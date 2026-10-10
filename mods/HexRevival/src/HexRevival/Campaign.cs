@@ -112,35 +112,64 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Encounter or conversation of a map node. The game's templates are named after the
-        /// node number: encounter scenes "AZ 1 - NODE 003 ..." and conversations "AZ1 - Node 003 ...".
+        /// Content of a map node, from the game's templates named after the node: encounter scenes
+        /// "AZ 1 - NODE 03 - WILD CUB" and conversations "AZ1 - Node 3 - Feralroot Bear".
+        /// A scene with an AI deck is a battle; otherwise the node's first conversation is used
+        /// (dialog, panorama, dungeon and reward scenes are not handled yet: the node is empty).
         /// </summary>
         private static void ResolveContent(MapNode n, TemplateManager tm)
         {
-            string number = n.Id.Length > 4 ? n.Id.Substring(4) : n.Id; // "Node003" -> "003"
+            string number = NodeNumber(n.Id);
+            if (number == null) return;
             foreach (SceneData s in tm.CampaignScenes.Values)
             {
                 EncounterScene es = s as EncounterScene;
-                if (es == null || !MatchesNode(es.m_Name, "AZ1", number)) continue;
+                if (es == null || NameNumber(es.m_Name, "AZ1-NODE") != number || !OfflineMenu.IsBattle(es, tm)) continue;
                 n.Type = "Encounter";
                 n.Encounter = es.m_Id.ToString();
                 return;
             }
+            ConversationTemplate best = null;
             foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
             {
-                if (c == null || !MatchesNode(c.m_Name, "AZ1", number)) continue;
+                if (c == null || NameNumber(c.m_Name, "AZ1-NODE") != number) continue;
+                if (best == null || ConversationRank(c.m_Name) < ConversationRank(best.m_Name)) best = c;
+            }
+            if (best != null)
+            {
                 n.Type = "Convo";
-                n.Conversation = c.m_Id.ToString();
-                return;
+                n.Conversation = best.m_Id.ToString();
             }
         }
 
-        /// <summary>"AZ 1 - NODE 003 - x" / "AZ1 - Node 003 x" match zone "AZ1" and node "003".</summary>
-        private static bool MatchesNode(string name, string zone, string number)
+        /// <summary>Opening conversation first: not a success/fail/repeat variant, step 1 before the others.</summary>
+        private static int ConversationRank(string name)
         {
-            if (string.IsNullOrEmpty(name)) return false;
+            string s = name.ToUpperInvariant();
+            if (s.Contains("SUCCESS") || s.Contains("FAIL") || s.Contains("REPEAT") || s.Contains("NOT COMPLETE") || s.Contains("END")) return 2;
+            if (s.Contains("STEP") && !s.Contains("STEP 1")) return 1;
+            return 0;
+        }
+
+        /// <summary>"Node003" -> "3", "Node00R" -> "R", "Node019B" -> "19B"; null if not a "Node" id.</summary>
+        private static string NodeNumber(string id)
+        {
+            if (!id.StartsWith("Node") || id.Length <= 4) return null;
+            string s = id.Substring(4).TrimStart('0');
+            return s.Length > 0 ? s : null;
+        }
+
+        /// <summary>Node number in a template name: "AZ 1 - NODE 03 - X" -> "3", "AZ 1 - NODE - 18 - X" -> "18".</summary>
+        private static string NameNumber(string name, string prefix)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
             string s = name.Replace(" ", "").ToUpperInvariant();
-            return s.StartsWith(zone + "-NODE" + number);
+            if (!s.StartsWith(prefix)) return null;
+            s = s.Substring(prefix.Length).TrimStart('-');
+            int end = s.IndexOf('-');
+            if (end >= 0) s = s.Substring(0, end);
+            s = s.TrimStart('0');
+            return s.Length > 0 ? s : null;
         }
 
         // ------------------------------------------------------------------
@@ -307,14 +336,21 @@ namespace HexRevival
         // Answers (delivered on the next frame, like a network answer)
         // ------------------------------------------------------------------
 
-        private static readonly Queue<Action> s_Answers = new Queue<Action>();
+        // Answers are delivered a few frames later, like network answers: the map screen asks for
+        // the state in the same frame it creates the map nodes, which are only initialized by
+        // Unity on the next frame (UIDungeonMapNode.Start).
+        private const int AnswerDelayFrames = 5;
+        private static readonly List<KeyValuePair<int, Action>> s_Answers = new List<KeyValuePair<int, Action>>();
+
+        private static void Enqueue(Action a) { s_Answers.Add(new KeyValuePair<int, Action>(Time.frameCount + AnswerDelayFrames, a)); }
 
         /// <summary>Called every frame (main thread).</summary>
         public static void Pump()
         {
-            while (s_Answers.Count > 0)
+            while (s_Answers.Count > 0 && s_Answers[0].Key <= Time.frameCount)
             {
-                Action a = s_Answers.Dequeue();
+                Action a = s_Answers[0].Value;
+                s_Answers.RemoveAt(0);
                 try { a(); }
                 catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] answer: " + e); }
             }
@@ -325,7 +361,7 @@ namespace HexRevival
         {
             if (st == null) return;
             GameplayState gs = BuildState(st);
-            s_Answers.Enqueue(() =>
+            Enqueue(() =>
             {
                 MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
                 cache.Invoke(null, new object[] { st.CampId, gs });
@@ -363,7 +399,7 @@ namespace HexRevival
                 if (st != null) res.Add(Summary(st));
             }
             CampSummary[] arr = res.ToArray();
-            s_Answers.Enqueue(() => callback(arr));
+            Enqueue(() => callback(arr));
         }
 
         public static void GetActiveStatus(ulong champId, CampaignType type, string template, ClientCampaignManager.GetActiveStatusCallback callback)
@@ -373,7 +409,7 @@ namespace HexRevival
             if (st != null && (type == CampaignType.AREA || type == CampaignType.ANY))
                 res.Add(new TemplateInfo(st.CampId, CampaignType.AREA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, 1, null));
             TemplateInfo[] arr = res.ToArray();
-            s_Answers.Enqueue(() => callback(arr));
+            Enqueue(() => callback(arr));
         }
 
         public static void QueryState(ulong campId, ClientCampaignManager.StateCallback callback)
@@ -477,7 +513,7 @@ namespace HexRevival
             }
             catch { }
             s_Battle = st;
-            s_Answers.Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
+            Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
         }
 
         /// <summary>Called when a match ends (AuthoritativeSessionBase.EndGame postfix).</summary>

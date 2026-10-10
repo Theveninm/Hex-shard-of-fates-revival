@@ -156,7 +156,7 @@ namespace HexRevival
             if (m_GameDecks == null) BuildTemplateLists();
         }
 
-        private static bool IsBattle(EncounterScene es, TemplateManager tm)
+        internal static bool IsBattle(EncounterScene es, TemplateManager tm)
         {
             if (es.m_EncounterPlayers == null) return false;
             foreach (EncounterPlayer p in es.m_EncounterPlayers)
