@@ -10,16 +10,14 @@ namespace HexRevival
     /// HexRevivalSaves/&lt;name&gt;/ holding account.txt (settings, gold), collection.txt (cards owned,
     /// progression mode only), decks.txt, champions.txt and campaign.txt.
     ///
-    /// A save is created with two options: "cheats available" (in-game cheat menu) and
-    /// "unlock everything" (full collection, as in Quick Match before saves existed). Without the
-    /// latter the save is in progression mode: cards are earned by playing.
+    /// All saves work the same way (cards are earned by playing); a save created with "unlock
+    /// everything" simply owns every card and every equipment from the start.
     /// </summary>
     public static class Saves
     {
         public class Info
         {
             public string Name;
-            public bool Cheats;
             public bool UnlockAll;
             public long Gold;
             public DateTime LastPlayed;
@@ -66,19 +64,19 @@ namespace HexRevival
             return null;
         }
 
-        public static Info Create(string name, bool cheats, bool unlockAll)
+        public static Info Create(string name, bool unlockAll)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
-            Info i = new Info { Name = name, Cheats = cheats, UnlockAll = unlockAll, Gold = unlockAll ? UnlockedGold : StartingGold, LastPlayed = DateTime.Now };
+            Info i = new Info { Name = name, UnlockAll = unlockAll, Gold = unlockAll ? UnlockedGold : StartingGold, LastPlayed = DateTime.Now };
             Write(i);
             return i;
         }
 
-        /// <summary>The save with this name, created (everything unlocked, cheats) if missing.</summary>
+        /// <summary>The save with this name, created (everything unlocked) if missing.</summary>
         public static Info FindOrCreate(string name)
         {
             foreach (Info i in List()) if (string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)) return i;
-            return Create(CheckName(name) == null ? name : "Offline", true, true);
+            return Create(CheckName(name) == null ? name : "Offline", true);
         }
 
         /// <summary>Selects the save used by the next login.</summary>
@@ -88,7 +86,7 @@ namespace HexRevival
             save.LastPlayed = DateTime.Now;
             Write(save);
             Campaign.Reset();
-            Debug.Log("[HexRevival] [Saves] account '" + save.Name + "'" + (save.UnlockAll ? " (unlock all)" : "") + (save.Cheats ? " (cheats)" : ""));
+            Debug.Log("[HexRevival] [Saves] account '" + save.Name + "'" + (save.UnlockAll ? " (unlock all)" : ""));
         }
 
         /// <summary>Saves the current account settings (gold...).</summary>
@@ -109,8 +107,7 @@ namespace HexRevival
                     int eq = line.IndexOf('=');
                     if (eq <= 0) continue;
                     string k = line.Substring(0, eq), v = line.Substring(eq + 1);
-                    if (k == "cheats") i.Cheats = v == "1";
-                    else if (k == "unlock") i.UnlockAll = v == "1";
+                    if (k == "unlock") i.UnlockAll = v == "1";
                     else if (k == "gold") long.TryParse(v, out i.Gold);
                     else if (k == "lastplayed") { long t; if (long.TryParse(v, out t)) i.LastPlayed = new DateTime(t); }
                 }
@@ -126,7 +123,6 @@ namespace HexRevival
                 string dir = Path.Combine(RootDir, i.Name);
                 Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllLines(Path.Combine(dir, "account.txt"), new[] {
-                    "cheats=" + (i.Cheats ? "1" : "0"),
                     "unlock=" + (i.UnlockAll ? "1" : "0"),
                     "gold=" + i.Gold,
                     "lastplayed=" + i.LastPlayed.Ticks });
@@ -136,7 +132,7 @@ namespace HexRevival
 
         /// <summary>
         /// Before saves existed, decks, champions and campaign were stored next to Hex.exe:
-        /// they become a first save, "Offline", with everything unlocked and cheats available.
+        /// they become a first save, "Offline", with everything unlocked.
         /// </summary>
         private static void MigrateLegacyFiles()
         {
@@ -146,7 +142,7 @@ namespace HexRevival
             bool any = false;
             for (int k = 0; k < files.GetLength(0); k++) any |= System.IO.File.Exists(Path.Combine(root, files[k, 0]));
             if (!any) return;
-            Info i = Create("Offline", true, true);
+            Info i = Create("Offline", true);
             string dir = Path.Combine(RootDir, i.Name);
             for (int k = 0; k < files.GetLength(0); k++)
             {

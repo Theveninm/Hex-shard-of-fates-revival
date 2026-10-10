@@ -10,7 +10,8 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// In-game cheat menu (first draft), for saves created with "cheats available": a small
+    /// In-game cheat menu (first draft), shown when "Show the cheat menu" is checked in the
+    /// game's display options (see Settings): a small
     /// button in the bottom-left corner unfolds a list of cheats for the current screen,
     /// battle cheats during a match, progression cheats elsewhere.
     /// </summary>
@@ -26,7 +27,7 @@ namespace HexRevival
         {
             try
             {
-                return Saves.Current != null && Saves.Current.Cheats && M != null && M.m_GameClient != null
+                return Settings.ShowCheats && Saves.Current != null && M != null && M.m_GameClient != null
                     && M.m_GameClient.PlayerProfile != null && M.m_GameClient.PlayerProfile.IsInitialized();
             }
             catch { return false; }

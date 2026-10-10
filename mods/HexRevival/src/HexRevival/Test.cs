@@ -798,6 +798,8 @@ namespace HexRevival
                 case "cheat": return Cheats.Execute(gc, parts);
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
+                case "toggles": return Settings.DumpToggles();
+                case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
                 case "concede":
                     {

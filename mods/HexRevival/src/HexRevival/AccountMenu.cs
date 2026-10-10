@@ -7,7 +7,7 @@ namespace HexRevival
 {
     /// <summary>
     /// Account selection, drawn over the game's login screen: the list of local saves, with
-    /// "Create a new account" at the top (name + "cheats available" + "unlock everything").
+    /// "Create a new account" at the top (name + "unlock everything").
     /// Choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
     /// </summary>
     public class AccountMenu : MonoBehaviour
@@ -18,7 +18,7 @@ namespace HexRevival
         private List<Saves.Info> m_Saves;
         private Vector2 m_Scroll;
         private string m_Name = "";
-        private bool m_Cheats, m_Unlock;
+        private bool m_Unlock;
         private string m_Error;
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
@@ -116,14 +116,14 @@ namespace HexRevival
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none))
             {
                 m_Screen = Screen.Create;
-                m_Name = ""; m_Cheats = false; m_Unlock = false; m_Error = null;
+                m_Name = ""; m_Unlock = false; m_Error = null;
             }
 
             for (int i = 0; i < m_Saves.Count; i++)
             {
                 Saves.Info s = m_Saves[i];
                 Rect r = new Rect(0, newH + gap + i * (rowH + gap), view.width, rowH);
-                string detail = Loc.Get(s.UnlockAll ? "mode_unlocked" : "mode_progression") + (s.Cheats ? "  ·  " + Loc.Get("cheats") : "");
+                string detail = Loc.Get("last_played", s.LastPlayed.ToString("g", System.Globalization.CultureInfo.CurrentCulture));
                 if (GameSkin.Row(r, s.Name, detail, false)) Play(s);
             }
             GUI.EndScrollView();
@@ -145,8 +145,6 @@ namespace HexRevival
             if (GUI.GetNameOfFocusedControl() == "") GUI.FocusControl("hexrevival_account_name");
             y += 64 * S;
 
-            m_Cheats = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Cheats, Loc.Get("opt_cheats"), Loc.Get("opt_cheats_desc"));
-            y += 80 * S;
             m_Unlock = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
             y += 84 * S;
 
@@ -160,7 +158,7 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Cheats, m_Unlock));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock));
             }
         }
 

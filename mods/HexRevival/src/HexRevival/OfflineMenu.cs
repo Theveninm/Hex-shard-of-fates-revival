@@ -299,7 +299,7 @@ namespace HexRevival
                 // show that this mode was added by the mod.
                 Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
                 b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
-                StripClone(b, Loc.Get("quick_match"));
+                StripClone(b, Loc.Get("quick_match"), Loc.Get("quick_match_tip"));
                 foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.color = new Color(1f, 0.84f, 0.42f);
                 // Green background lighter than the game's grey-blue buttons, gold letters and border
                 // (green / red like the confirm / cancel buttons of the game's dialogs).
@@ -325,21 +325,26 @@ namespace HexRevival
             }
         }
 
+        /// <summary>Components kept on a clone of a main menu button: display, hover and click feedback.</summary>
+        private static readonly string[] KeptComponents = { "UISprite", "UILabel", "UIWidget", "UITexture", "UIButton", "UIButtonColor",
+            "UIButtonScale", "UIButtonOffset", "UIPlaySound", "UITooltipSetText", "TweenScale", "TweenColor", "TweenAlpha", "TweenPosition", "UIDragScrollView" };
+
         /// <summary>
-        /// Prepares a clone of a main menu button: removes the game's bindings (localized text,
-        /// commands of the original button) and its padlock (shown or not by profile flags).
+        /// Prepares a clone of a main menu button: keeps only its look (everything else, such as the
+        /// game's bindings, localized texts and the original button's actions, including the
+        /// right-click ones, is removed), sets its text and tooltip, hides its padlock.
         /// </summary>
-        private static void StripClone(GameObject b, string label)
+        private static void StripClone(GameObject b, string label, string tooltip)
         {
             foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
-            {
-                if (mb == null) continue;
-                string n = mb.GetType().Name;
-                if (n == "UILocalize" || n.IndexOf("Binding", StringComparison.Ordinal) >= 0 || n.StartsWith("Ngui", StringComparison.Ordinal)
-                    || n == "UIButtonMessage" || n == "UIEventTrigger")
+                if (mb != null && System.Array.IndexOf(KeptComponents, mb.GetType().Name) < 0)
                     UnityEngine.Object.DestroyImmediate(mb);
-            }
             foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.text = label;
+            foreach (UITooltipSetText t in b.GetComponentsInChildren<UITooltipSetText>(true))
+            {
+                t.TooltipLocalizationScript = null;
+                t.TooltipText = tooltip; // Localization.Get returns an unknown key as is
+            }
             foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
                 if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
         }
@@ -365,7 +370,6 @@ namespace HexRevival
             {
                 foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
                 {
-                    if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
                     string t = Loc.Get("change_account");
                     if (l.text != t) l.text = t;
                 }
@@ -386,8 +390,19 @@ namespace HexRevival
                 b.transform.localRotation = src.transform.localRotation;
                 b.transform.localScale = src.transform.localScale;
                 b.transform.SetAsLastSibling();
-                StripClone(b, Loc.Get("change_account"));
-                StyleModButton(b, new Color(1f, 0.8f, 0.78f), new Color(0.85f, 0.6f, 0.58f), new Color(0.95f, 0.38f, 0.32f, 0.30f));
+                StripClone(b, Loc.Get("change_account"), Loc.Get("change_account_tip"));
+                // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
+                Color red = new Color(1f, 0.55f, 0.5f);
+                foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
+                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = red;
+                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+                {
+                    if (ub.tweenTarget != null && ub.tweenTarget.GetComponent<UILabel>() != null) continue;
+                    ub.defaultColor = red;
+                    ub.hover = new Color(1f, 0.72f, 0.68f);
+                    ub.pressed = new Color(0.8f, 0.42f, 0.38f);
+                    ub.disabledColor = red;
+                }
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     ub.onClick.Clear();
