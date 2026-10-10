@@ -22,15 +22,14 @@ Not available (yet): the campaign world map, Frost Ring Arena, Siege, Battlegrou
 
 ## Install and play
 
-1. You need **HEX: Shards of Fate installed through Steam** (Windows). The game is free-to-play
-   (Steam app 410380). Its store page was retired at the end of 2020, but Steam can still be asked to
-   install it directly: open `steam://install/410380` in your browser or the Windows Run dialog
-   (the launcher does it for you). If Steam refuses, the free licence is no longer granted to new
-   accounts and the game must already be in your library.
+1. You need the **HEX: Shards of Fate game files** (Windows). The game was free-to-play, but it was
+   removed from Steam at the end of 2020: Steam only installs it (app 410380) on accounts that already
+   have it in their library; other accounts get "No license". If you have the game files from another
+   source, the launcher lets you pick the game folder.
 2. Download `HexOffline-1.0.0.zip` from the [Releases](../../releases) page and extract it anywhere.
 3. Double-click `HexOffline.exe`. It:
-   - finds the game in your Steam libraries (or asks you for the folder),
-   - offers to install the game through Steam, or Steam itself, if something is missing,
+   - finds the game (Steam libraries, Windows registry, or the folder you chose last time),
+   - otherwise offers to install it through Steam (if it is in your library) or to pick the game folder,
    - copies the files of the `mod` folder into the game folder (first launch and updates only),
    - starts the game.
 
@@ -38,9 +37,10 @@ Not available (yet): the campaign world map, Frost Ring Arena, Siege, Battlegrou
 
 Its whole source is [`tools/launcher/HexOfflineLauncher.cs`](tools/launcher/HexOfflineLauncher.cs) (about 300 lines).
 
-- It reads the Windows registry only to find where Steam is installed.
+- It reads the Windows registry only to find Steam and the game, and remembers the game folder you
+  picked (`HKEY_CURRENT_USER\Software\HexOffline`).
 - It copies the files of the `mod` folder, as they are, into the game folder. Nothing else is written.
-- It never uses the network (the only links it opens are Steam / the Steam download page, in your browser, when you click Yes).
+- It never uses the network (the only link it opens is the Steam installation of the game, when you click Yes).
 - It asks for administrator rights only if Windows refuses to write into the game folder, and only after you agree.
 - The `mod` folder holds the official, unmodified BepInEx 5.4.23.2 files (compare them with the
   [official release](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.2)) plus `HexOffline.dll`.
@@ -111,15 +111,14 @@ Pas (encore) disponible : la carte du monde de la campagne, Frost Ring Arena, Si
 
 ## Installer et jouer
 
-1. Il faut **HEX: Shards of Fate installé avec Steam** (Windows). Le jeu est gratuit (free-to-play,
-   application Steam 410380). Sa page de boutique a été retirée fin 2020, mais on peut toujours demander
-   à Steam de l'installer directement : ouvrez `steam://install/410380` dans votre navigateur ou dans la
-   fenêtre Exécuter de Windows (le lanceur le fait pour vous). Si Steam refuse, la licence gratuite n'est
-   plus accordée aux nouveaux comptes et le jeu doit déjà être dans votre bibliothèque.
+1. Il faut les **fichiers du jeu HEX: Shards of Fate** (Windows). Le jeu était gratuit, mais il a été
+   retiré de Steam fin 2020 : Steam ne l'installe (application 410380) que sur les comptes qui l'ont déjà
+   dans leur bibliothèque ; les autres obtiennent « Pas de licence ». Si vous avez les fichiers du jeu par
+   un autre moyen, le lanceur vous permet d'indiquer le dossier du jeu.
 2. Téléchargez `HexOffline-1.0.0.zip` depuis la page [Releases](../../releases) et extrayez-le où vous voulez.
 3. Double-cliquez sur `HexOffline.exe`. Il :
-   - trouve le jeu dans vos bibliothèques Steam (ou vous demande le dossier),
-   - propose d'installer le jeu avec Steam, ou Steam lui-même, s'il manque quelque chose,
+   - trouve le jeu (bibliothèques Steam, registre Windows, ou dossier choisi la fois précédente),
+   - sinon propose de l'installer avec Steam (s'il est dans votre bibliothèque) ou d'indiquer le dossier du jeu,
    - copie les fichiers du dossier `mod` dans le dossier du jeu (au premier lancement et aux mises à jour),
    - lance le jeu.
 
@@ -127,9 +126,10 @@ Pas (encore) disponible : la carte du monde de la campagne, Frost Ring Arena, Si
 
 Tout son code source est [`tools/launcher/HexOfflineLauncher.cs`](tools/launcher/HexOfflineLauncher.cs) (environ 300 lignes).
 
-- Il lit le registre Windows uniquement pour savoir où Steam est installé.
+- Il lit le registre Windows uniquement pour trouver Steam et le jeu, et y retient le dossier du jeu que
+  vous avez choisi (`HKEY_CURRENT_USER\Software\HexOffline`).
 - Il copie tels quels les fichiers du dossier `mod` dans le dossier du jeu. Rien d'autre n'est écrit.
-- Il n'utilise jamais le réseau (les seuls liens qu'il ouvre, dans votre navigateur et si vous cliquez Oui, sont Steam et sa page de téléchargement).
+- Il n'utilise jamais le réseau (le seul lien qu'il ouvre est l'installation du jeu par Steam, si vous cliquez Oui).
 - Il ne demande les droits administrateur que si Windows refuse l'écriture dans le dossier du jeu, et seulement avec votre accord.
 - Le dossier `mod` contient les fichiers officiels, non modifiés, de BepInEx 5.4.23.2 et `HexOffline.dll`.
   `SHA256SUMS.txt` donne l'empreinte de chaque fichier.

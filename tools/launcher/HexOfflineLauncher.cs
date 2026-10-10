@@ -1,14 +1,16 @@
 // HEX Offline - lanceur / installeur (Windows, .NET Framework 4.x).
 //
 // Double-clic :
-//   1. cherche HEX: Shards of Fate (bibliotheques Steam, ou dossier du lanceur) ;
-//   2. absent : propose d'installer le jeu via Steam, ou Steam s'il manque, ou de choisir le dossier ;
+//   1. cherche HEX: Shards of Fate (dossier du lanceur, registre Windows, bibliotheques Steam,
+//      dossier choisi la fois precedente) ;
+//   2. absent : propose de l'installer via Steam (s'il est dans la bibliotheque du joueur) ou de
+//      choisir le dossier du jeu ;
 //   3. present : installe / met a jour le mod (BepInEx + HexOffline) dans le dossier du jeu,
 //      puis lance le jeu.
 // Options : --uninstall (retire le mod), --install "<dossier>" (usage interne, apres elevation).
 //
-// Transparence : le lanceur n'utilise pas le reseau, lit seulement le registre (emplacement de
-// Steam), copie les fichiers du dossier "mod" livre a cote de lui dans le dossier du jeu, et ne
+// Transparence : le lanceur n'utilise pas le reseau, lit le registre seulement pour trouver Steam et
+// le jeu (et y retient le dossier choisi, HKCU\Software\HexOffline), copie les fichiers du dossier "mod" livre a cote de lui dans le dossier du jeu, et ne
 // demande les droits administrateur que si ce dossier est protege, apres accord du joueur.
 
 using System;
@@ -131,6 +133,26 @@ namespace HexOfflineLauncher
             string here = AppDomain.CurrentDomain.BaseDirectory;
             if (File.Exists(Path.Combine(here, ExeName))) return here.TrimEnd('\\');
 
+            // Entree "Programmes et fonctionnalites" creee par Steam a l'installation du jeu.
+            foreach (string root in new[] { "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App " + AppId,
+                                            "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App " + AppId })
+            {
+                try
+                {
+                    string loc = Registry.GetValue(root, "InstallLocation", null) as string;
+                    if (!string.IsNullOrEmpty(loc) && File.Exists(Path.Combine(loc, ExeName))) return loc.TrimEnd('\\');
+                }
+                catch { }
+            }
+
+            // Dossier choisi a la main lors d'un lancement precedent.
+            try
+            {
+                string saved = Registry.GetValue("HKEY_CURRENT_USER\\Software\\HexOffline", "GameFolder", null) as string;
+                if (!string.IsNullOrEmpty(saved) && File.Exists(Path.Combine(saved, ExeName))) return saved;
+            }
+            catch { }
+
             foreach (string lib in SteamLibraries(SteamPath()))
             {
                 string installDir = DefaultInstallDir;
@@ -152,42 +174,37 @@ namespace HexOfflineLauncher
 
         private static string HandleMissingGame()
         {
-            string steam = SteamPath();
-            DialogResult r;
-            if (steam != null)
-            {
-                r = MessageBox.Show(L(
-                    "HEX: Shards of Fate was not found on this computer.\n\n" +
-                    "Yes: ask Steam to install it (the game is free; its store page was retired in 2020, but Steam can still install it by its number).\n" +
-                    "No: choose the game folder yourself.",
+            // HEX a ete retire de Steam fin 2020 : Steam ne l'installe que pour les comptes qui l'ont deja
+            // dans leur bibliotheque (sinon "Pas de licence").
+            bool steam = SteamPath() != null;
+            string text = steam
+                ? L("HEX: Shards of Fate was not found on this computer.\n\n" +
+                    "Yes: ask Steam to install it. This only works if the game is already in your Steam library (it was removed from the store at the end of 2020).\n" +
+                    "No: choose the game folder yourself (if you have the game files from another source).",
                     "HEX: Shards of Fate n'a pas été trouvé sur cet ordinateur.\n\n" +
-                    "Oui : demander à Steam de l'installer (le jeu est gratuit ; sa page de boutique a été retirée en 2020, mais Steam peut encore l'installer par son numéro).\n" +
-                    "Non : choisir vous-même le dossier du jeu."),
-                    Title, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-                if (r == DialogResult.Yes)
-                {
-                    Process.Start("steam://install/" + AppId);
-                    MessageBox.Show(L("When the installation is finished, run HEX Offline again.", "Une fois l'installation terminée, relancez HEX Offline."), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return null;
-                }
-            }
-            else
+                    "Oui : demander à Steam de l'installer. Cela ne fonctionne que si le jeu est déjà dans votre bibliothèque Steam (il a été retiré de la boutique fin 2020).\n" +
+                    "Non : choisir vous-même le dossier du jeu (si vous avez les fichiers du jeu par un autre moyen).")
+                : L("HEX: Shards of Fate was not found on this computer.\n\nChoose the game folder (the one containing Hex.exe)?",
+                    "HEX: Shards of Fate n'a pas été trouvé sur cet ordinateur.\n\nChoisir le dossier du jeu (celui qui contient Hex.exe) ?");
+            DialogResult r = MessageBox.Show(text, Title, steam ? MessageBoxButtons.YesNoCancel : MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+            if (steam && r == DialogResult.Yes)
             {
-                r = MessageBox.Show(L(
-                    "Steam and HEX: Shards of Fate were not found on this computer.\n\n" +
-                    "Yes: open the Steam download page (HEX is installed through Steam).\n" +
-                    "No: choose the game folder yourself.",
-                    "Steam et HEX: Shards of Fate n'ont pas été trouvés sur cet ordinateur.\n\n" +
-                    "Oui : ouvrir la page de téléchargement de Steam (HEX s'installe avec Steam).\n" +
-                    "Non : choisir vous-même le dossier du jeu."),
-                    Title, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-                if (r == DialogResult.Yes)
-                {
-                    Process.Start("https://store.steampowered.com/about/");
-                    return null;
-                }
+                Process.Start("steam://install/" + AppId);
+                MessageBox.Show(L("When the installation is finished, run HEX Offline again.\nIf Steam answers \"No license\", the game is not in your library: run HEX Offline again and choose No to pick the game folder.",
+                    "Une fois l'installation terminée, relancez HEX Offline.\nSi Steam répond « Pas de licence », le jeu n'est pas dans votre bibliothèque : relancez HEX Offline et choisissez Non pour indiquer le dossier du jeu."),
+                    Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return null;
             }
-            return r == DialogResult.No ? AskFolder() : null;
+            if ((steam && r == DialogResult.No) || (!steam && r == DialogResult.OK))
+            {
+                string dir = AskFolder();
+                if (dir != null)
+                {
+                    try { Registry.SetValue("HKEY_CURRENT_USER\\Software\\HexOffline", "GameFolder", dir); } catch { }
+                }
+                return dir;
+            }
+            return null;
         }
 
         private static string AskFolder()
