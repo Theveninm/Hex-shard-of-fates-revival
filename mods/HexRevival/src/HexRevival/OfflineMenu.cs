@@ -301,18 +301,11 @@ namespace HexRevival
                 b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
                 StripClone(b, Loc.Get("quick_match"));
                 foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.color = new Color(1f, 0.84f, 0.42f);
-                // Green background lighter than the game's grey-blue buttons, gold letters and border.
-                Color dark = new Color(0.78f, 1f, 0.78f), darkHover = Color.white;
-                UISprite baseSprite = null;
-                foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
-                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) { sp.color = dark; if (baseSprite == null) baseSprite = sp; }
-                if (baseSprite != null) DecorateLandingButton(baseSprite, b);
+                // Green background lighter than the game's grey-blue buttons, gold letters and border
+                // (green / red like the confirm / cancel buttons of the game's dialogs).
+                StyleModButton(b, new Color(0.78f, 1f, 0.78f), new Color(0.6f, 0.85f, 0.6f), new Color(0.55f, 0.95f, 0.55f, 0.28f));
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
-                    ub.defaultColor = dark;
-                    ub.hover = darkHover;
-                    ub.pressed = new Color(0.6f, 0.85f, 0.6f);
-                    ub.disabledColor = dark;
                     ub.onClick.Clear();
                     ub.onClick.Add(new EventDelegate(() => SetOpen(true)));
                     ub.isEnabled = true;
@@ -372,6 +365,7 @@ namespace HexRevival
             {
                 foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
                 {
+                    if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
                     string t = Loc.Get("change_account");
                     if (l.text != t) l.text = t;
                 }
@@ -393,6 +387,7 @@ namespace HexRevival
                 b.transform.localScale = src.transform.localScale;
                 b.transform.SetAsLastSibling();
                 StripClone(b, Loc.Get("change_account"));
+                StyleModButton(b, new Color(1f, 0.8f, 0.78f), new Color(0.85f, 0.6f, 0.58f), new Color(0.95f, 0.38f, 0.32f, 0.30f));
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     ub.onClick.Clear();
@@ -446,8 +441,24 @@ namespace HexRevival
             return null;
         }
 
-        /// <summary>Light green veil and gold border over the button background, text on top.</summary>
-        private static void DecorateLandingButton(UISprite baseSprite, GameObject button)
+        /// <summary>Colored veil and gold border over the button background, text on top.</summary>
+        /// <summary>Tinted background, colored veil, gold border and gold letters for a mod button.</summary>
+        private static void StyleModButton(GameObject b, Color tint, Color pressed, Color veil)
+        {
+            UISprite baseSprite = null;
+            foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
+                if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) { sp.color = tint; if (baseSprite == null) baseSprite = sp; }
+            if (baseSprite != null) DecorateLandingButton(baseSprite, b, veil);
+            foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+            {
+                ub.defaultColor = tint;
+                ub.hover = Color.white;
+                ub.pressed = pressed;
+                ub.disabledColor = tint;
+            }
+        }
+
+        private static void DecorateLandingButton(UISprite baseSprite, GameObject button, Color veilColor)
         {
             UIAtlas frames = FindAtlas("A_Frames");
             if (frames == null) return;
@@ -457,7 +468,7 @@ namespace HexRevival
             veil.pivot = UIWidget.Pivot.Center;
             veil.width = baseSprite.width - 8;
             veil.height = baseSprite.height - 8;
-            veil.color = new Color(0.55f, 0.95f, 0.55f, 0.28f);
+            veil.color = veilColor;
             veil.depth = baseSprite.depth + 1;
             veil.transform.localPosition = new Vector3((0.5f - baseSprite.pivotOffset.x) * baseSprite.width, (0.5f - baseSprite.pivotOffset.y) * baseSprite.height, 0f);
             // Gold border: four lines (the tinted white sprite gives a clean gold).
