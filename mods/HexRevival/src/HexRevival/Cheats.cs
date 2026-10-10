@@ -67,11 +67,7 @@ namespace HexRevival
                     int n;
                     if (!int.TryParse(parts[3], out n))
                         return "invalid number";
-                    ss.IncrementPlayerTotalResourcePool(p, n, false);
-                    ss.IncrementPlayerCurrentResourcePool(p, n, false);
-                    foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
-                        ss.IncrementPlayerResourceThreshold(p, c, n, false);
-                    Server.MarkDirty();
+                    AddResources(ss, p, n);
                     return "resources +" + n + " for " + p.m_PlayerId;
                 }
             }
@@ -98,13 +94,23 @@ namespace HexRevival
             return card;
         }
 
-        private static StandaloneSession GetServer(StandaloneGameClient gc)
+        /// <summary>+n resources: total, current, and thresholds of every color.</summary>
+        internal static void AddResources(StandaloneSession ss, Player p, int n)
+        {
+            ss.IncrementPlayerTotalResourcePool(p, n, false);
+            ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
+                ss.IncrementPlayerResourceThreshold(p, c, n, false);
+            Server.MarkDirty();
+        }
+
+        internal static StandaloneSession GetServer(StandaloneGameClient gc)
         {
             FieldInfo f = typeof(StandaloneGameClient).GetField("m_SessionServer", BindingFlags.Instance | BindingFlags.NonPublic);
             return f == null ? null : f.GetValue(gc) as StandaloneSession;
         }
 
-        private static Player FindPlayer(StandaloneSession ss, string who)
+        internal static Player FindPlayer(StandaloneSession ss, string who)
         {
             bool wantAI = who.ToLower().StartsWith("ia") || who.ToLower().StartsWith("ai");
             foreach (Player p in ss.GetAllPlayers())

@@ -199,6 +199,7 @@ namespace HexRevival
                 go.AddComponent<TestBehaviour>();
                 go.AddComponent<OfflineMenu>();
                 go.AddComponent<AccountMenu>();
+                go.AddComponent<CheatMenu>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)

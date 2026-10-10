@@ -117,7 +117,8 @@ namespace HexRevival
             if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
-            if (OnLandingPage()) EnsureLandingButton(); else m_LandingButton = null;
+            if (OnLandingPage()) { EnsureLandingButton(); EnsureLogoutButton(); }
+            else { m_LandingButton = null; m_LogoutButton = null; }
         }
 
         private void SetOpen(bool open)
@@ -298,23 +299,8 @@ namespace HexRevival
                 // show that this mode was added by the mod.
                 Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
                 b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
-                // Removes the game's bindings (localized text, commands to Frost Ring).
-                foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
-                {
-                    if (mb == null) continue;
-                    string n = mb.GetType().Name;
-                    if (n == "UILocalize" || n.IndexOf("Binding", StringComparison.Ordinal) >= 0 || n.StartsWith("Ngui", StringComparison.Ordinal)
-                        || n == "UIButtonMessage" || n == "UIEventTrigger")
-                        UnityEngine.Object.DestroyImmediate(mb);
-                }
-                foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true))
-                {
-                    l.text = Loc.Get("quick_match");
-                    l.color = new Color(1f, 0.84f, 0.42f);
-                }
-                // No padlock (the clone keeps one, hidden or not depending on the profile flags).
-                foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
-                    if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
+                StripClone(b, Loc.Get("quick_match"));
+                foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.color = new Color(1f, 0.84f, 0.42f);
                 // Green background lighter than the game's grey-blue buttons, gold letters and border.
                 Color dark = new Color(0.78f, 1f, 0.78f), darkHover = Color.white;
                 UISprite baseSprite = null;
@@ -343,6 +329,84 @@ namespace HexRevival
                 Debug.LogError("[HexRevival] [Menu] button: " + e);
                 m_LandingButton = src; // no new attempt every frame
             }
+        }
+
+        /// <summary>
+        /// Prepares a clone of a main menu button: removes the game's bindings (localized text,
+        /// commands of the original button) and its padlock (shown or not by profile flags).
+        /// </summary>
+        private static void StripClone(GameObject b, string label)
+        {
+            foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (mb == null) continue;
+                string n = mb.GetType().Name;
+                if (n == "UILocalize" || n.IndexOf("Binding", StringComparison.Ordinal) >= 0 || n.StartsWith("Ngui", StringComparison.Ordinal)
+                    || n == "UIButtonMessage" || n == "UIEventTrigger")
+                    UnityEngine.Object.DestroyImmediate(mb);
+            }
+            foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.text = label;
+            foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
+                if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------
+        // "Change account" button at the bottom of the main menu
+        // ------------------------------------------------------------------
+
+        private GameObject m_LogoutButton;
+
+        private void EnsureLogoutButton()
+        {
+            if (m_LogoutButton != null)
+            {
+                foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
+                {
+                    string t = Loc.Get("change_account");
+                    if (l.text != t) l.text = t;
+                }
+                return;
+            }
+            UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+            if (vm == null || vm.MenuUI.Campaign == null) return;
+            GameObject src = vm.MenuUI.Campaign.gameObject;
+            Transform parent = src.transform.parent;
+            if (parent == null) return;
+            Transform existing = parent.Find("HexRevival_ChangeAccount");
+            if (existing != null) { m_LogoutButton = existing.gameObject; return; }
+            try
+            {
+                GameObject b = (GameObject)UnityEngine.Object.Instantiate(src);
+                b.name = "HexRevival_ChangeAccount";
+                b.transform.parent = parent;
+                b.transform.localPosition = src.transform.localPosition;
+                b.transform.localRotation = src.transform.localRotation;
+                b.transform.localScale = src.transform.localScale;
+                b.transform.SetAsLastSibling();
+                StripClone(b, Loc.Get("change_account"));
+                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+                {
+                    ub.onClick.Clear();
+                    ub.onClick.Add(new EventDelegate(ChangeAccount));
+                    ub.isEnabled = true;
+                }
+                b.SetActive(true);
+                UIGrid grid = parent.GetComponent<UIGrid>();
+                if (grid != null) grid.Reposition();
+                m_LogoutButton = b;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[HexRevival] [Menu] change account button: " + e);
+                m_LogoutButton = src; // no new attempt every frame
+            }
+        }
+
+        /// <summary>Logs out (the game's own logout) and goes back to the account menu.</summary>
+        private static void ChangeAccount()
+        {
+            try { Singleton<Main>.Instance.RequestLogOut(); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] logout: " + e); }
         }
 
         private static UIAtlas FindAtlas(string name)

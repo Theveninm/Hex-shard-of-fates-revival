@@ -201,6 +201,17 @@ namespace HexRevival
             s_Battle = null;
         }
 
+        /// <summary>Cheat: every node of the map becomes visible and selectable.</summary>
+        public static bool RevealAll(ulong champId)
+        {
+            CampState st = Get(champId, false);
+            if (st == null) return false;
+            BuildMap();
+            foreach (MapNode n in s_Nodes) st.Visible.Add(n.Id);
+            Save();
+            return true;
+        }
+
         /// <summary>True if this champion has a saved campaign (used for LastCampaignID).</summary>
         public static bool HasSave(ulong champId)
         {
