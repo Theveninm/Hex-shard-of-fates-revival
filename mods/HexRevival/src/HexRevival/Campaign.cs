@@ -572,6 +572,7 @@ namespace HexRevival
         {
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
+            if (sub == "rewards") return DumpRewards();
             if (sub == "map")
             {
                 BuildMap();
@@ -581,6 +582,42 @@ namespace HexRevival
                 return sb.ToString();
             }
             return "usage: camp dump [filter] | camp map";
+        }
+
+        /// <summary>"camp rewards": the game's reward templates and XP tables.</summary>
+        private static string DumpRewards()
+        {
+            StringBuilder sb = new StringBuilder();
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            foreach (Game.Shared.Rewards.RewardTemplate r in tm.RewardTemplates.Values)
+            {
+                if (r == null) continue;
+                sb.Append("reward ").Append(r.m_Id).Append(" '").Append(r.m_Name).Append("' once=").Append(r.m_OnlyEarnOnce);
+                foreach (Game.Shared.Rewards.RewardItemBase it in r.m_AndRewardItems) sb.Append(" AND[").Append(DescribeReward(it, tm)).Append(']');
+                foreach (Game.Shared.Rewards.RewardItemBase it in r.m_OrRewardItems) sb.Append(" OR[").Append(DescribeReward(it, tm)).Append(']');
+                sb.Append('\n');
+            }
+            foreach (XpTable x in tm.XpTables.Values)
+            {
+                if (x == null) continue;
+                sb.Append("xptable ").Append(x.m_Id).Append(':');
+                foreach (XpTableItem i in x.m_XpTable) sb.Append(' ').Append(i.m_Level).Append('=').Append(i.m_LevelXpRequirement);
+                sb.Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        private static string DescribeReward(Game.Shared.Rewards.RewardItemBase it, TemplateManager tm)
+        {
+            Game.Shared.Rewards.RewardFungible f = it as Game.Shared.Rewards.RewardFungible;
+            if (f != null) return f.m_RewardType + " " + f.m_Amount;
+            Game.Shared.Rewards.RewardCard c = it as Game.Shared.Rewards.RewardCard;
+            if (c != null) { CardTemplate t = tm.GetCardTemplate(c.m_CardTemplateId); return "card " + (t != null ? t.m_Name : c.m_CardTemplateId.ToString()); }
+            Game.Shared.Rewards.RewardInventoryItem i = it as Game.Shared.Rewards.RewardInventoryItem;
+            if (i != null) { InventoryItemData d = tm.GetInventoryItem(i.m_ItemId); return "item " + (d != null ? d.m_Name : i.m_ItemId.ToString()) + " x" + i.m_Amount; }
+            Game.Shared.Rewards.RewardLootTable l = it as Game.Shared.Rewards.RewardLootTable;
+            if (l != null) return "loot x" + l.m_Amount + " (" + l.m_Entries.Count + " entries)";
+            return it != null ? it.GetType().Name : "null";
         }
 
         private static string Dump(string filter)
