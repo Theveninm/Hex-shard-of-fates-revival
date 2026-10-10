@@ -358,7 +358,7 @@ namespace HexRevival
             {
                 foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
                 {
-                    string t = Loc.Get("change_account").ToLower();
+                    string t = Loc.Get("switch_account").ToLower();
                     if (l.text != t) l.text = t;
                 }
                 return;
@@ -373,7 +373,7 @@ namespace HexRevival
             {
                 GameObject b = UiClone.Copy(src, "HexRevival_ChangeAccount");
                 b.transform.SetAsLastSibling();
-                StripClone(b, Loc.Get("change_account"), Loc.Get("change_account_tip"));
+                StripClone(b, Loc.Get("switch_account"), Loc.Get("switch_account_tip"));
                 // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
                 Color red = new Color(1f, 0.55f, 0.5f);
                 foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))

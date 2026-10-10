@@ -17,6 +17,9 @@ namespace HexRevival
     /// </summary>
     public class CheatMenu : MonoBehaviour
     {
+        /// <summary>The "+5 resources" cheat stops at this total.</summary>
+        private const int MaxCheatResources = 10;
+
         private bool m_Open;
         private string m_Message;
         private float m_MessageUntil;
@@ -91,15 +94,19 @@ namespace HexRevival
             if (ss != null)
             {
                 items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_win"), () => WinBattle(ss)));
-                items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_resources"), () =>
+                Player me = Cheats.FindPlayer(ss, "j");
+                if (me != null)
                 {
-                    Player p = Cheats.FindPlayer(ss, "j");
-                    if (p != null) { Cheats.AddResources(ss, p, 5); Say(Loc.Get("cheat_done")); }
-                }));
+                    items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_resources"), () =>
+                        Say(Cheats.AddResourcesOnly(ss, me, 5, MaxCheatResources) > 0 ? Loc.Get("cheat_done") : Loc.Get("cheat_resources_max", MaxCheatResources))));
+                    items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_shards"), () => { Cheats.AddThresholds(ss, me, 1); Say(Loc.Get("cheat_done")); }));
+                    items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_draw"), () => { Cheats.DrawCard(ss, me); Say(Loc.Get("cheat_done")); }));
+                }
             }
             else
             {
-                items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_gold"), AddGold));
+                items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_gold"), () => AddMoney(1000, 0)));
+                items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_platinum"), () => AddMoney(0, 1000)));
                 if (State == EGameState.Dungeon)
                     items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_reveal"), RevealMap));
             }
@@ -116,11 +123,12 @@ namespace HexRevival
             m_Open = false;
         }
 
-        private void AddGold()
+        private void AddMoney(int gold, int platinum)
         {
-            Saves.Current.Gold += 1000;
+            Saves.Current.Gold += gold;
+            Saves.Current.Platinum += platinum;
             Saves.SaveCurrent();
-            M.m_GameClient.PlayerProfile.UpdateBalance((int)Saves.Current.Gold, 0);
+            M.m_GameClient.PlayerProfile.UpdateBalance((int)Saves.Current.Gold, (int)Saves.Current.Platinum);
             Say(Loc.Get("cheat_done"));
         }
 

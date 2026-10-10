@@ -99,8 +99,35 @@ namespace HexRevival
         {
             ss.IncrementPlayerTotalResourcePool(p, n, false);
             ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            AddThresholds(ss, p, n);
+        }
+
+        /// <summary>
+        /// In-game cheat: +n resources (total and available), without going over max in total.
+        /// Returns the number actually added.
+        /// </summary>
+        internal static int AddResourcesOnly(StandaloneSession ss, Player p, int n, int max)
+        {
+            n = Math.Min(n, max - p.m_TotalResourcePool);
+            if (n <= 0) return 0;
+            ss.IncrementPlayerTotalResourcePool(p, n, false);
+            ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            Server.MarkDirty();
+            return n;
+        }
+
+        /// <summary>+n to the threshold of every shard color.</summary>
+        internal static void AddThresholds(StandaloneSession ss, Player p, int n)
+        {
             foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
                 ss.IncrementPlayerResourceThreshold(p, c, n, false);
+            Server.MarkDirty();
+        }
+
+        /// <summary>The player draws a card, as with a normal draw.</summary>
+        internal static void DrawCard(StandaloneSession ss, Player p)
+        {
+            ss.DrawCard(p, SessionCardId.Invalid, new TAC());
             Server.MarkDirty();
         }
 

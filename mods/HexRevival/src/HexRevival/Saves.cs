@@ -20,6 +20,7 @@ namespace HexRevival
             public string Name;
             public bool UnlockAll;
             public long Gold;
+            public long Platinum;
             public DateTime LastPlayed;
         }
 
@@ -109,6 +110,7 @@ namespace HexRevival
                     string k = line.Substring(0, eq), v = line.Substring(eq + 1);
                     if (k == "unlock") i.UnlockAll = v == "1";
                     else if (k == "gold") long.TryParse(v, out i.Gold);
+                    else if (k == "platinum") long.TryParse(v, out i.Platinum);
                     else if (k == "lastplayed") { long t; if (long.TryParse(v, out t)) i.LastPlayed = new DateTime(t); }
                 }
             }
@@ -125,6 +127,7 @@ namespace HexRevival
                 System.IO.File.WriteAllLines(Path.Combine(dir, "account.txt"), new[] {
                     "unlock=" + (i.UnlockAll ? "1" : "0"),
                     "gold=" + i.Gold,
+                    "platinum=" + i.Platinum,
                     "lastplayed=" + i.LastPlayed.Ticks });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

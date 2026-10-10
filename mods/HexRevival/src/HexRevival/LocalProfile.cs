@@ -47,7 +47,7 @@ namespace HexRevival
             bits.ReckID = reckId.GetInstanceId();
             bits.Name = name;
             bits.Gold = (int)Saves.Current.Gold;
-            bits.Platinum = 0;
+            bits.Platinum = (int)Saves.Current.Platinum;
             bits.Level = 1;
             bits.ProfileId = 1UL;
 
