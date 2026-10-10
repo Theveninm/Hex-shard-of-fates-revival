@@ -316,6 +316,7 @@ namespace HexRevival
                     ub.onClick.Clear();
                     ub.onClick.Add(new EventDelegate(() => SetOpen(true)));
                     ub.isEnabled = true;
+                    RightClick.Add(ub.gameObject, () => SetOpen(true));
                 }
                 b.SetActive(true);
                 src.SetActive(false);
@@ -358,6 +359,15 @@ namespace HexRevival
 
         private void EnsureLogoutButton()
         {
+            UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+            // The column has no room for one more button: the Collection button goes (the
+            // collection stays reachable from the deck editor of Quick Match and the game's menus).
+            if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
+            {
+                vm.MenuUI.Collection.gameObject.SetActive(false);
+                UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
+                if (g != null) g.Reposition();
+            }
             if (m_LogoutButton != null)
             {
                 foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
@@ -367,7 +377,6 @@ namespace HexRevival
                 }
                 return;
             }
-            UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
             if (vm == null || vm.MenuUI.Campaign == null) return;
             GameObject src = vm.MenuUI.Campaign.gameObject;
             Transform parent = src.transform.parent;
@@ -389,6 +398,7 @@ namespace HexRevival
                     ub.onClick.Clear();
                     ub.onClick.Add(new EventDelegate(ChangeAccount));
                     ub.isEnabled = true;
+                    RightClick.Add(ub.gameObject, ChangeAccount);
                 }
                 b.SetActive(true);
                 UIGrid grid = parent.GetComponent<UIGrid>();
@@ -399,6 +409,26 @@ namespace HexRevival
             {
                 Debug.LogError("[HexRevival] [Menu] change account button: " + e);
                 m_LogoutButton = src; // no new attempt every frame
+            }
+        }
+
+        /// <summary>
+        /// NGUI buttons ignore the right mouse button; the game's menu buttons react to it like a
+        /// left click (through components removed from our clones), so ours do the same.
+        /// </summary>
+        private class RightClick : MonoBehaviour
+        {
+            private Action m_Action;
+
+            public static void Add(GameObject go, Action action)
+            {
+                RightClick rc = go.GetComponent<RightClick>() ?? go.AddComponent<RightClick>();
+                rc.m_Action = action;
+            }
+
+            private void OnClick()
+            {
+                if (UICamera.currentTouchID == -2 && m_Action != null) m_Action();
             }
         }
 
