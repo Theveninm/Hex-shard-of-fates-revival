@@ -4,7 +4,7 @@ out/
 *.dll
 *.mdb
 *.pdb
-# Fichiers du jeu : jamais dans ce depot
+# Game files: never in this repository
 Hex_Data/
 decompiled/
 extracted/

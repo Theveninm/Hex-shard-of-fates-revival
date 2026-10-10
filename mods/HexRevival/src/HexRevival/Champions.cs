@@ -12,8 +12,8 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Champions de campagne du profil local : AddChampion / DeleteChampion / UpdateChampionDeckID,
-    /// sauvegarde dans HexRevival.champions.txt. Sans fichier, un champion par defaut est cree.
+    /// Campaign champions of the local profile: AddChampion / DeleteChampion / UpdateChampionDeckID,
+    /// saved in HexRevival.champions.txt. Without a file, a default champion is created.
     /// </summary>
     public static class Champions
     {
@@ -55,7 +55,7 @@ namespace HexRevival
                 c.Race = ERace.Human; c.ChampionClass = EChampionClass.Warrior; c.Gender = EGender.Male;
                 s_Champions.Add(c);
             }
-            // Champion sans deck enregistre : on rattache le dernier deck PvE qui lui appartient.
+            // Champion without a saved deck: attach the last PvE deck it owns.
             try
             {
                 string decks = Path.Combine(LocalServer.Root, "HexRevival.decks.txt");
@@ -145,7 +145,7 @@ namespace HexRevival
             return null;
         }
 
-        /// <summary>Nouveau deck cree pour un champion (premiere sauvegarde) : il devient son deck.</summary>
+        /// <summary>New deck created for a champion (first save): it becomes its deck.</summary>
         public static void SetDeck(ulong championId, ulong deckId)
         {
             champion_bits c = Find(championId);

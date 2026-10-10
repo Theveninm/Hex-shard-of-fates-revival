@@ -10,12 +10,12 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// "Serveur" local pour les services hors combat (profil, decks...).
+    /// Local "server" for non-combat services (profile, decks...).
     ///
-    /// Le client envoie ses requetes par ClientConnection.SendCommand(octets DataWrapper, ...) ; on
-    /// decode le DataWrapper (numero de transaction + arguments), on traite les transactions connues
-    /// et on renvoie la reponse a l'image suivante, comme le faisait la Dispatch generee
-    /// (evenement statique OnResponse de la struct de transaction + callback de la requete).
+    /// The client sends its requests through ClientConnection.SendCommand(DataWrapper bytes, ...); we
+    /// decode the DataWrapper (transaction number + arguments), handle the known transactions
+    /// and send the response on the next frame, as the generated Dispatch did
+    /// (static OnResponse event of the transaction struct + request callback).
     /// </summary>
     public static class LocalServer
     {
@@ -29,7 +29,7 @@ namespace HexRevival
         private static readonly Queue<Pending> s_Pending = new Queue<Pending>();
         private static Dictionary<int, Type> s_TxTypes;
 
-        /// <summary>Appele par le hook de ClientConnection.SendCommand. Vrai si la requete est traitee ici.</summary>
+        /// <summary>Called by the ClientConnection.SendCommand hook. True if the request is handled here.</summary>
         public static bool TryHandle(byte[] eventArgsBytes, MessageHandler callback)
         {
             DataWrapper dw;
@@ -42,7 +42,7 @@ namespace HexRevival
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[HexRevival] [LocalServer] decodage impossible : " + e.Message);
+                Debug.LogWarning("[HexRevival] [LocalServer] cannot decode: " + e.Message);
                 return false;
             }
             object resp = null;
@@ -62,7 +62,7 @@ namespace HexRevival
             return true;
         }
 
-        /// <summary>Delivre les reponses en attente (thread principal, une image apres la requete).</summary>
+        /// <summary>Delivers pending responses (main thread, one frame after the request).</summary>
         public static void Pump()
         {
             while (true)
@@ -91,7 +91,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Struct de transaction generee (ex. ProfileService+AddNewDeck) par numero.</summary>
+        /// <summary>Generated transaction struct (e.g. ProfileService+AddNewDeck) by number.</summary>
         private static Type TxType(int id)
         {
             if (s_TxTypes == null)
@@ -103,7 +103,7 @@ namespace HexRevival
                     FieldInfo f = t.GetField("TransactionId", BindingFlags.Public | BindingFlags.Static);
                     if (f == null || !f.IsLiteral || t.GetField("OnResponse", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public) == null) continue;
                     int v = (int)f.GetRawConstantValue();
-                    // plusieurs services clients peuvent partager un numero : on garde le premier cote client
+                    // several client services may share a number: keep the first one on the client side
                     if (!s_TxTypes.ContainsKey(v) || t.FullName.StartsWith("Game.Client")) s_TxTypes[v] = t;
                 }
             }
@@ -112,7 +112,7 @@ namespace HexRevival
             return r;
         }
 
-        /// <summary>Cree une reponse et met son champ Error a "Ok".</summary>
+        /// <summary>Creates a response and sets its Error field to "Ok".</summary>
         public static T Ok<T>() where T : new()
         {
             T r = new T();

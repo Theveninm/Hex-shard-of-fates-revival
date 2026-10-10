@@ -13,11 +13,11 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// "Boite noire" + harnais de test.
-    /// - Toujours actif : ecrit un etat concis dans HexRevival.state.log (1x/s) pendant un combat.
-    /// - Raccourcis : F8 = dump detaille, F9 = passer priorite, F10 = jouer 1re carte jouable,
-    ///   F11 = ne declarer ni attaquant ni bloqueur, F12 = forcer fin de tour (auto-pass).
-    /// - Auto-test complet uniquement si le marqueur HexRevival.autotest existe.
+    /// "Black box" + test harness.
+    /// - Always on: writes a concise state to HexRevival.state.log (once per second) during a match.
+    /// - Shortcuts: F8 = detailed dump, F9 = pass priority, F10 = play the first playable card,
+    ///   F11 = declare no attacker and no blocker, F12 = force end of turn (auto-pass).
+    /// - Full self-test only if the HexRevival.autotest marker exists.
     /// </summary>
     public class TestBehaviour : MonoBehaviour
     {
@@ -25,7 +25,7 @@ namespace HexRevival
 
         private bool m_Enabled;
         private bool m_AutoTest;
-        /// <summary>Marqueur HexRevival.autostart : login + lancement du combat, puis la main au joueur.</summary>
+        /// <summary>HexRevival.autostart marker: login + start of the match, then the player takes over.</summary>
         private bool m_AutoStart;
         private bool m_AutoStartDone;
         private bool m_AutoAI;
@@ -38,7 +38,7 @@ namespace HexRevival
         private int m_GamesPlayed;
 
         private string m_StallSig;
-        /// <summary>Mot-cle "menu" : connexion automatique seulement, on reste sur l'accueil.</summary>
+        /// <summary>"menu" keyword: automatic login only, stay on the main menu.</summary>
         private bool m_MenuOnly;
         private float m_StallSince;
 
@@ -49,8 +49,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Mode endurance : si rien ne bouge pendant 120 s (hors fin de partie), on journalise un
-        /// diagnostic complet ("STALL") puis on relance le jeu sur la rencontre suivante.
+        /// Soak mode: if nothing moves for 120 s (outside the end of a game), logs a
+        /// full diagnostic ("STALL") then restarts the game on the next encounter.
         /// </summary>
         private void CheckStall(StandaloneGameClient gc, StandaloneSession ss, string line)
         {
@@ -73,8 +73,8 @@ namespace HexRevival
             WriteState("STALL: " + ServerDump(gc).Replace("\n", " | "));
             WriteState("STALL: action=" + Repl.Execute(gc, new string[] { "get", "server", "m_ActionStack.m_CurrentAction" }, Repl.BuildRefs(gc)));
             WriteState("STALL: anims=" + AnimsDump().Replace("\n", " | "));
-            WriteState("STALL: relance");
-            // compteur persistant (le jeu redemarre apres un blocage)
+            WriteState("STALL: restarting");
+            // persistent counter (the game restarts after a stall)
             try
             {
                 string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.stalls"));
@@ -109,7 +109,7 @@ namespace HexRevival
             }
             if (now - m_DismissSince > 3f)
             {
-                WriteState("aiplay: fermeture auto de " + cover.GetType().Name);
+                WriteState("aiplay: auto-closing " + cover.GetType().Name);
                 cover.OnButton("Accept", 0, "");
                 m_DismissCandidate = null;
             }
@@ -119,8 +119,8 @@ namespace HexRevival
         private string m_LastEncounter = "-";
 
         /// <summary>
-        /// Fichier d'etat lisible (HexRevival.status.txt, ou .k par instance), reecrit toutes les 10 s.
-        /// S'il n'est plus mis a jour, le jeu est fige ou ferme (voir HexRevival_etat.bat).
+        /// Human-readable status file (HexRevival.status.txt, or .k per instance), rewritten every 10 s.
+        /// If it is no longer updated, the game is frozen or closed (see HexRevival_etat.bat).
         /// </summary>
         private static int ReadStalls()
         {
@@ -142,9 +142,9 @@ namespace HexRevival
             try
             {
                 List<string> l = new List<string>();
-                l.Add("Mise a jour : " + DateTime.Now.ToString("HH:mm:ss") + "   (instance " + Instance.Id + (Instance.Headless ? ", sans rendu" : "") + ")");
-                l.Add("Depuis le dernier lancement : " + (int)(Time.realtimeSinceStartup / 60) + " min, parties terminees : " + m_GamesPlayed + ", blocages detectes (total) : " + ReadStalls());
-                l.Add("Rencontre : " + m_LastEncounter);
+                l.Add("Updated: " + DateTime.Now.ToString("HH:mm:ss") + "   (instance " + Instance.Id + (Instance.Headless ? ", headless" : "") + ")");
+                l.Add("Since last start: " + (int)(Time.realtimeSinceStartup / 60) + " min, games finished: " + m_GamesPlayed + ", stalls detected (total): " + ReadStalls());
+                l.Add("Encounter: " + m_LastEncounter);
                 ClientSessionBase session = gc.Session as ClientSessionBase;
                 l.Add("Phase : " + (session != null ? session.CurrentPhase.ToString() : gc.StateManager.CurrentGameState.ToString()));
                 if (Gauntlet.Enabled())
@@ -171,7 +171,7 @@ namespace HexRevival
                         return;
                     }
                 }
-                WriteState("GAME OVER: etat BattleStateGameOver introuvable");
+                WriteState("GAME OVER: BattleStateGameOver state not found");
             }
             catch (Exception e)
             {
@@ -218,11 +218,11 @@ namespace HexRevival
             m_AutoStart = File.Exists(Path.Combine(root, "HexRevival.autostart"));
             if (m_AutoStart)
             {
-                // Contenu optionnel "LxH" : taille de fenetre souhaitee (ex. 2240x1260).
+                // Optional content "WxH": desired window size (e.g. 2240x1260).
                 try
                 {
-                    // Contenu : mots-cles separes par des espaces. "LxH" = taille de fenetre,
-                    // "aiplay" = l'IA joue aussi pour le joueur humain (test d'endurance).
+                    // Content: space-separated keywords. "WxH" = window size,
+                    // "aiplay" = the AI also plays for the human player (soak test).
                     foreach (string tok in File.ReadAllText(Path.Combine(root, "HexRevival.autostart")).Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         if (tok == "aiplay") { m_AutoAI = true; continue; }
@@ -240,7 +240,7 @@ namespace HexRevival
                 }
                 catch { }
             }
-            // Conserve le journal de la session precedente (mode endurance) dans soaklogs/.
+            // Keeps the previous session's log (soak mode) in soaklogs/.
             try
             {
                 if (Dev.Enabled && File.Exists(m_StatePath))
@@ -264,7 +264,7 @@ namespace HexRevival
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
                     Time.timeScale = m_Speed;
-                // Arret des instances supervisees : fichier HexRevival.soak.stop.
+                // Stops supervised instances: HexRevival.soak.stop file.
                 if (Instance.Supervised && Time.frameCount % 120 == 0
                     && File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.soak.stop")))
                     System.Diagnostics.Process.GetCurrentProcess().Kill();
@@ -290,8 +290,8 @@ namespace HexRevival
                     catch (Exception e) { Debug.LogWarning("[HexRevival] gauntlet frame: " + e.Message); }
                 }
 
-                // L'overlay "Loading" (ajoute par UIBattle.StartGame) n'est jamais retire dans
-                // notre flux offline et bloque les interactions : on le retire une fois le jeu lance.
+                // The "Loading" overlay (added by UIBattle.StartGame) is never removed in
+                // our offline flow and blocks interaction: we remove it once the game has started.
                 ClientSessionBase session = gc.Session as ClientSessionBase;
                 if (!ReferenceEquals(session, null) && !m_ClearedLoading && (int)session.CurrentPhase > (int)ETurnPhases.Mulligan)
                 {
@@ -303,29 +303,29 @@ namespace HexRevival
                     }
                 }
 
-                // "aiplay manualblock" : l'IA joue pour nous sauf la defense (on bloque a la main).
+                // "aiplay manualblock": the AI plays for us except for blocking (done by hand).
                 bool defending = m_ManualBlock && !ReferenceEquals(session, null) && !ReferenceEquals(gc.Player, null)
                     && !gc.Player.IsActivePlayer()
                     && (session.CurrentPhase == ETurnPhases.DeclareAttackPriorityWindow || session.CurrentPhase == ETurnPhases.DeclareDefense);
                 if (defending && !ReferenceEquals(gc.Player.AITactical, null))
                 {
                     gc.Player.RemoveAITactical();
-                    WriteState("aiplay: defense manuelle");
+                    WriteState("aiplay: manual blocking");
                 }
                 if (m_AutoAI && !defending && !ReferenceEquals(session, null) && !ReferenceEquals(gc.Player, null)
                     && ReferenceEquals(gc.Player.AITactical, null) && !ReferenceEquals(UIBattle.Instance, null))
                 {
                     gc.Player.InitializeAITactical(new Game.Shared.AI.AIPersonality());
                     gc.Player.RequestPriorityResync();
-                    WriteState("aiplay: IA attachee au joueur humain");
+                    WriteState("aiplay: AI attached to the human player");
                 }
 
-                // Mode endurance : fermer les fenetres d'information qui attendent un clic du joueur
-                // (cartes revelees, etc.), sinon la file d'animations - et donc le reseau - reste bloquee.
+                // Soak mode: close the information windows waiting for a player click
+                // (revealed cards, etc.), otherwise the animation queue - and so the network - stays stuck.
                 if (m_AutoAI && !ReferenceEquals(UIBattle.Instance, null) && !UIBattle.Instance.GameOver)
                     AutoDismissInfoStates();
 
-                // Mode endurance : a la fin de partie, "Continuer" puis relancer un combat.
+                // Soak mode: at the end of the game, "Continue" then start another match.
                 if (m_AutoAI && !ReferenceEquals(UIBattle.Instance, null) && UIBattle.Instance.GameOver)
                 {
                     if (m_GameOverSince < 0f)
@@ -348,7 +348,7 @@ namespace HexRevival
                     m_LandingSince = -1f;
                 }
 
-                // Journal d'etat continu pendant un combat.
+                // Continuous state log during a match.
                 if (Dev.Enabled && Time.realtimeSinceStartup - m_LastStateLog > 1f)
                 {
                     m_LastStateLog = Time.realtimeSinceStartup;
@@ -409,13 +409,13 @@ namespace HexRevival
                 foreach (Player p in ss.GetAllPlayers())
                 {
                     if (p == null) continue;
-                    srv += " " + (p.IsAI() || p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer ? "IA" : "J") + ":hp="
+                    srv += " " + (p.IsAI() || p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer ? "AI" : "P") + ":hp="
                         + (p.m_ChampionCard != null ? p.m_ChampionCard.CurrentDefenseValue : 0)
                         + ",main=" + p.GetCardCollection(ECardCollections.Hand).CardCount
-                        + ",jeu=" + p.GetCardCollection(ECardCollections.Warzone).CardCount
+                        + ",play=" + p.GetCardCollection(ECardCollections.Warzone).CardCount
                         + ",res=" + p.m_CurrentResourcePool + "/" + p.m_TotalResourcePool;
                 }
-                srv += " srvPhase=" + ss.CurrentTurnPhase + " chaine=" + ss.Chain.Count;
+                srv += " srvPhase=" + ss.CurrentTurnPhase + " chain=" + ss.Chain.Count;
             }
             int play = 0, atk = 0, def = 0, act = 0;
             foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in session.Cache.Cards)
@@ -479,11 +479,11 @@ namespace HexRevival
             List<SessionCardId> playable = session.Cache.GetCardsWithUsage(ECardUsage.Play);
             if (playable.Count == 0)
             {
-                WriteState("F10: aucune carte jouable");
+                WriteState("F10: no playable card");
                 return;
             }
             SessionCardId id = playable[0];
-            WriteState("F10: tentative de jouer " + id);
+            WriteState("F10: trying to play " + id);
             if (!ReferenceEquals(UIBattle.Instance, null))
                 UIBattle.Instance.PlayCard(id);
         }
@@ -501,15 +501,15 @@ namespace HexRevival
             else if (session.CurrentPhase == ETurnPhases.AssignDamage || session.CurrentPhase == ETurnPhases.AssignFirstStrikeDamage)
                 player.AssignDamageOrder(new List<AssignDamageOrderTransaction.DamageAssignment>());
             else
-                WriteState("F11: phase sans declaration (" + session.CurrentPhase + ")");
+                WriteState("F11: phase without declaration (" + session.CurrentPhase + ")");
         }
 
         private float m_LandingSince = -1f;
         private int m_EncounterIndex;
 
         /// <summary>
-        /// Rencontre suivante : HexRevival.encounters (une ligne "guid nom" par rencontre), parcourue
-        /// en boucle a partir d'un point aleatoire ; sinon la rencontre par defaut.
+        /// Next encounter: HexRevival.encounters (one "guid name" line per encounter), walked
+        /// in a loop from a random starting point; otherwise the default encounter.
         /// </summary>
         private string NextEncounter()
         {
@@ -539,8 +539,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Marqueur HexRevival.autostart : clique "Login" a notre place, puis lance le combat
-        /// Frost Ring une fois sur la page d'accueil. Le combat lui-meme reste au joueur.
+        /// HexRevival.autostart marker: clicks "Login" for us, then starts the Frost Ring
+        /// match once on the main menu. The match itself is left to the player.
         /// </summary>
         private void DriveAutoStart(StandaloneGameClient gc, float now)
         {
@@ -563,7 +563,7 @@ namespace HexRevival
             }
             if (state != EGameState.LandingPage)
                 return;
-            if (m_MenuOnly) { m_AutoStartDone = true; WriteState("autostart: connecte, reste sur l'accueil (menu)"); return; }
+            if (m_MenuOnly) { m_AutoStartDone = true; WriteState("autostart: logged in, staying on the main menu (menu)"); return; }
             if (m_LandingSince < 0f)
                 m_LandingSince = now;
             if (now - m_LandingSince < (Instance.Headless ? 1f : 4f))
@@ -660,7 +660,7 @@ namespace HexRevival
             catch { }
         }
 
-        /// <summary>Inventaire de l'UI NGUI visible (sprites, atlas, polices) pour reproduire son style.</summary>
+        /// <summary>Inventory of the visible NGUI UI (sprites, atlases, fonts) to reproduce its style.</summary>
         private static string UiDump(string filter)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -721,7 +721,7 @@ namespace HexRevival
                 case "quit": Application.Quit(); return "quitting";
                 case "killothers":
                 {
-                    // Ferme les autres processus Hex.exe (instances de test orphelines).
+                    // Closes the other Hex.exe processes (orphaned test instances).
                     int me = System.Diagnostics.Process.GetCurrentProcess().Id, n = 0;
                     foreach (System.Diagnostics.Process pr in System.Diagnostics.Process.GetProcessesByName("Hex"))
                         if (pr.Id != me) { try { pr.Kill(); n++; } catch { } }
@@ -729,10 +729,10 @@ namespace HexRevival
                 }
                 case "soak":
                 {
-                    // Passe en test sans rendu : lance HexRevival_soak.bat N puis ferme cette instance.
+                    // Switch to headless testing: runs HexRevival_soak.bat N then closes this instance.
                     string root2 = Path.GetFullPath(Application.dataPath + "/../");
                     string bat2 = Path.Combine(root2, "HexRevival_soak.bat");
-                    if (!File.Exists(bat2)) return "HexRevival_soak.bat introuvable";
+                    if (!File.Exists(bat2)) return "HexRevival_soak.bat not found";
                     string n = parts.Length > 1 ? parts[1] : "1";
                     System.Diagnostics.ProcessStartInfo psi2 = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c \"" + bat2 + "\" " + n);
                     psi2.WorkingDirectory = root2;
@@ -744,24 +744,24 @@ namespace HexRevival
                 }
                 case "restart":
                 {
-                    if (m_KillAt > 0f) return "deja en cours";
+                    if (m_KillAt > 0f) return "already in progress";
                     if (Instance.Supervised)
                     {
-                        // Lancee par HexRevival_soak.bat : le superviseur relance l'instance a sa sortie.
+                        // Started by HexRevival_soak.bat: the supervisor restarts the instance when it exits.
                         m_KillAt = Time.realtimeSinceStartup + 0.5f;
                         return "restarting (superviseur)";
                     }
-                    // Relance via HexRevival_restart.bat (installe un plugin .new en attente, relance Hex.exe).
+                    // Restart through HexRevival_restart.bat (installs a pending .new plugin, restarts Hex.exe).
                     string root = Path.GetFullPath(Application.dataPath + "/../");
                     string bat = Path.Combine(root, "HexRevival_restart.bat");
-                    if (!File.Exists(bat)) return "HexRevival_restart.bat introuvable";
+                    if (!File.Exists(bat)) return "HexRevival_restart.bat not found";
                     System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c \"" + bat + "\"");
                     psi.WorkingDirectory = root;
                     psi.UseShellExecute = true;
                     psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
                     System.Diagnostics.Process.Start(psi);
-                    // Application.Quit() peut etre bloque (ex. ecran de victoire) et Environment.Exit
-                    // fige le process Unity : on termine le process directement, apres avoir repondu.
+                    // Application.Quit() can be blocked (e.g. victory screen) and Environment.Exit
+                    // freezes the Unity process: we kill the process directly, after answering.
                     m_KillAt = Time.realtimeSinceStartup + 0.5f;
                     return "restarting";
                 }
@@ -784,7 +784,7 @@ namespace HexRevival
                     List<SessionCardId> playable = session.Cache.GetCardsWithUsage(ECardUsage.Play);
                     int idx = 0;
                     if (parts.Length > 1) int.TryParse(parts[1], out idx);
-                    if (idx < 0 || idx >= playable.Count) return "index hors limites (" + playable.Count + ")";
+                    if (idx < 0 || idx >= playable.Count) return "index out of range (" + playable.Count + ")";
                     if (ReferenceEquals(UIBattle.Instance, null)) return "noUIBattle";
                     UIBattle.Instance.PlayCard(playable[idx]);
                     return "play " + playable[idx];
@@ -796,7 +796,7 @@ namespace HexRevival
                 case "concede":
                     {
                         UIBattle ui = UnityEngine.Object.FindObjectOfType<UIBattle>();
-                        if (ui == null) return "pas de partie";
+                        if (ui == null) return "no game";
                         System.Reflection.MethodInfo q = typeof(UIBattle).GetMethod("Quit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(bool) }, null);
                         q.Invoke(ui, new object[] { false });
                         return "abandon";
@@ -816,7 +816,7 @@ namespace HexRevival
                     player.RequestPriorityResync();
                     return "aiplay on";
                 case "aitick":
-                    if (player == null || player.AITactical == null) return "pas d'IA";
+                    if (player == null || player.AITactical == null) return "no AI";
                     try
                     {
                         return "AIUpdate=" + player.AITactical.AIUpdate(session.CurrentPhase) + " phase=" + session.CurrentPhase
@@ -861,8 +861,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Compare la vue client (cache) et la vue serveur de chaque carte.
-        /// Sans "all" : cartes hors deck, ou divergentes. '!' = divergence de zone/controleur.
+        /// Compares the client view (cache) and the server view of each card.
+        /// Without "all": cards outside the deck, or diverging. '!' = zone/controller divergence.
         /// </summary>
         private string CardsDump(StandaloneGameClient gc, ClientSessionBase session, bool all)
         {
@@ -886,7 +886,7 @@ namespace HexRevival
             return string.Join("\n", sb.ToArray());
         }
 
-        /// <summary>File d'animations de l'UI de combat (une animation bloquante non terminee fige tout).</summary>
+        /// <summary>Combat UI animation queue (an unfinished blocking animation freezes everything).</summary>
         private string AnimsDump()
         {
             if (ReferenceEquals(UIBattle.Instance, null)) return "noUIBattle";
@@ -905,7 +905,7 @@ namespace HexRevival
             {
                 AnimationBase a = o as AnimationBase;
                 if (a == null) continue;
-                sb.Add(new string(' ', depth * 2) + a.GetType().Name + " fin=" + a.IsFinished + " blk=" + a.IsBlocking + " " + a);
+                sb.Add(new string(' ', depth * 2) + a.GetType().Name + " done=" + a.IsFinished + " blk=" + a.IsBlocking + " " + a);
                 DumpAnimQueue(a, depth + 1, sb);
             }
         }

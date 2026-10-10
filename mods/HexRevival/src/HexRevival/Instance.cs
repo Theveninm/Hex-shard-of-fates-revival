@@ -3,16 +3,16 @@ using System;
 namespace HexRevival
 {
     /// <summary>
-    /// Identite de l'instance de jeu (outil de test). Plusieurs HEX peuvent tourner en parallele :
+    /// Identity of the game instance (test tool). Several HEX can run in parallel:
     ///   Hex.exe -batchmode -nographics -hexinstance 2 -hexinstances 4
-    /// L'instance 0 (par defaut) garde les noms de fichiers d'origine ; l'instance k utilise le
-    /// suffixe ".k" (HexRevival.cmd.k, HexRevival.state.log.k, HexRevival.gauntlet.csv.k ...).
+    /// Instance 0 (default) keeps the original file names; instance k uses the
+    /// suffix ".k" (HexRevival.cmd.k, HexRevival.state.log.k, HexRevival.gauntlet.csv.k ...).
     /// </summary>
     public static class Instance
     {
         public static readonly int Id;
         public static readonly int Count = 1;
-        /// <summary>Lancee par le superviseur (HexRevival_soak.bat) : pour relancer, il suffit de quitter.</summary>
+        /// <summary>Started by the supervisor (HexRevival_soak.bat): to restart, just exit.</summary>
         public static readonly bool Supervised;
         public static readonly bool Headless;
 

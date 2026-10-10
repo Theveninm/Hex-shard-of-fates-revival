@@ -13,29 +13,29 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Méthodes de remplacement injectées par le patcher dans les DLL du jeu
-    /// (redirection de corps de méthode via Mono.Cecil, sans Harmony).
+    /// Replacement methods injected by the patcher into the game DLLs
+    /// (method body redirection through Mono.Cecil, without Harmony).
     /// </summary>
     public static class Patches
     {
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
 
-        /// <summary>Encounter PvE local "Lair of the Beast" (deck joueur + deck IA valides).</summary>
+        /// <summary>Local PvE encounter "Lair of the Beast" (valid player deck + AI deck).</summary>
         private const string OfflineEncounterGuid = "6aca3608-0ef6-478b-a089-d76e94b13650";
 
         // ------------------------------------------------------------------
-        // Auth / profil
+        // Auth / profile
         // ------------------------------------------------------------------
 
-        /// <summary>Remplace Steamy.IsRunningSteam() : on se comporte comme un build non-Steam.</summary>
+        /// <summary>Replaces Steamy.IsRunningSteam(): behave like a non-Steam build.</summary>
         public static bool Steamy_IsRunningSteam()
         {
             return false;
         }
 
         /// <summary>
-        /// Remplace PlayerProfile.Login(...) : contourne l'authentification réseau et
-        /// initialise un profil local minimal (identité + champion).
+        /// Replaces PlayerProfile.Login(...): bypasses network authentication and
+        /// initializes a minimal local profile (identity + champion).
         /// </summary>
         public static bool PlayerProfile_Login(
             PlayerProfile self,
@@ -53,7 +53,7 @@ namespace HexRevival
                 try { LocalProfile.Load(self, new UID(UID.Type.ServicePlayer, 0x1001UL), string.IsNullOrEmpty(username) ? "Offline" : username); }
                 catch (Exception e) { Debug.LogError("[HexRevival] LocalProfile.Load failed: " + e); }
                 RaiseLoginResponse(self, true, null);
-                Debug.Log("[HexRevival] PlayerProfile.Login -> profil local initialise pour '" + username + "'");
+                Debug.Log("[HexRevival] PlayerProfile.Login -> local profile initialized for '" + username + "'");
                 return true;
             }
             catch (Exception e)
@@ -76,7 +76,7 @@ namespace HexRevival
             SetField(self, "m_UserName", name);
             self.LoginStreamDone = true;
 
-            // Champion local minimal (permet a UIBattle.StartEncounter de resoudre GetCurrentChampion()).
+            // Minimal local champion (lets UIBattle.StartEncounter resolve GetCurrentChampion()).
             List<PlayerChampion> champions = (List<PlayerChampion>)GetField(self, "m_Champions");
             champions.Clear();
             ulong first = 0;
@@ -107,13 +107,13 @@ namespace HexRevival
             FieldInfo field = typeof(PlayerProfile).GetField("OnProfileLoginResponse", PrivateInstance);
             if (ReferenceEquals(field, null))
             {
-                Debug.LogWarning("[HexRevival] Champ OnProfileLoginResponse introuvable.");
+                Debug.LogWarning("[HexRevival] OnProfileLoginResponse field not found.");
                 return;
             }
             Delegate handler = field.GetValue(self) as Delegate;
             if (ReferenceEquals(handler, null))
             {
-                Debug.LogWarning("[HexRevival] Aucun abonne a OnProfileLoginResponse.");
+                Debug.LogWarning("[HexRevival] No subscriber to OnProfileLoginResponse.");
                 return;
             }
             foreach (Delegate d in handler.GetInvocationList())
@@ -124,24 +124,24 @@ namespace HexRevival
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("[HexRevival] Erreur dans un handler de login: " + e);
+                    Debug.LogError("[HexRevival] Error in a login handler: " + e);
                 }
             }
         }
 
         // ------------------------------------------------------------------
-        // Combat PvE local
+        // Local PvE match
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Remplace StandaloneGameClient.SendStartEncounter (stub "encounters need to be
-        /// launched by a server") par un vrai encounter local contre l'IA.
+        /// Replaces StandaloneGameClient.SendStartEncounter (stub "encounters need to be
+        /// launched by a server") with a real local encounter against the AI.
         /// </summary>
         /// <summary>
-        /// Remplace StandaloneGameClient.SendStartSession pour les parties contre l'IA hors rencontre
-        /// (bouton Practice de l'editeur de deck). Le "serveur" du client ne sait pas charger les decks
-        /// hors rencontre (LoadDeckForPlayers est vide) : on lance a la place une rencontre locale ;
-        /// le joueur y garde son deck (player.m_DeckID, fourni par le profil local).
+        /// Replaces StandaloneGameClient.SendStartSession for games against the AI outside encounters
+        /// (Practice button of the deck editor). The client's "server" cannot load decks
+        /// outside encounters (LoadDeckForPlayers is empty): a local encounter is started instead;
+        /// the player keeps their deck there (player.m_DeckID, provided by the local profile).
         /// </summary>
         public static bool StandaloneGameClient_SendStartSession(StandaloneGameClient self, string sessionName, int aiPlayerCount, int flags)
         {
@@ -151,16 +151,16 @@ namespace HexRevival
             SessionStateEncounterData data = new SessionStateEncounterData();
             data.SceneTemplateId = new ResourceId(new Guid(PracticeEncounterGuid));
             data.SessionFlags = ESessionFlags.IsEncounter | ESessionFlags.IsPvE;
-            Debug.Log("[HexRevival] Practice -> rencontre locale " + PracticeEncounterGuid + " (flags d'origine " + flags + ")");
+            Debug.Log("[HexRevival] Practice -> local encounter " + PracticeEncounterGuid + " (original flags " + flags + ")");
             StandaloneGameClient_SendStartEncounter(self, sessionName, data);
             return false;
         }
 
         /// <summary>
-        /// Postfix de Session.AddPlayer sur la session autoritative locale : StandaloneGameClient
-        /// y ajoute des RemotePlayer neufs (PlayerState vide), sans le deck choisi par le joueur.
-        /// On recopie m_DeckID (et le modele de deck) depuis le LocalPlayer correspondant, pour que
-        /// le moteur demande ce deck (GetDeckDetails) au lieu de prendre celui de la rencontre.
+        /// Postfix of Session.AddPlayer on the local authoritative session: StandaloneGameClient
+        /// adds fresh RemotePlayers to it (empty PlayerState), without the deck chosen by the player.
+        /// We copy m_DeckID (and the deck template) from the matching LocalPlayer, so that
+        /// the engine asks for that deck (GetDeckDetails) instead of taking the encounter's.
         /// </summary>
         public static void AuthoritativeSession_AddPlayer(Session self, Player player)
         {
@@ -174,7 +174,7 @@ namespace HexRevival
                         FieldInfo f = typeof(AuthoritativeSessionBase).GetField("m_OverrideDecks", BindingFlags.Instance | BindingFlags.NonPublic);
                         Dictionary<UID, DeckTemplate> over = f.GetValue(self) as Dictionary<UID, DeckTemplate>;
                         over[player.m_PlayerId] = s_PendingAIDeck;
-                        Debug.Log("[HexRevival] IA " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
+                        Debug.Log("[HexRevival] AI " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
                     }
                     return;
                 }
@@ -182,12 +182,12 @@ namespace HexRevival
                 if (gc == null || gc.Player == null || gc.Player.m_PlayerId != player.m_PlayerId) return;
                 player.m_DeckID = gc.Player.m_DeckID;
                 player.m_DeckTemplateID = gc.Player.m_DeckTemplateID;
-                Debug.Log("[HexRevival] joueur " + player.m_PlayerId + " : deck " + player.m_DeckID);
+                Debug.Log("[HexRevival] player " + player.m_PlayerId + ": deck " + player.m_DeckID);
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] AddPlayer : " + e.Message); }
         }
 
-        /// <summary>Rencontre servant d'adversaire pour "Practice" (deck IA de la rencontre).</summary>
+        /// <summary>Encounter used as the "Practice" opponent (the encounter's AI deck).</summary>
         private const string PracticeEncounterGuid = OfflineEncounterGuid;
 
         public static void StandaloneGameClient_SendStartEncounter(
@@ -195,7 +195,7 @@ namespace HexRevival
         {
             try
             {
-                Debug.Log("[HexRevival] Demarrage encounter local : " + encounterData.SceneTemplateId);
+                Debug.Log("[HexRevival] starting local encounter: " + encounterData.SceneTemplateId);
                 Server.ResetCache();
                 FillNullLists(encounterData);
 
@@ -217,12 +217,12 @@ namespace HexRevival
 
                     SessionClient sessionClient = new SessionClient(BuildSessionState(sessionServer, encounterData), self);
                     sessionClient.m_SessionName = "AILocalSession_" + aiPlayer.m_PlayerId;
-                    // Meme instance id que la session autoritative : sinon le filtre
-                    // RaiseSessionEventFromNetwork (par instance id) rejette tous les evenements.
+                    // Same instance id as the authoritative session: otherwise the
+                    // RaiseSessionEventFromNetwork filter (by instance id) rejects every event.
                     sessionClient.m_SessionId = sessionServer.m_SessionId;
                     sessionClient.AddPlayer(aiPlayer);
 
-                    // Attache le composant tactique IA (jamais initialise ailleurs dans le client).
+                    // Attaches the AI tactical component (never initialized anywhere else in the client).
                     aiPlayer.InitializeAITactical(new Game.Shared.AI.AIPersonality());
 
                     self.m_LocalPlayerMap[aiPlayer.m_PlayerId] = aiPlayer;
@@ -244,13 +244,13 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// StandaloneSession.GetSessionState() n'inclut pas EncounterData, alors que le client
-        /// (ClientSessionBase.SetSessionState -> m_EncounterData) s'en sert partout
-        /// (ex. GoHUDPlayer.SetActiveEquipmentForPlayer -> NRE qui casse tout le HUD du champion).
+        /// StandaloneSession.GetSessionState() does not include EncounterData, although the client
+        /// (ClientSessionBase.SetSessionState -> m_EncounterData) uses it everywhere
+        /// (e.g. GoHUDPlayer.SetActiveEquipmentForPlayer -> NRE that breaks the whole champion HUD).
         /// </summary>
         /// <summary>
-        /// Le serveur remplissait les listes de SessionStateEncounterData ; cote client elles restent
-        /// nulles (ex. InitEncounter fait AbilitiesToRun.AddRange pour les rencontres avec "mods").
+        /// The server filled the SessionStateEncounterData lists; on the client they stay
+        /// null (e.g. InitEncounter calls AbilitiesToRun.AddRange for encounters with "mods").
         /// </summary>
         private static void FillNullLists(object data)
         {
@@ -270,28 +270,28 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Remplace UILandingPageContext.OnClickChallengeAI : au lieu du matchmaking
-        /// (serveur mort), lance un encounter PvE local contre l'IA.
+        /// Replaces UILandingPageContext.OnClickChallengeAI: instead of matchmaking
+        /// (dead server), starts a local PvE encounter against the AI.
         /// </summary>
         public static void UILandingPage_OnClickChallengeAI(UILandingPageContext self)
         {
             StartOfflineEncounter("ChallengeAI");
         }
 
-        /// <summary>Remplace UILandingPageViewModel.OnFrostRingButtonClicked (ecran mort) par un encounter local.</summary>
+        /// <summary>Replaces UILandingPageViewModel.OnFrostRingButtonClicked (dead screen) with a local encounter.</summary>
         public static void UILandingPageViewModel_OnFrostRingButtonClicked(UILandingPageViewModel self)
         {
             OfflineMenu.Open();
         }
 
         // ------------------------------------------------------------------
-        // Partie lancee depuis le menu du mod
+        // Match started from the mod's menu
         // ------------------------------------------------------------------
 
-        /// <summary>Rencontre "neutre" utilisee pour les parties deck contre deck.</summary>
+        /// <summary>"Neutral" encounter used for deck-versus-deck matches.</summary>
         public static ResourceId NeutralEncounterId { get { return new ResourceId(new Guid(OfflineEncounterGuid)); } }
 
-        /// <summary>Deck impose a l'IA pour la prochaine partie (null : deck de la rencontre).</summary>
+        /// <summary>Deck forced on the AI for the next match (null: the encounter's deck).</summary>
         private static DeckTemplate s_PendingAIDeck;
 
         public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label)
@@ -305,7 +305,7 @@ namespace HexRevival
                 context.m_PlayerDeckId = playerDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
-                Debug.Log("[HexRevival] [Menu] partie : deck " + playerDeck + " contre " + label + " (rencontre " + scene + (aiDeck != null ? ", deck IA " + aiDeck.m_DeckName : "") + ")");
+                Debug.Log("[HexRevival] [Menu] match: deck " + playerDeck + " vs " + label + " (encounter " + scene + (aiDeck != null ? ", AI deck " + aiDeck.m_DeckName : "") + ")");
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Battle, context);
             }
             catch (Exception e)
@@ -314,7 +314,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Remplace UILandingPageContext.OnClickContinue (bouton Campagne) par un encounter local.</summary>
+        /// <summary>Replaces UILandingPageContext.OnClickContinue (Campaign button) with a local encounter.</summary>
         public static void UILandingPage_OnClickContinue(UILandingPageContext self)
         {
             StartOfflineEncounter("Campaign");
@@ -327,7 +327,7 @@ namespace HexRevival
                 ResourceId sceneId = new ResourceId(new Guid(OfflineEncounterGuid));
                 BattleStateContext context = new BattleStateContext();
                 context.m_SceneTemplateId = sceneId;
-                // Deck du joueur : le dernier deck enregistre du profil local (sinon celui de la rencontre).
+                // Player deck: the last deck saved in the local profile (otherwise the encounter's).
                 context.m_PlayerDeckId = Decks.LastDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
@@ -341,7 +341,7 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Helpers reflection
+        // Reflection helpers
         // ------------------------------------------------------------------
 
         private static object GetField(object target, string name)

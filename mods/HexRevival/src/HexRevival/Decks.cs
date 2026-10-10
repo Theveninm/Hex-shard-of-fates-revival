@@ -12,9 +12,9 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Decks du profil local : transactions AddNewDeck / UpdateDeck / GetDeckInfo / RemoveDeck,
-    /// et sauvegarde dans HexRevival.decks.txt (cartes enregistrees par modele, pas par numero
-    /// d'exemplaire : la collection generee peut changer d'une version a l'autre).
+    /// Local profile decks: AddNewDeck / UpdateDeck / GetDeckInfo / RemoveDeck transactions,
+    /// saved in HexRevival.decks.txt (cards stored by template, not by copy
+    /// number: the generated collection may change from one version to the next).
     /// </summary>
     public static class Decks
     {
@@ -36,13 +36,13 @@ namespace HexRevival
         private static Dictionary<ulong, card_instance_bits> s_Collection = new Dictionary<ulong, card_instance_bits>();
         private static ulong s_NextId = 1;
 
-        /// <summary>Deck a utiliser pour les parties lancees par le mod : le dernier enregistre.</summary>
+        /// <summary>Deck to use for matches started by the mod: the last one saved.</summary>
         public static UID LastDeck = UID.Invalid;
 
         private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.decks.txt"); } }
 
         // ------------------------------------------------------------------
-        // Chargement (a la connexion, apres generation de la collection)
+        // Loading (at login, after the collection is generated)
         // ------------------------------------------------------------------
 
         public static List<deck_bits> Load(ICollection<card_instance_bits> collection)
@@ -58,7 +58,7 @@ namespace HexRevival
             catch (Exception e) { Debug.LogError("[HexRevival] [Decks] lecture : " + e); }
             List<deck_bits> res = new List<deck_bits>();
             foreach (StoredDeck d in s_Decks.Values) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
-            Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) charge(s)");
+            Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) loaded");
             return res;
         }
 
@@ -66,7 +66,7 @@ namespace HexRevival
         // Transactions
         // ------------------------------------------------------------------
 
-        /// <summary>Deck vide rattache a un champion de campagne (creation de champion).</summary>
+        /// <summary>Empty deck attached to a campaign champion (champion creation).</summary>
         public static deck_bits CreateForChampion(string name, ulong championId)
         {
             StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? "", PveChampion = championId };
@@ -83,7 +83,7 @@ namespace HexRevival
             public ResourceId Champion = ResourceId.Invalid;
         }
 
-        /// <summary>Decks du joueur hors campagne (PvP), pour le menu du mod.</summary>
+        /// <summary>Player decks outside the campaign (PvP), for the mod's menu.</summary>
         public static List<DeckInfo> List()
         {
             List<DeckInfo> res = new List<DeckInfo>();
@@ -93,7 +93,7 @@ namespace HexRevival
             return res;
         }
 
-        /// <summary>Deck du joueur converti en modele de deck (pour le faire jouer par l'IA).</summary>
+        /// <summary>Player deck converted to a deck template (so the AI can play it).</summary>
         public static Reckoning.Game.DeckTemplate ToTemplate(UID id)
         {
             StoredDeck d;
@@ -156,9 +156,9 @@ namespace HexRevival
             GetDeckDetailsRequestArgs det = args as GetDeckDetailsRequestArgs;
             if (det != null)
             {
-                // Demande par le moteur de combat au lancement d'une partie (player.m_DeckID).
-                // ChampionBits null : LoadPlayerDeck prend alors le deck du joueur et son champion
-                // PvP (avec un ChampionBits, une rencontre imposerait son propre deck).
+                // Requested by the combat engine when a match starts (player.m_DeckID).
+                // Null ChampionBits: LoadPlayerDeck then takes the player's deck and PvP
+                // champion (with ChampionBits, an encounter would force its own deck).
                 StoredDeck d;
                 if (!s_Decks.TryGetValue(det.DeckID.GetInstanceId(), out d)) return null;
                 deck_bits b = ToBits(d);
@@ -237,7 +237,7 @@ namespace HexRevival
             return res;
         }
 
-        /// <summary>deck_bits avec des exemplaires de la collection (exemplaires distincts par modele).</summary>
+        /// <summary>deck_bits with copies from the collection (distinct copies per template).</summary>
         private static deck_bits ToBits(StoredDeck d)
         {
             deck_bits b = new deck_bits();
@@ -274,7 +274,7 @@ namespace HexRevival
                     if (c.TemplateID != t) continue;
                     if (seen++ == skip) { pick = c; break; }
                 }
-                if (pick == null) continue; // plus d'exemplaires que la collection n'en a
+                if (pick == null) continue; // more copies than the collection has
                 used[t] = skip + 1;
                 res.Add(pick);
             }
@@ -282,7 +282,7 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Fichier
+        // File
         // ------------------------------------------------------------------
 
         private static void Save()

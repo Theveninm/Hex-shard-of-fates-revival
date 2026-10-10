@@ -1,4 +1,4 @@
-# Compile HexRevival.exe a partir du code source, sur les serveurs de GitHub, et le joint a la release.
+# Compiles HexRevival.exe from source on GitHub's servers and attaches it to the release.
 name: Build launcher
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile (csc du .NET Framework 4)
+      - name: Compile (.NET Framework 4 csc)
         shell: cmd
         run: >
           C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /optimize+

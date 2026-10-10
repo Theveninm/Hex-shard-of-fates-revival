@@ -8,10 +8,10 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Menu "Partie rapide" (v1 du mod) : choisir son deck, puis un adversaire parmi ses propres
-    /// decks, les decks du jeu ou les rencontres, et lancer la partie contre l'IA.
-    /// S'ouvre depuis le bouton "Partie rapide" de l'accueil (ou F1). Dessine en IMGUI avec les
-    /// sprites et polices du jeu ; l'interface du jeu (NGUI) est desactivee tant qu'il est ouvert.
+    /// "Quick Match" menu (mod v1): choose your deck, then an opponent among your own
+    /// decks, the game's decks or the encounters, and start the match against the AI.
+    /// Opens from the main menu's "Quick Match" button (or F1). Drawn with IMGUI using the game's
+    /// sprites and fonts; the game's interface (NGUI) is disabled while it is open.
     /// </summary>
     public class OfflineMenu : MonoBehaviour
     {
@@ -47,16 +47,16 @@ namespace HexRevival
         private void Awake() { Instance = this; }
 
         /// <summary>
-        /// Commande de test (fichier HexRevival.cmd) : "menu open|close", "menu list enc|game|mine [texte]",
-        /// "menu fight enc|game|mine &lt;n&gt; [texte]" (n-ieme resultat de la recherche ; mon deck = celui selectionne).
+        /// Test command (HexRevival.cmd file): "menu open|close", "menu list enc|game|mine [text]",
+        /// "menu fight enc|game|mine &lt;n&gt; [text]" (n-th search result; my deck = the selected one).
         /// </summary>
         public static string Command(string[] parts)
         {
             OfflineMenu m = Instance;
-            if (m == null) return "pas de menu";
+            if (m == null) return "no menu";
             string sub = parts.Length > 1 ? parts[1] : "open";
-            if (sub == "open") { m.SetOpen(true); return "ouvert"; }
-            if (sub == "close") { m.SetOpen(false); return "ferme"; }
+            if (sub == "open") { m.SetOpen(true); return "opened"; }
+            if (sub == "close") { m.SetOpen(false); return "closed"; }
             if (sub == "lang" && parts.Length > 2) { PlayerConfig.Language = parts[2]; m.Refresh(); return "langue " + Loc.Lang; }
             if (sub == "layouts")
             {
@@ -86,18 +86,18 @@ namespace HexRevival
             if (sub == "list")
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                sb.Append(found.Count).Append(" resultat(s), mon deck = ").Append(m.m_SelMine != null ? m.m_SelMine.Label : "-").Append('\n');
+                sb.Append(found.Count).Append(" result(s), my deck = ").Append(m.m_SelMine != null ? m.m_SelMine.Label : "-").Append('\n');
                 for (int i = 0; i < found.Count && i < 40; i++) sb.Append(i).Append(": ").Append(found[i].Label).Append(" | ").Append(found[i].Detail).Append('\n');
                 return sb.ToString();
             }
             if (sub == "fight")
             {
-                if (idx < 0 || idx >= found.Count) return "index hors liste (" + found.Count + ")";
+                if (idx < 0 || idx >= found.Count) return "index out of range (" + found.Count + ")";
                 m.m_SelOpp = found[idx];
                 m.Fight();
                 return "combat : " + (m.m_SelMine != null ? m.m_SelMine.Label : "-") + " contre " + found[idx].Label + " " + m.m_Message;
             }
-            return "sous-commande inconnue";
+            return "unknown subcommand";
         }
 
         private static bool OnLandingPage()
@@ -127,7 +127,7 @@ namespace HexRevival
             if (open)
             {
                 Refresh();
-                // Bloque les clics vers l'interface du jeu situee sous le menu.
+                // Blocks clicks to the game interface under the menu.
                 foreach (UICamera c in UICamera.list.ToArray())
                     if (c != null && c.enabled) { c.enabled = false; m_DisabledUi.Add(c); }
             }
@@ -139,7 +139,7 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Donnees
+        // Data
         // ------------------------------------------------------------------
 
         private void Refresh()
@@ -204,8 +204,8 @@ namespace HexRevival
                 {
                     EncounterScene es = sd as EncounterScene;
                     if (es == null) continue;
-                    // Seules les vraies batailles : une IA avec un deck. Les autres "rencontres" sont des
-                    // etapes de campagne sans combat (dialogues, recompenses, panoramas, entrees de donjon).
+                    // Real battles only: an AI with a deck. The other "encounters" are campaign
+                    // steps without combat (dialogs, rewards, panoramas, dungeon entrances).
                     if (!IsBattle(es, tm)) continue;
                     string title = es.Title;
                     if (string.IsNullOrEmpty(title)) title = es.Name;
@@ -218,7 +218,7 @@ namespace HexRevival
                 catch { }
             }
             m_Encounters.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
-            Debug.Log("[HexRevival] [Menu] " + m_GameDecks.Count + " decks du jeu, " + m_Encounters.Count + " rencontres");
+            Debug.Log("[HexRevival] [Menu] " + m_GameDecks.Count + " game decks, " + m_Encounters.Count + " encounters");
         }
 
         // ------------------------------------------------------------------
@@ -247,16 +247,16 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Bouton "Partie rapide" dans le menu principal du jeu
+        // "Quick Match" button in the game's main menu
         // ------------------------------------------------------------------
 
         private GameObject m_LandingButton, m_HiddenFrostRing;
         private static readonly Color QuickMatchGold = new Color(1f, 0.78f, 0.25f);
 
         /// <summary>
-        /// Ajoute "Partie rapide" a la colonne de boutons de l'accueil, en clonant le bouton
-        /// Frost Ring Arena (meme apparence). Il prend la place de Frost Ring Arena, mode qui
-        /// demande le serveur officiel.
+        /// Adds "Quick Match" to the main menu's button column, by cloning the
+        /// Frost Ring Arena button (same look). It takes the place of Frost Ring Arena, a mode that
+        /// needs the official server.
         /// </summary>
         private void EnsureLandingButton()
         {
@@ -269,7 +269,7 @@ namespace HexRevival
                         string t = Loc.Get("quick_match");
                         if (l.text != t) l.text = t;
                     }
-                // Le jeu peut reactiver Frost Ring Arena apres coup (drapeaux du profil) : on le recache.
+                // The game may re-enable Frost Ring Arena afterwards (profile flags): hide it again.
                 if (m_HiddenFrostRing != null && m_HiddenFrostRing.activeSelf && m_LandingButton.name == "HexRevival_QuickMatch")
                 {
                     m_HiddenFrostRing.SetActive(false);
@@ -294,11 +294,11 @@ namespace HexRevival
                 b.transform.localPosition = src.transform.localPosition;
                 b.transform.localRotation = src.transform.localRotation;
                 b.transform.localScale = src.transform.localScale;
-                // Tout en haut de la colonne (au-dessus de Campaign), sur fond plus sombre pour
-                // signaler que ce mode a ete ajoute par le mod.
+                // At the very top of the column (above Campaign), on a darker background to
+                // show that this mode was added by the mod.
                 Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
                 b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
-                // Retire les liaisons du jeu (texte localise, commandes vers Frost Ring).
+                // Removes the game's bindings (localized text, commands to Frost Ring).
                 foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
                 {
                     if (mb == null) continue;
@@ -312,10 +312,10 @@ namespace HexRevival
                     l.text = Loc.Get("quick_match");
                     l.color = new Color(1f, 0.84f, 0.42f);
                 }
-                // Pas de cadenas (le clone en garde un, cache ou non selon les drapeaux du profil).
+                // No padlock (the clone keeps one, hidden or not depending on the profile flags).
                 foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
                     if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
-                // Fond vert plus clair que les boutons gris-bleu du jeu, lettres et bordure dorees.
+                // Green background lighter than the game's grey-blue buttons, gold letters and border.
                 Color dark = new Color(0.78f, 1f, 0.78f), darkHover = Color.white;
                 UISprite baseSprite = null;
                 foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
@@ -336,12 +336,12 @@ namespace HexRevival
                 UIGrid grid = parent.GetComponent<UIGrid>();
                 if (grid != null) grid.Reposition();
                 m_LandingButton = b;
-                Debug.Log("[HexRevival] [Menu] bouton Partie rapide ajoute");
+                Debug.Log("[HexRevival] [Menu] Quick Match button added");
             }
             catch (Exception e)
             {
                 Debug.LogError("[HexRevival] [Menu] bouton : " + e);
-                m_LandingButton = src; // pas de nouvel essai a chaque image
+                m_LandingButton = src; // no new attempt every frame
             }
         }
 
@@ -352,7 +352,7 @@ namespace HexRevival
             return null;
         }
 
-        /// <summary>Voile vert clair et bordure doree par-dessus le fond du bouton, texte au-dessus.</summary>
+        /// <summary>Light green veil and gold border over the button background, text on top.</summary>
         private static void DecorateLandingButton(UISprite baseSprite, GameObject button)
         {
             UIAtlas frames = FindAtlas("A_Frames");
@@ -366,10 +366,10 @@ namespace HexRevival
             veil.color = new Color(0.55f, 0.95f, 0.55f, 0.28f);
             veil.depth = baseSprite.depth + 1;
             veil.transform.localPosition = new Vector3((0.5f - baseSprite.pivotOffset.x) * baseSprite.width, (0.5f - baseSprite.pivotOffset.y) * baseSprite.height, 0f);
-            // Bordure doree : quatre filets (le sprite blanc teinte donne un or franc).
+            // Gold border: four lines (the tinted white sprite gives a clean gold).
             Color gold = new Color(1f, 0.80f, 0.32f, 1f);
             int w = baseSprite.width - 4, h = baseSprite.height - 4, t = 3;
-            Vector2 off = baseSprite.pivotOffset; // centre du widget selon son pivot
+            Vector2 off = baseSprite.pivotOffset; // widget center according to its pivot
             Vector3 c = new Vector3((0.5f - off.x) * baseSprite.width, (0.5f - off.y) * baseSprite.height, 0f);
             UISprite border = null;
             for (int i = 0; i < 4; i++)
@@ -393,7 +393,7 @@ namespace HexRevival
                 l.effectStyle = UILabel.Effect.Outline;
                 l.effectColor = new Color(0.12f, 0.08f, 0.02f, 1f);
             }
-            // Si un effet de survol du jeu recolore le texte, il garde l'or.
+            // If a hover effect of the game recolors the text, it stays gold.
             foreach (UIButtonColor bc in button.GetComponentsInChildren<UIButtonColor>(true))
                 if (bc.tweenTarget != null && bc.tweenTarget.GetComponent<UILabel>() != null)
                 {
@@ -404,7 +404,7 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Dessin (sprites et polices du jeu, voir GameSkin)
+        // Drawing (game sprites and fonts, see GameSkin)
         // ------------------------------------------------------------------
 
         private void OnGUI()
@@ -421,7 +421,7 @@ namespace HexRevival
             float w = Mathf.Min(1180f * S, Screen.width - 24f), h = Mathf.Min(760f * S, Screen.height - 24f);
             Rect win = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f + 10f * S, w, h);
 
-            // Illustrations en fond, cadre principal, ornements lateraux
+            // Background artwork, main frame, side ornaments
             GameSkin.Sprite(new Rect(win.x + 20 * S, win.y + 60 * S, 300 * S, 330 * S), "A_SplashArt", "ArtSplash_01", 0.25f, false);
             GameSkin.Sprite(new Rect(win.xMax - 320 * S, win.y + 60 * S, 300 * S, 330 * S), "A_SplashArt", "ArtSplash_02", 0.25f, false);
             if (!GameSkin.Sprite(win, "A_Frames", "Frame_With_Header_Hard_Corner"))
@@ -429,7 +429,7 @@ namespace HexRevival
             GameSkin.Sprite(new Rect(win.x - 40 * S, win.y + win.height / 2 - 175 * S, 65 * S, 349 * S), "A_Frames", "Frame_Side_Embellishment2_Left", 1f, false);
             GameSkin.Sprite(new Rect(win.xMax - 25 * S, win.y + win.height / 2 - 175 * S, 65 * S, 349 * S), "A_Frames", "Frame_Side_Embellishment2_Right", 1f, false);
 
-            // Titre
+            // Title
             Rect title = new Rect(win.center.x - 260 * S, win.y - 22 * S, 520 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
             GameSkin.Label(title, Loc.Get("quick_match"), GameSkin.Style("title", 30, GameSkin.Gold, TextAnchor.MiddleCenter));
@@ -442,14 +442,14 @@ namespace HexRevival
             Rect left = new Rect(win.x + pad, top, leftW, bottom - top);
             Rect right = new Rect(left.xMax + colGap, top, win.xMax - pad - left.xMax - colGap, bottom - top);
 
-            // --- Colonne gauche : mon deck
+            // --- Left column: my deck
             GameSkin.Sprite(left, "A_Frames", "Frame_Generic_Inner");
             Rect lh = new Rect(left.x + 16 * S, left.y + 10 * S, left.width - 32 * S, 34 * S);
             GameSkin.Label(lh, Loc.Get("your_deck"), GameSkin.Style("title", 21, GameSkin.Gold));
             Rect listL = new Rect(left.x + 12 * S, lh.yMax + 8 * S, left.width - 24 * S, left.yMax - lh.yMax - 20 * S);
             m_ScrollMine = DrawMyDecks(listL, m_ScrollMine);
 
-            // --- Colonne droite : adversaire
+            // --- Right column: opponent
             GameSkin.Sprite(right, "A_Frames", "Frame_Generic_Inner");
             Rect rh = new Rect(right.x + 16 * S, right.y + 10 * S, right.width - 32 * S, 34 * S);
             GameSkin.Label(rh, Loc.Get("your_opponent"), GameSkin.Style("title", 21, GameSkin.Gold));
@@ -475,7 +475,7 @@ namespace HexRevival
             List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_MyDecks;
             m_ScrollOpp = DrawList(listR, list ?? new List<Entry>(), m_ScrollOpp, ref m_SelOpp, (m_Search ?? "").Trim().ToLowerInvariant());
 
-            // --- Bas : resume + actions
+            // --- Bottom: summary + actions
             float by = win.yMax - 74 * S;
             Rect summary = new Rect(win.x + pad, by, win.width - 2 * pad - 420 * S, 30 * S);
             GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + (m_SelOpp != null ? m_SelOpp.Label : "—"), GameSkin.Style("title", 19, GameSkin.Text));
@@ -488,7 +488,7 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Mes decks : creer, editer, supprimer
+        // My decks: create, edit, delete
         // ------------------------------------------------------------------
 
         private Entry m_ConfirmDelete;
@@ -502,7 +502,7 @@ namespace HexRevival
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
 
-            // Creer un nouveau deck
+            // Create a new deck
             Rect nr = new Rect(0, 0, view.width, newH);
             bool over = nr.Contains(Event.current.mousePosition);
             GameSkin.Sprite(nr, "A_Buttons", over ? "Button_Bar_Main_hover" : "Button_Bar_Main_Mid");
@@ -516,7 +516,7 @@ namespace HexRevival
             {
                 Entry e = m_MyDecks[i];
                 Rect r = new Rect(0, newH + gap + i * (rowH + gap), view.width, rowH);
-                // Icones a droite (dessinees avant la ligne : elles recoivent le clic en priorite).
+                // Icons on the right (drawn before the row: they get the click first).
                 Rect del = new Rect(r.xMax - 12 * S - icon, r.y + (rowH - icon) / 2f, icon, icon);
                 Rect edit = new Rect(del.x - iconGap - icon, del.y, icon, icon);
                 bool clickEdit = GameSkin.Icon(edit, "A_Shared_Atlas", "PvE_Nav_DeckEdit_01_Normal", "PvE_Nav_DeckEdit_02_Hover", "PvE_Nav_DeckEdit_03_Click");
@@ -524,7 +524,7 @@ namespace HexRevival
                 if (clickEdit) { OpenEditor(e.PlayerDeck); break; }
                 if (clickDel) { m_ConfirmDelete = e; break; }
                 if (GameSkin.Row(r, e.Label, e.Detail, m_SelMine == e, e.Champion, reserve)) { m_SelMine = e; m_Message = ""; }
-                // Les icones par-dessus le fond de la ligne
+                // The icons on top of the row background
                 GameSkin.Sprite(edit, "A_Shared_Atlas", edit.Contains(Event.current.mousePosition) ? "PvE_Nav_DeckEdit_02_Hover" : "PvE_Nav_DeckEdit_01_Normal", 1f, false);
                 GameSkin.Sprite(del, "A_Icons", del.Contains(Event.current.mousePosition) ? "Icon_DeleteDeck_Hover" : "Icon_DeleteDeck", 1f, false);
             }
@@ -569,7 +569,7 @@ namespace HexRevival
             catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] suppression : " + ex); }
         }
 
-        /// <summary>Ouvre l'editeur Collection sur ce deck (ou sur un nouveau deck si id invalide).</summary>
+        /// <summary>Opens the Collection editor on this deck (or on a new deck if the id is invalid).</summary>
         private void OpenEditor(UID deck)
         {
             SetOpen(false);
@@ -591,8 +591,8 @@ namespace HexRevival
                     break;
                 vm = null;
             }
-            if (vm == null) { Debug.LogWarning("[HexRevival] [Menu] editeur introuvable"); yield break; }
-            yield return new WaitForSeconds(0.5f); // laisse l'editeur finir son initialisation
+            if (vm == null) { Debug.LogWarning("[HexRevival] [Menu] editor not found"); yield break; }
+            yield return new WaitForSeconds(0.5f); // lets the editor finish its initialization
             try
             {
                 if (deck == UID.Invalid) { vm.OnNewDeckClick(); yield break; }
@@ -604,11 +604,11 @@ namespace HexRevival
                     {
                         ed.Context.Decks.SelectItem(dc);
                         ed.OnLoadDeckPressed();
-                        Debug.Log("[HexRevival] [Menu] deck ouvert dans l'editeur : " + deck);
+                        Debug.Log("[HexRevival] [Menu] deck opened in the editor: " + deck);
                         yield break;
                     }
                 }
-                Debug.LogWarning("[HexRevival] [Menu] deck absent de l'editeur : " + deck);
+                Debug.LogWarning("[HexRevival] [Menu] deck missing from the editor: " + deck);
             }
             catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); }
         }

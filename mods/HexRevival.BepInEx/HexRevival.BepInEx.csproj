@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Plugin BepInEx 5 de HexRevival. Build Windows : dotnet build -c Release
-       (alternative Linux sans SDK : tools/build_bepinex.sh, avec mcs). -->
+  <!-- BepInEx 5 plugin of HexRevival. Windows build: dotnet build -c Release
+       (Linux alternative without the SDK: build.sh, with mcs). -->
   <PropertyGroup>
     <TargetFramework>net35</TargetFramework>
     <LangVersion>7.3</LangVersion>
@@ -9,7 +9,7 @@
     <RootNamespace>HexRevival</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <!-- Compile contre le mscorlib du jeu (profil Mono 2.0) : pas d'API .NET 4.x par erreur. -->
+    <!-- Compiles against the game's mscorlib (Mono 2.0 profile): no .NET 4.x API by mistake. -->
     <NoStdLib>true</NoStdLib>
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\HEX SHARDS OF FATE</GameDir>
@@ -48,7 +48,7 @@
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- Après build : copie dans BepInEx/plugins (le jeu doit être fermé). -->
+  <!-- After build: copies into BepInEx/plugins (the game must be closed). -->
   <Target Name="DeployToGame" AfterTargets="Build" Condition="Exists('$(GameDir)\BepInEx')">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\HexRevival" />
   </Target>

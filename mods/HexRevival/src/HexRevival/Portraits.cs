@@ -6,9 +6,9 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Portraits des champions, charges comme le fait le jeu (AssetBundleObject.SetChampionPrefab) :
-    /// texture "championsandmercenaries/&lt;nom&gt;" du paquet CardSets, recadree sur le visage
-    /// (m_CircleHudLayout, la vignette ronde des listes de decks). Chargement a la demande, en cache.
+    /// Champion portraits, loaded the way the game does (AssetBundleObject.SetChampionPrefab):
+    /// texture "championsandmercenaries/&lt;name&gt;" from the CardSets bundle, cropped on the face
+    /// (m_CircleHudLayout, the round thumbnail of deck lists). Loaded on demand, cached.
     /// </summary>
     public static class Portraits
     {
@@ -21,7 +21,7 @@ namespace HexRevival
 
         private static readonly Dictionary<string, Item> s_Cache = new Dictionary<string, Item>();
 
-        /// <summary>Texture et zone du visage ; null tant que le chargement n'est pas termine.</summary>
+        /// <summary>Texture and face area; null until loading has finished.</summary>
         public static Texture2D Get(ChampionTemplate champ, out Rect uv)
         {
             uv = new Rect(0, 0, 1, 1);
@@ -37,7 +37,7 @@ namespace HexRevival
                     it.Uv = new Rect(l.m_PortraitCenterX - l.m_PortraitRadius, 1f - l.m_PortraitCenterY - l.m_PortraitRadius, l.m_PortraitRadius * 2f, l.m_PortraitRadius * 2f);
                 Request(champ, it);
             }
-            // Texture dechargee par le jeu (changement d'ecran) : on la redemande.
+            // Texture unloaded by the game (screen change): request it again.
             if (it.Requested && !it.Loading && !it.Failed && it.Texture == null)
             {
                 it.Requested = false;
@@ -80,8 +80,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Bandeau large centre sur le visage (comme les vignettes de la fenetre "Select Deck" de la
-        /// collection) : zone de l'image de rapport largeur/hauteur "aspect" a l'ecran.
+        /// Wide banner centered on the face (like the thumbnails of the collection's "Select Deck"
+        /// window): image area with the on-screen width/height ratio "aspect".
         /// </summary>
         public static Texture2D GetBanner(ChampionTemplate champ, float aspect, out Rect uv)
         {
@@ -89,7 +89,7 @@ namespace HexRevival
             Texture2D tex = Get(champ, out face);
             uv = new Rect(0, 0, 1, 1);
             if (tex == null) return null;
-            // Cadrage officiel des listes de decks : m_SelectionLayout (le meme que la fenetre Select Deck).
+            // Official framing of deck lists: m_SelectionLayout (the same as the Select Deck window).
             CardTemplateLayout sel = champ.m_SelectionLayout;
             if (sel != null && sel.m_PortraitRight > sel.m_PortraitLeft && sel.m_PortraitBottom > sel.m_PortraitTop)
             {
@@ -98,7 +98,7 @@ namespace HexRevival
             }
             float texAspect = (float)tex.width / Mathf.Max(1, tex.height);
             float cx = face.center.x, cy = face.center.y;
-            // Hauteur : un peu plus que le visage (tete et epaules) ; largeur deduite du rapport voulu.
+            // Height: a bit more than the face (head and shoulders); width derived from the wanted ratio.
             float h = Mathf.Clamp(face.height * 1.05f, 0.1f, 1f);
             float w = h * aspect / texAspect;
             if (w > 1f) { w = 1f; h = w * texAspect / aspect; }
@@ -108,7 +108,7 @@ namespace HexRevival
             return tex;
         }
 
-        /// <summary>Dessine un bandeau du champion (fond noir en attendant le chargement).</summary>
+        /// <summary>Draws a champion banner (black background while loading).</summary>
         public static void DrawBanner(Rect r, ChampionTemplate champ)
         {
             GUI.DrawTexture(r, GameSkin.Solid(new Color(0, 0, 0, 0.7f)));
@@ -117,7 +117,7 @@ namespace HexRevival
             if (tex != null) GUI.DrawTextureWithTexCoords(r, tex, uv, true);
         }
 
-        /// <summary>Dessine le visage du champion dans un cadre du jeu (ou un cadre vide en attendant).</summary>
+        /// <summary>Draws the champion's face in a game frame (or an empty frame while loading).</summary>
         public static void Draw(Rect r, ChampionTemplate champ)
         {
             GUI.DrawTexture(r, GameSkin.Solid(new Color(0, 0, 0, 0.6f)));

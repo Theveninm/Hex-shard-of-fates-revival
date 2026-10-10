@@ -10,14 +10,14 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Profil joueur local (remplace le flux de profil que le serveur envoyait a la connexion).
+    /// Local player profile (replaces the profile stream the server sent at login).
     ///
-    /// Le client recoit TOUT le profil (cartes, decks, champions, or, objets, XP) par une seule
-    /// fonction : PlayerProfile.GetUserProfileInfoResponse(GetUserProfileInfoResponse{ReckoningBits}),
-    /// appelee a la fin de HandleProfileStream. On lui fournit ce paquet, construit localement.
+    /// The client receives the WHOLE profile (cards, decks, champions, gold, items, XP) through a single
+    /// function: PlayerProfile.GetUserProfileInfoResponse(GetUserProfileInfoResponse{ReckoningBits}),
+    /// called at the end of HandleProfileStream. We give it that packet, built locally.
     ///
-    /// Etape 1 : collection complete generee (4 exemplaires de chaque carte possedable, une version
-    /// par nom) + or. La sauvegarde des decks viendra ensuite (requetes UpdateDeck/AddNewDeck).
+    /// Step 1: generated full collection (4 copies of every collectible card, one version
+    /// per name) + gold. Deck saving comes next (UpdateDeck/AddNewDeck requests).
     /// </summary>
     public static class LocalProfile
     {
@@ -28,23 +28,23 @@ namespace HexRevival
         private static UID s_PendingId;
         private static string s_PendingName;
 
-        /// <summary>Appele a chaque image : termine un chargement differe (cartes encore en cours de lecture a la connexion).</summary>
+        /// <summary>Called every frame: finishes a deferred load (cards still being read at login).</summary>
         public static void Pump()
         {
             if (s_PendingProfile == null || !Singleton<TemplateManager>.Instance.LoadCompleted) return;
             PlayerProfile p = s_PendingProfile;
             s_PendingProfile = null;
             try { Load(p, s_PendingId, s_PendingName); }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Profil] chargement differe : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] deferred load: " + e); }
         }
 
         public static void Load(PlayerProfile profile, UID reckId, string name)
         {
             if (!Singleton<TemplateManager>.Instance.LoadCompleted)
             {
-                // Les modeles de cartes sont encore en cours de lecture (autre thread) : on attend.
+                // Card templates are still being read (another thread): wait.
                 s_PendingProfile = profile; s_PendingId = reckId; s_PendingName = name;
-                Debug.Log("[HexRevival] [Profil] cartes pas encore chargees : profil differe");
+                Debug.Log("[HexRevival] [Profile] cards not loaded yet: profile deferred");
                 return;
             }
             reckoning_bits bits = new reckoning_bits();
@@ -55,8 +55,8 @@ namespace HexRevival
             bits.Level = 1;
             bits.ProfileId = 1UL;
 
-            // Une version par nom : de preference celle d'un set "normal" (sets 1 a 9, format
-            // Immortal) ; l'editeur filtre par format et ignorerait une version PvE/promo.
+            // One version per name: preferably the one from a "normal" set (sets 1 to 9, Immortal
+            // format); the editor filters by format and would ignore a PvE/promo version.
             HashSet<ResourceId> mainSets = new HashSet<ResourceId>(Game.Shared.Resources.BuiltInResources.Format_Immortal);
             Dictionary<string, CardTemplate> byName = new Dictionary<string, CardTemplate>();
             foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
@@ -80,7 +80,7 @@ namespace HexRevival
                 CardTemplate t = byName[n];
                 templates++;
                 if (mainSets.Contains(t.m_SetId)) main++;
-                // Shards de base : nombre illimite dans un deck, on en donne 60.
+                // Basic shards: unlimited in a deck, we give 60.
                 int copies = CopiesPerCard;
                 try { if (t.IsBasicResource()) copies = 60; } catch { }
                 for (int i = 0; i < copies; i++)
@@ -94,10 +94,10 @@ namespace HexRevival
                     bits.Cards.Add(c);
                 }
             }
-            Debug.Log("[HexRevival] [Profil] versions retenues : " + main + " des sets 1-9 sur " + templates);
+            Debug.Log("[HexRevival] [Profile] versions kept: " + main + " from sets 1-9 out of " + templates);
 
-            // Shards de base : TOUTES les versions (le jeu en a deux par couleur ; certains modes,
-            // ex. la campagne, attendent une version precise), 60 exemplaires chacune.
+            // Basic shards: ALL versions (the game has two per color; some modes,
+            // e.g. the campaign, expect a specific version), 60 copies each.
             HashSet<ResourceId> given = new HashSet<ResourceId>();
             foreach (CardTemplate t in byName.Values) given.Add(t.m_Id);
             int extraShards = 0;
@@ -119,9 +119,9 @@ namespace HexRevival
                     bits.Cards.Add(c);
                 }
             }
-            Debug.Log("[HexRevival] [Profil] versions supplementaires de shards : " + extraShards);
+            Debug.Log("[HexRevival] [Profile] extra shard versions: " + extraShards);
 
-            // Equipements (champions PvE) : un exemplaire de chaque, dans l'inventaire.
+            // Equipment (PvE champions): one copy of each, in the inventory.
             int equip = 0;
             ulong itemId = 1;
             foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
@@ -137,10 +137,10 @@ namespace HexRevival
                 bits.InventoryIds.Add(inv);
                 equip++;
             }
-            Debug.Log("[HexRevival] [Profil] equipements : " + equip);
+            Debug.Log("[HexRevival] [Profile] equipements : " + equip);
 
             try { foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d); }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Profil] decks : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] decks : " + e); }
 
             Type respType = typeof(PlayerProfile).Assembly.GetType("Game.Client.Network.Profile.GetUserProfileInfoResponse");
             object resp = Activator.CreateInstance(respType);
@@ -153,11 +153,11 @@ namespace HexRevival
             }
             catch (TargetInvocationException e)
             {
-                // La fin de la methode rejoint un salon de discussion (reseau absent) : sans
-                // importance, cartes/decks/or sont deja charges a ce stade.
-                Debug.Log("[HexRevival] [Profil] fin de GetUserProfileInfoResponse ignoree : " + (e.InnerException != null ? e.InnerException.Message : e.Message));
+                // The end of the method joins a chat room (no network): irrelevant,
+                // cards/decks/gold are already loaded at this point.
+                Debug.Log("[HexRevival] [Profile] end of GetUserProfileInfoResponse ignored: " + (e.InnerException != null ? e.InnerException.Message : e.Message));
             }
-            Debug.Log("[HexRevival] [Profil] profil local charge : " + templates + " cartes x" + CopiesPerCard + ", or " + StartingGold);
+            Debug.Log("[HexRevival] [Profile] local profile loaded: " + templates + " cards x" + CopiesPerCard + ", gold " + StartingGold);
         }
 
         private static void SetMember(object target, string name, object value)

@@ -11,15 +11,15 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Injecteur de triche POUR LES TESTS, volontairement separe de la logique du mod.
-    /// Inactif sauf si le fichier "HexRevival.cheats" existe a la racine du jeu.
-    /// Agit cote "serveur" (session autoritative) : le client recoit les changements par le
-    /// flux normal (deltas d'etat + options), ce qui teste aussi ce flux.
+    /// Cheat injector FOR TESTING, deliberately kept apart from the mod's logic.
+    /// Inactive unless the file "HexRevival.cheats" exists in the game folder.
+    /// Acts on the "server" side (authoritative session): the client receives the changes through the
+    /// normal stream (state deltas + options), which also tests that stream.
     ///
-    /// Commandes (canal HexRevival.cmd) :
-    ///   cheat find &lt;texte&gt;               cartes dont le nom contient le texte
-    ///   cheat give &lt;j|ia&gt; &lt;nom de carte&gt;   ajoute la carte dans la main
-    ///   cheat res &lt;j|ia&gt; &lt;n&gt;               +n ressources (total, courant, seuils de toutes couleurs)
+    /// Commands (HexRevival.cmd channel):
+    ///   cheat find &lt;text&gt;               cards whose name contains the text
+    ///   cheat give &lt;j|ia&gt; &lt;card name&gt;   puts the card in the hand
+    ///   cheat res &lt;j|ia&gt; &lt;n&gt;               +n resources (total, current, thresholds of every color)
     /// </summary>
     public static class Cheats
     {
@@ -31,7 +31,7 @@ namespace HexRevival
         public static string Execute(StandaloneGameClient gc, string[] parts)
         {
             if (!Enabled())
-                return "triches desactivees (creer HexRevival.cheats)";
+                return "cheats disabled (create HexRevival.cheats)";
             if (parts.Length < 2)
                 return "usage: cheat find|give|res ...";
             string sub = parts[1].ToLower();
@@ -44,12 +44,12 @@ namespace HexRevival
 
             StandaloneSession ss = GetServer(gc);
             if (ss == null)
-                return "pas de partie en cours";
+                return "no game in progress";
             if (parts.Length < 4)
-                return "usage: cheat " + sub + " <j|ia> ...";
+                return "usage: cheat " + sub + " <j|ai> ...";
             Player p = FindPlayer(ss, parts[2]);
             if (p == null)
-                return "joueur introuvable (j ou ia)";
+                return "player not found (j or ai)";
 
             switch (sub)
             {
@@ -57,7 +57,7 @@ namespace HexRevival
                 {
                     CardTemplate t = FindCard(string.Join(" ", parts, 3, parts.Length - 3));
                     if (t == null)
-                        return "carte introuvable";
+                        return "card not found";
                     GiveToHand(ss, p, t);
                     Server.MarkDirty();
                     return "donne " + t.m_Name + " a " + p.m_PlayerId;
@@ -66,24 +66,24 @@ namespace HexRevival
                 {
                     int n;
                     if (!int.TryParse(parts[3], out n))
-                        return "nombre invalide";
+                        return "invalid number";
                     ss.IncrementPlayerTotalResourcePool(p, n, false);
                     ss.IncrementPlayerCurrentResourcePool(p, n, false);
                     foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
                         ss.IncrementPlayerResourceThreshold(p, c, n, false);
                     Server.MarkDirty();
-                    return "ressources +" + n + " pour " + p.m_PlayerId;
+                    return "resources +" + n + " for " + p.m_PlayerId;
                 }
             }
-            return "sous-commande inconnue";
+            return "unknown subcommand";
         }
 
         /// <summary>
-        /// Met une carte neuve dans la main, comme la triche de debogage du jeu
-        /// (DebugCheatTransaction) : creation, dessus de la pioche, capacites de creation,
-        /// capacites PERMANENTES seulement, puis pioche. CreateEncounterCardsInZone(Main) creait
-        /// TOUTES les capacites automatiques des la creation : elles etaient recreees a l'entree
-        /// en jeu, d'ou des effets statiques doubles (ex. Briar Legion +4/+4 au lieu de +2/+2).
+        /// Puts a new card in the hand, like the game's debug cheat
+        /// (DebugCheatTransaction): creation, top of the deck, creation abilities,
+        /// PERMANENT abilities only, then draw. CreateEncounterCardsInZone(Main) created
+        /// ALL automatic abilities at creation: they were created again when the card entered
+        /// play, hence doubled static effects (e.g. Briar Legion +4/+4 instead of +2/+2).
         /// </summary>
         public static Card GiveToHand(StandaloneSession ss, Player p, CardTemplate t)
         {
@@ -130,7 +130,7 @@ namespace HexRevival
             return partial;
         }
 
-        /// <summary>Texte complet d'une carte (texte de la carte + textes de ses capacites).</summary>
+        /// <summary>Full text of a card (card text + texts of its abilities).</summary>
         private static string CardText(CardTemplate t)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder(t.m_GameText ?? "");
@@ -142,7 +142,7 @@ namespace HexRevival
             return sb.ToString();
         }
 
-        /// <summary>cheat text &lt;mots&gt; : cartes (une par nom) dont le texte contient les mots.</summary>
+        /// <summary>cheat text &lt;words&gt;: cards (one per name) whose text contains the words.</summary>
         private static string FindText(string text)
         {
             text = text.Trim().ToLower();
@@ -156,14 +156,14 @@ namespace HexRevival
                 res.Add(t.m_Name + " [" + t.m_CardType + ", " + t.m_ResourceCost + "]");
                 if (res.Count >= 40) break;
             }
-            return res.Count + " carte(s)\n" + string.Join("\n", res.ToArray());
+            return res.Count + " card(s)\n" + string.Join("\n", res.ToArray());
         }
 
-        /// <summary>cheat cost &lt;min&gt; [type] : cartes de cout &gt;= min (40 max).</summary>
+        /// <summary>cheat cost &lt;min&gt; [type]: cards costing &gt;= min (40 max).</summary>
         private static string FindCost(string min, string type)
         {
             int m;
-            if (!int.TryParse(min, out m)) return "cout invalide";
+            if (!int.TryParse(min, out m)) return "invalid cost";
             type = type.ToLower();
             HashSet<string> seen = new HashSet<string>();
             List<string> res = new List<string>();
@@ -176,7 +176,7 @@ namespace HexRevival
                 res.Add(t.m_Name + " [" + t.m_CardType + ", " + t.m_ResourceCost + "]");
             }
             res.Sort();
-            return res.Count + " carte(s)\n" + string.Join("\n", res.GetRange(0, Math.Min(60, res.Count)).ToArray());
+            return res.Count + " card(s)\n" + string.Join("\n", res.GetRange(0, Math.Min(60, res.Count)).ToArray());
         }
 
         private static string Find(string text)
@@ -197,11 +197,11 @@ namespace HexRevival
 namespace HexRevival
 {
     /// <summary>
-    /// Banc d'essai des cartes (outil de test, separe du mod). Actif si "HexRevival.gauntlet" existe
-    /// (et HexRevival.cheats). A chaque debut de phase principale, le joueur actif (joue par l'IA)
-    /// recoit les K cartes suivantes de la liste des cartes possedables + des ressources ;
-    /// on note ensuite si chaque carte a quitte la main (= jouee). Resultats :
-    /// HexRevival.gauntlet.csv (carte;partie;tour;joueur;resultat;zone). Position : HexRevival.gauntlet.
+    /// Card test bench (test tool, separate from the mod). Active if "HexRevival.gauntlet" exists
+    /// (and HexRevival.cheats). At the start of each main phase, the active player (played by the AI)
+    /// receives the next K cards from the list of collectible cards + resources;
+    /// we then record whether each card left the hand (= played). Results:
+    /// HexRevival.gauntlet.csv (card;game;turn;player;result;zone). Position: HexRevival.gauntlet.
     /// </summary>
     public static class Gauntlet
     {
@@ -219,12 +219,12 @@ namespace HexRevival
             public bool PlayableAtFeed;
             public Card Created;
             public bool Checked;
-            public int Windows;   // fenetres ou le detenteur avait la priorite (phase principale, chaine vide)
-            public int CanPlay;   // ... dont celles ou le moteur disait la carte jouable
+            public int Windows;   // windows where the holder had priority (main phase, empty chain)
+            public int CanPlay;   // ... of which those where the engine said the card was playable
             public int Forced;
             public int Skips;
-            public int ClientWindows;      // fenetres (vues du client) ou l'option "jouer" etait presente
-            public string LastWindowKey, LastForcedKey;    // tentatives de jeu forcees (mode HexRevival.gauntlet.force)
+            public int ClientWindows;      // windows (seen by the client) where the "play" option was present
+            public string LastWindowKey, LastForcedKey;    // forced play attempts (HexRevival.gauntlet.force mode)
         }
 
         private static List<CardTemplate> s_Cards;
@@ -233,22 +233,22 @@ namespace HexRevival
         private static int s_Game;
 
         private static string Root { get { return Path.GetFullPath(Application.dataPath + "/../"); } }
-        /// <summary>Activation : fichier HexRevival.gauntlet (commun). Position : par instance.</summary>
+        /// <summary>Activation: HexRevival.gauntlet file (shared). Position: per instance.</summary>
         private static string MarkerPath { get { return Path.Combine(Root, "HexRevival.gauntlet"); } }
         private static string StatePath { get { return Path.Combine(Root, Instance.Id == 0 ? "HexRevival.gauntlet" : "HexRevival.gauntlet.pos" + Instance.Suffix); } }
         private static string CsvPath { get { return Path.Combine(Root, Instance.Name("HexRevival.gauntlet.csv")); } }
 
         public static bool Enabled() { return Cheats.Enabled() && File.Exists(MarkerPath); }
 
-        /// <summary>Mode "cible" (fichier HexRevival.gauntlet.focus) : moins de cartes par tour et un
-        /// plateau prepare a chaque distribution (troupes en jeu et au cimetiere des deux cotes,
-        /// un artefact chacun) pour que les sorts aient toujours des cibles.</summary>
+        /// <summary>"Target" mode (HexRevival.gauntlet.focus file): fewer cards per turn and a
+        /// board prepared at each deal (troops in play and in the graveyard on both sides,
+        /// one artifact each) so that spells always have targets.</summary>
         private static bool Focus() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.focus")); }
 
         private static CardTemplate s_FillerTroop, s_FillerArtifact;
         private static bool s_FillersSearched;
 
-        /// <summary>Cartes "neutres" pour garnir le plateau : sans capacite, troupe 2-3 / 2-4.</summary>
+        /// <summary>"Neutral" cards to fill the board: no ability, 2-3 / 2-4 troop.</summary>
         private static void FindFillers()
         {
             if (s_FillersSearched) return;
@@ -265,7 +265,7 @@ namespace HexRevival
                 if (s_FillerArtifact == null && (t.m_CardType & ECardTypes.Artifact) != 0 && (t.m_CardType & ECardTypes.Troop) == 0)
                     s_FillerArtifact = t;
             }
-            Debug.Log("[HexRevival] [Gauntlet] cartes de remplissage : troupe=" + (s_FillerTroop != null ? s_FillerTroop.m_Name : "-")
+            Debug.Log("[HexRevival] [Gauntlet] filler cards: troop=" + (s_FillerTroop != null ? s_FillerTroop.m_Name : "-")
                 + " artefact=" + (s_FillerArtifact != null ? s_FillerArtifact.m_Name : "-"));
         }
 
@@ -299,7 +299,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Resume pour le fichier d'etat : position, total, cartes jouees / non jouees.</summary>
+        /// <summary>Summary for the status file: position, total, played / unplayed cards.</summary>
         public static string Summary()
         {
             int total = Cards().Count, pos = ReadIndex(), played = 0, notPlayed = 0;
@@ -308,31 +308,31 @@ namespace HexRevival
                 if (File.Exists(CsvPath))
                     foreach (string l in File.ReadAllLines(CsvPath))
                     {
-                        if (l.Contains(";jouee;")) played++;
-                        else if (l.Contains(";NON_JOUEE;")) notPlayed++;
+                        if (l.Contains(";played;")) played++;
+                        else if (l.Contains(";NOT_PLAYED;")) notPlayed++;
                     }
             }
             catch { }
             int done = Math.Min(pos, total);
-            return "Banc d'essai : carte " + done + " / " + total + " (" + (total > 0 ? (100 * done / total) : 0) + " %)"
-                + (pos >= total ? "  -> TERMINE" : "")
-                + "\nCartes jouees : " + played + "   non jouees : " + notPlayed;
+            return "Test bench: card " + done + " / " + total + " (" + (total > 0 ? (100 * done / total) : 0) + " %)"
+                + (pos >= total ? "  -> DONE" : "")
+                + "\nPlayed cards: " + played + "   not played: " + notPlayed;
         }
 
         /// <summary>
-        /// Toutes les cartes du jeu jouables en partie (y compris PvE / IA uniquement), une par nom :
-        /// hors champions, ressources et jetons ("Land"). Triees par nom pour un ordre stable.
+        /// Every card of the game playable in a match (including PvE / AI-only), one per name:
+        /// excluding champions, resources and tokens ("Land"). Sorted by name for a stable order.
         /// </summary>
         private static List<CardTemplate> Cards()
         {
-            // Ne pas figer la liste avant la fin du chargement des cartes (le fichier d'etat
-            // interroge le banc des l'ecran de connexion).
+            // Do not freeze the list before the cards have finished loading (the status file
+            // queries the bench from the login screen on).
             if (s_Cards == null && !Singleton<TemplateManager>.Instance.LoadCompleted)
                 return new List<CardTemplate>();
             string listPath = Path.Combine(Root, "HexRevival.gauntlet.list");
             if (s_Cards == null && File.Exists(listPath))
             {
-                // Liste restreinte (un nom de carte par ligne), ex. pour retester les cartes non jouees.
+                // Restricted list (one card name per line), e.g. to retest the unplayed cards.
                 HashSet<string> wanted = new HashSet<string>();
                 foreach (string l in File.ReadAllLines(listPath))
                     if (l.Trim().Length > 0) wanted.Add(l.Trim());
@@ -361,8 +361,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Position dans la liste. Avec N instances, l'instance k traite les cartes k, k+N, k+2N...
-        /// (fichier de position propre a chaque instance ; l'instance 0 seule reprend HexRevival.gauntlet).
+        /// Position in the list. With N instances, instance k handles cards k, k+N, k+2N...
+        /// (position file specific to each instance; only instance 0 uses HexRevival.gauntlet).
         /// </summary>
         private static int ReadIndex()
         {
@@ -379,7 +379,7 @@ namespace HexRevival
             s_Game++;
         }
 
-        /// <summary>Appele chaque seconde pendant un combat.</summary>
+        /// <summary>Called every second during a match.</summary>
         public static void Tick(StandaloneSession ss, LocalPlayer clientPlayer)
         {
             s_ClientPlayer = clientPlayer;
@@ -392,7 +392,7 @@ namespace HexRevival
                 Resolve(false);
                 return;
             }
-            // Mode force : seules les cartes du joueur "client" peuvent etre forcees ; ne donner qu'a lui.
+            // Forced mode: only the "client" player's cards can be forced; give cards to that player only.
             if (ForceMode() && s_ClientPlayer != null && active.m_PlayerId != s_ClientPlayer.m_PlayerId)
                 return;
             string key = s_Game + "|" + ss.m_TotalTurnsTaken + "|" + active.m_PlayerId;
@@ -410,7 +410,7 @@ namespace HexRevival
             {
                 if (index >= cards.Count)
                 {
-                    Debug.Log("[HexRevival] [Gauntlet] liste terminee");
+                    Debug.Log("[HexRevival] [Gauntlet] list finished");
                     break;
                 }
                 CardTemplate t = cards[index];
@@ -443,19 +443,19 @@ namespace HexRevival
                 try { g.PlayableAtFeed = ss.CanPlayCard(g.Created, active); } catch { }
             }
             Server.MarkDirty();
-            Debug.Log("[HexRevival] [Gauntlet] cartes donnees jusqu'a l'index " + index + " a " + active.m_PlayerId);
+            Debug.Log("[HexRevival] [Gauntlet] cards given up to index " + index + " to " + active.m_PlayerId);
         }
 
-        /// <summary>Diagnostic : a chaque seconde ou un detenteur a la priorite (phase principale,
-        /// chaine vide), note si le moteur juge sa carte jouable.</summary>
+        /// <summary>Diagnostics: every second where a holder has priority (main phase,
+        /// empty chain), records whether the engine considers its card playable.</summary>
         private static LocalPlayer s_ClientPlayer;
         private static bool s_ForcedThisTick;
         private static bool ForceMode() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.force")); }
 
         /// <summary>
-        /// Mode force : fait jouer la carte par l'IA de son detenteur sans passer par sa decision
-        /// (AITactical.PlayCard(carte) prive : meme construction des donnees d'activation que l'IA).
-        /// Sert a verifier que la carte FONCTIONNE, independamment des choix de l'IA.
+        /// Forced mode: makes the holder's AI play the card without going through its decision
+        /// (private AITactical.PlayCard(card): same activation data construction as the AI).
+        /// Used to check that the card WORKS, independently of the AI's choices.
         /// </summary>
         private static void ForcePlay(StandaloneSession ss, Player prio, Given g)
         {
@@ -469,7 +469,7 @@ namespace HexRevival
             if (fn == null) return;
             CardRepresentation cr = fn.GetCard(g.Id);
             if (cr == null) return;
-            // Attendre que le client ait rattrape le serveur (file vide, option "jouer" recue).
+            // Wait until the client has caught up with the server (empty queue, "play" option received).
             string q = ClientQueue(owner);
             ClientSessionBase csb = owner.m_Session as ClientSessionBase;
             bool clientPrio = csb == null || (csb.PriorityPlayer != null && csb.PriorityPlayer.m_PlayerId == owner.m_PlayerId);
@@ -478,7 +478,7 @@ namespace HexRevival
                 if (g.Skips++ < 4)
                 {
                     ClientSessionBase cs = owner.m_Session as ClientSessionBase;
-                    Debug.Log("[HexRevival] [Gauntlet] attente " + g.Name + " : file=" + q + " usage=" + cr.Usage
+                    Debug.Log("[HexRevival] [Gauntlet] waiting for " + g.Name + " : file=" + q + " usage=" + cr.Usage
                         + " optionsClient=" + (cs != null ? cs.Cache.GetUsageFor(g.Id).ToString() : "?")
                         + " prioClient=" + (cs != null && cs.PriorityPlayer != null ? cs.PriorityPlayer.m_PlayerId.ToString() : "?")
                         + " phaseClient=" + (cs != null ? cs.CurrentPhase.ToString() : "?") + " phaseSrv=" + ss.CurrentTurnPhase);
@@ -489,15 +489,15 @@ namespace HexRevival
             bool wasFor;
             Server.LastPlayOffer.TryGetValue(prio.m_PlayerId, out last);
             Server.LastOfferWasFor.TryGetValue(prio.m_PlayerId, out wasFor);
-            Debug.Log("[HexRevival] [Gauntlet] avant jeu force de " + g.Name + " : usage client=" + cr.Usage
-                + " zone client=" + cr.Collection + " derniere liste serveur=" + (last == null ? "aucune" : (last.Contains(g.Id) ? "avec la carte" : "sans la carte (" + last.Count + ")"))
-                + (wasFor ? " [liste SendPlayerOptionsFor]" : "") + " chaine=" + ss.Chain.IsEmpty + " phase=" + ss.CurrentTurnPhase
+            Debug.Log("[HexRevival] [Gauntlet] before forced play of " + g.Name + ": client usage=" + cr.Usage
+                + " client zone=" + cr.Collection + " last server list=" + (last == null ? "none" : (last.Contains(g.Id) ? "with the card" : "without the card (" + last.Count + ")"))
+                + (wasFor ? " [SendPlayerOptionsFor list]" : "") + " chain=" + ss.Chain.IsEmpty + " phase=" + ss.CurrentTurnPhase
                 + " fileClient=" + ClientQueue(owner) + " usagesClient=" + ClientUsages(fn, owner));
             MethodInfo m = ai.GetType().GetMethod("PlayCard", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(CardRepresentation) }, null);
             if (m == null) return;
             g.Forced++;
             object r = m.Invoke(ai, new object[] { cr });
-            Debug.Log("[HexRevival] [Gauntlet] jeu force de " + g.Name + " par " + prio.m_PlayerId + " -> " + r);
+            Debug.Log("[HexRevival] [Gauntlet] forced play of " + g.Name + " by " + prio.m_PlayerId + " -> " + r);
         }
 
         private static string ClientQueue(LocalPlayer owner)
@@ -524,9 +524,9 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Mode force, a chaque image : quand le CLIENT (en retard sur le serveur, file de paquets)
-        /// voit la priorite chez son joueur en phase principale avec l'option "jouer" sur une carte
-        /// du banc, on compte la fenetre ; apres 2 fenetres laissees a l'IA, on force le jeu.
+        /// Forced mode, every frame: when the CLIENT (behind the server, packet queue)
+        /// sees priority on its player in the main phase with the "play" option on a bench
+        /// card, we count the window; after 2 windows left to the AI, we force the play.
         /// </summary>
         public static void FrameCheck(StandaloneSession ss, LocalPlayer client)
         {
@@ -538,7 +538,7 @@ namespace HexRevival
                 return;
             if (!cs.CurrentPhase.IsMainPhasePriorityWindow())
                 return;
-            // Client et serveur d'accord (sinon la transaction part sur un etat perime et echoue).
+            // Client and server agree (otherwise the transaction is built on a stale state and fails).
             Player srvPrio = ss.GetPriorityPlayer();
             if (srvPrio == null || srvPrio.m_PlayerId != client.m_PlayerId || ClientQueue(client) != "0" || !ss.Chain.IsEmpty)
                 return;
@@ -555,7 +555,7 @@ namespace HexRevival
                 Player prio = ss.GetPriorityPlayer();
                 try { ForcePlay(ss, prio ?? client, g); }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Gauntlet] ForcePlay " + g.Name + ": " + e); }
-                return; // une seule tentative par image
+                return; // only one attempt per frame
             }
         }
 
@@ -581,7 +581,7 @@ namespace HexRevival
             catch { }
         }
 
-        /// <summary>Ecrit les cartes dont le sort est connu (sorties de main), ou toutes si fin de partie.</summary>
+        /// <summary>Writes the cards whose fate is known (left the hand), or all of them at the end of the game.</summary>
         private static void Resolve(bool all)
         {
             if (s_Given.Count == 0)
@@ -598,7 +598,7 @@ namespace HexRevival
                     continue;
                 int fails;
                 Server.FailuresByCard.TryGetValue(g.Id, out fails);
-                lines.Add(string.Join(";", new[] { g.Name.Replace(";", ","), g.Game.ToString(), g.Turn.ToString(), g.Player.ToString(), played ? "jouee" : "NON_JOUEE", zone,
+                lines.Add(string.Join(";", new[] { g.Name.Replace(";", ","), g.Game.ToString(), g.Turn.ToString(), g.Player.ToString(), played ? "played" : "NOT_PLAYED", zone,
                     g.PlayableAtFeed ? "jouable" : "injouable", fails.ToString(),
                     g.Windows.ToString(), g.CanPlay.ToString(), Server.OfferedToPlay.Contains(g.Id) ? "proposee" : "jamais_proposee", g.Forced.ToString() }));
                 s_Given.RemoveAt(i);

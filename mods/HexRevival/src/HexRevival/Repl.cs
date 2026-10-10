@@ -11,9 +11,9 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Mini-debugger generique par reflexion : lecture/ecriture de n'importe quel
-    /// champ/propriete (public ou prive), a n'importe quelle profondeur, + appel de methodes.
-    /// Accessible via le canal de commandes (HexRevival.cmd).
+    /// Generic mini-debugger through reflection: reads/writes any
+    /// field/property (public or private), at any depth, + method calls.
+    /// Available through the command channel (HexRevival.cmd).
     /// </summary>
     public static class Repl
     {
@@ -56,7 +56,7 @@ namespace HexRevival
                 case "getref": return GetRef(parts, refs);
                 case "call": return Call(parts, refs, staticOnly: true);
                 case "callref": return Call(parts, refs, staticOnly: false);
-                default: return "commande inconnue. refs|types|statics|get|set|getref|call|callref";
+                default: return "unknown command. refs|types|statics|get|set|getref|call|callref";
             }
         }
 
@@ -93,7 +93,7 @@ namespace HexRevival
         private static string Statics(string typeName)
         {
             Type t = FindType(typeName);
-            if (ReferenceEquals(t, null)) return "type introuvable";
+            if (ReferenceEquals(t, null)) return "type not found";
             StringBuilder sb = new StringBuilder();
             foreach (FieldInfo fi in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             {
@@ -112,7 +112,7 @@ namespace HexRevival
 
         private static string Get(string[] parts, Dictionary<string, object> refs)
         {
-            // get <ref> <path>   (regarde d'abord dans les refs, sinon type statique)
+            // get <ref> <path>   (looks in the refs first, otherwise static type)
             if (parts.Length < 3) return "usage: get <ref|Type> <path>";
             object cur;
             if (refs.TryGetValue(parts[1], out cur))
@@ -120,7 +120,7 @@ namespace HexRevival
             Type t = FindType(parts[1]);
             if (!ReferenceEquals(t, null))
                 return parts[1] + "." + parts[2] + " = " + Summarize(WalkStatic(t, parts[2]));
-            return "ref/type introuvable: " + parts[1];
+            return "ref/type not found: " + parts[1];
         }
 
         private static string GetRef(string[] parts, Dictionary<string, object> refs)
@@ -138,11 +138,11 @@ namespace HexRevival
             Type t;
             if (refs.TryGetValue(parts[1], out cur)) { target = WalkParent(cur, path); t = ReferenceEquals(target, null) ? null : target.GetType(); }
             else { t = FindType(parts[1]); target = null; }
-            if (ReferenceEquals(t, null) && ReferenceEquals(target, null)) return "ref/type introuvable";
+            if (ReferenceEquals(t, null) && ReferenceEquals(target, null)) return "ref/type not found";
             string member = LastMember(path);
             object converted = ConvertArg(value, FindMemberType(target, t, member));
             bool ok = SetMember(target, t, member, converted);
-            return ok ? "set ok" : "set echec";
+            return ok ? "set ok" : "set failed";
         }
 
         private static string Call(string[] parts, Dictionary<string, object> refs, bool staticOnly)
@@ -153,12 +153,12 @@ namespace HexRevival
             if (staticOnly)
             {
                 t = FindType(parts[1]);
-                if (ReferenceEquals(t, null)) return "type introuvable";
-                if (parts.Length < 4) { } // pas d'arg
+                if (ReferenceEquals(t, null)) return "type not found";
+                if (parts.Length < 4) { } // no argument
             }
             else
             {
-                if (!refs.TryGetValue(parts[1], out target)) return "ref introuvable";
+                if (!refs.TryGetValue(parts[1], out target)) return "ref not found";
                 t = target.GetType();
             }
             string method = parts[2];
@@ -175,9 +175,9 @@ namespace HexRevival
                     object r = m.Invoke(target, vals);
                     return m.Name + "() = " + Summarize(r);
                 }
-                catch (Exception e) { return "erreur " + e.Message; }
+                catch (Exception e) { return "error " + e.Message; }
             }
-            return "methode " + method + "(" + args.Length + " args) introuvable";
+            return "method " + method + "(" + args.Length + " args) not found";
         }
 
         private static object Walk(object root, string path)

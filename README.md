@@ -53,7 +53,7 @@ copy that ships extra programs or asks for administrator rights.
 
 ### What the launcher does (and does not do)
 
-Its whole source is [`tools/launcher/HexRevivalLauncher.cs`](tools/launcher/HexRevivalLauncher.cs) (about 300 lines).
+Its whole source is [`tools/launcher/HexRevivalLauncher.cs`](tools/launcher/HexRevivalLauncher.cs) (about 500 lines, half of it the translated messages).
 
 - It reads the Windows registry only to find Steam and the game, and remembers the game folder you
   picked (`HKEY_CURRENT_USER\Software\HexRevival`).

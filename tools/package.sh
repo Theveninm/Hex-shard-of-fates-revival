@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Assemble l'archive de publication HexRevival-<version>.zip :
-#   HexRevival.exe (lanceur), mod/ (BepInEx 5.4.23.2 officiel + HexRevival.dll), notices, SHA256SUMS.txt.
-# Usage : tools/package.sh <version> <HexRevival.dll> <HexRevival.exe>
+# Assembles the release archive HexRevival-<version>.zip:
+#   HexRevival.exe (launcher), mod/ (official BepInEx 5.4.23.2 + HexRevival.dll), notices, SHA256SUMS.txt.
+# Usage: tools/package.sh <version> <HexRevival.dll> <HexRevival.exe>
 set -e
 V="$1"; DLL="$2"; EXE="$3"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

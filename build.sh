@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Compile le module BepInEx HexRevival.dll avec Mono (mcs), contre les DLL du jeu installe.
-# Les DLL du jeu ne sont pas fournies (elles appartiennent a leurs ayants droit).
+# Compiles the BepInEx plugin HexRevival.dll with Mono (mcs), against the installed game's DLLs.
+# The game DLLs are not provided (they belong to their rights holders).
 #
-# Usage : ./build.sh "<HEX>/Hex_Data/Managed" "<HEX>/BepInEx/core" out/HexRevival.dll
-#   <HEX> = dossier du jeu, avec BepInEx 5.4.23.2 (x86) deja installe.
+# Usage: ./build.sh "<HEX>/Hex_Data/Managed" "<HEX>/BepInEx/core" out/HexRevival.dll
+#   <HEX> = game folder, with BepInEx 5.4.23.2 (x86) already installed.
 set -e
 G="$1"; B="$2"; OUT="${3:-out/HexRevival.dll}"
 if [ -z "$G" ] || [ -z "$B" ]; then
@@ -12,7 +12,7 @@ fi
 cd "$(dirname "$0")"
 S=mods/HexRevival/src/HexRevival
 mkdir -p "$(dirname "$OUT")"
-# -nostdlib : on compile contre le mscorlib du jeu (Unity 5.6, profil .NET 3.5).
+# -nostdlib: compiles against the game's mscorlib (Unity 5.6, .NET 3.5 profile).
 mcs -target:library -nostdlib -noconfig -langversion:7 -debug:portable -nowarn:618 -out:"$OUT" \
  -r:"$G/mscorlib.dll" -r:"$G/System.dll" -r:"$G/System.Core.dll" -r:"$G/System.Xml.dll" \
  -r:"$G/UnityEngine.dll" -r:"$G/UnityEngine.UI.dll" -r:"$G/Assembly-CSharp.dll" -r:"$G/Assembly-CSharp-firstpass.dll" \

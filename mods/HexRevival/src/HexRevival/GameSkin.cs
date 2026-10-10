@@ -6,9 +6,9 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Dessin IMGUI avec les ressources graphiques du jeu : sprites des atlas NGUI (cadres, boutons,
-    /// onglets, en "9-slice" selon leurs bordures) et polices du jeu (FMBolyar pour les titres,
-    /// Hex_Arial pour le texte). Permet aux ecrans du mod d'avoir l'apparence de l'interface d'origine.
+    /// IMGUI drawing with the game's graphic resources: NGUI atlas sprites (frames, buttons,
+    /// tabs, "9-sliced" according to their borders) and game fonts (FMBolyar for titles,
+    /// Hex_Arial for text). Gives the mod's screens the look of the original interface.
     /// </summary>
     public static class GameSkin
     {
@@ -22,7 +22,7 @@ namespace HexRevival
         private static Font s_Title, s_Body, s_BodyBold, s_Japanese, s_Chinese;
         private static bool s_FontsLoaded;
 
-        /// <summary>Echelle de l'interface : le jeu est concu pour 1000 pixels de haut.</summary>
+        /// <summary>Interface scale: the game is designed for a height of 1000 pixels.</summary>
         public static float Scale { get { return Mathf.Max(0.6f, Screen.height / 1000f); } }
 
         public static int Px(float v) { return Mathf.RoundToInt(v * Scale); }
@@ -38,7 +38,7 @@ namespace HexRevival
             return a;
         }
 
-        /// <summary>Dessine un sprite d'atlas, etire en conservant ses bordures (9-slice).</summary>
+        /// <summary>Draws an atlas sprite, stretched while keeping its borders (9-slice).</summary>
         public static bool Sprite(Rect r, string atlas, string sprite, float alpha = 1f, bool sliced = true)
         {
             UIAtlas a = Atlas(atlas);
@@ -56,7 +56,7 @@ namespace HexRevival
                 GUI.color = old;
                 return true;
             }
-            // Bordures a l'ecran : a l'echelle, sans depasser la moitie du rectangle.
+            // On-screen borders: scaled, never more than half of the rectangle.
             float s = Scale;
             float l = Mathf.Min(bl * s, r.width / 2f), ri = Mathf.Min(br * s, r.width / 2f);
             float t = Mathf.Min(bt * s, r.height / 2f), b = Mathf.Min(bb * s, r.height / 2f);
@@ -78,7 +78,7 @@ namespace HexRevival
 
         private static void Draw(Texture tex, Rect screen, float sx, float sy, float sw, float sh, float tw, float th)
         {
-            // Coordonnees NGUI : origine en haut a gauche ; UV Unity : origine en bas a gauche.
+            // NGUI coordinates: origin at the top left; Unity UVs: origin at the bottom left.
             Rect uv = new Rect(sx / tw, 1f - (sy + sh) / th, sw / tw, sh / th);
             GUI.DrawTextureWithTexCoords(screen, tex, uv, true);
         }
@@ -98,7 +98,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Style de texte : "title" (FMBolyar) ou "body"/"bold" (Arial du jeu), taille de reference 1000 px.</summary>
+        /// <summary>Text style: "title" (FMBolyar) or "body"/"bold" (the game's Arial), reference size 1000 px.</summary>
         public static GUIStyle Style(string kind, int size, Color color, TextAnchor anchor = TextAnchor.MiddleLeft, bool wrap = false)
         {
             LoadFonts();
@@ -109,7 +109,7 @@ namespace HexRevival
             st = new GUIStyle();
             Font cjk = Loc.Lang == "ja" ? s_Japanese : Loc.Lang == "zh" ? s_Chinese : null;
             if (cjk != null) st.font = cjk;
-            else if (Loc.NonLatin) st.font = kind == "body" ? s_Body : (s_BodyBold ?? s_Body); // cyrillique : Arial du jeu
+            else if (Loc.NonLatin) st.font = kind == "body" ? s_Body : (s_BodyBold ?? s_Body); // Cyrillic: the game's Arial
             else st.font = kind == "title" ? (s_Title ?? s_BodyBold) : kind == "bold" ? (s_BodyBold ?? s_Body) : s_Body;
             st.fontSize = px;
             st.normal.textColor = color;
@@ -121,7 +121,7 @@ namespace HexRevival
             return st;
         }
 
-        /// <summary>Texte avec ombre portee (comme les libelles du jeu).</summary>
+        /// <summary>Text with a drop shadow (like the game's labels).</summary>
         public static void Label(Rect r, string text, GUIStyle style, bool shadow = true)
         {
             if (shadow)
@@ -135,8 +135,8 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Bouton dessine avec les sprites du jeu : prefixe "Generic_Button_Decorated_01" etc.
-        /// Variantes : Base / Hover / Click (noms du jeu), Inactive si desactive.
+        /// Button drawn with the game's sprites: prefix "Generic_Button_Decorated_01" etc.
+        /// Variants: Base / Hover / Click (game names), Inactive when disabled.
         /// </summary>
         public static bool Button(Rect r, string text, string baseSprite, string hoverSprite, string clickSprite, string disabledSprite = null, bool enabled = true, int fontSize = 20)
         {
@@ -169,7 +169,7 @@ namespace HexRevival
             return Button(r, text, "Generic_Button_Decorated_Orange_Base", "Generic_Button_Decorated_Orange_Hover", "Generic_Button_Decorated_Orange_Click", null, true, size);
         }
 
-        /// <summary>Icone cliquable du jeu (trois etats : normal, survol, clic).</summary>
+        /// <summary>Clickable game icon (three states: normal, hover, click).</summary>
         public static bool Icon(Rect r, string atlas, string normal, string hover, string click, string tooltip = null)
         {
             bool over = r.Contains(Event.current.mousePosition);
@@ -178,7 +178,7 @@ namespace HexRevival
             return GUI.Button(r, tooltip != null ? new GUIContent("", tooltip) : GUIContent.none, GUIStyle.none);
         }
 
-        /// <summary>Onglet du jeu (Header_Tabs_*).</summary>
+        /// <summary>Game tab (Header_Tabs_*).</summary>
         public static bool Tab(Rect r, string text, bool selected)
         {
             bool hover = r.Contains(Event.current.mousePosition);
@@ -187,7 +187,7 @@ namespace HexRevival
             return GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
-        /// <summary>Ligne de liste selectionnable : titre + detail.</summary>
+        /// <summary>Selectable list row: title + detail.</summary>
         public static bool Row(Rect r, string title, string detail, bool selected, ChampionTemplate champion = null, float rightReserve = 0f)
         {
             bool hover = r.Contains(Event.current.mousePosition);
@@ -195,8 +195,8 @@ namespace HexRevival
             float pad = Px(14);
             if (champion != null)
             {
-                // Comme la fenetre "Select Deck" : bandeau du champion, nom du deck sur une bande sombre en bas.
-                // Marge pour rester a l'interieur du cadre du bouton.
+                // Like the "Select Deck" window: champion banner, deck name on a dark strip at the bottom.
+                // Margin to stay inside the button frame.
                 float inset = Px(8);
                 float bh = r.height - 2 * inset;
                 float bw = Mathf.Min(bh * 3.3f, (r.width - rightReserve) * 0.55f);
@@ -224,7 +224,7 @@ namespace HexRevival
         private static GUIStyle s_ScrollV, s_Thumb, s_Field;
         private static string s_FieldLang;
 
-        /// <summary>Barre de defilement verticale aux couleurs du jeu.</summary>
+        /// <summary>Vertical scrollbar in the game's colors.</summary>
         public static GUIStyle ScrollBar
         {
             get

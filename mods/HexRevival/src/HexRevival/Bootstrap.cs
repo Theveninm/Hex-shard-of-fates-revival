@@ -5,8 +5,8 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Point d'entrée injecté dans Main.FinializeInit() par le patcher (HexRevival.Patcher).
-    /// Sert de test de fumée : confirme que le plugin est chargeable par le Mono du jeu.
+    /// Entry point injected into Main.FinializeInit() by the patcher (HexRevival.Patcher).
+    /// Serves as a smoke test: confirms that the plugin can be loaded by the game's Mono.
     /// </summary>
     public static class Bootstrap
     {
@@ -19,15 +19,15 @@ namespace HexRevival
                 File.AppendAllText(logPath, DateTime.Now.ToString("s") + "  Bootstrap.Init() called" + Environment.NewLine);
                 Debug.Log("[HexRevival] Bootstrap.Init OK - plugin loaded");
 
-                // Mode hors-ligne : client de session local + plateforme standalone.
+                // Offline mode: local session client + standalone platform.
                 GameConfig.Standalone = true;
                 GameConfig.CurrentAuthPlatform = GameConfig.AuthPlatform.STANDALONE;
-                // ConnDevMode : permet au moteur local de fabriquer un deck par defaut
-                // pour le joueur humain (AuthoritativeSessionBase.LoadPlayerDeck).
+                // ConnDevMode: lets the local engine build a default deck
+                // for the human player (AuthoritativeSessionBase.LoadPlayerDeck).
                 GameConfig.ConnDevMode = true;
                 Debug.Log("[HexRevival] Standalone=" + GameConfig.Standalone + " AuthPlatform=" + GameConfig.CurrentAuthPlatform + " ConnDevMode=" + GameConfig.ConnDevMode);
 
-                // Boite noire / debogage runtime (toujours actif ; auto-test si marqueur).
+                // Black box / runtime debugging (always on; self-test if marker present).
                 TestBehaviour.Enable();
             }
             catch (Exception e)
@@ -38,9 +38,9 @@ namespace HexRevival
     }
 
     /// <summary>
-    /// Mode developpeur : journaux detailles (etat chaque seconde, trace des evenements, sonde
-    /// reseau, transactions refusees). Actif seulement si le fichier HexRevival.dev existe a cote
-    /// de Hex.exe ; desactive dans la version publiee.
+    /// Developer mode: detailed logs (state every second, event trace, network
+    /// probe, rejected transactions). Active only if the HexRevival.dev file exists next
+    /// to Hex.exe; disabled in the published version.
     /// </summary>
     public static class Dev
     {

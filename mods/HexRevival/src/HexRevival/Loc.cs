@@ -3,9 +3,9 @@ using System.Collections.Generic;
 namespace HexRevival
 {
     /// <summary>
-    /// Textes du mod dans les langues du jeu. La langue suit l'option "Language" du jeu
-    /// (PlayerConfig.Language, ex. "fr-FR" -> "fr") ; anglais par defaut.
-    /// Ordre des colonnes : en, fr, de, es, it, pt, pl, ru, tr, ja, zh.
+    /// Mod texts in the game's languages. The language follows the game's "Language" option
+    /// (PlayerConfig.Language, e.g. "fr-FR" -> "fr"); English by default.
+    /// Column order: en, fr, de, es, it, pt, pl, ru, tr, ja, zh.
     /// </summary>
     public static class Loc
     {
@@ -42,7 +42,7 @@ namespace HexRevival
             { "delete", new[] { "Delete", "Supprimer", "Löschen", "Eliminar", "Elimina", "Eliminar", "Usuń", "Удалить", "Sil", "削除", "删除" } },
         };
 
-        /// <summary>Code de langue du jeu sur deux lettres ("en" par defaut).</summary>
+        /// <summary>Two-letter game language code ("en" by default).</summary>
         public static string Lang
         {
             get
@@ -54,7 +54,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Langue sans police latine (titres et texte avec une police adaptee).</summary>
+        /// <summary>Language without a Latin font (titles and text use a suitable font).</summary>
         public static bool NonLatin { get { string l = Lang; return l == "ru" || l == "ja" || l == "zh"; } }
 
         public static string Get(string key)

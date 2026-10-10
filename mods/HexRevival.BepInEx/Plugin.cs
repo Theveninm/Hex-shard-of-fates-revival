@@ -11,13 +11,13 @@ using Game.Shared.Mechanics;
 namespace HexRevival
 {
     /// <summary>
-    /// Point d'entrée BepInEx 5 du mod HexRevival.
+    /// BepInEx 5 entry point of the HexRevival mod.
     ///
-    /// Remplace le patcheur Mono.Cecil (tools/HexRevival.Patcher) : les mêmes
-    /// redirections sont posées à chaud via Harmony, l'installation du jeu reste
-    /// vierge (BepInEx ne fait que déposer des fichiers à côté).
+    /// Replaces the Mono.Cecil patcher (tools/HexRevival.Patcher): the same
+    /// redirections are applied at runtime through Harmony, and the game installation stays
+    /// untouched (BepInEx only adds files next to it).
     ///
-    /// La logique elle-même est inchangée et partagée avec l'ancien plugin :
+    /// The logic itself is unchanged and shared with the old plugin:
     /// mods/HexRevival/src/HexRevival/{Bootstrap,Patches,Server,Repl,Test}.cs.
     /// </summary>
     [BepInPlugin("hexrevival", "HexRevival", "1.0.0")]
@@ -26,8 +26,8 @@ namespace HexRevival
         internal static ManualLogSource Log;
 
         /// <summary>
-        /// Le mod s'appelait "HexOffline" (1.0) : reprend ses fichiers a la racine du jeu
-        /// (decks, champions, reglages) sous le nouveau nom, sans jamais ecraser un fichier existant.
+        /// The mod used to be called "HexOffline" (1.0): takes over its files in the game folder
+        /// (decks, champions, settings) under the new name, never overwriting an existing file.
         /// </summary>
         private static void MigrateOldName()
         {
@@ -60,8 +60,8 @@ namespace HexRevival
 
             Type standaloneSession = typeof(StandaloneSession);
 
-            // Equivalent de l'injection Cecil au début de Main.FinializeInit :
-            // config.ini est déjà lu à ce stade, on peut forcer le mode standalone.
+            // Equivalent of the Cecil injection at the start of Main.FinializeInit:
+            // config.ini has already been read at this point, so standalone mode can be forced.
             apply("Main.FinializeInit", () => Prefix(harmony, typeof(Main), "FinializeInit", Type.EmptyTypes, "Main_FinializeInit"));
 
             apply("Steamy.IsRunningSteam", () => Prefix(harmony, typeof(Steamy), "IsRunningSteam", Type.EmptyTypes, "Steamy_IsRunningSteam"));
@@ -70,23 +70,23 @@ namespace HexRevival
                 "PlayerProfile_Login"));
             apply("StandaloneGameClient.SendStartSession (Practice)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendStartSession",
                 null, "StandaloneGameClient_SendStartSession"));
-            apply("Session.AddPlayer (deck du joueur)", () =>
+            apply("Session.AddPlayer (player deck)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(StandaloneSession), "AddPlayer", new[] { typeof(Player) });
                 if (m == null) throw new MissingMethodException("AddPlayer");
                 harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Session_AddPlayer"));
             });
-            // L'IA locale a un identifiant de type AIPlayer : sa copie cote "serveur" (RemotePlayer)
-            // n'est donc pas reconnue comme IA (IsAI teste ServiceAI) et recevait le deck du cote
-            // joueur de la rencontre. On la reconnait comme IA.
-            apply("Player.IsAI (IA locale)", () =>
+            // The local AI has an AIPlayer-type id: its "server"-side copy (RemotePlayer)
+            // is therefore not recognized as an AI (IsAI tests ServiceAI) and received the
+            // player-side deck of the encounter. We recognize it as an AI.
+            apply("Player.IsAI (local AI)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(Player), "IsAI", Type.EmptyTypes);
                 harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Player_IsAI"));
             });
-            // Demarrage plus rapide : la video d'intro (logo HEX Entertainment) est passee
-            // automatiquement, comme si le joueur appuyait sur Espace.
-            apply("LevelLoader.Update (passer l'intro)", () => Prefix(harmony, typeof(LevelLoader), "Update", Type.EmptyTypes, "LevelLoader_SkipIntro"));
+            // Faster startup: the intro video (HEX Entertainment logo) is skipped
+            // automatically, as if the player pressed Space.
+            apply("LevelLoader.Update (skip intro)", () => Prefix(harmony, typeof(LevelLoader), "Update", Type.EmptyTypes, "LevelLoader_SkipIntro"));
             apply("StandaloneGameClient.SendStartEncounter", () => Prefix(harmony, typeof(StandaloneGameClient), "SendStartEncounter",
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
@@ -94,15 +94,15 @@ namespace HexRevival
             apply("UILandingPageContext.OnClickContinue", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickContinue", Type.EmptyTypes, "UILandingPage_OnClickContinue"));
             apply("UILandingPageViewModel.OnFrostRingButtonClicked", () => Prefix(harmony, typeof(UILandingPageViewModel), "OnFrostRingButtonClicked", Type.EmptyTypes, "UILandingPageViewModel_OnFrostRingButtonClicked"));
 
-            // Ecran de login : en offline, aucun identifiant n'est requis (bouton toujours actif,
-            // nom vide => profil "Offline").
+            // Login screen: offline, no credentials are needed (button always enabled,
+            // empty name => "Offline" profile).
             apply("UILoginDialogViewModel.CheckForLoginButtonEnable", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(UILoginDialogViewModel), "CheckForLoginButtonEnable");
                 harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Login_AlwaysEnabled"));
             });
 
-            // Couche "serveur autoritatif" (stubs de StandaloneSession).
+            // "Authoritative server" layer (StandaloneSession stubs).
             apply("StandaloneSession.SendPlayerOptions", () => Prefix(harmony, standaloneSession, "SendPlayerOptions", new[] { typeof(Player) }, "Session_SendPlayerOptions"));
             apply("StandaloneSession.Update", () =>
             {
@@ -119,25 +119,25 @@ namespace HexRevival
                 new[] { typeof(Player), typeof(List<Card>), typeof(List<Reckoning.Game.AbilityTemplate>), typeof(List<Game.Shared.Mechanics.Abilities.AbilityInstance>) }, "Session_SendPlayerOptionsForList"));
             apply("StandaloneSession.SendRevealedCards", () => Prefix(harmony, standaloneSession, "SendRevealedCards", new[] { typeof(Player), typeof(List<SessionCardId>) }, "Session_SendRevealedCards"));
 
-            // NRE d'UI connus : on avale l'exception (remplace WrapVoidInTryCatch).
+            // Known UI NREs: the exception is swallowed (replaces WrapVoidInTryCatch).
             apply("GoChampionAbilityButton.SetStateFromAbilityTemplate", () => Finalizer(harmony, typeof(GoChampionAbilityButton), "SetStateFromAbilityTemplate"));
             apply("GoHUDPlayer.UpdateAbilityButtons", () => Finalizer(harmony, typeof(GoHUDPlayer), "UpdateAbilityButtons"));
 
-            // Diagnostic : toute transaction refusee (hors passe de priorite) est journalisee avec ses cartes.
-            apply("Transaction.Validate (journal)", () =>
+            // Diagnostics: every rejected transaction (except priority passes) is logged with its cards.
+            apply("Transaction.Validate (log)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(Game.Shared.Mechanics.Transactions.Transaction), "Validate");
                 harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "LogFailedTransaction"));
             });
 
-            // Solo hors ligne : pas de defaite au chrono ni pour inactivite (45 min contre l'IA).
+            // Offline solo: no loss on the chess clock or for inactivity (45 min against the AI).
             apply("Player.IsChessTimerExpired", () => Prefix(harmony, typeof(Player), "IsChessTimerExpired", Type.EmptyTypes, "NeverExpired"));
             apply("Player.IsInactiveTimerExpired", () => Prefix(harmony, typeof(Player), "IsInactiveTimerExpired", Type.EmptyTypes, "NeverExpired"));
 
-            // Services reseau (SFS) sans connexion : Produce() appelle pub(m_Publish) avec null -> NRE.
-            // Le plus grave : AuthoritativeSessionBase.EndGame appelle MonitorService.SendBIInfo,
-            // l'exception avorte la fin de partie a chaque tick (champion mort mais partie sans fin).
-            apply("Service<T>.Produce (hors ligne)", () =>
+            // Network services (SFS) without a connection: Produce() calls pub(m_Publish) with null -> NRE.
+            // Worst case: AuthoritativeSessionBase.EndGame calls MonitorService.SendBIInfo,
+            // and the exception aborts the end of the game on every tick (champion dead but endless game).
+            apply("Service<T>.Produce (offline)", () =>
             {
                 int n = 0;
                 foreach (Type t in typeof(Game.Client.Network.Monitor.MonitorService).Assembly.GetTypes())
@@ -150,11 +150,11 @@ namespace HexRevival
                     try { harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "Service_Produce")); n++; }
                     catch (Exception e) { Log.LogWarning("Produce " + t.Name + " : " + e.Message); }
                 }
-                Log.LogInfo("Service.Produce neutralise sur " + n + " service(s)");
+                Log.LogInfo("Service.Produce disabled on " + n + " service(s)");
             });
 
-            // Sonde reseau : journalise ce que le client tente d'envoyer au serveur (HexRevival.net.log).
-            apply("ClientConnection.SendCommand (sonde)", () =>
+            // Network probe: logs what the client tries to send to the server (HexRevival.net.log).
+            apply("ClientConnection.SendCommand (probe)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(Game.Shared.Network.SFS.ClientConnection), "SendCommand",
                     new[] { typeof(byte[]), typeof(string), typeof(string), typeof(long), typeof(Game.Shared.Network.MessageHandler), typeof(System.Collections.Generic.IDictionary<string, object>) });
@@ -162,7 +162,7 @@ namespace HexRevival
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "ClientConnection_SendCommand"));
             });
 
-            Log.LogInfo("HexRevival charge : " + ok + " patchs OK, " + failed + " en echec.");
+            Log.LogInfo("HexRevival loaded: " + ok + " patches OK, " + failed + " failed.");
         }
 
         private static void Prefix(Harmony h, Type type, string method, Type[] args, string hook)
@@ -183,9 +183,9 @@ namespace HexRevival
     }
 
     /// <summary>
-    /// Prefixes Harmony. Convention : retourner false = l'original n'est pas exécuté,
-    /// on exécute à la place la méthode de remplacement existante (Patches / Server).
-    /// Les arguments sont pris par position (__0, __1…) pour ne pas dépendre des noms.
+    /// Harmony prefixes. Convention: returning false = the original is not executed,
+    /// the existing replacement method (Patches / Server) runs instead.
+    /// Arguments are taken by position (__0, __1…) so as not to depend on names.
     /// </summary>
     internal static class Hooks
     {
@@ -334,7 +334,7 @@ namespace HexRevival
             return false;
         }
 
-        /// <summary>Pourquoi le moteur refuse de jouer la carte (sous-conditions de Session.CanPlayCard).</summary>
+        /// <summary>Why the engine refuses to play the card (sub-conditions of Session.CanPlayCard).</summary>
         private static string PlayDiag(object req, Session session, Player p)
         {
             Game.Shared.Mechanics.Transactions.Requirements.CardCanBePlayedRequirement cr = req as Game.Shared.Mechanics.Transactions.Requirements.CardCanBePlayedRequirement;
@@ -344,16 +344,16 @@ namespace HexRevival
                 System.Reflection.FieldInfo f = cr.GetType().GetField("m_SessionCardId", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 SessionCardId id = (SessionCardId)f.GetValue(cr);
                 Card c = session.ResourceCache.GetCard(id);
-                if (c == null) return " (carte introuvable)";
+                if (c == null) return " (card not found)";
                 Player prio = session.GetPriorityPlayer();
                 Player act = session.GetActivePlayer();
                 System.Text.StringBuilder sb = new System.Text.StringBuilder(" (");
                 sb.Append("zone=").Append(c.m_CurrentCardCollection);
                 sb.Append(" prio=").Append(prio != null ? prio.m_PlayerId.ToString() : "-");
-                sb.Append(" actif=").Append(act != null ? act.m_PlayerId.ToString() : "-");
+                sb.Append(" active=").Append(act != null ? act.m_PlayerId.ToString() : "-");
                 sb.Append(" phase=").Append(session.CurrentTurnPhase);
-                sb.Append(" chaine=").Append(session.Chain.IsEmpty ? "vide" : "non vide");
-                sb.Append(" rapide=").Append(c.IsQuickSpeed());
+                sb.Append(" chain=").Append(session.Chain.IsEmpty ? "empty" : "not empty");
+                sb.Append(" quick=").Append(c.IsQuickSpeed());
                 sb.Append(" cout=").Append(c.CastingCost).Append("/res=").Append(p.m_CurrentResourcePool);
                 sb.Append(" seuils=").Append(p.HasResourceThresholds(c.Thresholds));
                 sb.Append(" condition=").Append(c.m_CardTemplate.m_PlayCondition == null ? "-" : c.m_CardTemplate.m_PlayCondition.IsValid(c, session).ToString());
@@ -369,7 +369,7 @@ namespace HexRevival
             catch (Exception e) { return " (diag: " + e.Message + ")"; }
         }
 
-        /// <summary>Premiere exigence non satisfaite (reevaluee : IsValid n'a pas d'effet de bord).</summary>
+        /// <summary>First unmet requirement (re-evaluated: IsValid has no side effect).</summary>
         private static string FailedRequirement(Game.Shared.Mechanics.Transactions.Transaction tx, Session session)
         {
             try
@@ -385,7 +385,7 @@ namespace HexRevival
                     if (r != null && !r.IsValid(session, p))
                         return r.GetType().Name + PlayDiag(r, session, p);
                 }
-                return "(aucune a la reevaluation)";
+                return "(none on re-evaluation)";
             }
             catch (Exception e) { return "? " + e.Message; }
         }
@@ -397,7 +397,7 @@ namespace HexRevival
             string line;
             try { line = __instance.GetLogLine(__0); }
             catch (Exception e) { line = __instance.GetType().Name + " (GetLogLine: " + e.Message + ")"; }
-            line = "ECHEC " + FailedRequirement(__instance, __0) + " | " + line;
+            line = "FAILED " + FailedRequirement(__instance, __0) + " | " + line;
             UnityEngine.Debug.Log("[HexRevival] [FailTx] " + line.Replace("\n", " | "));
             try
             {
@@ -416,11 +416,11 @@ namespace HexRevival
 
         private static readonly Dictionary<Type, FieldInfo> s_PublishFields = new Dictionary<Type, FieldInfo>();
 
-        /// <summary>Saute l'envoi si le service n'a aucune connexion (mode hors ligne).</summary>
+        /// <summary>Skips sending if the service has no connection (offline mode).</summary>
         public static bool Service_Produce(object __instance, Delegate __0, string __1)
         {
             if (__1 != null)
-                return true; // l'original gere deja m_Connections == null
+                return true; // the original already handles m_Connections == null
             Type t = __instance.GetType();
             FieldInfo f;
             if (!s_PublishFields.TryGetValue(t, out f))
@@ -434,7 +434,7 @@ namespace HexRevival
             return send;
         }
 
-        /// <summary>Trace (hors ligne) : envoi direct sur la connexion SFS, sans session.</summary>
+        /// <summary>Trace (offline): direct send on the SFS connection, without a session.</summary>
         public static bool ClientConnection_SendCommand(byte[] eventArgsBytes, string toexc, string routeto, Game.Shared.Network.MessageHandler responseHandler)
         {
             bool local = LocalServer.TryHandle(eventArgsBytes, responseHandler);
@@ -445,14 +445,14 @@ namespace HexRevival
         public static Exception SwallowException(Exception __exception, MethodBase __originalMethod)
         {
             if (__exception != null && Plugin.Log != null)
-                Plugin.Log.LogDebug("Exception avalee dans " + __originalMethod.DeclaringType.Name + "." + __originalMethod.Name + " : " + __exception.GetType().Name);
+                Plugin.Log.LogDebug("Exception swallowed in " + __originalMethod.DeclaringType.Name + "." + __originalMethod.Name + ": " + __exception.GetType().Name);
             return null;
         }
     }
 
     /// <summary>
-    /// Sonde reseau hors ligne : pour chaque envoi bloque, note le service, la methode appelante
-    /// (pile) et le contenu de la fermeture (objets requete captures). Fichier HexRevival.net.log.
+    /// Offline network probe: for each blocked send, records the service, the calling method
+    /// (stack) and the closure content (captured request objects). File HexRevival.net.log.
     /// </summary>
     public static class NetTrace
     {
@@ -482,7 +482,7 @@ namespace HexRevival
                 int count;
                 s_Seen.TryGetValue(key, out count);
                 s_Seen[key] = count + 1;
-                if (count >= 3) return; // pas de flood pour les envois periodiques
+                if (count >= 3) return; // no flooding for periodic sends
                 if (pub != null && pub.Target != null)
                 {
                     foreach (FieldInfo f in pub.Target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -498,7 +498,7 @@ namespace HexRevival
             catch { }
         }
 
-        /// <summary>Debut lisible d'un message serialise (le nom du type y figure souvent).</summary>
+        /// <summary>Readable start of a serialized message (the type name often appears in it).</summary>
         public static string Peek(byte[] b)
         {
             if (b == null) return "";
