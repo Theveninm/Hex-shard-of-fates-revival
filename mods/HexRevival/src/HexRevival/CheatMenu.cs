@@ -17,9 +17,6 @@ namespace HexRevival
     /// </summary>
     public class CheatMenu : MonoBehaviour
     {
-        /// <summary>The "+5 resources" cheat stops at this total.</summary>
-        private const int MaxCheatResources = 10;
-
         private bool m_Open;
         private string m_Message;
         private float m_MessageUntil;
@@ -98,7 +95,7 @@ namespace HexRevival
                 if (me != null)
                 {
                     items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_resources"), () =>
-                        Say(Cheats.AddResourcesOnly(ss, me, 5, MaxCheatResources) > 0 ? Loc.Get("cheat_done") : Loc.Get("cheat_resources_max", MaxCheatResources))));
+                        { Cheats.AddResourcesOnly(ss, me, 5); Say(Loc.Get("cheat_done")); }));
                     items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_shards"), () => { Cheats.AddThresholds(ss, me, 1); Say(Loc.Get("cheat_done")); }));
                     items.Add(new KeyValuePair<string, Action>(Loc.Get("cheat_draw"), () => { Cheats.DrawCard(ss, me); Say(Loc.Get("cheat_done")); }));
                 }

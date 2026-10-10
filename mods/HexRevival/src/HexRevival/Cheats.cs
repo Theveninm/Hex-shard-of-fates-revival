@@ -103,17 +103,14 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// In-game cheat: +n resources (total and available), without going over max in total.
-        /// Returns the number actually added.
+        /// In-game cheat: +n maximum resources (the resources received each turn), also available
+        /// right away for the current turn. Shard thresholds are unchanged.
         /// </summary>
-        internal static int AddResourcesOnly(StandaloneSession ss, Player p, int n, int max)
+        internal static void AddResourcesOnly(StandaloneSession ss, Player p, int n)
         {
-            n = Math.Min(n, max - p.m_TotalResourcePool);
-            if (n <= 0) return 0;
             ss.IncrementPlayerTotalResourcePool(p, n, false);
             ss.IncrementPlayerCurrentResourcePool(p, n, false);
             Server.MarkDirty();
-            return n;
         }
 
         /// <summary>+n to the threshold of every shard color.</summary>
