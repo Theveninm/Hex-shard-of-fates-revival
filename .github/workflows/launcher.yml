@@ -1,0 +1,31 @@
+# Compile HexOffline.exe a partir du code source, sur les serveurs de GitHub, et le joint a la release.
+name: Build launcher
+on:
+  push:
+    paths: [ "tools/launcher/**" ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile (csc du .NET Framework 4)
+        shell: cmd
+        run: >
+          C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /optimize+
+          /out:HexOffline.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll
+          tools\launcher\HexOfflineLauncher.cs
+      - name: Checksum
+        shell: pwsh
+        run: Get-FileHash HexOffline.exe -Algorithm SHA256 | Format-List
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HexOffline-launcher
+          path: HexOffline.exe
+      - name: Attach to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" HexOffline.exe --clobber

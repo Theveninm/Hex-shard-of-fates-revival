@@ -1,0 +1,10 @@
+out/
+*.zip
+*.exe
+*.dll
+*.mdb
+*.pdb
+# Fichiers du jeu : jamais dans ce depot
+Hex_Data/
+decompiled/
+extracted/
