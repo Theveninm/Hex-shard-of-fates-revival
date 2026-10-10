@@ -86,7 +86,7 @@ namespace HexRevival
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("[HexRevival] [LocalServer] livraison " + p.TransactionId + " : " + e);
+                    Debug.LogError("[HexRevival] [LocalServer] delivery " + p.TransactionId + " : " + e);
                 }
             }
         }

@@ -45,6 +45,7 @@ namespace HexRevival
                         if (p.Length > 10)
                             foreach (string t in p[10].Split(';'))
                                 if (t.Length > 0) { try { c.ChampionTalents.Add(new ResourceId(t)); } catch { } }
+                        c.LastCampaignID = Campaign.HasSave(c.Id) ? c.Id : 0UL;
                         s_Champions.Add(c);
                     }
             }

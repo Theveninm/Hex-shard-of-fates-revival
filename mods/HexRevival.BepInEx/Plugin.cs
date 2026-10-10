@@ -4,6 +4,8 @@ using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using Game.Client;
+using Game.Client.Campaign;
+using Game.Shared.Campaign.Messages;
 using Game.Shared;
 using HarmonyLib;
 using Game.Shared.Mechanics;
@@ -91,8 +93,21 @@ namespace HexRevival
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
             apply("UILandingPageContext.OnClickChallengeAI", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickChallengeAI", Type.EmptyTypes, "UILandingPage_OnClickChallengeAI"));
-            apply("UILandingPageContext.OnClickContinue", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickContinue", Type.EmptyTypes, "UILandingPage_OnClickContinue"));
             apply("UILandingPageViewModel.OnFrostRingButtonClicked", () => Prefix(harmony, typeof(UILandingPageViewModel), "OnFrostRingButtonClicked", Type.EmptyTypes, "UILandingPageViewModel_OnFrostRingButtonClicked"));
+
+            // Local campaign service: the client's campaign requests are answered by Campaign.
+            Type ccm = typeof(ClientCampaignManager);
+            foreach (string m in new[] { "QueryCurrentCampaign", "GetSummary", "GetActiveStatus", "QueryState", "Start", "Create",
+                                         "Forfeit", "SendEvent", "StartLocation", "FinishLocation", "GetTemplateTypeInfo" })
+            {
+                string name = m;
+                apply("ClientCampaignManager." + name, () => Prefix(harmony, ccm, name, null, "Campaign_" + name));
+            }
+            apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
+            {
+                MethodInfo m = AccessTools.Method(typeof(AuthoritativeSessionBase), "EndGame", new[] { typeof(List<UID>), typeof(List<UID>), typeof(bool) });
+                harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Session_EndGame"));
+            });
 
             // Login screen: offline, no credentials are needed (button always enabled,
             // empty name => "Offline" profile).
@@ -223,7 +238,7 @@ namespace HexRevival
                     __instance.m_mediaPlayer.Control.Stop();
                 MethodInfo m = typeof(LevelLoader).GetMethod("StartLoading", BindingFlags.Instance | BindingFlags.NonPublic);
                 __instance.StartCoroutine((System.Collections.IEnumerator)m.Invoke(__instance, null));
-                Plugin.Log.LogInfo("Intro passee");
+                Plugin.Log.LogInfo("Intro skipped");
             }
             catch (Exception e) { Plugin.Log.LogWarning("Intro : " + e.Message); }
             return false;
@@ -250,15 +265,23 @@ namespace HexRevival
             return false;
         }
 
+        // --- Local campaign service (see Campaign.cs) ---
+        public static bool Campaign_QueryCurrentCampaign(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryCurrentCampaign(__0, __1); return false; }
+        public static bool Campaign_GetSummary(IEnumerable<ulong> __0, ClientCampaignManager.GetSummaryCallback __1) { Campaign.GetSummary(__0, __1); return false; }
+        public static bool Campaign_GetActiveStatus(ulong __0, CampaignType __1, string __2, ClientCampaignManager.GetActiveStatusCallback __3) { Campaign.GetActiveStatus(__0, __1, __2, __3); return false; }
+        public static bool Campaign_QueryState(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryState(__0, __1); return false; }
+        public static bool Campaign_Start(ulong __0, ClientCampaignManager.StateCallback __3) { Campaign.Start(__0, __3); return false; }
+        public static bool Campaign_Create(ulong __0, string __1, ClientCampaignManager.StateCallback __2) { Campaign.Create(__0, __1, __2); return false; }
+        public static bool Campaign_Forfeit(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.Forfeit(__0, __1); return false; }
+        public static bool Campaign_SendEvent(ulong __0, string __1, object[] __2, ClientCampaignManager.StateCallback __3) { Campaign.SendEvent(__0, __1, __2, __3); return false; }
+        public static bool Campaign_StartLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.StartLocation(__0, __1, __3); return false; }
+        public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.FinishLocation(__0, __1, __3); return false; }
+        public static bool Campaign_GetTemplateTypeInfo(ClientCampaignManager.GetTemplateTypeInfoCallback __0) { if (__0 != null) __0(new TemplateTypeInfo[0]); return false; }
+        public static void Session_EndGame(List<UID> __0) { Campaign.OnGameEnded(__0); }
+
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)
         {
             Patches.UILandingPage_OnClickChallengeAI(__instance);
-            return false;
-        }
-
-        public static bool UILandingPage_OnClickContinue(UILandingPageContext __instance)
-        {
-            Patches.UILandingPage_OnClickContinue(__instance);
             return false;
         }
 

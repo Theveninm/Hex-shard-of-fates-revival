@@ -261,6 +261,7 @@ namespace HexRevival
             try
             {
                 LocalServer.Pump();
+                Campaign.Pump();
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
                     Time.timeScale = m_Speed;
@@ -792,6 +793,7 @@ namespace HexRevival
                 case "anims": return AnimsDump();
                 case "cheat": return Cheats.Execute(gc, parts);
                 case "menu": return OfflineMenu.Command(parts);
+                case "camp": return Campaign.Command(parts);
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
                 case "concede":
                     {

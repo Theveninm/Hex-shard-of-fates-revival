@@ -1,0 +1,554 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using Game.Client;
+using Game.Client.Campaign;
+using Game.Client.GameState;
+using Game.Shared;
+using Game.Shared.Campaign.Messages;
+using Game.Shared.Eval.Data;
+using Reckoning.Game;
+using Reckoning.Game.Conversations;
+using UnityEngine;
+
+namespace HexRevival
+{
+    /// <summary>
+    /// Local campaign service, replacing the campaign server (CampSysGeneral).
+    ///
+    /// The client talks to the campaign only through the static ClientCampaignManager methods
+    /// (QueryCurrentCampaign, GetSummary, QueryState, StartLocation, SendEvent...). They are
+    /// intercepted (see Plugin.cs) and answered here with a GameplayState built locally, which
+    /// the client caches and renders exactly as it did with the server's answers.
+    ///
+    /// Scope (milestone 1): the AZ1 world map (Howling Plains). Map nodes come from the game's
+    /// own AZ1 DungeonTemplate, the paths between nodes from the client's map prefab, and each
+    /// node's encounter or conversation from the game's templates. Completing a node reveals its
+    /// neighbours. One campaign per champion, saved in HexRevival.campaign.txt.
+    /// </summary>
+    public static class Campaign
+    {
+        /// <summary>AZ1 (Howling Plains) map template: the DungeonTemplate listing the map nodes.</summary>
+        public static readonly ResourceId AZ1TemplateId = new ResourceId(new Guid("742c6fc1-77e5-4029-bf9e-4e8af387857a"));
+        private const string AZ1Name = "AZ1";
+        private const string AZ1NodesPrefab = "campaign/az01/nodes";
+        private const string AZ1BackgroundPrefab = "campaign/azmap/azmap";
+        private const string StartNode = "Node001";
+
+        // ------------------------------------------------------------------
+        // Map model (built once from the game data)
+        // ------------------------------------------------------------------
+
+        private class MapNode
+        {
+            public string Id;            // "Node001", the map prefab's node name
+            public string Name;          // location name sent back by the client (unique)
+            public string Type = "Empty"; // LocationType: Encounter, Convo or Empty
+            public string Encounter;     // EncounterScene GUID
+            public string Conversation;  // ConversationTemplate GUID
+        }
+
+        private static List<MapNode> s_Nodes;
+        private static Dictionary<string, HashSet<string>> s_Edges;
+
+        private static MapNode FindNode(string idOrName)
+        {
+            BuildMap();
+            return s_Nodes.Find(n => n.Id == idOrName || n.Name == idOrName);
+        }
+
+        private static void BuildMap()
+        {
+            if (s_Nodes != null) return;
+            s_Nodes = new List<MapNode>();
+            s_Edges = new Dictionary<string, HashSet<string>>();
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            SceneData sd;
+            DungeonTemplate dt = tm.CampaignScenes.TryGetValue(AZ1TemplateId, out sd) ? sd as DungeonTemplate : null;
+            if (dt == null) { Debug.LogError("[HexRevival] [Campaign] AZ1 template not found"); return; }
+
+            HashSet<string> names = new HashSet<string>();
+            foreach (DungeonItemData it in dt.m_ItemData)
+            {
+                if (string.IsNullOrEmpty(it.m_MapNodeId)) continue;
+                MapNode n = new MapNode { Id = it.m_MapNodeId };
+                string title = !string.IsNullOrEmpty(it.m_Title) ? it.m_Title : it.m_Name;
+                n.Name = string.IsNullOrEmpty(title) || names.Contains(title) ? n.Id : title;
+                names.Add(n.Name);
+                ResolveContent(n, tm);
+                s_Nodes.Add(n);
+            }
+
+            // Paths: the map prefab holds one object per path, named "Path_NodeA_NodeB".
+            try
+            {
+                GameObject prefab = Resources.Load(AZ1NodesPrefab) as GameObject;
+                if (prefab != null)
+                    foreach (Transform t in prefab.GetComponentsInChildren<Transform>(true))
+                    {
+                        string[] p = t.name.Split('_');
+                        if (p.Length != 3 || p[0] != "Path") continue;
+                        AddEdge(p[1], p[2]);
+                        AddEdge(p[2], p[1]);
+                    }
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] map paths: " + e); }
+            Debug.Log("[HexRevival] [Campaign] AZ1: " + s_Nodes.Count + " nodes, " + s_Edges.Count + " connected");
+        }
+
+        private static void AddEdge(string a, string b)
+        {
+            HashSet<string> set;
+            if (!s_Edges.TryGetValue(a, out set)) s_Edges[a] = set = new HashSet<string>();
+            set.Add(b);
+        }
+
+        private static IEnumerable<string> Neighbours(string node)
+        {
+            HashSet<string> set;
+            return s_Edges.TryGetValue(node, out set) ? (IEnumerable<string>)set : new string[0];
+        }
+
+        /// <summary>
+        /// Encounter or conversation of a map node. The game's templates are named after the
+        /// node number: encounter scenes "AZ 1 - NODE 003 ..." and conversations "AZ1 - Node 003 ...".
+        /// </summary>
+        private static void ResolveContent(MapNode n, TemplateManager tm)
+        {
+            string number = n.Id.Length > 4 ? n.Id.Substring(4) : n.Id; // "Node003" -> "003"
+            foreach (SceneData s in tm.CampaignScenes.Values)
+            {
+                EncounterScene es = s as EncounterScene;
+                if (es == null || !MatchesNode(es.m_Name, "AZ1", number)) continue;
+                n.Type = "Encounter";
+                n.Encounter = es.m_Id.ToString();
+                return;
+            }
+            foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+            {
+                if (c == null || !MatchesNode(c.m_Name, "AZ1", number)) continue;
+                n.Type = "Convo";
+                n.Conversation = c.m_Id.ToString();
+                return;
+            }
+        }
+
+        /// <summary>"AZ 1 - NODE 003 - x" / "AZ1 - Node 003 x" match zone "AZ1" and node "003".</summary>
+        private static bool MatchesNode(string name, string zone, string number)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            string s = name.Replace(" ", "").ToUpperInvariant();
+            return s.StartsWith(zone + "-NODE" + number);
+        }
+
+        // ------------------------------------------------------------------
+        // Campaign state (one per champion)
+        // ------------------------------------------------------------------
+
+        private class CampState
+        {
+            public ulong ChampId;
+            public bool Started;
+            public string ALoc;                 // active location (name), null when exploring
+            public string LastNode = StartNode;
+            public HashSet<string> Completed = new HashSet<string>();
+            public HashSet<string> Visible = new HashSet<string>();
+            public List<string> VisitedNodes = new List<string>();
+            public List<string> VisitedPaths = new List<string>();
+            public ulong CampId { get { return ChampId; } } // one campaign per champion
+        }
+
+        private static Dictionary<ulong, CampState> s_States;
+        private static CampState s_Battle; // campaign whose encounter is being played
+
+        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.campaign.txt"); } }
+
+        /// <summary>True if this champion has a saved campaign (used for LastCampaignID).</summary>
+        public static bool HasSave(ulong champId)
+        {
+            LoadAll();
+            return s_States.ContainsKey(champId);
+        }
+
+        private static CampState Get(ulong id, bool create)
+        {
+            LoadAll();
+            CampState st;
+            if (s_States.TryGetValue(id, out st) || !create) return st;
+            BuildMap();
+            st = new CampState { ChampId = id };
+            st.Completed.Add(StartNode);
+            st.VisitedNodes.Add(StartNode);
+            Reveal(st, StartNode);
+            s_States[id] = st;
+            Save();
+            return st;
+        }
+
+        /// <summary>A node and its neighbours become visible (and selectable).</summary>
+        private static void Reveal(CampState st, string node)
+        {
+            st.Visible.Add(node);
+            foreach (string n in Neighbours(node)) st.Visible.Add(n);
+        }
+
+        private static void Complete(CampState st, MapNode node)
+        {
+            st.Completed.Add(node.Id);
+            Reveal(st, node.Id);
+        }
+
+        // File: one line per champion:
+        // champId|started|lastNode|completed,..|visible,..|visitedNodes,..|visitedPaths,..
+        private static void LoadAll()
+        {
+            if (s_States != null) return;
+            s_States = new Dictionary<ulong, CampState>();
+            try
+            {
+                if (!File.Exists(FilePath)) return;
+                foreach (string line in File.ReadAllLines(FilePath))
+                {
+                    string[] p = line.Split('|');
+                    if (p.Length < 7) continue;
+                    CampState st = new CampState { ChampId = ulong.Parse(p[0]), Started = p[1] == "1", LastNode = p[2] };
+                    st.Completed.UnionWith(SplitList(p[3]));
+                    st.Visible.UnionWith(SplitList(p[4]));
+                    st.VisitedNodes.AddRange(SplitList(p[5]));
+                    st.VisitedPaths.AddRange(SplitList(p[6]));
+                    s_States[st.ChampId] = st;
+                }
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] load: " + e); }
+        }
+
+        private static string[] SplitList(string s) { return s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries); }
+
+        private static void Save()
+        {
+            try
+            {
+                List<string> lines = new List<string>();
+                foreach (CampState st in s_States.Values)
+                    lines.Add(string.Join("|", new[] { st.ChampId.ToString(), st.Started ? "1" : "0", st.LastNode,
+                        string.Join(",", new List<string>(st.Completed).ToArray()), string.Join(",", new List<string>(st.Visible).ToArray()),
+                        string.Join(",", st.VisitedNodes.ToArray()), string.Join(",", st.VisitedPaths.ToArray()) }));
+                File.WriteAllLines(FilePath, lines.ToArray());
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] save: " + e); }
+        }
+
+        // ------------------------------------------------------------------
+        // GameplayState sent to the client
+        // ------------------------------------------------------------------
+
+        private static GameplayState BuildState(CampState st)
+        {
+            BuildMap();
+            GameplayState gs = new GameplayState();
+            gs.CampID = st.CampId;
+            gs.ChampID = st.ChampId;
+            gs.TempType = "AREA";
+            gs.PayGroups = new PayableGroup[0];
+            gs.ALoc = st.ALoc;
+            gs.LastNode = st.LastNode;
+            gs.CurState = "EXPLORE";
+            gs.Started = st.Started ? "2020-01-01T00:00:00Z" : null;
+            gs.Champions = new List<Champion>();
+            gs.Flags = new Dictionary<string, object>();
+            gs.VisLocs = new List<Location>();
+            gs.LocNodes = new List<Node>();
+            gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
+            foreach (MapNode n in s_Nodes)
+            {
+                bool visible = st.Visible.Contains(n.Id);
+                Dictionary<string, object> d = new Dictionary<string, object>();
+                d["name"] = n.Name;
+                d["node"] = n.Id;
+                d["type"] = n.Type;
+                d["visible"] = visible;
+                d["enabled"] = visible;
+                d["completed"] = st.Completed.Contains(n.Id);
+                d["repeatable"] = false;
+                d["allow_cancel"] = true;
+                if (n.Encounter != null) d["encounter"] = n.Encounter;
+                if (n.Conversation != null) d["conversationId"] = n.Conversation;
+                gs.VisLocs.Add(new Location(d));
+                Dictionary<string, object> nd = new Dictionary<string, object>();
+                nd["id"] = n.Id;
+                nd["type"] = "DEFAULT";
+                gs.LocNodes.Add(new Node(n.Id, nd));
+                if (n.Encounter != null)
+                {
+                    Dictionary<string, object> ed = new Dictionary<string, object>();
+                    ed["encscene"] = n.Encounter;
+                    gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(n.Encounter, ed));
+                }
+            }
+            Dictionary<string, object> pub = new Dictionary<string, object>();
+            pub["CampaignGroup"] = AZ1Name;
+            pub["visited_nodes"] = new List<object>(st.VisitedNodes.ToArray());
+            pub["visited_paths"] = new List<object>(st.VisitedPaths.ToArray());
+            pub["quest_nodes"] = new List<object>();
+            gs.PublicState = new QueryState(pub);
+            return gs;
+        }
+
+        private static CampSummary Summary(CampState st)
+        {
+            TemplateTypeInfo info = new TemplateTypeInfo(AZ1Name, "AREA", null, false, false, "", "",
+                AZ1BackgroundPrefab, AZ1NodesPrefab, AZ1TemplateId.ToString());
+            return new CampSummary(st.CampId, info, CampaignType.AREA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, true, 1, null);
+        }
+
+        // ------------------------------------------------------------------
+        // Answers (delivered on the next frame, like a network answer)
+        // ------------------------------------------------------------------
+
+        private static readonly Queue<Action> s_Answers = new Queue<Action>();
+
+        /// <summary>Called every frame (main thread).</summary>
+        public static void Pump()
+        {
+            while (s_Answers.Count > 0)
+            {
+                Action a = s_Answers.Dequeue();
+                try { a(); }
+                catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] answer: " + e); }
+            }
+        }
+
+        /// <summary>Same handling as ClientCampaignManager.HandleInputResponse for a successful answer.</summary>
+        private static void Answer(CampState st, ClientCampaignManager.StateCallback callback)
+        {
+            if (st == null) return;
+            GameplayState gs = BuildState(st);
+            s_Answers.Enqueue(() =>
+            {
+                MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
+                cache.Invoke(null, new object[] { st.CampId, gs });
+                if (callback != null) callback(gs);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // ClientCampaignManager entry points (Harmony prefixes, see Plugin.cs)
+        // ------------------------------------------------------------------
+
+        public static void QueryCurrentCampaign(ulong champId, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(champId, true);
+            try
+            {
+                PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(champId);
+                if (ch != null && ch.SourceBits != null) ch.SourceBits.LastCampaignID = st.CampId;
+            }
+            catch { }
+            Answer(st, callback);
+        }
+
+        public static void Create(ulong champId, string template, ClientCampaignManager.StateCallback callback)
+        {
+            Answer(Get(champId, true), callback);
+        }
+
+        public static void GetSummary(IEnumerable<ulong> ids, ClientCampaignManager.GetSummaryCallback callback)
+        {
+            List<CampSummary> res = new List<CampSummary>();
+            foreach (ulong id in ids)
+            {
+                CampState st = Get(id, false);
+                if (st != null) res.Add(Summary(st));
+            }
+            CampSummary[] arr = res.ToArray();
+            s_Answers.Enqueue(() => callback(arr));
+        }
+
+        public static void GetActiveStatus(ulong champId, CampaignType type, string template, ClientCampaignManager.GetActiveStatusCallback callback)
+        {
+            List<TemplateInfo> res = new List<TemplateInfo>();
+            CampState st = Get(champId, false);
+            if (st != null && (type == CampaignType.AREA || type == CampaignType.ANY))
+                res.Add(new TemplateInfo(st.CampId, CampaignType.AREA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, 1, null));
+            TemplateInfo[] arr = res.ToArray();
+            s_Answers.Enqueue(() => callback(arr));
+        }
+
+        public static void QueryState(ulong campId, ClientCampaignManager.StateCallback callback)
+        {
+            Answer(Get(campId, false), callback);
+        }
+
+        public static void Start(ulong campId, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(campId, false);
+            if (st != null && !st.Started) { st.Started = true; Save(); }
+            Answer(st, callback);
+        }
+
+        public static void Forfeit(ulong campId, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(campId, false);
+            if (st != null) st.ALoc = null;
+            Answer(st, callback);
+        }
+
+        public static void StartLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(campId, false);
+            if (st == null) return;
+            MapNode n = FindNode(location);
+            if (n != null && st.Visible.Contains(n.Id))
+            {
+                st.ALoc = n.Name;
+                st.LastNode = n.Id;
+                Save();
+            }
+            Debug.Log("[HexRevival] [Campaign] StartLocation " + location + " -> " + (n != null ? n.Type : "unknown"));
+            Answer(st, callback);
+        }
+
+        public static void FinishLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(campId, false);
+            if (st == null) return;
+            MapNode n = FindNode(location);
+            if (n != null) Complete(st, n);
+            st.ALoc = null;
+            Save();
+            Answer(st, callback);
+        }
+
+        public static void SendEvent(ulong campId, string evt, object[] args, ClientCampaignManager.StateCallback callback)
+        {
+            CampState st = Get(campId, false);
+            if (st == null) return;
+            string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
+            Debug.Log("[HexRevival] [Campaign] event " + evt + (arg0 != null ? " " + arg0 : ""));
+            MapNode active = st.ALoc != null ? FindNode(st.ALoc) : null;
+            switch (evt)
+            {
+                case "visit_node":
+                    if (arg0 != null && !st.VisitedNodes.Contains(arg0)) st.VisitedNodes.Add(arg0);
+                    if (arg0 != null) st.LastNode = arg0;
+                    break;
+                case "visit_path":
+                    if (args != null)
+                        foreach (object a in args)
+                            if (a != null && !st.VisitedPaths.Contains(a.ToString())) st.VisitedPaths.Add(a.ToString());
+                    break;
+                case "pass_node":
+                    if (arg0 != null) st.LastNode = arg0;
+                    break;
+                case "conv_done":
+                case "empty_done":
+                case "display_done":
+                case "shroom_choice":
+                case "count_choice":
+                case "accept":
+                    if (active != null) Complete(st, active);
+                    st.ALoc = null;
+                    break;
+                case "enc_cancel":
+                case "cancel":
+                    st.ALoc = null;
+                    break;
+                case "start":
+                    if (active != null && active.Encounter != null) StartBattle(st, active);
+                    break;
+            }
+            Save();
+            Answer(st, callback);
+        }
+
+        // ------------------------------------------------------------------
+        // Encounter battles
+        // ------------------------------------------------------------------
+
+        private static void StartBattle(CampState st, MapNode node)
+        {
+            UID deck = UID.Invalid;
+            try
+            {
+                PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(st.ChampId);
+                if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
+            }
+            catch { }
+            s_Battle = st;
+            s_Answers.Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
+        }
+
+        /// <summary>Called when a match ends (AuthoritativeSessionBase.EndGame postfix).</summary>
+        public static void OnGameEnded(List<UID> winners)
+        {
+            CampState st = s_Battle;
+            if (st == null) return;
+            s_Battle = null;
+            bool won = false;
+            if (winners != null)
+                foreach (UID u in winners)
+                    if (u.GetUIDType() != UID.Type.AIPlayer) won = true;
+            MapNode node = st.ALoc != null ? FindNode(st.ALoc) : null;
+            if (won && node != null) Complete(st, node);
+            st.ALoc = null;
+            Save();
+            Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
+        }
+
+        // ------------------------------------------------------------------
+        // Test command
+        // ------------------------------------------------------------------
+
+        /// <summary>"camp dump [filter]": AZ1 data as the client knows it; "camp map": the map model.</summary>
+        public static string Command(string[] parts)
+        {
+            string sub = parts.Length > 1 ? parts[1] : "";
+            if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
+            if (sub == "map")
+            {
+                BuildMap();
+                StringBuilder sb = new StringBuilder();
+                foreach (MapNode n in s_Nodes)
+                    sb.AppendLine(n.Id + " '" + n.Name + "' " + n.Type + " " + (n.Encounter ?? n.Conversation ?? "") + " -> " + string.Join(",", new List<string>(Neighbours(n.Id)).ToArray()));
+                return sb.ToString();
+            }
+            return "usage: camp dump [filter] | camp map";
+        }
+
+        private static string Dump(string filter)
+        {
+            StringBuilder sb = new StringBuilder();
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            SceneData sd;
+            if (tm.CampaignScenes.TryGetValue(AZ1TemplateId, out sd))
+            {
+                sb.AppendLine("template " + sd.GetType().Name + " '" + sd.m_Name + "'");
+                DungeonTemplate dt = sd as DungeonTemplate;
+                if (dt != null)
+                    foreach (DungeonItemData it in dt.m_ItemData)
+                        sb.AppendLine("  item " + it.m_ID + " " + it.m_MapNodeId + " '" + it.m_Name + "' title='" + it.m_Title + "' totem=" + it.m_TotemType + " terrain=" + it.m_TerrainType
+                            + " events=" + (it.m_EventsToFireWhenVisited != null ? it.m_EventsToFireWhenVisited.Count : 0));
+            }
+            else sb.AppendLine("AZ1 template not found");
+            foreach (SceneData s in tm.CampaignScenes.Values)
+                if (s != null && s.m_Name != null && s.m_Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                    sb.AppendLine("scene " + s.GetType().Name + " " + s.m_Id + " '" + s.m_Name + "'");
+            foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+                if (c != null && c.m_Name != null && c.m_Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                    sb.AppendLine("conv " + c.m_Id + " '" + c.m_Name + "'");
+            try
+            {
+                GameObject prefab = Resources.Load(AZ1NodesPrefab) as GameObject;
+                if (prefab == null) sb.AppendLine("nodes prefab not found");
+                else
+                    foreach (Transform t in prefab.GetComponentsInChildren<Transform>(true))
+                        if (t.name.StartsWith("Path_") || t.name.StartsWith("Node"))
+                            sb.AppendLine("prefab " + t.name + " (parent " + (t.parent != null ? t.parent.name : "-") + ")");
+            }
+            catch (Exception e) { sb.AppendLine("prefab: " + e.Message); }
+            return sb.ToString();
+        }
+    }
+}

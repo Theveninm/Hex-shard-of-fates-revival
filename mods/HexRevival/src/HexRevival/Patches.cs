@@ -314,12 +314,6 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Replaces UILandingPageContext.OnClickContinue (Campaign button) with a local encounter.</summary>
-        public static void UILandingPage_OnClickContinue(UILandingPageContext self)
-        {
-            StartOfflineEncounter("Campaign");
-        }
-
         private static void StartOfflineEncounter(string source)
         {
             try
