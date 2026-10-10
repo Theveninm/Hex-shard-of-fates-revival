@@ -8,15 +8,15 @@ using Game.Shared.Mechanics;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Injecteur de triche POUR LES TESTS, volontairement separe de la logique du mod.
-    /// Inactif sauf si le fichier "HexOffline.cheats" existe a la racine du jeu.
+    /// Inactif sauf si le fichier "HexRevival.cheats" existe a la racine du jeu.
     /// Agit cote "serveur" (session autoritative) : le client recoit les changements par le
     /// flux normal (deltas d'etat + options), ce qui teste aussi ce flux.
     ///
-    /// Commandes (canal HexOffline.cmd) :
+    /// Commandes (canal HexRevival.cmd) :
     ///   cheat find &lt;texte&gt;               cartes dont le nom contient le texte
     ///   cheat give &lt;j|ia&gt; &lt;nom de carte&gt;   ajoute la carte dans la main
     ///   cheat res &lt;j|ia&gt; &lt;n&gt;               +n ressources (total, courant, seuils de toutes couleurs)
@@ -25,13 +25,13 @@ namespace HexOffline
     {
         public static bool Enabled()
         {
-            return File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexOffline.cheats"));
+            return File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.cheats"));
         }
 
         public static string Execute(StandaloneGameClient gc, string[] parts)
         {
             if (!Enabled())
-                return "triches desactivees (creer HexOffline.cheats)";
+                return "triches desactivees (creer HexRevival.cheats)";
             if (parts.Length < 2)
                 return "usage: cheat find|give|res ...";
             string sub = parts[1].ToLower();
@@ -194,14 +194,14 @@ namespace HexOffline
     }
 }
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
-    /// Banc d'essai des cartes (outil de test, separe du mod). Actif si "HexOffline.gauntlet" existe
-    /// (et HexOffline.cheats). A chaque debut de phase principale, le joueur actif (joue par l'IA)
+    /// Banc d'essai des cartes (outil de test, separe du mod). Actif si "HexRevival.gauntlet" existe
+    /// (et HexRevival.cheats). A chaque debut de phase principale, le joueur actif (joue par l'IA)
     /// recoit les K cartes suivantes de la liste des cartes possedables + des ressources ;
     /// on note ensuite si chaque carte a quitte la main (= jouee). Resultats :
-    /// HexOffline.gauntlet.csv (carte;partie;tour;joueur;resultat;zone). Position : HexOffline.gauntlet.
+    /// HexRevival.gauntlet.csv (carte;partie;tour;joueur;resultat;zone). Position : HexRevival.gauntlet.
     /// </summary>
     public static class Gauntlet
     {
@@ -224,7 +224,7 @@ namespace HexOffline
             public int Forced;
             public int Skips;
             public int ClientWindows;      // fenetres (vues du client) ou l'option "jouer" etait presente
-            public string LastWindowKey, LastForcedKey;    // tentatives de jeu forcees (mode HexOffline.gauntlet.force)
+            public string LastWindowKey, LastForcedKey;    // tentatives de jeu forcees (mode HexRevival.gauntlet.force)
         }
 
         private static List<CardTemplate> s_Cards;
@@ -233,17 +233,17 @@ namespace HexOffline
         private static int s_Game;
 
         private static string Root { get { return Path.GetFullPath(Application.dataPath + "/../"); } }
-        /// <summary>Activation : fichier HexOffline.gauntlet (commun). Position : par instance.</summary>
-        private static string MarkerPath { get { return Path.Combine(Root, "HexOffline.gauntlet"); } }
-        private static string StatePath { get { return Path.Combine(Root, Instance.Id == 0 ? "HexOffline.gauntlet" : "HexOffline.gauntlet.pos" + Instance.Suffix); } }
-        private static string CsvPath { get { return Path.Combine(Root, Instance.Name("HexOffline.gauntlet.csv")); } }
+        /// <summary>Activation : fichier HexRevival.gauntlet (commun). Position : par instance.</summary>
+        private static string MarkerPath { get { return Path.Combine(Root, "HexRevival.gauntlet"); } }
+        private static string StatePath { get { return Path.Combine(Root, Instance.Id == 0 ? "HexRevival.gauntlet" : "HexRevival.gauntlet.pos" + Instance.Suffix); } }
+        private static string CsvPath { get { return Path.Combine(Root, Instance.Name("HexRevival.gauntlet.csv")); } }
 
         public static bool Enabled() { return Cheats.Enabled() && File.Exists(MarkerPath); }
 
-        /// <summary>Mode "cible" (fichier HexOffline.gauntlet.focus) : moins de cartes par tour et un
+        /// <summary>Mode "cible" (fichier HexRevival.gauntlet.focus) : moins de cartes par tour et un
         /// plateau prepare a chaque distribution (troupes en jeu et au cimetiere des deux cotes,
         /// un artefact chacun) pour que les sorts aient toujours des cibles.</summary>
-        private static bool Focus() { return File.Exists(Path.Combine(Root, "HexOffline.gauntlet.focus")); }
+        private static bool Focus() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.focus")); }
 
         private static CardTemplate s_FillerTroop, s_FillerArtifact;
         private static bool s_FillersSearched;
@@ -265,7 +265,7 @@ namespace HexOffline
                 if (s_FillerArtifact == null && (t.m_CardType & ECardTypes.Artifact) != 0 && (t.m_CardType & ECardTypes.Troop) == 0)
                     s_FillerArtifact = t;
             }
-            Debug.Log("[HexOffline] [Gauntlet] cartes de remplissage : troupe=" + (s_FillerTroop != null ? s_FillerTroop.m_Name : "-")
+            Debug.Log("[HexRevival] [Gauntlet] cartes de remplissage : troupe=" + (s_FillerTroop != null ? s_FillerTroop.m_Name : "-")
                 + " artefact=" + (s_FillerArtifact != null ? s_FillerArtifact.m_Name : "-"));
         }
 
@@ -295,7 +295,7 @@ namespace HexOffline
                     if (s_FillerArtifact != null && Count(p, ECardCollections.Warzone, ECardTypes.Artifact) < 1)
                         ss.CreateEncounterCardsInZone(p, s_FillerArtifact.m_Id, 1, ECardCollections.Warzone, ECardLocations.Unknown);
                 }
-                catch (Exception e) { Debug.LogWarning("[HexOffline] [Gauntlet] PrepareBoard: " + e.Message); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Gauntlet] PrepareBoard: " + e.Message); }
             }
         }
 
@@ -329,7 +329,7 @@ namespace HexOffline
             // interroge le banc des l'ecran de connexion).
             if (s_Cards == null && !Singleton<TemplateManager>.Instance.LoadCompleted)
                 return new List<CardTemplate>();
-            string listPath = Path.Combine(Root, "HexOffline.gauntlet.list");
+            string listPath = Path.Combine(Root, "HexRevival.gauntlet.list");
             if (s_Cards == null && File.Exists(listPath))
             {
                 // Liste restreinte (un nom de carte par ligne), ex. pour retester les cartes non jouees.
@@ -362,7 +362,7 @@ namespace HexOffline
 
         /// <summary>
         /// Position dans la liste. Avec N instances, l'instance k traite les cartes k, k+N, k+2N...
-        /// (fichier de position propre a chaque instance ; l'instance 0 seule reprend HexOffline.gauntlet).
+        /// (fichier de position propre a chaque instance ; l'instance 0 seule reprend HexRevival.gauntlet).
         /// </summary>
         private static int ReadIndex()
         {
@@ -410,14 +410,14 @@ namespace HexOffline
             {
                 if (index >= cards.Count)
                 {
-                    Debug.Log("[HexOffline] [Gauntlet] liste terminee");
+                    Debug.Log("[HexRevival] [Gauntlet] liste terminee");
                     break;
                 }
                 CardTemplate t = cards[index];
                 index += Instance.Count;
                 Card created = null;
                 try { created = Cheats.GiveToHand(ss, active, t); }
-                catch (Exception e) { Debug.LogWarning("[HexOffline] [Gauntlet] GiveToHand " + t.m_Name + ": " + e.Message); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Gauntlet] GiveToHand " + t.m_Name + ": " + e.Message); }
                 if (created != null && created.m_CurrentCardCollection == ECardCollections.Hand)
                     s_Given.Add(new Given { Id = created.m_SessionCardId, Name = t.m_Name, Game = s_Game, Turn = ss.m_TotalTurnsTaken, Player = active.m_PlayerId, Created = created });
             }
@@ -443,14 +443,14 @@ namespace HexOffline
                 try { g.PlayableAtFeed = ss.CanPlayCard(g.Created, active); } catch { }
             }
             Server.MarkDirty();
-            Debug.Log("[HexOffline] [Gauntlet] cartes donnees jusqu'a l'index " + index + " a " + active.m_PlayerId);
+            Debug.Log("[HexRevival] [Gauntlet] cartes donnees jusqu'a l'index " + index + " a " + active.m_PlayerId);
         }
 
         /// <summary>Diagnostic : a chaque seconde ou un detenteur a la priorite (phase principale,
         /// chaine vide), note si le moteur juge sa carte jouable.</summary>
         private static LocalPlayer s_ClientPlayer;
         private static bool s_ForcedThisTick;
-        private static bool ForceMode() { return File.Exists(Path.Combine(Root, "HexOffline.gauntlet.force")); }
+        private static bool ForceMode() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.force")); }
 
         /// <summary>
         /// Mode force : fait jouer la carte par l'IA de son detenteur sans passer par sa decision
@@ -478,7 +478,7 @@ namespace HexOffline
                 if (g.Skips++ < 4)
                 {
                     ClientSessionBase cs = owner.m_Session as ClientSessionBase;
-                    Debug.Log("[HexOffline] [Gauntlet] attente " + g.Name + " : file=" + q + " usage=" + cr.Usage
+                    Debug.Log("[HexRevival] [Gauntlet] attente " + g.Name + " : file=" + q + " usage=" + cr.Usage
                         + " optionsClient=" + (cs != null ? cs.Cache.GetUsageFor(g.Id).ToString() : "?")
                         + " prioClient=" + (cs != null && cs.PriorityPlayer != null ? cs.PriorityPlayer.m_PlayerId.ToString() : "?")
                         + " phaseClient=" + (cs != null ? cs.CurrentPhase.ToString() : "?") + " phaseSrv=" + ss.CurrentTurnPhase);
@@ -489,7 +489,7 @@ namespace HexOffline
             bool wasFor;
             Server.LastPlayOffer.TryGetValue(prio.m_PlayerId, out last);
             Server.LastOfferWasFor.TryGetValue(prio.m_PlayerId, out wasFor);
-            Debug.Log("[HexOffline] [Gauntlet] avant jeu force de " + g.Name + " : usage client=" + cr.Usage
+            Debug.Log("[HexRevival] [Gauntlet] avant jeu force de " + g.Name + " : usage client=" + cr.Usage
                 + " zone client=" + cr.Collection + " derniere liste serveur=" + (last == null ? "aucune" : (last.Contains(g.Id) ? "avec la carte" : "sans la carte (" + last.Count + ")"))
                 + (wasFor ? " [liste SendPlayerOptionsFor]" : "") + " chaine=" + ss.Chain.IsEmpty + " phase=" + ss.CurrentTurnPhase
                 + " fileClient=" + ClientQueue(owner) + " usagesClient=" + ClientUsages(fn, owner));
@@ -497,7 +497,7 @@ namespace HexOffline
             if (m == null) return;
             g.Forced++;
             object r = m.Invoke(ai, new object[] { cr });
-            Debug.Log("[HexOffline] [Gauntlet] jeu force de " + g.Name + " par " + prio.m_PlayerId + " -> " + r);
+            Debug.Log("[HexRevival] [Gauntlet] jeu force de " + g.Name + " par " + prio.m_PlayerId + " -> " + r);
         }
 
         private static string ClientQueue(LocalPlayer owner)
@@ -554,7 +554,7 @@ namespace HexOffline
                 g.LastForcedKey = key;
                 Player prio = ss.GetPriorityPlayer();
                 try { ForcePlay(ss, prio ?? client, g); }
-                catch (Exception e) { Debug.LogWarning("[HexOffline] [Gauntlet] ForcePlay " + g.Name + ": " + e); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Gauntlet] ForcePlay " + g.Name + ": " + e); }
                 return; // une seule tentative par image
             }
         }

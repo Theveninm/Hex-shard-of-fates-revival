@@ -10,7 +10,7 @@ using Game.Shared.Mechanics;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Méthodes de remplacement injectées par le patcher dans les DLL du jeu
@@ -51,14 +51,14 @@ namespace HexOffline
             {
                 SeedLocalProfile(self, username);
                 try { LocalProfile.Load(self, new UID(UID.Type.ServicePlayer, 0x1001UL), string.IsNullOrEmpty(username) ? "Offline" : username); }
-                catch (Exception e) { Debug.LogError("[HexOffline] LocalProfile.Load failed: " + e); }
+                catch (Exception e) { Debug.LogError("[HexRevival] LocalProfile.Load failed: " + e); }
                 RaiseLoginResponse(self, true, null);
-                Debug.Log("[HexOffline] PlayerProfile.Login -> profil local initialise pour '" + username + "'");
+                Debug.Log("[HexRevival] PlayerProfile.Login -> profil local initialise pour '" + username + "'");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] PlayerProfile_Login failed: " + e);
+                Debug.LogError("[HexRevival] PlayerProfile_Login failed: " + e);
                 error = "OFFLINE_ERROR";
                 RaiseLoginResponse(self, false, "OFFLINE_ERROR");
                 return false;
@@ -107,13 +107,13 @@ namespace HexOffline
             FieldInfo field = typeof(PlayerProfile).GetField("OnProfileLoginResponse", PrivateInstance);
             if (ReferenceEquals(field, null))
             {
-                Debug.LogWarning("[HexOffline] Champ OnProfileLoginResponse introuvable.");
+                Debug.LogWarning("[HexRevival] Champ OnProfileLoginResponse introuvable.");
                 return;
             }
             Delegate handler = field.GetValue(self) as Delegate;
             if (ReferenceEquals(handler, null))
             {
-                Debug.LogWarning("[HexOffline] Aucun abonne a OnProfileLoginResponse.");
+                Debug.LogWarning("[HexRevival] Aucun abonne a OnProfileLoginResponse.");
                 return;
             }
             foreach (Delegate d in handler.GetInvocationList())
@@ -124,7 +124,7 @@ namespace HexOffline
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("[HexOffline] Erreur dans un handler de login: " + e);
+                    Debug.LogError("[HexRevival] Erreur dans un handler de login: " + e);
                 }
             }
         }
@@ -151,7 +151,7 @@ namespace HexOffline
             SessionStateEncounterData data = new SessionStateEncounterData();
             data.SceneTemplateId = new ResourceId(new Guid(PracticeEncounterGuid));
             data.SessionFlags = ESessionFlags.IsEncounter | ESessionFlags.IsPvE;
-            Debug.Log("[HexOffline] Practice -> rencontre locale " + PracticeEncounterGuid + " (flags d'origine " + flags + ")");
+            Debug.Log("[HexRevival] Practice -> rencontre locale " + PracticeEncounterGuid + " (flags d'origine " + flags + ")");
             StandaloneGameClient_SendStartEncounter(self, sessionName, data);
             return false;
         }
@@ -174,7 +174,7 @@ namespace HexOffline
                         FieldInfo f = typeof(AuthoritativeSessionBase).GetField("m_OverrideDecks", BindingFlags.Instance | BindingFlags.NonPublic);
                         Dictionary<UID, DeckTemplate> over = f.GetValue(self) as Dictionary<UID, DeckTemplate>;
                         over[player.m_PlayerId] = s_PendingAIDeck;
-                        Debug.Log("[HexOffline] IA " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
+                        Debug.Log("[HexRevival] IA " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
                     }
                     return;
                 }
@@ -182,9 +182,9 @@ namespace HexOffline
                 if (gc == null || gc.Player == null || gc.Player.m_PlayerId != player.m_PlayerId) return;
                 player.m_DeckID = gc.Player.m_DeckID;
                 player.m_DeckTemplateID = gc.Player.m_DeckTemplateID;
-                Debug.Log("[HexOffline] joueur " + player.m_PlayerId + " : deck " + player.m_DeckID);
+                Debug.Log("[HexRevival] joueur " + player.m_PlayerId + " : deck " + player.m_DeckID);
             }
-            catch (Exception e) { Debug.LogWarning("[HexOffline] AddPlayer : " + e.Message); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] AddPlayer : " + e.Message); }
         }
 
         /// <summary>Rencontre servant d'adversaire pour "Practice" (deck IA de la rencontre).</summary>
@@ -195,7 +195,7 @@ namespace HexOffline
         {
             try
             {
-                Debug.Log("[HexOffline] Demarrage encounter local : " + encounterData.SceneTemplateId);
+                Debug.Log("[HexRevival] Demarrage encounter local : " + encounterData.SceneTemplateId);
                 Server.ResetCache();
                 FillNullLists(encounterData);
 
@@ -239,7 +239,7 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] SendStartEncounter local failed: " + e);
+                Debug.LogError("[HexRevival] SendStartEncounter local failed: " + e);
             }
         }
 
@@ -305,12 +305,12 @@ namespace HexOffline
                 context.m_PlayerDeckId = playerDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
-                Debug.Log("[HexOffline] [Menu] partie : deck " + playerDeck + " contre " + label + " (rencontre " + scene + (aiDeck != null ? ", deck IA " + aiDeck.m_DeckName : "") + ")");
+                Debug.Log("[HexRevival] [Menu] partie : deck " + playerDeck + " contre " + label + " (rencontre " + scene + (aiDeck != null ? ", deck IA " + aiDeck.m_DeckName : "") + ")");
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Battle, context);
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] [Menu] StartMatch : " + e);
+                Debug.LogError("[HexRevival] [Menu] StartMatch : " + e);
             }
         }
 
@@ -331,12 +331,12 @@ namespace HexOffline
                 context.m_PlayerDeckId = Decks.LastDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
-                Debug.Log("[HexOffline] " + source + " -> encounter PvE local " + sceneId);
+                Debug.Log("[HexRevival] " + source + " -> encounter PvE local " + sceneId);
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Battle, context);
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] StartOfflineEncounter failed: " + e);
+                Debug.LogError("[HexRevival] StartOfflineEncounter failed: " + e);
             }
         }
 

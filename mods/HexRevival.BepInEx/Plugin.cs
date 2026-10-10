@@ -8,27 +8,48 @@ using Game.Shared;
 using HarmonyLib;
 using Game.Shared.Mechanics;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
-    /// Point d'entrée BepInEx 5 du mod HexOffline.
+    /// Point d'entrée BepInEx 5 du mod HexRevival.
     ///
-    /// Remplace le patcheur Mono.Cecil (tools/HexOffline.Patcher) : les mêmes
+    /// Remplace le patcheur Mono.Cecil (tools/HexRevival.Patcher) : les mêmes
     /// redirections sont posées à chaud via Harmony, l'installation du jeu reste
     /// vierge (BepInEx ne fait que déposer des fichiers à côté).
     ///
     /// La logique elle-même est inchangée et partagée avec l'ancien plugin :
-    /// mods/HexOffline/src/HexOffline/{Bootstrap,Patches,Server,Repl,Test}.cs.
+    /// mods/HexRevival/src/HexRevival/{Bootstrap,Patches,Server,Repl,Test}.cs.
     /// </summary>
-    [BepInPlugin("hexoffline", "HexOffline", "1.0.0")]
+    [BepInPlugin("hexrevival", "HexRevival", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
 
+        /// <summary>
+        /// Le mod s'appelait "HexOffline" (1.0) : reprend ses fichiers a la racine du jeu
+        /// (decks, champions, reglages) sous le nouveau nom, sans jamais ecraser un fichier existant.
+        /// </summary>
+        private static void MigrateOldName()
+        {
+            try
+            {
+                string root = System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../");
+                foreach (string f in System.IO.Directory.GetFiles(root, "HexOffline*"))
+                {
+                    string name = System.IO.Path.GetFileName(f);
+                    string dest = System.IO.Path.Combine(root, "HexRevival" + name.Substring("HexOffline".Length));
+                    if (System.IO.File.Exists(dest)) continue;
+                    try { System.IO.File.Move(f, dest); } catch (Exception e) { Log.LogWarning("Migration " + name + " : " + e.Message); }
+                }
+            }
+            catch { }
+        }
+
         private void Awake()
         {
             Log = Logger;
-            Harmony harmony = new Harmony("hexoffline");
+            MigrateOldName();
+            Harmony harmony = new Harmony("hexrevival");
             int ok = 0, failed = 0;
 
             Action<string, Action> apply = (label, patch) =>
@@ -132,7 +153,7 @@ namespace HexOffline
                 Log.LogInfo("Service.Produce neutralise sur " + n + " service(s)");
             });
 
-            // Sonde reseau : journalise ce que le client tente d'envoyer au serveur (HexOffline.net.log).
+            // Sonde reseau : journalise ce que le client tente d'envoyer au serveur (HexRevival.net.log).
             apply("ClientConnection.SendCommand (sonde)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(Game.Shared.Network.SFS.ClientConnection), "SendCommand",
@@ -141,7 +162,7 @@ namespace HexOffline
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "ClientConnection_SendCommand"));
             });
 
-            Log.LogInfo("HexOffline charge : " + ok + " patchs OK, " + failed + " en echec.");
+            Log.LogInfo("HexRevival charge : " + ok + " patchs OK, " + failed + " en echec.");
         }
 
         private static void Prefix(Harmony h, Type type, string method, Type[] args, string hook)
@@ -377,10 +398,10 @@ namespace HexOffline
             try { line = __instance.GetLogLine(__0); }
             catch (Exception e) { line = __instance.GetType().Name + " (GetLogLine: " + e.Message + ")"; }
             line = "ECHEC " + FailedRequirement(__instance, __0) + " | " + line;
-            UnityEngine.Debug.Log("[HexOffline] [FailTx] " + line.Replace("\n", " | "));
+            UnityEngine.Debug.Log("[HexRevival] [FailTx] " + line.Replace("\n", " | "));
             try
             {
-                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), Instance.Name("HexOffline.failtx.log")),
+                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), Instance.Name("HexRevival.failtx.log")),
                     DateTime.Now.ToString("HH:mm:ss") + " " + line.Replace("\n", " | ") + "\r\n");
             }
             catch { }
@@ -431,7 +452,7 @@ namespace HexOffline
 
     /// <summary>
     /// Sonde reseau hors ligne : pour chaque envoi bloque, note le service, la methode appelante
-    /// (pile) et le contenu de la fermeture (objets requete captures). Fichier HexOffline.net.log.
+    /// (pile) et le contenu de la fermeture (objets requete captures). Fichier HexRevival.net.log.
     /// </summary>
     public static class NetTrace
     {
@@ -471,7 +492,7 @@ namespace HexOffline
                         sb.Append("\n    ").Append(f.Name).Append(" = ").Append(Describe(v, 0));
                     }
                 }
-                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), "HexOffline.net.log"),
+                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), "HexRevival.net.log"),
                     sb.ToString() + "\r\n");
             }
             catch { }

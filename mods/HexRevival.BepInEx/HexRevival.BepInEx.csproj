@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Plugin BepInEx 5 de HexOffline. Build Windows : dotnet build -c Release
+  <!-- Plugin BepInEx 5 de HexRevival. Build Windows : dotnet build -c Release
        (alternative Linux sans SDK : tools/build_bepinex.sh, avec mcs). -->
   <PropertyGroup>
     <TargetFramework>net35</TargetFramework>
     <LangVersion>7.3</LangVersion>
-    <AssemblyName>HexOffline</AssemblyName>
-    <RootNamespace>HexOffline</RootNamespace>
+    <AssemblyName>HexRevival</AssemblyName>
+    <RootNamespace>HexRevival</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <!-- Compile contre le mscorlib du jeu (profil Mono 2.0) : pas d'API .NET 4.x par erreur. -->
@@ -18,21 +18,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\HexOffline\src\HexOffline\Bootstrap.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Patches.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Server.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Repl.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Test.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Cheats.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Instance.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\LocalProfile.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\LocalServer.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Decks.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Champions.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\OfflineMenu.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\GameSkin.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Portraits.cs" />
-    <Compile Include="..\HexOffline\src\HexOffline\Loc.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Bootstrap.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Patches.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Server.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Repl.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Test.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Cheats.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Instance.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\LocalProfile.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\LocalServer.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Decks.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Champions.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\OfflineMenu.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\GameSkin.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Portraits.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\Loc.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,7 +50,7 @@
 
   <!-- Après build : copie dans BepInEx/plugins (le jeu doit être fermé). -->
   <Target Name="DeployToGame" AfterTargets="Build" Condition="Exists('$(GameDir)\BepInEx')">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\HexOffline" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\HexRevival" />
   </Target>
 
 </Project>

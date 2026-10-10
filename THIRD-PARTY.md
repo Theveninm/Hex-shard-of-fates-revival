@@ -11,4 +11,4 @@ https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.2
 | MonoMod | MIT | `mod/BepInEx/core/MonoMod.*.dll` |
 | Mono.Cecil | MIT | `mod/BepInEx/core/Mono.Cecil*.dll` |
 
-`mod/BepInEx/plugins/HexOffline/HexOffline.dll` and `HexOffline.exe` are built from this repository's source.
+`mod/BepInEx/plugins/HexRevival/HexRevival.dll` and `HexRevival.exe` are built from this repository's source.

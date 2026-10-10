@@ -10,14 +10,14 @@ using Game.Shared.Mechanics.Transactions;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// "Boite noire" + harnais de test.
-    /// - Toujours actif : ecrit un etat concis dans HexOffline.state.log (1x/s) pendant un combat.
+    /// - Toujours actif : ecrit un etat concis dans HexRevival.state.log (1x/s) pendant un combat.
     /// - Raccourcis : F8 = dump detaille, F9 = passer priorite, F10 = jouer 1re carte jouable,
     ///   F11 = ne declarer ni attaquant ni bloqueur, F12 = forcer fin de tour (auto-pass).
-    /// - Auto-test complet uniquement si le marqueur HexOffline.autotest existe.
+    /// - Auto-test complet uniquement si le marqueur HexRevival.autotest existe.
     /// </summary>
     public class TestBehaviour : MonoBehaviour
     {
@@ -25,7 +25,7 @@ namespace HexOffline
 
         private bool m_Enabled;
         private bool m_AutoTest;
-        /// <summary>Marqueur HexOffline.autostart : login + lancement du combat, puis la main au joueur.</summary>
+        /// <summary>Marqueur HexRevival.autostart : login + lancement du combat, puis la main au joueur.</summary>
         private bool m_AutoStart;
         private bool m_AutoStartDone;
         private bool m_AutoAI;
@@ -77,7 +77,7 @@ namespace HexOffline
             // compteur persistant (le jeu redemarre apres un blocage)
             try
             {
-                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexOffline.stalls"));
+                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.stalls"));
                 int n = 0;
                 if (File.Exists(f)) int.TryParse(File.ReadAllText(f).Trim(), out n);
                 File.WriteAllText(f, (n + 1).ToString());
@@ -119,14 +119,14 @@ namespace HexOffline
         private string m_LastEncounter = "-";
 
         /// <summary>
-        /// Fichier d'etat lisible (HexOffline.status.txt, ou .k par instance), reecrit toutes les 10 s.
-        /// S'il n'est plus mis a jour, le jeu est fige ou ferme (voir HexOffline_etat.bat).
+        /// Fichier d'etat lisible (HexRevival.status.txt, ou .k par instance), reecrit toutes les 10 s.
+        /// S'il n'est plus mis a jour, le jeu est fige ou ferme (voir HexRevival_etat.bat).
         /// </summary>
         private static int ReadStalls()
         {
             try
             {
-                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexOffline.stalls"));
+                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.stalls"));
                 int n;
                 if (File.Exists(f) && int.TryParse(File.ReadAllText(f).Trim(), out n)) return n;
             }
@@ -149,7 +149,7 @@ namespace HexOffline
                 l.Add("Phase : " + (session != null ? session.CurrentPhase.ToString() : gc.StateManager.CurrentGameState.ToString()));
                 if (Gauntlet.Enabled())
                     l.Add(Gauntlet.Summary());
-                File.WriteAllText(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexOffline.status.txt")), string.Join("\r\n", l.ToArray()).Replace("\n", "\r\n").Replace("\r\r", "\r") + "\r\n");
+                File.WriteAllText(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.status.txt")), string.Join("\r\n", l.ToArray()).Replace("\n", "\r\n").Replace("\r\r", "\r") + "\r\n");
             }
             catch { }
         }
@@ -194,15 +194,15 @@ namespace HexOffline
         {
             try
             {
-                GameObject go = new GameObject("HexOfflineDebug");
+                GameObject go = new GameObject("HexRevivalDebug");
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 go.AddComponent<TestBehaviour>();
                 go.AddComponent<OfflineMenu>();
-                Debug.Log("[HexOffline][Dbg] behaviour created");
+                Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline][Dbg] Enable failed: " + e);
+                Debug.LogError("[HexRevival][Dbg] Enable failed: " + e);
             }
         }
 
@@ -211,11 +211,11 @@ namespace HexOffline
             m_Enabled = true;
             m_StartTime = Time.realtimeSinceStartup;
             string root = Path.GetFullPath(Application.dataPath + "/../");
-            m_StatePath = Path.Combine(root, Instance.Name("HexOffline.state.log"));
-            m_CmdPath = Path.Combine(root, Instance.Name("HexOffline.cmd"));
-            m_RespPath = Path.Combine(root, Instance.Name("HexOffline.resp"));
-            m_AutoTest = File.Exists(Path.Combine(root, "HexOffline.autotest"));
-            m_AutoStart = File.Exists(Path.Combine(root, "HexOffline.autostart"));
+            m_StatePath = Path.Combine(root, Instance.Name("HexRevival.state.log"));
+            m_CmdPath = Path.Combine(root, Instance.Name("HexRevival.cmd"));
+            m_RespPath = Path.Combine(root, Instance.Name("HexRevival.resp"));
+            m_AutoTest = File.Exists(Path.Combine(root, "HexRevival.autotest"));
+            m_AutoStart = File.Exists(Path.Combine(root, "HexRevival.autostart"));
             if (m_AutoStart)
             {
                 // Contenu optionnel "LxH" : taille de fenetre souhaitee (ex. 2240x1260).
@@ -223,7 +223,7 @@ namespace HexOffline
                 {
                     // Contenu : mots-cles separes par des espaces. "LxH" = taille de fenetre,
                     // "aiplay" = l'IA joue aussi pour le joueur humain (test d'endurance).
-                    foreach (string tok in File.ReadAllText(Path.Combine(root, "HexOffline.autostart")).Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+                    foreach (string tok in File.ReadAllText(Path.Combine(root, "HexRevival.autostart")).Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         if (tok == "aiplay") { m_AutoAI = true; continue; }
                         if (tok == "menu") { m_MenuOnly = true; continue; }
@@ -264,9 +264,9 @@ namespace HexOffline
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
                     Time.timeScale = m_Speed;
-                // Arret des instances supervisees : fichier HexOffline.soak.stop.
+                // Arret des instances supervisees : fichier HexRevival.soak.stop.
                 if (Instance.Supervised && Time.frameCount % 120 == 0
-                    && File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexOffline.soak.stop")))
+                    && File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.soak.stop")))
                     System.Diagnostics.Process.GetCurrentProcess().Kill();
                 if (m_Mute && AudioListener.volume != 0f)
                     AudioListener.volume = 0f;
@@ -287,7 +287,7 @@ namespace HexOffline
                 if (m_AutoAI && Gauntlet.Enabled())
                 {
                     try { Gauntlet.FrameCheck(GetServer(gc), gc.Player); }
-                    catch (Exception e) { Debug.LogWarning("[HexOffline] gauntlet frame: " + e.Message); }
+                    catch (Exception e) { Debug.LogWarning("[HexRevival] gauntlet frame: " + e.Message); }
                 }
 
                 // L'overlay "Loading" (ajoute par UIBattle.StartGame) n'est jamais retire dans
@@ -373,7 +373,7 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline][Dbg] Update: " + e);
+                Debug.LogError("[HexRevival][Dbg] Update: " + e);
             }
         }
 
@@ -508,14 +508,14 @@ namespace HexOffline
         private int m_EncounterIndex;
 
         /// <summary>
-        /// Rencontre suivante : HexOffline.encounters (une ligne "guid nom" par rencontre), parcourue
+        /// Rencontre suivante : HexRevival.encounters (une ligne "guid nom" par rencontre), parcourue
         /// en boucle a partir d'un point aleatoire ; sinon la rencontre par defaut.
         /// </summary>
         private string NextEncounter()
         {
             try
             {
-                string path = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexOffline.encounters");
+                string path = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.encounters");
                 if (File.Exists(path))
                 {
                     List<string> lines = new List<string>();
@@ -539,7 +539,7 @@ namespace HexOffline
         }
 
         /// <summary>
-        /// Marqueur HexOffline.autostart : clique "Login" a notre place, puis lance le combat
+        /// Marqueur HexRevival.autostart : clique "Login" a notre place, puis lance le combat
         /// Frost Ring une fois sur la page d'accueil. Le combat lui-meme reste au joueur.
         /// </summary>
         private void DriveAutoStart(StandaloneGameClient gc, float now)
@@ -729,10 +729,10 @@ namespace HexOffline
                 }
                 case "soak":
                 {
-                    // Passe en test sans rendu : lance HexOffline_soak.bat N puis ferme cette instance.
+                    // Passe en test sans rendu : lance HexRevival_soak.bat N puis ferme cette instance.
                     string root2 = Path.GetFullPath(Application.dataPath + "/../");
-                    string bat2 = Path.Combine(root2, "HexOffline_soak.bat");
-                    if (!File.Exists(bat2)) return "HexOffline_soak.bat introuvable";
+                    string bat2 = Path.Combine(root2, "HexRevival_soak.bat");
+                    if (!File.Exists(bat2)) return "HexRevival_soak.bat introuvable";
                     string n = parts.Length > 1 ? parts[1] : "1";
                     System.Diagnostics.ProcessStartInfo psi2 = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c \"" + bat2 + "\" " + n);
                     psi2.WorkingDirectory = root2;
@@ -747,14 +747,14 @@ namespace HexOffline
                     if (m_KillAt > 0f) return "deja en cours";
                     if (Instance.Supervised)
                     {
-                        // Lancee par HexOffline_soak.bat : le superviseur relance l'instance a sa sortie.
+                        // Lancee par HexRevival_soak.bat : le superviseur relance l'instance a sa sortie.
                         m_KillAt = Time.realtimeSinceStartup + 0.5f;
                         return "restarting (superviseur)";
                     }
-                    // Relance via HexOffline_restart.bat (installe un plugin .new en attente, relance Hex.exe).
+                    // Relance via HexRevival_restart.bat (installe un plugin .new en attente, relance Hex.exe).
                     string root = Path.GetFullPath(Application.dataPath + "/../");
-                    string bat = Path.Combine(root, "HexOffline_restart.bat");
-                    if (!File.Exists(bat)) return "HexOffline_restart.bat introuvable";
+                    string bat = Path.Combine(root, "HexRevival_restart.bat");
+                    if (!File.Exists(bat)) return "HexRevival_restart.bat introuvable";
                     System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c \"" + bat + "\"");
                     psi.WorkingDirectory = root;
                     psi.UseShellExecute = true;

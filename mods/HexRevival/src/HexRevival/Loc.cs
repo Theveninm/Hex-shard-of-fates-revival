@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Textes du mod dans les langues du jeu. La langue suit l'option "Language" du jeu

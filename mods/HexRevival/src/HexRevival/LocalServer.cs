@@ -7,7 +7,7 @@ using Game.Shared.Domain;
 using Game.Shared.Network;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// "Serveur" local pour les services hors combat (profil, decks...).
@@ -42,7 +42,7 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[HexOffline] [LocalServer] decodage impossible : " + e.Message);
+                Debug.LogWarning("[HexRevival] [LocalServer] decodage impossible : " + e.Message);
                 return false;
             }
             object resp = null;
@@ -52,11 +52,11 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] [LocalServer] transaction " + dw.DataType + " (" + (args != null ? args.GetType().Name : "?") + ") : " + e);
+                Debug.LogError("[HexRevival] [LocalServer] transaction " + dw.DataType + " (" + (args != null ? args.GetType().Name : "?") + ") : " + e);
             }
             if (resp == null)
                 return false;
-            Debug.Log("[HexOffline] [LocalServer] " + args.GetType().Name + " -> " + resp.GetType().Name);
+            Debug.Log("[HexRevival] [LocalServer] " + args.GetType().Name + " -> " + resp.GetType().Name);
             lock (s_Pending)
                 s_Pending.Enqueue(new Pending { TransactionId = dw.DataType, Response = resp, Callback = callback });
             return true;
@@ -86,7 +86,7 @@ namespace HexOffline
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("[HexOffline] [LocalServer] livraison " + p.TransactionId + " : " + e);
+                    Debug.LogError("[HexRevival] [LocalServer] livraison " + p.TransactionId + " : " + e);
                 }
             }
         }

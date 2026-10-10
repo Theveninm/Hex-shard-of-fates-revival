@@ -5,7 +5,7 @@ using Game.Shared;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Menu "Partie rapide" (v1 du mod) : choisir son deck, puis un adversaire parmi ses propres
@@ -47,7 +47,7 @@ namespace HexOffline
         private void Awake() { Instance = this; }
 
         /// <summary>
-        /// Commande de test (fichier HexOffline.cmd) : "menu open|close", "menu list enc|game|mine [texte]",
+        /// Commande de test (fichier HexRevival.cmd) : "menu open|close", "menu list enc|game|mine [texte]",
         /// "menu fight enc|game|mine &lt;n&gt; [texte]" (n-ieme resultat de la recherche ; mon deck = celui selectionne).
         /// </summary>
         public static string Command(string[] parts)
@@ -218,7 +218,7 @@ namespace HexOffline
                 catch { }
             }
             m_Encounters.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
-            Debug.Log("[HexOffline] [Menu] " + m_GameDecks.Count + " decks du jeu, " + m_Encounters.Count + " rencontres");
+            Debug.Log("[HexRevival] [Menu] " + m_GameDecks.Count + " decks du jeu, " + m_Encounters.Count + " rencontres");
         }
 
         // ------------------------------------------------------------------
@@ -229,7 +229,7 @@ namespace HexOffline
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Menu] editeur : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] editeur : " + e); }
         }
 
         private void Fight()
@@ -262,7 +262,7 @@ namespace HexOffline
         {
             if (m_LandingButton != null)
             {
-                if (m_LandingButton.name == "HexOffline_QuickMatch")
+                if (m_LandingButton.name == "HexRevival_QuickMatch")
                     foreach (UILabel l in m_LandingButton.GetComponentsInChildren<UILabel>())
                     {
                         if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
@@ -270,7 +270,7 @@ namespace HexOffline
                         if (l.text != t) l.text = t;
                     }
                 // Le jeu peut reactiver Frost Ring Arena apres coup (drapeaux du profil) : on le recache.
-                if (m_HiddenFrostRing != null && m_HiddenFrostRing.activeSelf && m_LandingButton.name == "HexOffline_QuickMatch")
+                if (m_HiddenFrostRing != null && m_HiddenFrostRing.activeSelf && m_LandingButton.name == "HexRevival_QuickMatch")
                 {
                     m_HiddenFrostRing.SetActive(false);
                     UIGrid g = m_LandingButton.transform.parent != null ? m_LandingButton.transform.parent.GetComponent<UIGrid>() : null;
@@ -283,13 +283,13 @@ namespace HexOffline
             GameObject src = vm.MenuUI.FrostRingArena.gameObject;
             Transform parent = src.transform.parent;
             if (parent == null) return;
-            Transform existing = parent.Find("HexOffline_QuickMatch");
+            Transform existing = parent.Find("HexRevival_QuickMatch");
             m_HiddenFrostRing = src;
             if (existing != null) { m_LandingButton = existing.gameObject; return; }
             try
             {
                 GameObject b = (GameObject)UnityEngine.Object.Instantiate(src);
-                b.name = "HexOffline_QuickMatch";
+                b.name = "HexRevival_QuickMatch";
                 b.transform.parent = parent;
                 b.transform.localPosition = src.transform.localPosition;
                 b.transform.localRotation = src.transform.localRotation;
@@ -336,11 +336,11 @@ namespace HexOffline
                 UIGrid grid = parent.GetComponent<UIGrid>();
                 if (grid != null) grid.Reposition();
                 m_LandingButton = b;
-                Debug.Log("[HexOffline] [Menu] bouton Partie rapide ajoute");
+                Debug.Log("[HexRevival] [Menu] bouton Partie rapide ajoute");
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] [Menu] bouton : " + e);
+                Debug.LogError("[HexRevival] [Menu] bouton : " + e);
                 m_LandingButton = src; // pas de nouvel essai a chaque image
             }
         }
@@ -462,9 +462,9 @@ namespace HexOffline
             Rect search = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, 34 * S);
             GameSkin.Sprite(search, "A_Frames", "Frame_Inner");
             GUI.DrawTexture(new Rect(search.x + 2, search.y + 2, search.width - 4, search.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
-            GUI.SetNextControlName("hexoffline_search");
+            GUI.SetNextControlName("hexrevival_search");
             m_Search = GUI.TextField(search, m_Search ?? "", GameSkin.Field);
-            if (string.IsNullOrEmpty(m_Search) && GUI.GetNameOfFocusedControl() != "hexoffline_search")
+            if (string.IsNullOrEmpty(m_Search) && GUI.GetNameOfFocusedControl() != "hexrevival_search")
                 GUI.Label(search, "   " + Loc.Get("search"), GameSkin.Style("body", 14, GameSkin.Muted));
 
             string hint = m_Tab == Tab.Encounters ? Loc.Get("hint_enc")
@@ -560,13 +560,13 @@ namespace HexOffline
                         Game.Client.PlayerProfile profile = Singleton<Main>.Instance.m_GameClient.PlayerProfile;
                         if (profile.DeckList.ContainsKey(id)) profile.RemoveDeck(id);
                     }
-                    catch (Exception ex) { Debug.LogWarning("[HexOffline] [Menu] suppression (profil) : " + ex.Message); }
+                    catch (Exception ex) { Debug.LogWarning("[HexRevival] [Menu] suppression (profil) : " + ex.Message); }
                     if (m_SelMine == e) m_SelMine = null;
                     if (m_SelOpp == e) m_SelOpp = null;
                     Refresh();
                 }));
             }
-            catch (Exception ex) { Debug.LogError("[HexOffline] [Menu] suppression : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] suppression : " + ex); }
         }
 
         /// <summary>Ouvre l'editeur Collection sur ce deck (ou sur un nouveau deck si id invalide).</summary>
@@ -574,7 +574,7 @@ namespace HexOffline
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception ex) { Debug.LogError("[HexOffline] [Menu] editeur : " + ex); return; }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); return; }
             StartCoroutine(PrepareEditor(deck));
         }
 
@@ -591,7 +591,7 @@ namespace HexOffline
                     break;
                 vm = null;
             }
-            if (vm == null) { Debug.LogWarning("[HexOffline] [Menu] editeur introuvable"); yield break; }
+            if (vm == null) { Debug.LogWarning("[HexRevival] [Menu] editeur introuvable"); yield break; }
             yield return new WaitForSeconds(0.5f); // laisse l'editeur finir son initialisation
             try
             {
@@ -604,13 +604,13 @@ namespace HexOffline
                     {
                         ed.Context.Decks.SelectItem(dc);
                         ed.OnLoadDeckPressed();
-                        Debug.Log("[HexOffline] [Menu] deck ouvert dans l'editeur : " + deck);
+                        Debug.Log("[HexRevival] [Menu] deck ouvert dans l'editeur : " + deck);
                         yield break;
                     }
                 }
-                Debug.LogWarning("[HexOffline] [Menu] deck absent de l'editeur : " + deck);
+                Debug.LogWarning("[HexRevival] [Menu] deck absent de l'editeur : " + deck);
             }
-            catch (Exception ex) { Debug.LogError("[HexOffline] [Menu] editeur : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); }
         }
 
         private void SwitchTab(Tab t)

@@ -1,16 +1,16 @@
-// HEX Offline - lanceur / installeur (Windows, .NET Framework 4.x).
+// HEX Revival - lanceur / installeur (Windows, .NET Framework 4.x).
 //
 // Double-clic :
 //   1. cherche HEX: Shards of Fate (dossier du lanceur, registre Windows, bibliotheques Steam,
 //      dossier choisi la fois precedente) ;
 //   2. absent : propose de l'installer via Steam (s'il est dans la bibliotheque du joueur) ou de
 //      choisir le dossier du jeu ;
-//   3. present : installe / met a jour le mod (BepInEx + HexOffline) dans le dossier du jeu,
+//   3. present : installe / met a jour le mod (BepInEx + HexRevival) dans le dossier du jeu,
 //      puis lance le jeu.
 // Options : --uninstall (retire le mod), --install "<dossier>" (usage interne, apres elevation).
 //
 // Transparence : le lanceur n'utilise pas le reseau, lit le registre seulement pour trouver Steam et
-// le jeu (et y retient le dossier choisi, HKCU\Software\HexOffline), copie les fichiers du dossier "mod" livre a cote de lui dans le dossier du jeu, et ne
+// le jeu (et y retient le dossier choisi, HKCU\Software\HexRevival), copie les fichiers du dossier "mod" livre a cote de lui dans le dossier du jeu, et ne
 // demande les droits administrateur que si ce dossier est protege, apres accord du joueur.
 
 using System;
@@ -23,12 +23,12 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("HEX Offline")]
-[assembly: AssemblyProduct("HEX Offline")]
+[assembly: AssemblyTitle("HEX Revival")]
+[assembly: AssemblyProduct("HEX Revival")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
-namespace HexOfflineLauncher
+namespace HexRevivalLauncher
 {
     internal static class Program
     {
@@ -36,7 +36,7 @@ namespace HexOfflineLauncher
         private const string ExeName = "Hex.exe";
         private const string DefaultInstallDir = "HEX SHARDS OF FATE";
         private const string Version = "1.0.0";
-        private const string Title = "HEX Offline";
+        private const string Title = "HEX Revival";
 
         private static bool Fr { get { return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "fr"; } }
 
@@ -148,7 +148,8 @@ namespace HexOfflineLauncher
             // Dossier choisi a la main lors d'un lancement precedent.
             try
             {
-                string saved = Registry.GetValue("HKEY_CURRENT_USER\\Software\\HexOffline", "GameFolder", null) as string;
+                string saved = Registry.GetValue("HKEY_CURRENT_USER\\Software\\HexRevival", "GameFolder", null) as string
+                    ?? Registry.GetValue("HKEY_CURRENT_USER\\Software\\HexOffline", "GameFolder", null) as string; // ancien nom du mod
                 if (!string.IsNullOrEmpty(saved) && File.Exists(Path.Combine(saved, ExeName))) return saved;
             }
             catch { }
@@ -190,8 +191,8 @@ namespace HexOfflineLauncher
             if (steam && r == DialogResult.Yes)
             {
                 Process.Start("steam://install/" + AppId);
-                MessageBox.Show(L("When the installation is finished, run HEX Offline again.\nIf Steam answers \"No license\", the game is not in your library: run HEX Offline again and choose No to pick the game folder.",
-                    "Une fois l'installation terminée, relancez HEX Offline.\nSi Steam répond « Pas de licence », le jeu n'est pas dans votre bibliothèque : relancez HEX Offline et choisissez Non pour indiquer le dossier du jeu."),
+                MessageBox.Show(L("When the installation is finished, run HEX Revival again.\nIf Steam answers \"No license\", the game is not in your library: run HEX Revival again and choose No to pick the game folder.",
+                    "Une fois l'installation terminée, relancez HEX Revival.\nSi Steam répond « Pas de licence », le jeu n'est pas dans votre bibliothèque : relancez HEX Revival et choisissez Non pour indiquer le dossier du jeu."),
                     Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return null;
             }
@@ -200,7 +201,7 @@ namespace HexOfflineLauncher
                 string dir = AskFolder();
                 if (dir != null)
                 {
-                    try { Registry.SetValue("HKEY_CURRENT_USER\\Software\\HexOffline", "GameFolder", dir); } catch { }
+                    try { Registry.SetValue("HKEY_CURRENT_USER\\Software\\HexRevival", "GameFolder", dir); } catch { }
                 }
                 return dir;
             }
@@ -225,14 +226,14 @@ namespace HexOfflineLauncher
         // Installation du mod
         // ------------------------------------------------------------------
 
-        private static string VersionFile(string game) { return Path.Combine(game, "BepInEx\\plugins\\HexOffline\\version.txt"); }
+        private static string VersionFile(string game) { return Path.Combine(game, "BepInEx\\plugins\\HexRevival\\version.txt"); }
 
         private static bool IsModUpToDate(string game)
         {
             try
             {
                 return File.Exists(Path.Combine(game, "winhttp.dll"))
-                    && File.Exists(Path.Combine(game, "BepInEx\\plugins\\HexOffline\\HexOffline.dll"))
+                    && File.Exists(Path.Combine(game, "BepInEx\\plugins\\HexRevival\\HexRevival.dll"))
                     && File.Exists(VersionFile(game))
                     && File.ReadAllText(VersionFile(game)).Trim() == Version;
             }
@@ -245,10 +246,10 @@ namespace HexOfflineLauncher
             // Dossier protege en ecriture : on n'eleve les droits qu'avec l'accord explicite du joueur.
             if (MessageBox.Show(L(
                     "Windows does not allow writing to the game folder:\n" + game + "\n\n" +
-                    "HEX Offline only needs to copy its files there (BepInEx and the HexOffline plugin).\n" +
+                    "HEX Revival only needs to copy its files there (BepInEx and the HexRevival plugin).\n" +
                     "Retry with administrator rights?",
                     "Windows n'autorise pas l'écriture dans le dossier du jeu :\n" + game + "\n\n" +
-                    "HEX Offline doit seulement y copier ses fichiers (BepInEx et le module HexOffline).\n" +
+                    "HEX Revival doit seulement y copier ses fichiers (BepInEx et le module HexRevival).\n" +
                     "Réessayer avec les droits administrateur ?"),
                     Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return false;
@@ -268,7 +269,7 @@ namespace HexOfflineLauncher
         {
             try
             {
-                string test = Path.Combine(dir, ".hexoffline_write_test");
+                string test = Path.Combine(dir, ".hexrevival_write_test");
                 File.WriteAllText(test, "ok");
                 File.Delete(test);
                 return true;
@@ -286,16 +287,20 @@ namespace HexOfflineLauncher
                 string src = PayloadDir;
                 if (!Directory.Exists(src))
                 {
-                    MessageBox.Show(L("The \"mod\" folder is missing next to HexOffline.exe. Extract the whole archive, then try again.",
-                        "Le dossier \"mod\" est absent à côté de HexOffline.exe. Extrayez toute l'archive, puis réessayez."), Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L("The \"mod\" folder is missing next to HexRevival.exe. Extract the whole archive, then try again.",
+                        "Le dossier \"mod\" est absent à côté de HexRevival.exe. Extrayez toute l'archive, puis réessayez."), Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
+                // Ancien nom du mod (HEX Offline 1.0) : son module ne doit pas etre charge en plus de celui-ci.
+                // Les decks et champions (HexOffline.*.txt) sont repris par le module au demarrage.
+                string old = Path.Combine(game, "BepInEx\\plugins\\HexOffline");
+                if (Directory.Exists(old)) Directory.Delete(old, true);
                 foreach (string file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
                 {
                     string rel = file.Substring(src.Length).TrimStart('\\', '/');
                     string dest = Path.Combine(game, rel);
                     // Reglages du joueur : jamais ecrases s'ils existent deja.
-                    if (Path.GetFileName(rel) == "HexOffline.autostart" && File.Exists(dest)) continue;
+                    if (Path.GetFileName(rel) == "HexRevival.autostart" && File.Exists(dest)) continue;
                     Directory.CreateDirectory(Path.GetDirectoryName(dest));
                     File.Copy(file, dest, true);
                 }
@@ -316,14 +321,16 @@ namespace HexOfflineLauncher
 
         private static void Uninstall(string game)
         {
-            if (MessageBox.Show(L("Remove HEX Offline from:\n", "Retirer HEX Offline de :\n") + game + L("\n\nYour decks and champions are kept.", "\n\nVos decks et champions sont conservés."), Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+            if (MessageBox.Show(L("Remove HEX Revival from:\n", "Retirer HEX Revival de :\n") + game + L("\n\nYour decks and champions are kept.", "\n\nVos decks et champions sont conservés."), Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
             try
             {
                 string bep = Path.Combine(game, "BepInEx");
-                string plugin = Path.Combine(bep, "plugins\\HexOffline");
+                string plugin = Path.Combine(bep, "plugins\\HexRevival");
                 if (Directory.Exists(plugin)) Directory.Delete(plugin, true);
-                if (File.Exists(Path.Combine(game, "HexOffline.autostart"))) File.Delete(Path.Combine(game, "HexOffline.autostart"));
+                string old = Path.Combine(bep, "plugins\\HexOffline");
+                if (Directory.Exists(old)) Directory.Delete(old, true);
+                if (File.Exists(Path.Combine(game, "HexRevival.autostart"))) File.Delete(Path.Combine(game, "HexRevival.autostart"));
                 // BepInEx n'est retire que s'il ne sert a aucun autre mod.
                 string plugins = Path.Combine(bep, "plugins");
                 bool otherMods = Directory.Exists(plugins) && Directory.GetFileSystemEntries(plugins).Length > 0;
@@ -333,7 +340,7 @@ namespace HexOfflineLauncher
                         if (File.Exists(Path.Combine(game, f))) File.Delete(Path.Combine(game, f));
                     if (Directory.Exists(bep)) Directory.Delete(bep, true);
                 }
-                MessageBox.Show(L("HEX Offline has been removed.", "HEX Offline a été retiré."), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L("HEX Revival has been removed.", "HEX Revival a été retiré."), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception e)
             {

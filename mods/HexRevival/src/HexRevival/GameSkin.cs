@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Dessin IMGUI avec les ressources graphiques du jeu : sprites des atlas NGUI (cadres, boutons,

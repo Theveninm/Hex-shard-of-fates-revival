@@ -9,11 +9,11 @@ using Game.Shared.Mechanics;
 using Game.Shared.Network.Profile;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Decks du profil local : transactions AddNewDeck / UpdateDeck / GetDeckInfo / RemoveDeck,
-    /// et sauvegarde dans HexOffline.decks.txt (cartes enregistrees par modele, pas par numero
+    /// et sauvegarde dans HexRevival.decks.txt (cartes enregistrees par modele, pas par numero
     /// d'exemplaire : la collection generee peut changer d'une version a l'autre).
     /// </summary>
     public static class Decks
@@ -39,7 +39,7 @@ namespace HexOffline
         /// <summary>Deck a utiliser pour les parties lancees par le mod : le dernier enregistre.</summary>
         public static UID LastDeck = UID.Invalid;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexOffline.decks.txt"); } }
+        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.decks.txt"); } }
 
         // ------------------------------------------------------------------
         // Chargement (a la connexion, apres generation de la collection)
@@ -55,10 +55,10 @@ namespace HexOffline
             {
                 if (File.Exists(FilePath)) Parse(File.ReadAllLines(FilePath));
             }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Decks] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] lecture : " + e); }
             List<deck_bits> res = new List<deck_bits>();
             foreach (StoredDeck d in s_Decks.Values) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
-            Debug.Log("[HexOffline] [Decks] " + res.Count + " deck(s) charge(s)");
+            Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) charge(s)");
             return res;
         }
 
@@ -301,7 +301,7 @@ namespace HexOffline
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Decks] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] sauvegarde : " + e); }
         }
 
         private static string Join(List<ResourceId> l)

@@ -7,7 +7,7 @@ using Game.Shared.Mechanics.Transactions;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Couche "serveur autoritatif" minimale pour le mode offline.
@@ -114,7 +114,7 @@ namespace HexOffline
         {
             if (transaction == null)
                 return false;
-            Debug.Log("[HexOffline] [Server] SubmitTransaction " + transaction.GetType().Name + (s_InServerTick ? " (serveur)" : ""));
+            Debug.Log("[HexRevival] [Server] SubmitTransaction " + transaction.GetType().Name + (s_InServerTick ? " (serveur)" : ""));
             if (transaction is RequestPlayerOptionsTransaction)
             {
                 // Le client redemande ses options (ex. carte annulee pendant le choix des cibles) et
@@ -124,7 +124,7 @@ namespace HexOffline
                 s_SuppressNextGreenLight = false;
                 s_LastGreenLightSig = null;
                 try { self.SendGreenLight(s_LastGreenLightContext); }
-                catch (Exception e) { Debug.LogError("[HexOffline] RequestPlayerOptions : " + e); }
+                catch (Exception e) { Debug.LogError("[HexRevival] RequestPlayerOptions : " + e); }
                 return true;
             }
             if (s_InServerTick)
@@ -323,12 +323,12 @@ namespace HexOffline
                 if (tpu != null)
                     s_LastTurnPhaseSig = TurnSig(tpu.TurnPhase, tpu.ActivePlayerId, tpu.PriorityPlayerId);
                 if (TraceEvents)
-                    Debug.Log("[HexOffline] >> " + Describe(args) + (player != null ? " @" + player.m_PlayerId : ""));
+                    Debug.Log("[HexRevival] >> " + Describe(args) + (player != null ? " @" + player.m_PlayerId : ""));
                 Send(self, player, args);
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] Dispatch failed: " + e);
+                Debug.LogError("[HexRevival] Dispatch failed: " + e);
             }
         }
 
@@ -585,7 +585,7 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] SendPlayerOptions failed: " + e);
+                Debug.LogError("[HexRevival] SendPlayerOptions failed: " + e);
                 return false;
             }
         }
@@ -769,7 +769,7 @@ namespace HexOffline
             if (n >= 3 && !s_BlockedThisTurn.Contains(card))
             {
                 s_BlockedThisTurn.Add(card);
-                Debug.Log("[HexOffline] [Garde-fou] " + card + " retiree des options pour ce tour apres " + n + " refus : " + description);
+                Debug.Log("[HexRevival] [Garde-fou] " + card + " retiree des options pour ce tour apres " + n + " refus : " + description);
                 MarkDirty();
             }
         }
@@ -801,7 +801,7 @@ namespace HexOffline
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[HexOffline] options " + card.m_CardTemplate.m_Name + " / " + abilityId + " : " + ex.Message);
+                Debug.LogWarning("[HexRevival] options " + card.m_CardTemplate.m_Name + " / " + abilityId + " : " + ex.Message);
             }
         }
 
@@ -916,7 +916,7 @@ namespace HexOffline
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexOffline] SendPlayerOptionsFor failed: " + e);
+                Debug.LogError("[HexRevival] SendPlayerOptionsFor failed: " + e);
                 return false;
             }
         }
@@ -1162,13 +1162,13 @@ namespace HexOffline
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[HexOffline] FillClientAttributes: " + ex.Message);
+                Debug.LogWarning("[HexRevival] FillClientAttributes: " + ex.Message);
             }
         }
 
         private static void Log(string message)
         {
-            Debug.Log("[HexOffline] " + message);
+            Debug.Log("[HexRevival] " + message);
         }
     }
 }

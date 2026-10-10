@@ -8,12 +8,12 @@ using Game.Shared;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Mini-debugger generique par reflexion : lecture/ecriture de n'importe quel
     /// champ/propriete (public ou prive), a n'importe quelle profondeur, + appel de methodes.
-    /// Accessible via le canal de commandes (HexOffline.cmd).
+    /// Accessible via le canal de commandes (HexRevival.cmd).
     /// </summary>
     public static class Repl
     {

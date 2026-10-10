@@ -7,7 +7,7 @@ using Game.Shared.Domain;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Profil joueur local (remplace le flux de profil que le serveur envoyait a la connexion).
@@ -35,7 +35,7 @@ namespace HexOffline
             PlayerProfile p = s_PendingProfile;
             s_PendingProfile = null;
             try { Load(p, s_PendingId, s_PendingName); }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Profil] chargement differe : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profil] chargement differe : " + e); }
         }
 
         public static void Load(PlayerProfile profile, UID reckId, string name)
@@ -44,7 +44,7 @@ namespace HexOffline
             {
                 // Les modeles de cartes sont encore en cours de lecture (autre thread) : on attend.
                 s_PendingProfile = profile; s_PendingId = reckId; s_PendingName = name;
-                Debug.Log("[HexOffline] [Profil] cartes pas encore chargees : profil differe");
+                Debug.Log("[HexRevival] [Profil] cartes pas encore chargees : profil differe");
                 return;
             }
             reckoning_bits bits = new reckoning_bits();
@@ -94,7 +94,7 @@ namespace HexOffline
                     bits.Cards.Add(c);
                 }
             }
-            Debug.Log("[HexOffline] [Profil] versions retenues : " + main + " des sets 1-9 sur " + templates);
+            Debug.Log("[HexRevival] [Profil] versions retenues : " + main + " des sets 1-9 sur " + templates);
 
             // Shards de base : TOUTES les versions (le jeu en a deux par couleur ; certains modes,
             // ex. la campagne, attendent une version precise), 60 exemplaires chacune.
@@ -119,7 +119,7 @@ namespace HexOffline
                     bits.Cards.Add(c);
                 }
             }
-            Debug.Log("[HexOffline] [Profil] versions supplementaires de shards : " + extraShards);
+            Debug.Log("[HexRevival] [Profil] versions supplementaires de shards : " + extraShards);
 
             // Equipements (champions PvE) : un exemplaire de chaque, dans l'inventaire.
             int equip = 0;
@@ -137,10 +137,10 @@ namespace HexOffline
                 bits.InventoryIds.Add(inv);
                 equip++;
             }
-            Debug.Log("[HexOffline] [Profil] equipements : " + equip);
+            Debug.Log("[HexRevival] [Profil] equipements : " + equip);
 
             try { foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d); }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Profil] decks : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profil] decks : " + e); }
 
             Type respType = typeof(PlayerProfile).Assembly.GetType("Game.Client.Network.Profile.GetUserProfileInfoResponse");
             object resp = Activator.CreateInstance(respType);
@@ -155,9 +155,9 @@ namespace HexOffline
             {
                 // La fin de la methode rejoint un salon de discussion (reseau absent) : sans
                 // importance, cartes/decks/or sont deja charges a ce stade.
-                Debug.Log("[HexOffline] [Profil] fin de GetUserProfileInfoResponse ignoree : " + (e.InnerException != null ? e.InnerException.Message : e.Message));
+                Debug.Log("[HexRevival] [Profil] fin de GetUserProfileInfoResponse ignoree : " + (e.InnerException != null ? e.InnerException.Message : e.Message));
             }
-            Debug.Log("[HexOffline] [Profil] profil local charge : " + templates + " cartes x" + CopiesPerCard + ", or " + StartingGold);
+            Debug.Log("[HexRevival] [Profil] profil local charge : " + templates + " cartes x" + CopiesPerCard + ", or " + StartingGold);
         }
 
         private static void SetMember(object target, string name, object value)

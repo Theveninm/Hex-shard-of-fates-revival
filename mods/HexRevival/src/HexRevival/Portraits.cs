@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Reckoning.Game;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Portraits des champions, charges comme le fait le jeu (AssetBundleObject.SetChampionPrefab) :
@@ -75,7 +75,7 @@ namespace HexOffline
             {
                 it.Failed = true;
                 it.Loading = false;
-                Debug.LogWarning("[HexOffline] [Portraits] " + champ.m_HudPortrait + " : " + e.Message);
+                Debug.LogWarning("[HexRevival] [Portraits] " + champ.m_HudPortrait + " : " + e.Message);
             }
         }
 

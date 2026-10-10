@@ -9,18 +9,18 @@ using Game.Shared.Mechanics;
 using Game.Shared.Network.Profile;
 using UnityEngine;
 
-namespace HexOffline
+namespace HexRevival
 {
     /// <summary>
     /// Champions de campagne du profil local : AddChampion / DeleteChampion / UpdateChampionDeckID,
-    /// sauvegarde dans HexOffline.champions.txt. Sans fichier, un champion par defaut est cree.
+    /// sauvegarde dans HexRevival.champions.txt. Sans fichier, un champion par defaut est cree.
     /// </summary>
     public static class Champions
     {
         private static readonly List<champion_bits> s_Champions = new List<champion_bits>();
         private static UID s_ReckId;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexOffline.champions.txt"); } }
+        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.champions.txt"); } }
 
         public static List<champion_bits> Load(UID reckId, string defaultName)
         {
@@ -48,7 +48,7 @@ namespace HexOffline
                         s_Champions.Add(c);
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Champions] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] lecture : " + e); }
             if (s_Champions.Count == 0)
             {
                 champion_bits c = New(1UL, defaultName);
@@ -58,7 +58,7 @@ namespace HexOffline
             // Champion sans deck enregistre : on rattache le dernier deck PvE qui lui appartient.
             try
             {
-                string decks = Path.Combine(LocalServer.Root, "HexOffline.decks.txt");
+                string decks = Path.Combine(LocalServer.Root, "HexRevival.decks.txt");
                 if (File.Exists(decks))
                     foreach (string line in File.ReadAllLines(decks))
                     {
@@ -70,8 +70,8 @@ namespace HexOffline
                         if (c != null && c.LastDeckID == 0) c.LastDeckID = id;
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Champions] decks : " + e); }
-            Debug.Log("[HexOffline] [Champions] " + s_Champions.Count + " champion(s)");
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks : " + e); }
+            Debug.Log("[HexRevival] [Champions] " + s_Champions.Count + " champion(s)");
             return new List<champion_bits>(s_Champions);
         }
 
@@ -176,7 +176,7 @@ namespace HexOffline
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexOffline] [Champions] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] sauvegarde : " + e); }
         }
     }
 }
