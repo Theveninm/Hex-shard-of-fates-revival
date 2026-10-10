@@ -471,9 +471,9 @@ namespace HexRevival
                     if (arg0 != null) st.LastNode = arg0;
                     break;
                 case "visit_path":
-                    if (args != null)
-                        foreach (object a in args)
-                            if (a != null && !st.VisitedPaths.Contains(a.ToString())) st.VisitedPaths.Add(a.ToString());
+                    // The client sends the path names as one string array inside the arguments.
+                    foreach (string path in Strings(args))
+                        if (!st.VisitedPaths.Contains(path)) st.VisitedPaths.Add(path);
                     break;
                 case "pass_node":
                     if (arg0 != null) st.LastNode = arg0;
@@ -497,6 +497,18 @@ namespace HexRevival
             }
             Save();
             Answer(st, callback);
+        }
+
+        /// <summary>Event arguments as strings, nested arrays flattened.</summary>
+        private static IEnumerable<string> Strings(object[] args)
+        {
+            if (args == null) yield break;
+            foreach (object a in args)
+            {
+                System.Collections.IEnumerable list = a as System.Collections.IEnumerable;
+                if (a is string || list == null) { if (a != null) yield return a.ToString(); continue; }
+                foreach (object x in list) if (x != null) yield return x.ToString();
+            }
         }
 
         // ------------------------------------------------------------------
