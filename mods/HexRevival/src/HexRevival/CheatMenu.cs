@@ -41,6 +41,11 @@ namespace HexRevival
             m_MessageUntil = Time.realtimeSinceStartup + 3f;
         }
 
+        private void Update()
+        {
+            Settings.EnsureOptionRow();
+        }
+
         private void OnGUI()
         {
             if (!LoggedIn()) { m_Open = false; return; }

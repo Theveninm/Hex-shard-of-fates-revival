@@ -267,7 +267,7 @@ namespace HexRevival
                     foreach (UILabel l in m_LandingButton.GetComponentsInChildren<UILabel>())
                     {
                         if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
-                        string t = Loc.Get("quick_match");
+                        string t = Loc.Get("quick_match").ToLower();
                         if (l.text != t) l.text = t;
                     }
                 // The game may re-enable Frost Ring Arena afterwards (profile flags): hide it again.
@@ -289,12 +289,7 @@ namespace HexRevival
             if (existing != null) { m_LandingButton = existing.gameObject; return; }
             try
             {
-                GameObject b = (GameObject)UnityEngine.Object.Instantiate(src);
-                b.name = "HexRevival_QuickMatch";
-                b.transform.parent = parent;
-                b.transform.localPosition = src.transform.localPosition;
-                b.transform.localRotation = src.transform.localRotation;
-                b.transform.localScale = src.transform.localScale;
+                GameObject b = UiClone.Copy(src, "HexRevival_QuickMatch");
                 // At the very top of the column (above Campaign), on a darker background to
                 // show that this mode was added by the mod.
                 Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
@@ -325,21 +320,14 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Components kept on a clone of a main menu button: display, hover and click feedback.</summary>
-        private static readonly string[] KeptComponents = { "UISprite", "UILabel", "UIWidget", "UITexture", "UIButton", "UIButtonColor",
-            "UIButtonScale", "UIButtonOffset", "UIPlaySound", "UITooltipSetText", "TweenScale", "TweenColor", "TweenAlpha", "TweenPosition", "UIDragScrollView" };
-
         /// <summary>
-        /// Prepares a clone of a main menu button: keeps only its look (everything else, such as the
-        /// game's bindings, localized texts and the original button's actions, including the
-        /// right-click ones, is removed), sets its text and tooltip, hides its padlock.
+        /// Prepares a clone of a main menu button: keeps only its look (see UiClone), sets its text,
+        /// in lower case like the game's own buttons, and tooltip, hides its padlock.
         /// </summary>
         private static void StripClone(GameObject b, string label, string tooltip)
         {
-            foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
-                if (mb != null && System.Array.IndexOf(KeptComponents, mb.GetType().Name) < 0)
-                    UnityEngine.Object.DestroyImmediate(mb);
-            foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.text = label;
+            UiClone.Strip(b);
+            foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.text = label.ToLower();
             foreach (UITooltipSetText t in b.GetComponentsInChildren<UITooltipSetText>(true))
             {
                 t.TooltipLocalizationScript = null;
@@ -370,7 +358,7 @@ namespace HexRevival
             {
                 foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
                 {
-                    string t = Loc.Get("change_account");
+                    string t = Loc.Get("change_account").ToLower();
                     if (l.text != t) l.text = t;
                 }
                 return;
@@ -383,12 +371,7 @@ namespace HexRevival
             if (existing != null) { m_LogoutButton = existing.gameObject; return; }
             try
             {
-                GameObject b = (GameObject)UnityEngine.Object.Instantiate(src);
-                b.name = "HexRevival_ChangeAccount";
-                b.transform.parent = parent;
-                b.transform.localPosition = src.transform.localPosition;
-                b.transform.localRotation = src.transform.localRotation;
-                b.transform.localScale = src.transform.localScale;
+                GameObject b = UiClone.Copy(src, "HexRevival_ChangeAccount");
                 b.transform.SetAsLastSibling();
                 StripClone(b, Loc.Get("change_account"), Loc.Get("change_account_tip"));
                 // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
