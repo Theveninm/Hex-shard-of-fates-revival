@@ -1,7 +1,6 @@
 # HEX Revival
 
 Play **HEX: Shards of Fate** solo, offline, now that the official servers are gone (December 2020).
-*Version française plus bas.*
 
 HEX Revival is a mod: it does not include or modify any game file. It adds a small loader
 ([BepInEx](https://github.com/BepInEx/BepInEx)) and the HexRevival plugin next to `Hex.exe`,
@@ -104,79 +103,3 @@ A Steam "Verify integrity of game files" does not remove the mod files, they are
 HEX Revival code: MIT. BepInEx: LGPL-2.1, HarmonyX / MonoMod: MIT (see `THIRD-PARTY.md`).
 HEX: Shards of Fate and all its content belong to their respective owners; this project is an
 unofficial, non-commercial fan project and distributes no game content.
-
----
-
-# HEX Revival (français)
-
-Jouer à **HEX: Shards of Fate** en solo, hors ligne, depuis la fermeture des serveurs officiels (décembre 2020).
-
-HEX Revival est un mod : il ne contient ni ne modifie aucun fichier du jeu. Il ajoute un petit chargeur
-(BepInEx) et le module HexRevival à côté de `Hex.exe`, et reconstruit sur votre ordinateur ce que faisait
-le serveur : règles du jeu, adversaire IA, collection et decks.
-
-## Contenu
-
-- **Partie rapide** dans le menu principal : choisissez un de vos decks, puis affrontez
-  - une des ~270 rencontres de la campagne et des donjons (avec leurs règles spéciales),
-  - un des decks préconstruits du jeu,
-  - ou un de vos propres decks joué par l'IA.
-- **Collection complète** : toutes les cartes (4 exemplaires, shards de base illimités) et tous les équipements.
-- **Éditeur de deck** (écran Collection du jeu) : créer, modifier, supprimer ; les decks sont enregistrés sur votre ordinateur.
-- L'IA d'origine du jeu, moteur de combat reconstruit à partir du code du client.
-- Interface dans la langue du jeu.
-
-Pas (encore) disponible : la carte du monde de la campagne, Frost Ring Arena, Siege, Battlegrounds, le multijoueur.
-
-## Installer et jouer
-
-1. Il faut les **fichiers du jeu HEX: Shards of Fate** (Windows). Le jeu était gratuit, mais il a été
-   retiré de Steam fin 2020 : Steam ne l'installe (application 410380) que sur les comptes qui l'ont déjà
-   dans leur bibliothèque ; les autres obtiennent « Pas de licence ». Si vous avez les fichiers du jeu par
-   un autre moyen, le lanceur vous permet d'indiquer le dossier du jeu.
-2. Téléchargez `HexRevival-1.0.0.zip` depuis la page [Releases](../../releases) et extrayez-le où vous voulez.
-3. Double-cliquez sur `HexRevival.exe`. Il :
-   - trouve le jeu (bibliothèques Steam, registre Windows, ou dossier choisi la fois précédente),
-   - sinon propose de l'installer avec Steam (s'il est dans votre bibliothèque) ou d'indiquer le dossier du jeu,
-   - copie les fichiers du dossier `mod` dans le dossier du jeu (au premier lancement et aux mises à jour),
-   - lance le jeu.
-
-### Sans Steam (fichiers du jeu obtenus autrement)
-
-HEX Revival fonctionne avec n'importe quelle copie complète du dossier du jeu ; le mod n'utilise pas Steam.
-Ce projet ne distribue pas les fichiers du jeu et ne donne aucun lien vers une copie.
-
-1. Placez le dossier du jeu à un endroit où vous pouvez écrire sans droits administrateur, par exemple
-   `C:\Jeux\HEX SHARDS OF FATE` (évitez `C:\Program Files`). Il doit contenir `Hex.exe`, le dossier
-   `Hex_Data` et les fichiers DLL situés à côté de `Hex.exe`.
-2. Lancez `HexRevival.exe`. S'il ne trouve pas le jeu, il propose d'indiquer le dossier (si Steam est installé,
-   répondez Non à la question sur l'installation par Steam) : sélectionnez le dossier qui contient `Hex.exe`. Le dossier est retenu pour les lancements suivants.
-   *Sans le lanceur :* copiez le contenu du dossier `mod` à côté de `Hex.exe`, puis lancez `Hex.exe`.
-3. Le mod est conçu pour la dernière version du jeu (décembre 2020). Pour vérifier que votre copie est
-   cette version, son fichier `Hex_Data\Managed\Assembly-CSharp.dll` doit avoir cette empreinte SHA-256
-   (PowerShell : `Get-FileHash "Hex_Data\Managed\Assembly-CSharp.dll"`) :
-   `04bdd7a93bd05cdb38c1cc2283b51f521a2e428771ef845938b6c93a203bf94d`
-
-Des fichiers obtenus hors de Steam ne sont garantis par personne : analysez-les avec votre antivirus et
-méfiez-vous de toute copie qui contient des programmes en plus ou demande les droits administrateur.
-
-### Ce que fait le lanceur (et ce qu'il ne fait pas)
-
-Tout son code source est [`tools/launcher/HexRevivalLauncher.cs`](tools/launcher/HexRevivalLauncher.cs) (environ 300 lignes).
-
-- Il lit le registre Windows uniquement pour trouver Steam et le jeu, et y retient le dossier du jeu que
-  vous avez choisi (`HKEY_CURRENT_USER\Software\HexRevival`).
-- Il copie tels quels les fichiers du dossier `mod` dans le dossier du jeu. Rien d'autre n'est écrit.
-- Il n'utilise jamais le réseau (le seul lien qu'il ouvre est l'installation du jeu par Steam, si vous cliquez Oui).
-- Il ne demande les droits administrateur que si Windows refuse l'écriture dans le dossier du jeu, et seulement avec votre accord.
-- Le dossier `mod` contient les fichiers officiels, non modifiés, de BepInEx 5.4.23.2 et `HexRevival.dll`.
-  `SHA256SUMS.txt` donne l'empreinte de chaque fichier.
-
-Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » au premier lancement, car le
-programme n'est pas signé avec un certificat payant : cliquez « Informations complémentaires », puis
-« Exécuter quand même ». Vous pouvez aussi vous passer du lanceur : copiez le contenu du dossier `mod`
-dans le dossier du jeu, puis lancez le jeu normalement.
-
-Utilisez `HexRevival.exe` à chaque fois que vous voulez jouer.
-
-**Désinstaller** : lancez `HexRevival.exe --uninstall` (vos decks sont conservés).
