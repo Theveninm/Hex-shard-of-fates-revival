@@ -22,8 +22,11 @@ Not available (yet): the campaign world map, Frost Ring Arena, Siege, Battlegrou
 
 ## Install and play
 
-1. You need **HEX: Shards of Fate installed through Steam** (Windows). The game was removed from the
-   Steam store at the end of 2020: it must already be in your Steam library.
+1. You need **HEX: Shards of Fate installed through Steam** (Windows). The game is free-to-play
+   (Steam app 410380). Its store page was retired at the end of 2020, but Steam can still be asked to
+   install it directly: open `steam://install/410380` in your browser or the Windows Run dialog
+   (the launcher does it for you). If Steam refuses, the free licence is no longer granted to new
+   accounts and the game must already be in your library.
 2. Download `HexOffline-1.0.0.zip` from the [Releases](../../releases) page and extract it anywhere.
 3. Double-click `HexOffline.exe`. It:
    - finds the game in your Steam libraries (or asks you for the folder),
@@ -108,8 +111,11 @@ Pas (encore) disponible : la carte du monde de la campagne, Frost Ring Arena, Si
 
 ## Installer et jouer
 
-1. Il faut **HEX: Shards of Fate installé avec Steam** (Windows). Le jeu a été retiré de la boutique Steam
-   fin 2020 : il doit déjà être dans votre bibliothèque.
+1. Il faut **HEX: Shards of Fate installé avec Steam** (Windows). Le jeu est gratuit (free-to-play,
+   application Steam 410380). Sa page de boutique a été retirée fin 2020, mais on peut toujours demander
+   à Steam de l'installer directement : ouvrez `steam://install/410380` dans votre navigateur ou dans la
+   fenêtre Exécuter de Windows (le lanceur le fait pour vous). Si Steam refuse, la licence gratuite n'est
+   plus accordée aux nouveaux comptes et le jeu doit déjà être dans votre bibliothèque.
 2. Téléchargez `HexOffline-1.0.0.zip` depuis la page [Releases](../../releases) et extrayez-le où vous voulez.
 3. Double-cliquez sur `HexOffline.exe`. Il :
    - trouve le jeu dans vos bibliothèques Steam (ou vous demande le dossier),

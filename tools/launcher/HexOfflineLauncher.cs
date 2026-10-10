@@ -158,10 +158,10 @@ namespace HexOfflineLauncher
             {
                 r = MessageBox.Show(L(
                     "HEX: Shards of Fate was not found on this computer.\n\n" +
-                    "Yes: open Steam to install it (the game was removed from the Steam store at the end of 2020: it must already be in your Steam library).\n" +
+                    "Yes: ask Steam to install it (the game is free; its store page was retired in 2020, but Steam can still install it by its number).\n" +
                     "No: choose the game folder yourself.",
                     "HEX: Shards of Fate n'a pas été trouvé sur cet ordinateur.\n\n" +
-                    "Oui : ouvrir Steam pour l'installer (le jeu a été retiré de la boutique Steam fin 2020 : il doit déjà être dans votre bibliothèque).\n" +
+                    "Oui : demander à Steam de l'installer (le jeu est gratuit ; sa page de boutique a été retirée en 2020, mais Steam peut encore l'installer par son numéro).\n" +
                     "Non : choisir vous-même le dossier du jeu."),
                     Title, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
                 if (r == DialogResult.Yes)
