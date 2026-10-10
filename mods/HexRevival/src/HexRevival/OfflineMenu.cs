@@ -95,7 +95,7 @@ namespace HexRevival
                 if (idx < 0 || idx >= found.Count) return "index out of range (" + found.Count + ")";
                 m.m_SelOpp = found[idx];
                 m.Fight();
-                return "combat : " + (m.m_SelMine != null ? m.m_SelMine.Label : "-") + " contre " + found[idx].Label + " " + m.m_Message;
+                return "fight: " + (m.m_SelMine != null ? m.m_SelMine.Label : "-") + " vs " + found[idx].Label + " " + m.m_Message;
             }
             return "unknown subcommand";
         }
@@ -229,7 +229,7 @@ namespace HexRevival
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] editeur : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] editor: " + e); }
         }
 
         private void Fight()
@@ -340,7 +340,7 @@ namespace HexRevival
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexRevival] [Menu] bouton : " + e);
+                Debug.LogError("[HexRevival] [Menu] button: " + e);
                 m_LandingButton = src; // no new attempt every frame
             }
         }
@@ -566,7 +566,7 @@ namespace HexRevival
                     Refresh();
                 }));
             }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] suppression : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] delete: " + ex); }
         }
 
         /// <summary>Opens the Collection editor on this deck (or on a new deck if the id is invalid).</summary>
@@ -574,7 +574,7 @@ namespace HexRevival
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); return; }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editor: " + ex); return; }
             StartCoroutine(PrepareEditor(deck));
         }
 
@@ -610,7 +610,7 @@ namespace HexRevival
                 }
                 Debug.LogWarning("[HexRevival] [Menu] deck missing from the editor: " + deck);
             }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editor: " + ex); }
         }
 
         private void SwitchTab(Tab t)

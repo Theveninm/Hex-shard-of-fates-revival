@@ -39,7 +39,7 @@ namespace HexRevival
         /// <summary>Deck to use for matches started by the mod: the last one saved.</summary>
         public static UID LastDeck = UID.Invalid;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.decks.txt"); } }
+        private static string FilePath { get { return Saves.File("decks.txt"); } }
 
         // ------------------------------------------------------------------
         // Loading (at login, after the collection is generated)
@@ -55,7 +55,7 @@ namespace HexRevival
             {
                 if (File.Exists(FilePath)) Parse(File.ReadAllLines(FilePath));
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] read: " + e); }
             List<deck_bits> res = new List<deck_bits>();
             foreach (StoredDeck d in s_Decks.Values) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
             Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) loaded");
@@ -66,10 +66,19 @@ namespace HexRevival
         // Transactions
         // ------------------------------------------------------------------
 
-        /// <summary>Empty deck attached to a campaign champion (champion creation).</summary>
-        public static deck_bits CreateForChampion(string name, ulong championId)
+        /// <summary>A card given during the game (reward, starter deck) becomes usable in decks.</summary>
+        public static void AddToCollection(card_instance_bits c)
+        {
+            s_Collection[c.Id] = c;
+        }
+
+        /// <summary>Deck of a new campaign champion, filled with a starter deck (or empty).</summary>
+        public static deck_bits CreateForChampion(string name, ulong championId, Reckoning.Game.DeckTemplate starter)
         {
             StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? "", PveChampion = championId };
+            if (starter != null)
+                foreach (Reckoning.Game.TemplateCardStack st in starter.m_DeckResources)
+                    for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
             s_Decks[d.Id] = d;
             Save();
             return ToBits(d);
@@ -301,7 +310,7 @@ namespace HexRevival
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] save: " + e); }
         }
 
         private static string Join(List<ResourceId> l)

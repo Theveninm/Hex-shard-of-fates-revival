@@ -20,7 +20,7 @@ namespace HexRevival
         private static readonly List<champion_bits> s_Champions = new List<champion_bits>();
         private static UID s_ReckId;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.champions.txt"); } }
+        private static string FilePath { get { return Saves.File("champions.txt"); } }
 
         public static List<champion_bits> Load(UID reckId, string defaultName)
         {
@@ -49,7 +49,7 @@ namespace HexRevival
                         s_Champions.Add(c);
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] read: " + e); }
             if (s_Champions.Count == 0)
             {
                 champion_bits c = New(1UL, defaultName);
@@ -59,7 +59,7 @@ namespace HexRevival
             // Champion without a saved deck: attach the last PvE deck it owns.
             try
             {
-                string decks = Path.Combine(LocalServer.Root, "HexRevival.decks.txt");
+                string decks = Saves.File("decks.txt");
                 if (File.Exists(decks))
                     foreach (string line in File.ReadAllLines(decks))
                     {
@@ -71,7 +71,7 @@ namespace HexRevival
                         if (c != null && c.LastDeckID == 0) c.LastDeckID = id;
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks: " + e); }
             Debug.Log("[HexRevival] [Champions] " + s_Champions.Count + " champion(s)");
             return new List<champion_bits>(s_Champions);
         }
@@ -100,7 +100,11 @@ namespace HexRevival
                 c.Race = add.Race; c.ChampionClass = add.ChampionClass; c.Gender = add.Gender;
                 c.OwnerChampionId = add.OwnerChampionId;
                 c.PetName = add.PetName ?? "";
-                deck_bits deck = Decks.CreateForChampion(c.Name, c.Id);
+                // Like a new champion of the original game: it receives its race's starter deck.
+                Reckoning.Game.DeckTemplate starter = null;
+                try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
+                Collection.GrantDeck(starter);
+                deck_bits deck = Decks.CreateForChampion(c.Name, c.Id, starter);
                 c.LastDeckID = deck.Id;
                 s_Champions.Add(c);
                 Save();
@@ -177,7 +181,7 @@ namespace HexRevival
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] save: " + e); }
         }
     }
 }

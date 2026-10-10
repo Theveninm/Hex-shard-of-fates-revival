@@ -12,7 +12,6 @@ curl -sSL "$BEPINEX_URL" -o "$WORK/bepinex.zip"
 unzip -q "$WORK/bepinex.zip" -d "$D/mod"
 rm -f "$D/mod/changelog.txt"
 cp "$DLL" "$D/mod/BepInEx/plugins/HexRevival/HexRevival.dll"
-printf 'menu' > "$D/mod/HexRevival.autostart"
 cp "$EXE" "$D/HexRevival.exe"
 cp "$ROOT/README.md" "$ROOT/THIRD-PARTY.md" "$D/"; cp "$ROOT/LICENSE" "$D/LICENSE.txt"
 (cd "$D" && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt)

@@ -198,6 +198,7 @@ namespace HexRevival
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 go.AddComponent<TestBehaviour>();
                 go.AddComponent<OfflineMenu>();
+                go.AddComponent<AccountMenu>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -557,6 +558,8 @@ namespace HexRevival
                     if (!ReferenceEquals(login, null) && login.isActiveAndEnabled)
                     {
                         WriteState("autostart: login");
+                        // Developer shortcut: the most recently played account (the account menu is skipped).
+                        if (Saves.Current == null) { List<Saves.Info> saves = Saves.List(); Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline")); }
                         login.LoginToGame();
                     }
                 }

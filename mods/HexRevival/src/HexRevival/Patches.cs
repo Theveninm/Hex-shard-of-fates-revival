@@ -49,6 +49,9 @@ namespace HexRevival
             attrs = new Dictionary<string, object>();
             try
             {
+                // The account is the save chosen in the account menu (see AccountMenu).
+                if (Saves.Current == null) Saves.Select(Saves.FindOrCreate(string.IsNullOrEmpty(username) ? "Offline" : username));
+                username = Saves.Current.Name;
                 SeedLocalProfile(self, username);
                 try { LocalProfile.Load(self, new UID(UID.Type.ServicePlayer, 0x1001UL), string.IsNullOrEmpty(username) ? "Offline" : username); }
                 catch (Exception e) { Debug.LogError("[HexRevival] LocalProfile.Load failed: " + e); }

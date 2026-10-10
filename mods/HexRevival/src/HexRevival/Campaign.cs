@@ -192,7 +192,14 @@ namespace HexRevival
         private static Dictionary<ulong, CampState> s_States;
         private static CampState s_Battle; // campaign whose encounter is being played
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.campaign.txt"); } }
+        private static string FilePath { get { return Saves.File("campaign.txt"); } }
+
+        /// <summary>Forgets the loaded campaigns (another save was selected).</summary>
+        public static void Reset()
+        {
+            s_States = null;
+            s_Battle = null;
+        }
 
         /// <summary>True if this champion has a saved campaign (used for LastCampaignID).</summary>
         public static bool HasSave(ulong champId)

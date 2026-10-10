@@ -60,7 +60,7 @@ namespace HexRevival
                         return "card not found";
                     GiveToHand(ss, p, t);
                     Server.MarkDirty();
-                    return "donne " + t.m_Name + " a " + p.m_PlayerId;
+                    return "gave " + t.m_Name + " to " + p.m_PlayerId;
                 }
                 case "res":
                 {
