@@ -47,7 +47,10 @@ replace that default the first time a champion completes them (one time per cham
 | Node004 Sporemist Hollow | Shroomkin Haus (conversation) | 1 card of the Haus's 3, 100 gold | Guide2016, LootTables2016 (cards); the game let the player choose, the mod picks at random: PLACEHOLDER |
 | Node009 The Sutherland | Cockatwice | Chickatwice, 200 gold | Guide2016 |
 | Node010 Sylvan Peninsula | Squashing Pumpkins | 1 AZ1 pack, 200 gold | Guide2016 ("Wandering Abomination"); node inferred from the route |
-| Node013 Zila River | Gnash Bridges | Ravenous Piranha | HexServer |
+| Node006 Horwich Sea | The Sea Witch Unfettered ("Hag") | Kiss of the Princess | LootTables2016 ("Hag Sorceress"); the Enchanted Frog condition is not checked |
+| Node013 Zila River | Gnash Bridges ("Piranhas") | Piranha Swarm | LootTables2016 (hex-server's Ravenous Piranha is a non-collectible token) |
+| Node055 Deep Desert | Hard Wurms (Wormoid Queen) | Wormoid Hydra | LootTables2016 |
+| Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 | 1 card of the Haus's 3 | LootTables2016; Haus order assumed (PLACEHOLDER, see below) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
 | Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
 | Node017 Cave-In / Node034 Ambling Mesa | "Find the Cave-In / Ambling Mesa" (Underworld / Ardent) | race card | LootTables2016; given at the node, quest not checked |
@@ -64,7 +67,10 @@ Race items (LootTables2016), in race order Human, Elf, Coyotle, Orc / Dwarf, Nec
 Shroom Hauses (LootTables2016): Artifact (Builder Bot, Deployment Orders, Tricerobot), Blood (Elegy of
 Death, Raving Ghoul, Rotting Away), Diamond (Form Ranks, Ethereal Healer, Dandelion Faerie), Sapphire
 (Morphology, Chaotic Murmurs, Heroic Echo), Ruby (Skittering Skarn, Fuel for the Fire, Emberbrute),
-Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The Haus is recognised from the node's scene names.
+Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses 1 to 6 (Sporemist Hollow,
+Bauer Dunes, Lena Grotto, Blau Flats, Hoff Mines, Uuug's Oasis) without naming the kind: Haus 1 =
+Artifact is confirmed (Guide2016, hex-server), the others are assumed to follow the sheet's order
+(PLACEHOLDER).
 
 Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;
@@ -77,9 +83,9 @@ game names. The dev command `loot check` lists the reward names that match nothi
 Known but not given yet:
 - Crayburn Castle (dungeon not implemented): 150 gold (Guide2016) and 4 cards by race (LootTables2016),
   e.g. Human: Noble Citizenry, Phoenix Guard Trainer, Captain of the Dragon Guard, Shards of Fate.
-- Quests whose map node is not identified (LootTables2016): Blood Beneath (Contract Killing), Army of
-  Myth 6 (Spectral Caller), Hag Sorceress (Kiss the Princess), Gnomes Come Home (Gnome Wayfarer),
-  Wormoid Queen (Wormoid Hydra), Piranhas (Piranha Swarm).
+- Multi-step quests (LootTables2016; turned in at the Cave-In / Ambling Mesa hubs, quest steps not
+  modelled): The Blood Beneath (Contract Killing; Blood Gate, Node037), Army of Myth "6" (Spectral
+  Caller; Forsaken Plateau, Node066), Gnomes Come Home (Gnome Wayfarer; desert, Node053-063).
 - Dungeon packs (Tranquil Dream, Fort Romor, The Usurper, Smoldering Dead, Devonshire Keep): their
   contents are in the loot tables, the dungeons are not implemented.
 - AZ2.

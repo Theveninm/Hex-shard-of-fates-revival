@@ -117,7 +117,7 @@ namespace HexRevival
                 if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
                 bool own; try { own = t.IsOwnable(); } catch { own = false; }
                 if (!own) continue;
-                string k = t.m_Name;
+                string k = t.m_Name.Trim();   // some game names end with spaces ("Camouflage Vest ")
                 CardTemplate cur;
                 if (!s_Cards.TryGetValue(k, out cur) || (!IsCampaignSet(cur) && IsCampaignSet(t))) s_Cards[k] = t;
             }
@@ -125,7 +125,7 @@ namespace HexRevival
             foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {
                 if (!(item is InventoryEquipmentData) || string.IsNullOrEmpty(item.m_Name)) continue;
-                string k = item.m_Name;
+                string k = item.m_Name.Trim();
                 if (!s_Items.ContainsKey(k)) s_Items[k] = item.m_Id;
             }
         }

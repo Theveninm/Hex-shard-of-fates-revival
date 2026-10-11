@@ -89,12 +89,23 @@ namespace HexRevival
             { "Node003", new Reward { Cards = new[] { "Dire Toad" }, Gold = 150, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
             // Sporemist Hollow, Shroomkin Haus: one card out of the Haus's 3 (picked at random: PLACEHOLDER until the choice window exists)
             { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016, Note = "card picked at random among the Haus's 3 (the game let the player choose)" } },
+            // Other Shroom Hauses (scenes "SHROOM HAUS 2..6 - REWARD"): the Haus's card only (no source for gold)
+            { "Node042", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
+            { "Node025", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
+            { "Node077", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
+            { "Node029", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
+            { "Node035", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
             // The Sutherland, Cockatwice
             { "Node009", new Reward { Cards = new[] { "Chickatwice" }, Gold = 200, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
             // Sylvan Peninsula, Squashing Pumpkins: matched to the guide's "Wandering Abomination" (order of the route; hex-server also gives a pack here)
             { "Node010", new Reward { Packs = 1, Gold = 200, Xp = 100, OneTime = true, Source = Src.Guide2016, Note = "node inferred from the route" } },
-            // Zila River, Gnash Bridges
-            { "Node013", new Reward { Cards = new[] { "Ravenous Piranha" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.HexServer } },
+            // Zila River, Gnash Bridges (conversation "Piranhas"): Piranha Swarm (Src.LootTables2016, "Piranhas";
+            // hex-server's "Ravenous Piranha" is a non-collectible token of the encounter)
+            { "Node013", new Reward { Cards = new[] { "Piranha Swarm" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
+            // Horwich Sea, The Sea Witch Unfettered (conversations "Hag", "Hag - Princess Revert"): Src.LootTables2016 "Hag Sorceress"
+            { "Node006", new Reward { Cards = new[] { "Kiss of the Princess" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "given on the win; the Enchanted Frog condition is not checked" } },
+            // Deep Desert, Hard Wurms (conversations "Wormoid Queen Tunnels/Surfaces"): Src.LootTables2016 "Wormoid Queen"
+            { "Node055", new Reward { Cards = new[] { "Wormoid Hydra" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
             // Razortooth Forest, Savage Lord: 200 gold (guide 2016); hex-server later saw 300 gold + 200 XP
             { "Node014", new Reward { Gold = 200, Xp = 200, OneTime = true, Source = Src.Guide2016, Note = "XP from hex-server" } },
             // Bridge over the Zila - West: "Cross the Zila River" turn-in (quest condition not modelled yet)
@@ -117,7 +128,7 @@ namespace HexRevival
             { "mesa",   new[] { "Experienced Masons", "Ashwood Colossus", "Dance of Dusk", "Hunger of the Mountain God", "LZ-37 Targeting System", "Awaken", "Uzume's Handmaiden", "Phenteo's Gift" } },
             { "zila",   new[] { "Slippers of Intellect", "Rotwood Sandals", "Nightsky Handlers", "Darkspire Armor", "Rose Circlet", "Reaper's Helm", "Elite Handwraps", "Nursery Handlers" } },
             { "zodiac", new[] { "Orders from High Command", "Master of Masks", "Prophet of the Sun", "Bloodlust", "Junk Repurposer", "Grim Mandate", "Emperor Ito's Will", "Nazhk Lookout" } },
-            { "dryad",  new[] { "Holy Beads", "Sylvan Sounder", "Earthcaller's Robes", "Lightening Medallion", "Winged Alloy Helm", "Gem Walkers", "Thug Topper", "Vile Stompers" } },
+            { "dryad",  new[] { "Holy Beads", "Sylvan Sounder", "Earthcaller's Robes", "Lightning Medallion", "Winged Alloy Helm", "Gem Walkers", "Thug Topper", "Vile Stompers" } },
         };
 
         /// <summary>
@@ -132,16 +143,16 @@ namespace HexRevival
             new[] { "Darkspire Priestess", "Mazat Spearman", "Wrathseeker", "Assault Bot" },
             new[] { "Axe Bot", "Researcher Adept", "War Bot Bunker", "Construction Plans: War Hulk" },
             new[] { "Call the Grave", "Spiritbound Spy", "Deepgaze Acolyte", "Shards of Fate" },
-            new[] { "Concubunny", "Tyrannosaurus Hex", "Shroom Tank", "Ebony Pawn" },
+            new[] { "Concubunny", "Tyrannosaurus Hex", "Shroomtank", "Ebony Pawn" },
             new[] { "Hatchery Priest", "Incubation Webs", "Vicious Vivisector", "Shield Bot" },
         };
 
         /// <summary>
-        /// Other quest rewards, Src.LootTables2016; their map nodes are not identified yet, so they
-        /// are not given: Blood Beneath, Army of Myth 6, Hag Sorceress (Revert and save the Enchanted
-        /// Frog), Gnomes Come Home, Wormoid Queen, Piranhas.
+        /// Other quest rewards, Src.LootTables2016, not given yet (the quest steps are not modelled):
+        /// The Blood Beneath (Blood Gate, Node037), Army of Myth "6" (Forsaken Plateau, Node066),
+        /// Gnomes Come Home (desert, Node053-063).
         /// </summary>
-        private static readonly string[] UnmappedQuestCards = { "Contract Killing", "Spectral Caller", "Kiss the Princess", "Gnome Wayfarer", "Wormoid Hydra", "Piranha Swarm" };
+        private static readonly string[] UnmappedQuestCards = { "Contract Killing", "Spectral Caller", "Gnome Wayfarer" };
 
         /// <summary>Shroom Haus card choices by Haus, Src.LootTables2016 ("Shroom Hauses" sheet). The Haus is recognised from the node's scene names.</summary>
         private static readonly Dictionary<string, string[]> ShroomHauses = new Dictionary<string, string[]>
@@ -175,13 +186,22 @@ namespace HexRevival
             return null;
         }
 
+        /// <summary>
+        /// Haus of each "SHROOM HAUS n" scene (Src.Game numbers them 1-6, no kind). PLACEHOLDER: the
+        /// sheet's order (Artifact, Blood, Diamond, Sapphire, Ruby, Wild) is assumed to follow the
+        /// numbers; Haus 1 (Sporemist Hollow) = Artifact is confirmed by Guide2016 and hex-server.
+        /// </summary>
+        private static readonly string[] HausByNumber = { "Artifact", "Blood", "Diamond", "Sapphire", "Ruby", "Wild" };
+
         private static string ShroomHausCard(string node)
         {
             string scenes = Campaign.NodeScenes(node).ToUpperInvariant();
-            string[] cards = null;
-            foreach (KeyValuePair<string, string[]> kv in ShroomHauses)
-                if (scenes.Contains(kv.Key.ToUpperInvariant() + " HAUS")) cards = kv.Value;
-            if (cards == null) { cards = ShroomHauses["Artifact"]; Debug.Log("[HexRevival] [Progression] Shroom Haus kind not found in '" + scenes + "': Artifact Haus"); }
+            int i = scenes.IndexOf("SHROOM HAUS ");
+            int n = 0;
+            if (i >= 0 && i + 12 < scenes.Length) int.TryParse(scenes.Substring(i + 12, 1), out n);
+            string kind = n >= 1 && n <= HausByNumber.Length ? HausByNumber[n - 1] : "Artifact";
+            if (n < 1) Debug.Log("[HexRevival] [Progression] Shroom Haus number not found in '" + scenes + "': Artifact Haus");
+            string[] cards = ShroomHauses[kind];
             return cards[UnityEngine.Random.Range(0, cards.Length)];
         }
 
