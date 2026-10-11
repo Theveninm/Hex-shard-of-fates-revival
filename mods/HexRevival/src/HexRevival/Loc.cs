@@ -65,6 +65,13 @@ namespace HexRevival
             { "cheat_resources", new[] { "+10 max resources", "+10 ressources max", "+10 max. Ressourcen", "+10 recursos máx.", "+10 risorse max", "+10 recursos máx.", "+10 maks. zasobów", "+10 макс. ресурсов", "+10 azami kaynak", "最大リソース+10", "+10 最大资源" } },
             { "cheat_shards", new[] { "+1 shard of each color", "+1 shard de chaque couleur", "+1 Splitter jeder Farbe", "+1 fragmento de cada color", "+1 frammento di ogni colore", "+1 fragmento de cada cor", "+1 odłamek każdego koloru", "+1 осколок каждого цвета", "Her renkten +1 parça", "各色のシャード+1", "每种颜色 +1 碎片" } },
             { "cheat_draw", new[] { "Draw a card", "Piocher une carte", "Eine Karte ziehen", "Robar una carta", "Pesca una carta", "Comprar uma carta", "Dobierz kartę", "Взять карту", "Bir kart çek", "カードを1枚引く", "抽一张牌" } },
+            { "account_xp", new[] { "+{0} account XP", "+{0} XP de compte", "+{0} Konto-EP", "+{0} PX de cuenta", "+{0} PE account", "+{0} XP de conta", "+{0} PD konta", "+{0} опыта аккаунта", "+{0} hesap TP", "アカウント経験値 +{0}", "账户经验 +{0}" } },
+            { "account_level", new[] { "Account level {0}!", "Niveau de compte {0} !", "Kontostufe {0}!", "¡Nivel de cuenta {0}!", "Livello account {0}!", "Nível de conta {0}!", "Poziom konta {0}!", "Уровень аккаунта {0}!", "Hesap seviyesi {0}!", "アカウントレベル{0}！", "账户等级 {0}！" } },
+            { "xp_capped", new[] { "Daily account XP limit reached.", "Limite quotidienne d'XP de compte atteinte.", "Tägliches Konto-EP-Limit erreicht.", "Límite diario de PX de cuenta alcanzado.", "Limite giornaliero di PE account raggiunto.", "Limite diário de XP de conta atingido.", "Osiągnięto dzienny limit PD konta.", "Дневной лимит опыта аккаунта достигнут.", "Günlük hesap TP sınırına ulaşıldı.", "本日のアカウント経験値の上限に達しました。", "已达到每日账户经验上限。" } },
+            { "reward_gold", new[] { "{0} gold", "{0} pièces d'or", "{0} Gold", "{0} de oro", "{0} oro", "{0} de ouro", "{0} złota", "{0} золота", "{0} altın", "ゴールド{0}", "{0} 金币" } },
+            { "reward_cards", new[] { "{0} cards", "{0} cartes", "{0} Karten", "{0} cartas", "{0} carte", "{0} cartas", "{0} kart", "{0} карт", "{0} kart", "カード{0}枚", "{0} 张卡" } },
+            { "reward_pack", new[] { "{0} pack", "booster {0}", "Booster {0}", "sobre {0}", "busta {0}", "pacote {0}", "pakiet {0}", "бустер {0}", "{0} paketi", "{0}パック", "{0} 补充包" } },
+            { "primal_pack", new[] { "Primal pack!", "Booster primal !", "Primal-Booster!", "¡Sobre primigenio!", "Busta primordiale!", "Pacote primordial!", "Pakiet pierwotny!", "Первородный бустер!", "İlkel paket!", "プライマルパック！", "原初补充包！" } },
         };
 
         /// <summary>Two-letter game language code ("en" by default).</summary>

@@ -22,6 +22,13 @@ namespace HexRevival
             public long Gold;
             public long Platinum;
             public DateTime LastPlayed;
+            // Account level (see Progression).
+            public int AccountLevel = 1;
+            public int AccountXp;          // total account XP
+            public int XpInPeriod;         // XP earned in the current daily period
+            public DateTime PeriodStart;   // first win of the current daily period
+            /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
+            public HashSet<string> Claims = new HashSet<string>();
         }
 
         public const long UnlockedGold = 100000;
@@ -112,6 +119,11 @@ namespace HexRevival
                     else if (k == "gold") long.TryParse(v, out i.Gold);
                     else if (k == "platinum") long.TryParse(v, out i.Platinum);
                     else if (k == "lastplayed") { long t; if (long.TryParse(v, out t)) i.LastPlayed = new DateTime(t); }
+                    else if (k == "level") int.TryParse(v, out i.AccountLevel);
+                    else if (k == "xp") int.TryParse(v, out i.AccountXp);
+                    else if (k == "xpperiod") int.TryParse(v, out i.XpInPeriod);
+                    else if (k == "periodstart") { long t; if (long.TryParse(v, out t)) i.PeriodStart = new DateTime(t); }
+                    else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] read " + name + ": " + e.Message); return null; }
@@ -128,7 +140,12 @@ namespace HexRevival
                     "unlock=" + (i.UnlockAll ? "1" : "0"),
                     "gold=" + i.Gold,
                     "platinum=" + i.Platinum,
-                    "lastplayed=" + i.LastPlayed.Ticks });
+                    "lastplayed=" + i.LastPlayed.Ticks,
+                    "level=" + i.AccountLevel,
+                    "xp=" + i.AccountXp,
+                    "xpperiod=" + i.XpInPeriod,
+                    "periodstart=" + i.PeriodStart.Ticks,
+                    "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }
         }

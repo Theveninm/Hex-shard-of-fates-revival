@@ -200,6 +200,7 @@ namespace HexRevival
                 go.AddComponent<OfflineMenu>();
                 go.AddComponent<AccountMenu>();
                 go.AddComponent<CheatMenu>();
+                go.AddComponent<Notices>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -799,6 +800,26 @@ namespace HexRevival
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
                 case "toggles": return Settings.DumpToggles();
+                case "collsets":
+                    {
+                        // dev: copies owned per card set, from collection.txt
+                        Dictionary<string, int> bySet = new Dictionary<string, int>();
+                        foreach (string line in File.ReadAllLines(Saves.File("collection.txt")))
+                        {
+                            string[] p = line.Split(' ');
+                            CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(p[0]));
+                            CardSetTemplate set = null;
+                            if (t != null) Singleton<TemplateManager>.Instance.CardSets.TryGetValue(t.m_SetId, out set);
+                            string k = set != null ? set.m_Name : "?";
+                            int c; bySet.TryGetValue(k, out c); bySet[k] = c + int.Parse(p[1]);
+                        }
+                        List<string> o = new List<string>();
+                        foreach (KeyValuePair<string, int> kv in bySet) o.Add(kv.Key + "=" + kv.Value);
+                        return string.Join(", ", o.ToArray());
+                    }
+                case "accountxp":
+                    if (parts.Length > 2 && parts[2] == "reset") Saves.Current.PeriodStart = DateTime.MinValue;   // dev: ignore the daily cap
+                    Progression.AddAccountXp(parts.Length > 1 ? int.Parse(parts[1]) : 50); return "account level " + Saves.Current.AccountLevel + ", xp " + Saves.Current.AccountXp + ", gold " + Saves.Current.Gold;
                 case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
                 case "concede":

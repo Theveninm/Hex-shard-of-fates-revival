@@ -66,6 +66,27 @@ namespace HexRevival
             }
         }
 
+        /// <summary>
+        /// Same as Grant, but the client is not told: the instances are returned to be handed to
+        /// it another way (campaign rewards, see Progression).
+        /// </summary>
+        public static List<card_instance_bits> GrantSilently(ResourceId template, int count)
+        {
+            List<card_instance_bits> res = new List<card_instance_bits>();
+            if (Saves.Current == null || Saves.Current.UnlockAll || count <= 0) return res;
+            int n;
+            s_Counts.TryGetValue(template, out n);
+            s_Counts[template] = n + count;
+            SaveFile();
+            for (int i = 0; i < count; i++)
+            {
+                card_instance_bits c = NewInstance(template);
+                Decks.AddToCollection(c);
+                res.Add(c);
+            }
+            return res;
+        }
+
         /// <summary>Gives the cards of a deck template (missing copies only on progression saves).</summary>
         public static void GrantDeck(DeckTemplate deck)
         {

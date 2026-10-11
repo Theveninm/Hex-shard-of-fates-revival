@@ -62,9 +62,28 @@ namespace HexRevival
             return true;
         }
 
+        private static readonly Queue<Action> s_Later = new Queue<Action>();
+
+        /// <summary>Runs an action on the next Pump (main thread), like a network answer.</summary>
+        public static void Later(Action a)
+        {
+            lock (s_Later) s_Later.Enqueue(a);
+        }
+
         /// <summary>Delivers pending responses (main thread, one frame after the request).</summary>
         public static void Pump()
         {
+            while (true)
+            {
+                Action a;
+                lock (s_Later)
+                {
+                    if (s_Later.Count == 0) break;
+                    a = s_Later.Dequeue();
+                }
+                try { a(); }
+                catch (Exception e) { Debug.LogError("[HexRevival] [LocalServer] answer: " + e); }
+            }
             while (true)
             {
                 Pending p;

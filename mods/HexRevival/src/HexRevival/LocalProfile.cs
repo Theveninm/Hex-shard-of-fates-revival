@@ -48,7 +48,9 @@ namespace HexRevival
             bits.Name = name;
             bits.Gold = (int)Saves.Current.Gold;
             bits.Platinum = (int)Saves.Current.Platinum;
-            bits.Level = 1;
+            bits.Level = Saves.Current.AccountLevel;
+            bits.ExperiencePoints = Saves.Current.AccountXp;
+            bits.XpGain = Saves.Current.XpInPeriod;
             bits.ProfileId = 1UL;
 
             foreach (card_instance_bits c in Collection.Build(reckId)) bits.Cards.Add(c);
@@ -89,6 +91,7 @@ namespace HexRevival
                 // cards/decks/gold are already loaded at this point.
                 Debug.Log("[HexRevival] [Profile] end of GetUserProfileInfoResponse ignored: " + (e.InnerException != null ? e.InnerException.Message : e.Message));
             }
+            Progression.RefreshAccountUi();
             Debug.Log("[HexRevival] [Profile] local profile loaded: account '" + Saves.Current.Name + "', " + bits.Cards.Count + " cards, gold " + bits.Gold);
         }
 

@@ -45,6 +45,7 @@ namespace HexRevival
                         if (p.Length > 10)
                             foreach (string t in p[10].Split(';'))
                                 if (t.Length > 0) { try { c.ChampionTalents.Add(new ResourceId(t)); } catch { } }
+                        if (p.Length > 11) { int xp; if (int.TryParse(p[11], out xp)) c.CurrentXP = xp; }
                         c.LastCampaignID = Campaign.HasSave(c.Id) ? c.Id : 0UL;
                         s_Champions.Add(c);
                     }
@@ -159,6 +160,22 @@ namespace HexRevival
             Save();
         }
 
+        /// <summary>
+        /// Adds champion XP and recomputes the level from the game's own XP table. Returns the
+        /// updated champion (null if unknown); levelsGained is the number of new levels.
+        /// </summary>
+        public static champion_bits AddXp(ulong championId, int xp, out int levelsGained)
+        {
+            levelsGained = 0;
+            champion_bits c = Find(championId);
+            if (c == null || xp <= 0) return c;
+            c.CurrentXP += xp;
+            int level = Progression.ChampionLevelForXp(c.CurrentXP);
+            if (level > c.Level) { levelsGained = level - c.Level; c.Level = level; }
+            Save();
+            return c;
+        }
+
         private static champion_bits Find(ulong id)
         {
             foreach (champion_bits c in s_Champions) if (c.Id == id) return c;
@@ -177,6 +194,7 @@ namespace HexRevival
                       .Append(c.OwnerChampionId).Append('|').Append(c.LastDeckID).Append('|').Append(c.DeckTemplateId).Append('|')
                       .Append((c.PetName ?? "").Replace("|", "/")).Append('|');
                     if (c.ChampionTalents != null) foreach (ResourceId t in c.ChampionTalents) sb.Append(t).Append(';');
+                    sb.Append('|').Append(c.CurrentXP);
                     sb.Append('\n');
                 }
                 File.WriteAllText(FilePath, sb.ToString());

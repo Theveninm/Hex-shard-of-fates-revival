@@ -504,6 +504,7 @@ namespace HexRevival
                 case "accept":
                     if (active != null) Complete(st, active);
                     st.ALoc = null;
+                    if (active != null && evt == "conv_done") Progression.OnCampaignConversationDone(st.ChampId, active.Id);
                     break;
                 case "enc_cancel":
                 case "cancel":
@@ -547,20 +548,19 @@ namespace HexRevival
         }
 
         /// <summary>Called when a match ends (AuthoritativeSessionBase.EndGame postfix).</summary>
-        public static void OnGameEnded(List<UID> winners)
+        /// <summary>Called once when a match ends. Returns false if it was not a campaign battle.</summary>
+        public static bool OnGameEnded(bool won)
         {
             CampState st = s_Battle;
-            if (st == null) return;
+            if (st == null) return false;
             s_Battle = null;
-            bool won = false;
-            if (winners != null)
-                foreach (UID u in winners)
-                    if (u.GetUIDType() != UID.Type.AIPlayer) won = true;
             MapNode node = st.ALoc != null ? FindNode(st.ALoc) : null;
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
             Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
+            if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id);
+            return true;
         }
 
         // ------------------------------------------------------------------
@@ -573,6 +573,34 @@ namespace HexRevival
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
             if (sub == "rewards") return DumpRewards();
+            if (sub == "sets")
+            {
+                StringBuilder sb = new StringBuilder();
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                foreach (CardSetTemplate cs in tm.CardSets.Values)
+                {
+                    if (cs == null) continue;
+                    int n = 0;
+                    Dictionary<string, int> rar = new Dictionary<string, int>();
+                    foreach (CardTemplate t in tm.Cards.Values)
+                    {
+                        if (t == null || t.m_SetId != cs.m_Id) continue;
+                        n++;
+                        bool own; try { own = t.IsOwnable(); } catch { own = false; }
+                        string k = t.m_CardRarity + (own ? "" : "(x)");
+                        int c; rar.TryGetValue(k, out c); rar[k] = c + 1;
+                    }
+                    List<string> rs = new List<string>();
+                    foreach (KeyValuePair<string, int> kv in rar) rs.Add(kv.Key + ":" + kv.Value);
+                    sb.AppendLine("set " + cs.m_Id + " no=" + cs.m_SetNo + " '" + cs.m_Name + "' cards=" + n + " " + string.Join(" ", rs.ToArray()));
+                }
+                foreach (InventoryItemData it in tm.InventoryItems.Values)
+                {
+                    InventoryCardPack p = it as InventoryCardPack;
+                    if (p != null) sb.AppendLine("pack " + p.m_Id + " " + p.m_CardPackType + " '" + p.m_Name + "' set=" + p.m_SetId);
+                }
+                return sb.ToString();
+            }
             if (sub == "map")
             {
                 BuildMap();

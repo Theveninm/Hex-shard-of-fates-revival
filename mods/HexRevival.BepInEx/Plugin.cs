@@ -103,6 +103,11 @@ namespace HexRevival
                 string name = m;
                 apply("ClientCampaignManager." + name, () => Prefix(harmony, ccm, name, null, "Campaign_" + name));
             }
+            // Local store (see Store.cs).
+            apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
+                new[] { typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItems"));
+            apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
+                new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(AuthoritativeSessionBase), "EndGame", new[] { typeof(List<UID>), typeof(List<UID>), typeof(bool) });
@@ -277,7 +282,9 @@ namespace HexRevival
         public static bool Campaign_StartLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.StartLocation(__0, __1, __3); return false; }
         public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.FinishLocation(__0, __1, __3); return false; }
         public static bool Campaign_GetTemplateTypeInfo(ClientCampaignManager.GetTemplateTypeInfoCallback __0) { if (__0 != null) __0(new TemplateTypeInfo[0]); return false; }
-        public static void Session_EndGame(List<UID> __0) { Campaign.OnGameEnded(__0); }
+        public static bool Store_GetStoreItems(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler __0) { Store.GetStoreItems(__0); return false; }
+        public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
+        public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
 
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)
         {
