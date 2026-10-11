@@ -106,6 +106,11 @@ namespace HexRevival
             // Local store (see Store.cs).
             apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
                 new[] { typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItems"));
+            // Overloads without a handler (the store screen uses these: the answer goes through OnResponse).
+            apply("EscrowService.GetStoreItems.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
+                new[] { typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItemsEvent"));
+            apply("EscrowService.PurchaseItem.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
+                new[] { typeof(int), typeof(ulong), typeof(bool), typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItemEvent"));
             apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
@@ -283,6 +288,8 @@ namespace HexRevival
         public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.FinishLocation(__0, __1, __3); return false; }
         public static bool Campaign_GetTemplateTypeInfo(ClientCampaignManager.GetTemplateTypeInfoCallback __0) { if (__0 != null) __0(new TemplateTypeInfo[0]); return false; }
         public static bool Store_GetStoreItems(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler __0) { Store.GetStoreItems(__0); return false; }
+        public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
+        public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
 
