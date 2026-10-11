@@ -70,10 +70,9 @@ Taming quest ("Tamed"): when a campaign battle is won and an opponent troop mark
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;
 Game: the Tamed marker, HexServer: the capture rule).
 
-Names in the loot tables are matched to the game's cards and equipment ignoring case, spaces and
-punctuation; a misspelt name is read as the closest game name (at most 1 letter wrong in 5, and only
-if no other name is as close). The dev command `loot check` lists the names read that way and the
-ones still not found.
+The loot tables are kept as published (`data/az1_pack_loot_tables.csv`); their misspelt names are
+corrected in `data/loot_name_fixes.csv`, applied by `tools/gen_loot.py`, so the mod only uses exact
+game names. The dev command `loot check` lists the reward names that match nothing in the game.
 
 Known but not given yet:
 - Crayburn Castle (dungeon not implemented): 150 gold (Guide2016) and 4 cards by race (LootTables2016),

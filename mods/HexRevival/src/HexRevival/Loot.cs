@@ -88,65 +88,44 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// A card (preferably a campaign version, sets AZ1/AZ2) or an equipment item, by name.
-        /// Exact names first (case, spaces and punctuation ignored), then the closest name when
-        /// the spreadsheet misspells it (see Closest).
+        /// A card (preferably a campaign version, sets AZ1/AZ2) or an equipment item, by its exact
+        /// game name (case ignored). The spreadsheet's misspellings are corrected in
+        /// data/loot_name_fixes.csv when LootData.cs is generated, not here.
         /// </summary>
         public static Drop Resolve(string name, bool cardFirst)
         {
             Index();
-            string key = Key(name);
             Drop d = new Drop();
             CardTemplate c;
             ResourceId it;
-            bool hasCard = s_Cards.TryGetValue(key, out c), hasItem = s_Items.TryGetValue(key, out it);
+            bool hasCard = s_Cards.TryGetValue(name, out c), hasItem = s_Items.TryGetValue(name, out it);
             if (hasCard && (cardFirst || !hasItem)) { d.Card = c; return d; }
             if (hasItem) { d.Item = it; return d; }
-            string ck = Closest(key, s_Cards.Keys), ik = Closest(key, s_Items.Keys);
-            int cd = ck != null ? Distance(key, ck) : int.MaxValue, id = ik != null ? Distance(key, ik) : int.MaxValue;
-            if (ck != null && (cd < id || (cd == id && cardFirst))) { d.Card = s_Cards[ck]; Inferred(name, d.Card.m_Name); return d; }
-            if (ik != null) { d.Item = s_Items[ik]; Inferred(name, Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item).m_Name); return d; }
             Debug.LogWarning("[HexRevival] [Loot] not found: " + name);
             return null;
         }
 
         private static Dictionary<string, CardTemplate> s_Cards;
         private static Dictionary<string, ResourceId> s_Items;
-        private static readonly Dictionary<string, string> s_Inferred = new Dictionary<string, string>();
-
-        private static void Inferred(string from, string to)
-        {
-            if (s_Inferred.ContainsKey(from)) return;
-            s_Inferred[from] = to;
-            Debug.Log("[HexRevival] [Loot] '" + from + "' read as '" + to + "'");
-        }
-
-        /// <summary>Lowercase letters and digits only: "Rotting away" = "Rotting Away", "LZ-37" = "LZ 37".</summary>
-        private static string Key(string name)
-        {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            foreach (char ch in name.ToLowerInvariant()) if (char.IsLetterOrDigit(ch)) sb.Append(ch);
-            return sb.ToString();
-        }
 
         private static void Index()
         {
             if (s_Cards != null) return;
-            s_Cards = new Dictionary<string, CardTemplate>();
+            s_Cards = new Dictionary<string, CardTemplate>(StringComparer.OrdinalIgnoreCase);
             foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
             {
                 if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
                 bool own; try { own = t.IsOwnable(); } catch { own = false; }
                 if (!own) continue;
-                string k = Key(t.m_Name);
+                string k = t.m_Name;
                 CardTemplate cur;
                 if (!s_Cards.TryGetValue(k, out cur) || (!IsCampaignSet(cur) && IsCampaignSet(t))) s_Cards[k] = t;
             }
-            s_Items = new Dictionary<string, ResourceId>();
+            s_Items = new Dictionary<string, ResourceId>(StringComparer.OrdinalIgnoreCase);
             foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {
                 if (!(item is InventoryEquipmentData) || string.IsNullOrEmpty(item.m_Name)) continue;
-                string k = Key(item.m_Name);
+                string k = item.m_Name;
                 if (!s_Items.ContainsKey(k)) s_Items[k] = item.m_Id;
             }
         }
@@ -157,65 +136,45 @@ namespace HexRevival
             return Singleton<TemplateManager>.Instance.CardSets.TryGetValue(t.m_SetId, out s) && s != null && (s.m_Name == "AZ1" || s.m_Name == "AZ2");
         }
 
-        /// <summary>
-        /// Closest known name for a misspelt one: at most 1 edit per 5 letters (2 for a 10-letter
-        /// name), and only if no other name is as close (otherwise the guess is ambiguous: null).
-        /// </summary>
-        private static string Closest(string key, IEnumerable<string> keys)
-        {
-            int max = Math.Max(1, key.Length / 5), best = int.MaxValue;
-            string res = null;
-            bool tie = false;
-            foreach (string k in keys)
-            {
-                if (Math.Abs(k.Length - key.Length) > max) continue;
-                int dist = Distance(key, k);
-                if (dist < best) { best = dist; res = k; tie = false; }
-                else if (dist == best) tie = true;
-            }
-            return best <= max && !tie ? res : null;
-        }
-
-        /// <summary>Levenshtein distance.</summary>
-        private static int Distance(string a, string b)
-        {
-            int[] prev = new int[b.Length + 1], cur = new int[b.Length + 1];
-            for (int j = 0; j <= b.Length; j++) prev[j] = j;
-            for (int i = 1; i <= a.Length; i++)
-            {
-                cur[0] = i;
-                for (int j = 1; j <= b.Length; j++)
-                    cur[j] = Math.Min(Math.Min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1));
-                int[] t = prev; prev = cur; cur = t;
-            }
-            return prev[b.Length];
-        }
-
-        /// <summary>Dev command "loot check": names that match nothing, and names read as another (misspellings).</summary>
+        /// <summary>Dev command "loot check": reward names that match no card or equipment of the game.</summary>
         public static string Check()
         {
             List<string> names = new List<string>();
             foreach (KeyValuePair<string, PackTable> p in Packs())
                 foreach (KeyValuePair<char, List<Entry>> kv in p.Value.Cat)
-                    foreach (Entry e in kv.Value) names.Add(e.Name);
-            names.AddRange(Progression.FixedRewardNames());
-            List<string> missing = new List<string>();
-            foreach (string n in names) if (Resolve(n, true) == null) missing.Add(n);
-            List<string> guessed = new List<string>();
-            foreach (KeyValuePair<string, string> kv in s_Inferred) guessed.Add(kv.Key + " -> " + kv.Value);
-            return names.Count + " names, " + missing.Count + " not found, " + guessed.Count + " inferred"
-                + (missing.Count > 0 ? "\nNOT FOUND:\n" + string.Join("\n", missing.ToArray()) : "")
-                + (guessed.Count > 0 ? "\nINFERRED:\n" + string.Join("\n", guessed.ToArray()) : "");
+                    foreach (Entry e in kv.Value) if (!names.Contains(e.Name)) names.Add(e.Name);
+            foreach (string n in Progression.FixedRewardNames()) if (!names.Contains(n)) names.Add(n);
+            List<string> missing = names.FindAll(n => Resolve(n, true) == null);
+            return names.Count + " names, " + missing.Count + " not found" + (missing.Count > 0 ? ":\n" + string.Join("\n", missing.ToArray()) : "");
+        }
+
+        /// <summary>Dev command "loot names": writes every collectible card and equipment name (with set / type) to HexRevivalNames.txt.</summary>
+        public static string DumpNames()
+        {
+            Index();
+            List<string> lines = new List<string>();
+            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+            {
+                if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
+                bool own; try { own = t.IsOwnable(); } catch { own = false; }
+                CardSetTemplate set;
+                Singleton<TemplateManager>.Instance.CardSets.TryGetValue(t.m_SetId, out set);
+                lines.Add("card\t" + t.m_Name + "\t" + (set != null ? set.m_Name : "?") + "\t" + t.m_CardRarity + "\t" + (own ? "own" : "-"));
+            }
+            foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                if (item is InventoryEquipmentData) lines.Add("item\t" + item.m_Name + "\t" + item.Rarity + "\t" + item.m_Id);
+            System.IO.File.WriteAllLines(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "HexRevivalNames.txt"), lines.ToArray());
+            return lines.Count + " names written to HexRevivalNames.txt";
         }
 
         /// <summary>Dev command "loot find text": card and equipment names containing text (letters only).</summary>
         public static string Find(string text)
         {
             Index();
-            string k = Key(text);
+            string k = text.ToLowerInvariant();
             List<string> o = new List<string>();
-            foreach (KeyValuePair<string, CardTemplate> kv in s_Cards) if (kv.Key.Contains(k)) o.Add("card " + kv.Value.m_Name);
-            foreach (KeyValuePair<string, ResourceId> kv in s_Items) if (kv.Key.Contains(k)) o.Add("item " + Singleton<TemplateManager>.Instance.GetInventoryItem(kv.Value).m_Name);
+            foreach (KeyValuePair<string, CardTemplate> kv in s_Cards) if (kv.Key.ToLowerInvariant().Contains(k)) o.Add("card " + kv.Value.m_Name);
+            foreach (KeyValuePair<string, ResourceId> kv in s_Items) if (kv.Key.ToLowerInvariant().Contains(k)) o.Add("item " + Singleton<TemplateManager>.Instance.GetInventoryItem(kv.Value).m_Name);
             return o.Count + " match(es)" + (o.Count > 0 ? ": " + string.Join(", ", o.ToArray()) : "");
         }
     }

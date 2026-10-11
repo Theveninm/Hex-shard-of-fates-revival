@@ -599,6 +599,24 @@ namespace HexRevival
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
             if (sub == "rewards") return DumpRewards();
+            if (sub == "nodes")
+            {
+                // dev: every AZ1 node with its scenes and conversations, to HexRevivalNodes.txt
+                BuildMap();
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                List<string> lines = new List<string>();
+                foreach (MapNode n in s_Nodes)
+                {
+                    string convs = "";
+                    string number = NodeNumber(n.Id);
+                    if (number != null)
+                        foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+                            if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number) convs += c.m_Name + " | ";
+                    lines.Add(n.Id + "\t" + n.Name + "\t" + n.Type + "\tSCENES: " + n.Scenes + "\tCONVS: " + convs);
+                }
+                File.WriteAllLines(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalNodes.txt"), lines.ToArray());
+                return lines.Count + " nodes written to HexRevivalNodes.txt";
+            }
             if (sub == "sets")
             {
                 StringBuilder sb = new StringBuilder();
