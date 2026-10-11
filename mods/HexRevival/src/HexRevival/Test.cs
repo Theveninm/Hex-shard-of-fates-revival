@@ -800,6 +800,23 @@ namespace HexRevival
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
                 case "toggles": return Settings.DumpToggles();
+                case "gostate":   // dev: e.g. "gostate PremiumStore"
+                    {
+                        Reckoning.Game.EGameState st = (Reckoning.Game.EGameState)Enum.Parse(typeof(Reckoning.Game.EGameState), parts[1]);
+                        Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(st, null);
+                        return "-> " + st;
+                    }
+                case "storedump":   // dev: state of the store screen
+                    {
+                        UIPremiumStoreViewModel vm = UnityEngine.Object.FindObjectOfType<UIPremiumStoreViewModel>();
+                        if (vm == null) return "no store";
+                        BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+                        System.Collections.IDictionary bp = typeof(UIPremiumStoreViewModel).GetField("m_BoosterPacks", bf).GetValue(vm) as System.Collections.IDictionary;
+                        object ctx = typeof(UIPremiumStoreViewModel).GetField("Context", bf).GetValue(vm);
+                        UIPremiumStoreContext c = ctx as UIPremiumStoreContext;
+                        return "boosters=" + (bp != null ? bp.Count : -1) + " catalog=" + c.Catalog.Count + " tab=" + c.VisibleTab + " boosterTabVisible=" + c.BoosterPackTabVisible
+                            + " curTab=" + typeof(UIPremiumStoreViewModel).GetField("m_CurrentTab", bf).GetValue(vm) + " dirty=" + typeof(UIPremiumStoreViewModel).GetField("m_CatalogDirty", bf).GetValue(vm) + " waiting=" + c.Waiting;
+                    }
                 case "collsets":
                     {
                         // dev: copies owned per card set, from collection.txt

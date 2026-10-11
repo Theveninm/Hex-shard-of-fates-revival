@@ -64,7 +64,8 @@ namespace HexRevival
         {
             GetStoreItemsResponse r = LocalServer.Ok<GetStoreItemsResponse>();
             r.StoreItems = new List<StoreItem>();
-            foreach (StoreItem s in Items()) r.StoreItems.Add(s.Clone());
+            // Not StoreItem.Clone(): it only copies rawData (the server bytes), which local items do not have.
+            r.StoreItems.AddRange(Items());
             Deliver(typeof(EscrowService.GetStoreItems), r, handler);
         }
 
@@ -132,8 +133,12 @@ namespace HexRevival
             LocalServer.Later(() =>
             {
                 FieldInfo ev = tx.GetField("OnResponse", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                if (ev == null)
+                    foreach (FieldInfo f in tx.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+                        if (typeof(Delegate).IsAssignableFrom(f.FieldType)) { ev = f; break; }
                 Delegate d = ev != null ? ev.GetValue(null) as Delegate : null;
-                if (d != null) d.DynamicInvoke(response);
+                Debug.Log("[HexRevival] [Store] " + tx.Name + " answer: field " + (ev != null ? ev.Name : "none") + ", listeners " + (d != null ? d.GetInvocationList().Length : 0) + ", handler " + (handler != null));
+                if (d != null) foreach (Delegate one in d.GetInvocationList()) one.DynamicInvoke(response);
                 if (handler != null) handler.DynamicInvoke(response);
             });
         }
