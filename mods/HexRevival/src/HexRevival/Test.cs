@@ -817,6 +817,15 @@ namespace HexRevival
                         return "boosters=" + (bp != null ? bp.Count : -1) + " catalog=" + c.Catalog.Count + " tab=" + c.VisibleTab + " boosterTabVisible=" + c.BoosterPackTabVisible
                             + " curTab=" + typeof(UIPremiumStoreViewModel).GetField("m_CurrentTab", bf).GetValue(vm) + " dirty=" + typeof(UIPremiumStoreViewModel).GetField("m_CatalogDirty", bf).GetValue(vm) + " waiting=" + c.Waiting;
                     }
+                case "loot":   // dev: "loot check" (names not found), "loot open [pack]" (draw without granting)
+                    if (parts.Length > 1 && parts[1] == "open")
+                    {
+                        List<string> o = new List<string>();
+                        foreach (Loot.Drop d in Loot.Open(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : Loot.AZ1Pack))
+                            o.Add(d.Card != null ? "card " + d.Card.m_Name : "item " + Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item).m_Name);
+                        return string.Join(", ", o.ToArray());
+                    }
+                    return Loot.Check();
                 case "collsets":
                     {
                         // dev: copies owned per card set, from collection.txt

@@ -21,7 +21,8 @@ namespace HexRevival
     public static class Collection
     {
         public const int CopiesPerCard = 4;
-        public const int BasicShardCopies = 60;
+        /// <summary>Basic shards of each kind owned from the start. Src.SteamGuide2016 ("200 of each base shard card").</summary>
+        public const int BasicShardCopies = 200;
 
         private static ulong s_NextId = 1;
         private static UID s_Owner;

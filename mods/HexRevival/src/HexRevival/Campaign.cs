@@ -48,6 +48,7 @@ namespace HexRevival
             public string Type = "Empty"; // LocationType: Encounter, Convo or Empty
             public string Encounter;     // EncounterScene GUID
             public string Conversation;  // ConversationTemplate GUID
+            public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
         }
 
         private static List<MapNode> s_Nodes;
@@ -105,6 +106,20 @@ namespace HexRevival
             set.Add(b);
         }
 
+        /// <summary>True when the node is a battle (its rewards come with the win, not with a conversation).</summary>
+        public static bool NodeHasBattle(string node)
+        {
+            MapNode n = FindNode(node);
+            return n != null && n.Encounter != null;
+        }
+
+        /// <summary>Names and titles of the scenes of a map node ("" if unknown).</summary>
+        public static string NodeScenes(string node)
+        {
+            MapNode n = FindNode(node);
+            return n != null ? n.Scenes : "";
+        }
+
         private static IEnumerable<string> Neighbours(string node)
         {
             HashSet<string> set;
@@ -121,6 +136,11 @@ namespace HexRevival
         {
             string number = NodeNumber(n.Id);
             if (number == null) return;
+            foreach (SceneData s in tm.CampaignScenes.Values)
+            {
+                EncounterScene es = s as EncounterScene;
+                if (es != null && NameNumber(es.m_Name, "AZ1-NODE") == number) n.Scenes += es.m_Name + " / " + es.m_Title + " | ";
+            }
             foreach (SceneData s in tm.CampaignScenes.Values)
             {
                 EncounterScene es = s as EncounterScene;

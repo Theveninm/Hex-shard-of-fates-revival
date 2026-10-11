@@ -55,23 +55,8 @@ namespace HexRevival
 
             foreach (card_instance_bits c in Collection.Build(reckId)) bits.Cards.Add(c);
 
-            // Equipment (PvE champions): one copy of each, in the inventory ("unlock everything" saves).
-            int equip = 0;
-            ulong itemId = 1;
-            foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
-            {
-                if (!(item is InventoryEquipmentData) || !Saves.Current.UnlockAll) continue;
-                inventory_bits inv = new inventory_bits();
-                inv.Id = itemId++;
-                inv.TemplateID = item.m_Id;
-                inv.ItemQuantity = 1;
-                inv.ClaimDate = DateTime.MinValue;
-                inv.EscrowStatus = "";
-                inv.OwnerReckId = reckId.GetInstanceId();
-                bits.InventoryIds.Add(inv);
-                equip++;
-            }
-            Debug.Log("[HexRevival] [Profile] equipment: " + equip);
+            // Equipment (PvE champions): see Inventory.
+            foreach (inventory_bits inv in Inventory.Build(reckId)) bits.InventoryIds.Add(inv);
 
             try { foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Profile] decks: " + e); }
