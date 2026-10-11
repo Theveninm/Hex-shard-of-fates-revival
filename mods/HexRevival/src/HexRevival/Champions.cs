@@ -176,6 +176,8 @@ namespace HexRevival
             return c;
         }
 
+        public static champion_bits Get(ulong id) { return Find(id); }
+
         private static champion_bits Find(ulong id)
         {
             foreach (champion_bits c in s_Champions) if (c.Id == id) return c;

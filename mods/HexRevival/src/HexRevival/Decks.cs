@@ -176,6 +176,15 @@ namespace HexRevival
                 GetDeckDetailsResponse r = LocalServer.Ok<GetDeckDetailsResponse>();
                 r.Deckbits = b;
                 r.ChampionBits = null;
+                // Campaign battle: the champion card is built from the PvE champion (race, class,
+                // level, talents: portrait and health as in the original game), unless the
+                // encounter forces its own player deck.
+                champion_bits pveChamp = Campaign.BattleChampion != 0 && d.PveChampion == Campaign.BattleChampion ? Champions.Get(d.PveChampion) : null;
+                if (pveChamp != null && !EncounterForcesPlayerDeck())
+                {
+                    b.PVPChampionId = ResourceId.Invalid;
+                    r.ChampionBits = pveChamp;
+                }
                 r.PlayerName = "";
                 return r;
             }
@@ -247,6 +256,28 @@ namespace HexRevival
         }
 
         /// <summary>deck_bits with copies from the collection (distinct copies per template).</summary>
+        /// <summary>True when the current encounter gives the human player a deck of its own.</summary>
+        private static bool EncounterForcesPlayerDeck()
+        {
+            try
+            {
+                object session = Server.CurrentSession;
+                if (session == null) return false;
+                System.Reflection.FieldInfo f = null;
+                for (Type t = session.GetType(); t != null && f == null; t = t.BaseType)
+                    f = t.GetField("m_Players", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly);
+                System.Collections.IEnumerable players = f != null ? f.GetValue(session) as System.Collections.IEnumerable : null;
+                if (players == null) return false;
+                foreach (object o in players)
+                {
+                    Game.Shared.Player p = o as Game.Shared.Player;
+                    if (p != null && !p.IsAI() && p.m_DeckTemplateID.IsValid) return true;
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] encounter deck: " + e.Message); }
+            return false;
+        }
+
         private static deck_bits ToBits(StoredDeck d)
         {
             deck_bits b = new deck_bits();

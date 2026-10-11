@@ -192,6 +192,9 @@ namespace HexRevival
         private static Dictionary<ulong, CampState> s_States;
         private static CampState s_Battle; // campaign whose encounter is being played
 
+        /// <summary>Champion playing the current campaign battle (0 outside campaign battles).</summary>
+        public static ulong BattleChampion { get { return s_Battle != null ? s_Battle.ChampId : 0UL; } }
+
         private static string FilePath { get { return Saves.File("campaign.txt"); } }
 
         /// <summary>Forgets the loaded campaigns (another save was selected).</summary>
@@ -544,6 +547,9 @@ namespace HexRevival
             }
             catch { }
             s_Battle = st;
+            // The battle HUD reads the level from the profile's current champion.
+            try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, st.ChampId); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Campaign] current champion: " + e.Message); }
             Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
         }
 
