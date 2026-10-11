@@ -193,7 +193,58 @@ namespace HexRevival
             bool claimed = special != null && special.OneTime && Saves.Current.Claims.Contains(champId + ":" + node);
             Reward give = special != null && !claimed ? special : DefaultBattle;
             if (special != null && special.OneTime && !claimed) Saves.Current.Claims.Add(champId + ":" + node);
+            // Taming quest ("AZ01 Tamed", Src.Game + Src.HexServer): an opponent troop tamed with the
+            // taming item (IntAttr Tamed) and sent to the void is captured: 1 copy, once per champion and creature.
+            List<string> extra = new List<string>();
+            foreach (CardTemplate t in TamedCreatures())
+            {
+                string key = champId + ":tamed:" + t.m_Name;
+                if (Saves.Current.Claims.Contains(key) || Array.Exists(give.Cards, x => string.Equals(x, t.m_Name, StringComparison.OrdinalIgnoreCase))) continue;
+                Saves.Current.Claims.Add(key);
+                extra.Add(t.m_Name);
+            }
+            if (extra.Count > 0)
+            {
+                Reward withTamed = new Reward { Gold = give.Gold, Xp = give.Xp, Packs = give.Packs, RaceQuest = give.RaceQuest, ShroomHaus = give.ShroomHaus, Source = give.Source };
+                List<string> all = new List<string>(give.Cards);
+                all.AddRange(extra);
+                withTamed.Cards = all.ToArray();
+                give = withTamed;
+            }
             Grant(champId, give, node, "campaign " + node);
+        }
+
+        /// <summary>Opponent troops of the match that ended, in the void with the Tamed marker.</summary>
+        private static List<CardTemplate> TamedCreatures()
+        {
+            List<CardTemplate> res = new List<CardTemplate>();
+            try
+            {
+                object session = Server.CurrentSession;
+                if (session == null) return res;
+                FieldInfo f = null;
+                for (Type t = session.GetType(); t != null && f == null; t = t.BaseType)
+                    f = t.GetField("m_Players", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                System.Collections.IEnumerable players = f != null ? f.GetValue(session) as System.Collections.IEnumerable : null;
+                if (players == null) return res;
+                foreach (object o in players)
+                {
+                    Game.Shared.Player p = o as Game.Shared.Player;
+                    if (p == null || !p.IsAI() || p.m_Void == null) continue;
+                    foreach (Card c in p.m_Void.m_Cards)
+                    {
+                        if (c == null || !c.IsTroop()) continue;
+                        bool tamed = c.GetBool(IntAttrs.Tamed) || c.GetCardContext().GetBool(IntAttrs.Tamed) || c.GetOrCreate(TACAttrs.PermanentData).GetBool(IntAttrs.Tamed);
+                        if (!tamed) continue;
+                        CardTemplate t = c.m_OriginalCardTemplateId.IsValid ? Singleton<TemplateManager>.Instance.GetCardTemplate(c.m_OriginalCardTemplateId) : null;
+                        if (t == null) t = c.m_CardTemplate;
+                        if (t != null && !res.Exists(x => x.m_Name == t.m_Name)) res.Add(t);
+                    }
+                }
+                if (res.Count > 0) Debug.Log("[HexRevival] [Progression] tamed: " + string.Join(", ", res.ConvertAll(x => x.m_Name).ToArray()));
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Progression] tamed creatures: " + e.Message); }
+            return res;
         }
 
         /// <summary>Campaign conversation completed: quest turn-in rewards (Shroomkin Haus, bridges, race quests).</summary>

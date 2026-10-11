@@ -66,6 +66,15 @@ Death, Raving Ghoul, Rotting Away), Diamond (Form Ranks, Ethereal Healer, Dandel
 (Morphology, Chaotic Murmurs, Heroic Echo), Ruby (Skittering Skarn, Fuel for the Fire, Emberbrute),
 Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The Haus is recognised from the node's scene names.
 
+Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
+taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;
+Game: the Tamed marker, HexServer: the capture rule).
+
+Names in the loot tables are matched to the game's cards and equipment ignoring case, spaces and
+punctuation; a misspelt name is read as the closest game name (at most 1 letter wrong in 5, and only
+if no other name is as close). The dev command `loot check` lists the names read that way and the
+ones still not found.
+
 Known but not given yet:
 - Crayburn Castle (dungeon not implemented): 150 gold (Guide2016) and 4 cards by race (LootTables2016),
   e.g. Human: Noble Citizenry, Phoenix Guard Trainer, Captain of the Dragon Guard, Shards of Fate.

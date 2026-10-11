@@ -825,6 +825,7 @@ namespace HexRevival
                             o.Add(d.Card != null ? "card " + d.Card.m_Name : "item " + Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item).m_Name);
                         return string.Join(", ", o.ToArray());
                     }
+                    if (parts.Length > 2 && parts[1] == "find") return Loot.Find(string.Join(" ", parts, 2, parts.Length - 2));
                     return Loot.Check();
                 case "collsets":
                     {
