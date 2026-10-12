@@ -191,15 +191,15 @@ namespace HexRevival
 
         /// <summary>
         /// Haus kind of each Shroom Haus node. The game numbers its Hauses without naming the kind
-        /// (Src.Game), so the kinds are inferred (PLACEHOLDER, see docs/PROGRESSION.md):
-        /// Sporemist Hollow = Artifact (Guide2016, hex-server); Blau Flats = Sapphire ("blau" = blue);
-        /// Uuug's Oasis = Ruby (desert, only Ruby decks nearby); Lena Grotto = Blood (Blood decks
-        /// nearby, dark grotto); Bauer Dunes = Diamond (Diamond decks nearby); Hoff Mines = Wild (the one left).
+        /// (Src.Game). Confirmed: Sporemist Hollow = Artifact (Guide2016, hex-server), Uuug's Oasis =
+        /// Ruby and Lena Grotto = Diamond (let's plays seen by the user). Inferred (PLACEHOLDER):
+        /// Blau Flats = Sapphire ("blau" = blue), Bauer Dunes = Wild (Wild decks nearby), Hoff Mines =
+        /// Blood (the one left; dark humid cave).
         /// </summary>
         private static readonly Dictionary<string, string> HausByNode = new Dictionary<string, string>
         {
-            { "Node004", "Artifact" }, { "Node042", "Diamond" }, { "Node025", "Blood" },
-            { "Node077", "Sapphire" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
+            { "Node004", "Artifact" }, { "Node042", "Wild" }, { "Node025", "Diamond" },
+            { "Node077", "Sapphire" }, { "Node029", "Blood" }, { "Node035", "Ruby" },
         };
 
         /// <summary>Card template ids offered by a Shroom Haus (the game's choice window).</summary>

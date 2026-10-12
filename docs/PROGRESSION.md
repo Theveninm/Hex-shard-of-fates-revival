@@ -53,7 +53,7 @@ replace that default the first time a champion completes them (one time per cham
 | Node078 Skittering Ridge | Killipede's Revenge ("The Blood Beneath": the flask) | Contract Killing | LootTables2016; the game gave it at the turn-in (Rizzix / Gurtok), given on the win |
 | Node053 South Desert | Gnomes at Home ("Gnomes Come Home": Herbert found) | Gnome Wayfarer | LootTables2016; the game gave it at the turn-in (Vincent), given at the camp |
 | Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"). Once the army is beaten, the node offers the game's "Repeat Encounters" dialogue (level 1, or the army starting with 1 to 6 resources in play: Game) |
-| Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 (same flow) | 1 card of the Haus's 3, chosen | LootTables2016; Haus kinds inferred (PLACEHOLDER, see below; Uuug's Oasis = Ruby confirmed by a let's play) |
+| Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 (same flow) | 1 card of the Haus's 3, chosen | LootTables2016; Haus kinds partly inferred (PLACEHOLDER, see below) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
 | Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
 | Node017 Cave-In / Node034 Ambling Mesa | "Find the Cave-In / Ambling Mesa" (Underworld / Ardent) | race card | LootTables2016; given at the node, quest not checked |
@@ -70,12 +70,10 @@ Race items (LootTables2016), in race order Human, Elf, Coyotle, Orc / Dwarf, Nec
 Shroom Hauses (LootTables2016): Artifact (Builder Bot, Deployment Orders, Tricerobot), Blood (Elegy of
 Death, Raving Ghoul, Rotting Away), Diamond (Form Ranks, Ethereal Healer, Dandelion Faerie), Sapphire
 (Morphology, Chaotic Murmurs, Heroic Echo), Ruby (Skittering Skarn, Fuel for the Fire, Emberbrute),
-Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses without naming the kind, and the Shroomkin dialogues give no hint, so
-the kinds are inferred from place names and the shard colours of the AI decks of nearby battles
-(PLACEHOLDER): Sporemist Hollow = Artifact (Guide2016, hex-server: certain), Blau Flats = Sapphire
-("blau" = blue), Uuug's Oasis = Ruby (in the desert, only Ruby decks nearby), Lena Grotto = Blood
-(Blood and Wild decks nearby; Uuug's Oasis = Ruby is confirmed by a let's play), Bauer Dunes = Diamond (Diamond and Wild decks nearby), Hoff Mines =
-Wild (the one left; no battle nearby). After the Shroomkin's conversation the location opens the game's
+Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses without naming the kind, and the Shroomkin dialogues give no hint.
+Confirmed: Sporemist Hollow = Artifact (Guide2016, hex-server), Uuug's Oasis = Ruby and Lena Grotto =
+Diamond (let's plays). Inferred (PLACEHOLDER): Blau Flats = Sapphire ("blau" = blue), Bauer Dunes =
+Wild (Wild and Diamond decks nearby), Hoff Mines = Blood (the one left). After the Shroomkin's conversation the location opens the game's
 choice window ("ShroomHaus" location with the 3 card ids), and the client's "shroom_choice" event
 gives the card picked.
 
