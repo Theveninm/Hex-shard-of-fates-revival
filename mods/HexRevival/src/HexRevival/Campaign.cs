@@ -412,7 +412,8 @@ namespace HexRevival
                 d["type"] = repeat ? "Convo" : n.Type;
                 d["visible"] = visible;
                 d["enabled"] = visible;
-                d["completed"] = st.Completed.Contains(n.Id);
+                // A completed node cannot be started again by the client: repeatable nodes are sent as not completed (blue marker).
+                d["completed"] = st.Completed.Contains(n.Id) && !repeat;
                 d["repeatable"] = repeat;
                 d["allow_cancel"] = true;
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
