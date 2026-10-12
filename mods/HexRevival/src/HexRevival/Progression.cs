@@ -91,10 +91,8 @@ namespace HexRevival
             { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016, Note = "card picked at random among the Haus's 3 (the game let the player choose)" } },
             // Skittering Ridge, Killipede's Revenge: the flask of "The Blood Beneath" (Src.LootTables2016: Contract Killing;
             // the game gave it at the turn-in to Rizzix / Gurtok, quest steps not modelled: given on the win)
-            { "Node078", new Reward { Cards = new[] { "Contract Killing" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "given on the win instead of the turn-in" } },
             // South Desert, Gnomes at Home: Herbert found, "Gnomes Come Home" (Src.LootTables2016: Gnome Wayfarer;
             // the game gave it at the turn-in to Vincent, quest steps not modelled: given at the camp)
-            { "Node053", new Reward { Cards = new[] { "Gnome Wayfarer" }, OneTime = true, Source = Src.LootTables2016, Note = "given at Herbert's camp instead of the turn-in" } },
             // Other Shroom Hauses (scenes "SHROOM HAUS 2..6 - REWARD"): the Haus's card only (no source for gold)
             { "Node042", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
             { "Node025", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
@@ -117,8 +115,6 @@ namespace HexRevival
             // Bridge over the Zila - West: "Cross the Zila River" turn-in (quest condition not modelled yet)
             { "Node015", new Reward { Packs = 1, RaceQuest = "zila", Gold = 300, OneTime = true, Source = Src.Guide2016, Note = "race equipment from the loot tables; quest not checked" } },
             // Cave-In (Underworld) / Ambling Mesa (Ardent): "Find the Cave-In / Ambling Mesa" quest item
-            { "Node017", new Reward { RaceQuest = "mesa", OneTime = true, Source = Src.LootTables2016, Note = "given at the node; quest not checked" } },
-            { "Node034", new Reward { RaceQuest = "mesa", OneTime = true, Source = Src.LootTables2016, Note = "given at the node; quest not checked" } },
             // Shadowgrove, Corrupt Dryad: AZ1 pack + race equipment; 250 XP (hex-server)
             { "Node018", new Reward { Packs = 1, RaceQuest = "dryad", Xp = 250, OneTime = true, Source = Src.Guide2016 } },
             // Bridge over the Zodiac - East: "Cross the Zodiac River" turn-in (guide's "Zila East"), AZ1 pack + race card
@@ -271,6 +267,31 @@ namespace HexRevival
                 give = withTamed;
             }
             Grant(champId, give, node, "campaign " + node);
+        }
+
+        /// <summary>True when an opponent troop was captured with the taming item in the match that ended.</summary>
+        public static bool AnyTamed() { return TamedCreatures().Count > 0; }
+
+        /// <summary>
+        /// Quest rewards, given at the turn-in (Src.LootTables2016 for the cards; the race card of the
+        /// "Find the Cave-In / Ambling Mesa" quests). Gold for quests without a known reward: PLACEHOLDER.
+        /// </summary>
+        private static readonly Dictionary<string, Reward> QuestRewards = new Dictionary<string, Reward>
+        {
+            { "az01_ar_find_ambling_mesa", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
+            { "az01_uw_find_cave_in", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
+            { "q_blood_beneath", new Reward { Cards = new[] { "Contract Killing" }, Gold = QuestGold, Source = Src.LootTables2016 } },
+            { "q_gnomes_come_home", new Reward { Cards = new[] { "Gnome Wayfarer" }, Gold = QuestGold, Source = Src.LootTables2016 } },
+        };
+
+        /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>
+        private const int QuestGold = 300;
+
+        public static void OnQuestFinished(ulong champId, string script)
+        {
+            Reward r;
+            if (!QuestRewards.TryGetValue(script, out r)) r = new Reward { Gold = QuestGold, Source = Src.Placeholder };
+            Grant(champId, r, null, "quest " + script);
         }
 
         /// <summary>Opponent troops of the match that ended, in the void with the Tamed marker.</summary>

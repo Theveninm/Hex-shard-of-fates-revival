@@ -49,6 +49,7 @@ namespace HexRevival
             public string Encounter;     // EncounterScene GUID
             public string Conversation;  // ConversationTemplate GUID
             public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
+            public string Panorama;      // hub panorama scene (Cave-In, Ambling Mesa, Thunderfield): NPCs and quest givers
             public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
         }
@@ -213,6 +214,16 @@ namespace HexRevival
             foreach (SceneData s in tm.CampaignScenes.Values)
             {
                 EncounterScene es = s as EncounterScene;
+                if (es != null && NameNumber(es.m_Name, "AZ1-NODE") == number && es.m_Name.ToUpperInvariant().Contains("PANORAMA") && PanoramaAssets.ContainsKey(n.Id))
+                {
+                    n.Panorama = es.m_Id.ToString();
+                    n.Type = "Panorama";
+                    return;
+                }
+            }
+            foreach (SceneData s in tm.CampaignScenes.Values)
+            {
+                EncounterScene es = s as EncounterScene;
                 if (es == null || NameNumber(es.m_Name, "AZ1-NODE") != number || !OfflineMenu.IsBattle(es, tm)) continue;
                 n.Type = "Encounter";
                 n.Encounter = es.m_Id.ToString();
@@ -290,6 +301,8 @@ namespace HexRevival
         /// <summary>Forgets the loaded campaigns (another save was selected).</summary>
         public static void Reset()
         {
+            s_Pano.Clear();
+            Quests.Reset();
             s_States = null;
             s_Battle = null;
         }
@@ -420,6 +433,15 @@ namespace HexRevival
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
                 if (repeat) d["conversationId"] = n.RepeatConversation;
                 else if (n.Conversation != null) d["conversationId"] = n.Conversation;
+                if (n.Panorama != null)
+                {
+                    // Hub: a reusable portal to its panorama (never completed, Src.Game location type Panorama).
+                    d["type"] = "Panorama";
+                    d["encounter"] = n.Panorama;
+                    d.Remove("conversationId");
+                    d["completed"] = false;
+                    d["repeatable"] = true;
+                }
                 if (n.IsHaus && st.HausReady.Contains(n.Id) && !st.Completed.Contains(n.Id))
                 {
                     // The game's card choice window (Src.Game, as hex-server serves it): 3 card templates to pick from.
@@ -496,6 +518,177 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
+        // Hub panoramas (Cave-In, Ambling Mesa, Thunderfield): the game's panorama scenes,
+        // whose NPCs are quest givers. One PANORAMA campaign per champion (id PanoBase + champion).
+        // ------------------------------------------------------------------
+
+        private const ulong PanoBase = 1000000;
+        private static bool IsPanoCamp(ulong id) { return id >= PanoBase && !Quests.IsQuestCamp(id); }
+
+        /// <summary>Panorama level of each hub (Src.HexServer, read from the client's asset bundles).</summary>
+        private static readonly Dictionary<string, string[]> PanoramaAssets = new Dictionary<string, string[]>
+        {
+            { "Node017", new[] { "adventurezone01/p_dwrf_cavein", "p_dwrf_cavein" } },
+            { "Node034", new[] { "adventurezone01/p_cytl_amblingmesa", "p_cytl_amblingmesa" } },
+            { "Node049", new[] { "adventurezone01/p_cytl_thunderfield", "p_cytl_thunderfield" } },
+        };
+
+        private class PanoState { public string Node; public string ALoc; }
+        private static readonly Dictionary<ulong, PanoState> s_Pano = new Dictionary<ulong, PanoState>();
+
+        private class Npc { public string Name; public string ConvId; public string ConvName; public bool Give, TurnIn, Repeat; public string Champion; }
+
+        private static void EnterPanorama(CampState st, MapNode node)
+        {
+            s_Pano[st.ChampId] = new PanoState { Node = node.Id };
+            st.ALoc = null;
+            st.LastNode = node.Id;
+            Save();
+            Debug.Log("[HexRevival] [Campaign] enter panorama " + node.Name);
+            GameplayState gs = BuildPanoState(st.ChampId);
+            Enqueue(() => Quests.Invoke("HandleOnNotifyCampUpdate", new CampSysGeneral.Any.CampUpdateNotify(0, PanoBase + st.ChampId, st.ChampId, "area_panorama", "PANORAMA", true, gs, null)));
+        }
+
+        private static void LeavePanorama(ulong champ)
+        {
+            s_Pano.Remove(champ);
+            CampState st = Get(champ, false);
+            if (st == null) return;
+            GameplayState gs = BuildState(st);
+            Enqueue(() => Quests.Invoke("HandleOnNotifyCampUpdate", new CampSysGeneral.Any.CampUpdateNotify(0, st.CampId, champ, "return_parent", "AREA", true, gs, null)));
+        }
+
+        /// <summary>Conversation each NPC of the hub offers now, from the quest progress.</summary>
+        private static List<Npc> HubNpcs(ulong champ, string node)
+        {
+            string number = NodeNumber(node);
+            Dictionary<string, List<ConversationTemplate>> byNpc = new Dictionary<string, List<ConversationTemplate>>();
+            foreach (ConversationTemplate c in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)
+            {
+                if (c == null || string.IsNullOrEmpty(c.m_OwnerName) || NameNumber(c.m_Name, "AZ1-NODE") != number) continue;
+                if (!Quests.MatchesChampion(c.m_Name, champ)) continue;
+                List<ConversationTemplate> l;
+                if (!byNpc.TryGetValue(c.m_OwnerName, out l)) byNpc[c.m_OwnerName] = l = new List<ConversationTemplate>();
+                l.Add(c);
+            }
+            List<Npc> res = new List<Npc>();
+            foreach (KeyValuePair<string, List<ConversationTemplate>> kv in byNpc)
+            {
+                ConversationTemplate pick = null; int rank = 99; bool give = false, turnIn = false;
+                bool anyFinished = false;
+                foreach (ConversationTemplate c in kv.Value)
+                {
+                    string q = Quests.QuestOf(c.m_Name);
+                    if (q != null && Quests.IsFinished(champ, q)) anyFinished = true;
+                }
+                // Order: turn-in, new quest, quest in progress, finished quest, NPC's generic repeat.
+                foreach (ConversationTemplate c in kv.Value)
+                {
+                    string q = Quests.QuestOf(c.m_Name);
+                    Quests.Role r = Quests.RoleOf(c.m_Name);
+                    int cr = 99; bool g = false, t = false;
+                    if (q != null)
+                    {
+                        bool started = Quests.IsStarted(champ, q), finished = Quests.IsFinished(champ, q);
+                        if (r == Quests.Role.End && Quests.TurnInReady(champ, q)) { cr = 0; t = true; }
+                        else if (r == Quests.Role.Start && !started && Quests.CanStart(champ, q)) { cr = 1; g = true; }
+                        else if (r == Quests.Role.NotComplete && started && !finished) cr = 2;
+                        else if (r == Quests.Role.Repeat && finished) cr = 3;
+                    }
+                    else if (r == Quests.Role.Repeat && anyFinished) cr = 4;
+                    if (cr < rank) { rank = cr; pick = c; give = g; turnIn = t; }
+                }
+                if (pick == null) continue;
+                res.Add(new Npc { Name = kv.Key, ConvId = pick.m_Id.ToString(), ConvName = pick.m_Name, Give = give, TurnIn = turnIn, Repeat = rank >= 2, Champion = pick.m_ChampionId.IsValid ? pick.m_ChampionId.ToString() : null });
+            }
+            return res;
+        }
+
+        private static GameplayState BuildPanoState(ulong champ)
+        {
+            PanoState ps;
+            s_Pano.TryGetValue(champ, out ps);
+            GameplayState gs = new GameplayState();
+            gs.CampID = PanoBase + champ;
+            gs.ChampID = champ;
+            gs.TempType = "PANORAMA";
+            gs.PayGroups = new PayableGroup[0];
+            gs.ALoc = ps != null ? ps.ALoc : null;
+            gs.CurState = "EXPLORE";
+            gs.Started = "2020-01-01T00:00:00Z";
+            gs.Champions = new List<Champion>();
+            gs.Flags = new Dictionary<string, object>();
+            gs.VisLocs = new List<Location>();
+            gs.LocNodes = new List<Node>();
+            gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
+            if (ps != null)
+                foreach (Npc n in HubNpcs(champ, ps.Node))
+                {
+                    Dictionary<string, object> d = new Dictionary<string, object>();
+                    d["name"] = n.Name; d["node"] = n.Name; d["type"] = "Convo"; d["conversationId"] = n.ConvId;
+                    d["visible"] = true; d["enabled"] = true; d["completed"] = false; d["repeatable"] = n.Repeat;
+                    d["givequest"] = n.Give; d["turninquest"] = n.TurnIn; d["autostart"] = false; d["autopan"] = false;
+                    gs.VisLocs.Add(new Location(d));
+                    Dictionary<string, object> nd = new Dictionary<string, object> { { "id", n.Name }, { "type", "DEFAULT" } };
+                    if (n.Champion != null) nd["championId"] = n.Champion;
+                    gs.LocNodes.Add(new Node(n.Name, nd));
+                }
+            gs.PublicState = new QueryState(new Dictionary<string, object> { { "CampaignGroup", AZ1Name }, { "HideQuickNavigation", false } });
+            return gs;
+        }
+
+        private static CampSummary PanoSummary(ulong champ)
+        {
+            PanoState ps;
+            string[] a = s_Pano.TryGetValue(champ, out ps) && PanoramaAssets.ContainsKey(ps.Node) ? PanoramaAssets[ps.Node] : new[] { "", "" };
+            TemplateTypeInfo info = new TemplateTypeInfo(AZ1Name, "PANORAMA", null, false, false, a[0], a[1],
+                "campaign/tutorial/prefabs/background1", "", "2f59b729-7cdf-4fb4-abc3-5654a644df65");
+            return new CampSummary(PanoBase + champ, info, CampaignType.PANORAMA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, true, 1, null);
+        }
+
+        private static void AnswerPano(ulong champ, ClientCampaignManager.StateCallback callback)
+        {
+            GameplayState gs = BuildPanoState(champ);
+            Enqueue(() =>
+            {
+                MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
+                cache.Invoke(null, new object[] { gs.CampID, gs });
+                if (callback != null) callback(gs);
+            });
+        }
+
+        private static void AnswerQuest(ulong campId, ClientCampaignManager.StateCallback callback)
+        {
+            GameplayState gs = Quests.State(campId);
+            if (gs == null) return;
+            Enqueue(() =>
+            {
+                MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
+                cache.Invoke(null, new object[] { campId, gs });
+                if (callback != null) callback(gs);
+            });
+        }
+
+        private static void PanoEvent(ulong champ, string evt, ClientCampaignManager.StateCallback callback)
+        {
+            PanoState ps;
+            s_Pano.TryGetValue(champ, out ps);
+            if (evt == "return_parent") { LeavePanorama(champ); return; }
+            if (ps != null && (evt == "conv_done" || evt == "accept") && ps.ALoc != null)
+            {
+                Npc n = HubNpcs(champ, ps.Node).Find(x => x.Name == ps.ALoc);
+                ps.ALoc = null;
+                if (n != null && evt == "conv_done")
+                {
+                    Debug.Log("[HexRevival] [Campaign] " + n.Name + ": " + n.ConvName);
+                    Quests.OnGiverConversationDone(champ, n.ConvId, n.ConvName);
+                }
+            }
+            else if (ps != null && (evt == "cancel" || evt == "enc_cancel")) ps.ALoc = null;
+            AnswerPano(champ, callback);
+        }
+
+        // ------------------------------------------------------------------
         // ClientCampaignManager entry points (Harmony prefixes, see Plugin.cs)
         // ------------------------------------------------------------------
 
@@ -521,6 +714,7 @@ namespace HexRevival
             List<CampSummary> res = new List<CampSummary>();
             foreach (ulong id in ids)
             {
+                if (IsPanoCamp(id)) { res.Add(PanoSummary(id - PanoBase)); continue; }
                 CampState st = Get(id, false);
                 if (st != null) res.Add(Summary(st));
             }
@@ -534,17 +728,22 @@ namespace HexRevival
             CampState st = Get(champId, false);
             if (st != null && (type == CampaignType.AREA || type == CampaignType.ANY))
                 res.Add(new TemplateInfo(st.CampId, CampaignType.AREA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, 1, null));
+            if (type == CampaignType.QUEST || type == CampaignType.ANY) res.AddRange(Quests.ActiveInfos(champId));
             TemplateInfo[] arr = res.ToArray();
             Enqueue(() => callback(arr));
         }
 
         public static void QueryState(ulong campId, ClientCampaignManager.StateCallback callback)
         {
+            if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
+            if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
             Answer(Get(campId, false), callback);
         }
 
         public static void Start(ulong campId, ClientCampaignManager.StateCallback callback)
         {
+            if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
+            if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
             CampState st = Get(campId, false);
             if (st != null && !st.Started) { st.Started = true; Save(); }
             Answer(st, callback);
@@ -552,6 +751,7 @@ namespace HexRevival
 
         public static void Forfeit(ulong campId, ClientCampaignManager.StateCallback callback)
         {
+            if (IsPanoCamp(campId)) { LeavePanorama(campId - PanoBase); return; }
             CampState st = Get(campId, false);
             if (st != null) st.ALoc = null;
             Answer(st, callback);
@@ -559,6 +759,13 @@ namespace HexRevival
 
         public static void StartLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
         {
+            if (IsPanoCamp(campId))
+            {
+                PanoState ps;
+                if (s_Pano.TryGetValue(campId - PanoBase, out ps)) ps.ALoc = location;
+                AnswerPano(campId - PanoBase, callback);
+                return;
+            }
             CampState st = Get(campId, false);
             if (st == null) return;
             MapNode n = FindNode(location);
@@ -574,6 +781,7 @@ namespace HexRevival
 
         public static void FinishLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
         {
+            if (IsPanoCamp(campId)) { PanoEvent(campId - PanoBase, "conv_done", callback); return; }
             CampState st = Get(campId, false);
             if (st == null) return;
             MapNode n = FindNode(location);
@@ -585,6 +793,8 @@ namespace HexRevival
 
         public static void SendEvent(ulong campId, string evt, object[] args, ClientCampaignManager.StateCallback callback)
         {
+            if (IsPanoCamp(campId)) { Debug.Log("[HexRevival] [Campaign] panorama event " + evt); PanoEvent(campId - PanoBase, evt, callback); return; }
+            if (Quests.IsQuestCamp(campId)) return;
             CampState st = Get(campId, false);
             if (st == null) return;
             string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
@@ -627,13 +837,24 @@ namespace HexRevival
                 case "accept":
                     if (active != null) Complete(st, active);
                     st.ALoc = null;
-                    if (active != null && evt == "conv_done") Progression.OnCampaignConversationDone(st.ChampId, active.Id);
+                    if (active != null && evt == "conv_done")
+                    {
+                        Progression.OnCampaignConversationDone(st.ChampId, active.Id);
+                        string convId = active.RepeatConversation != null && st.Completed.Contains(active.Id) ? active.RepeatConversation : active.Conversation;
+                        ConversationTemplate ct = convId != null ? Singleton<TemplateManager>.Instance.GetConversationTemplate(new ResourceId(convId)) : null;
+                        if (ct != null)
+                        {
+                            Quests.OnAreaConversationDone(st.ChampId, active.Id, ct.m_Name);
+                            Quests.OnConversationDone(st.ChampId, convId, null);
+                        }
+                    }
                     break;
                 case "enc_cancel":
                 case "cancel":
                     st.ALoc = null;
                     break;
                 case "start":
+                    if (active != null && active.Panorama != null) { EnterPanorama(st, active); break; }
                     if (active != null && active.Encounter != null) StartBattle(st, active);
                     break;
                 default:
@@ -706,6 +927,7 @@ namespace HexRevival
             st.ALoc = null;
             Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
+            if (won && node != null && node.Encounter != null) Quests.OnEncounterWon(st.ChampId, node.Encounter, Progression.AnyTamed());
             if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id);
             BattleDifficulty = 0;
             return true;
@@ -762,6 +984,28 @@ namespace HexRevival
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
                 StartBattle(st, n);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
+            }
+            if (sub == "open")
+            {
+                // dev: open the campaign map of the current champion (or "camp open <champion id>")
+                ulong champ = parts.Length > 2 ? ulong.Parse(parts[2]) : GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, champ);
+                Get(champ, true);
+                UICampaignZoneVMBase.StateContext ctx = new UICampaignZoneVMBase.StateContext { CampaignId = champ, CampaignType = CampaignType.AREA, CampaignName = AZ1Name };
+                Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Dungeon, ctx);
+                return "opening the campaign of champion " + champ;
+            }
+            if (sub == "pano" && parts.Length > 2)
+            {
+                // dev: "camp pano Node017" = enter that hub's panorama with the current champion (campaign map open)
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                CampState st = Get(champ, false);
+                MapNode mn = FindNode(parts[2]);
+                if (st == null || mn == null || mn.Panorama == null) return "no campaign or not a hub";
+                EnterPanorama(st, mn);
+                List<string> o = new List<string>();
+                foreach (Npc n in HubNpcs(champ, mn.Id)) o.Add(n.Name + (n.Give ? " [!]" : n.TurnIn ? " [?]" : "") + " = " + n.ConvName);
+                return "panorama " + mn.Name + ": " + string.Join("; ", o.ToArray());
             }
             if (sub == "loc" && parts.Length > 2)
             {
@@ -856,6 +1100,22 @@ namespace HexRevival
                     sb.AppendLine(h.Id + " " + h.Name + ": " + string.Join(" ", cl.ToArray()) + "  near " + string.Join(",", near.ToArray()));
                 }
                 return sb.ToString();
+            }
+            if (sub == "questdump")
+            {
+                // dev: every quest template (objectives included) to HexRevivalQuests.txt
+                StringBuilder sb = new StringBuilder();
+                int count = 0;
+                foreach (QuestTemplate q in Singleton<TemplateManager>.Instance.QuestTemplates.Values)
+                {
+                    if (q == null) continue;
+                    count++;
+                    sb.AppendLine("=== " + q.m_ScriptName + " | " + q.m_Name + " | " + q.m_Id);
+                    foreach (QualifiedText t in q.m_Title) sb.AppendLine("  title: " + Describe(t));
+                    foreach (QuestObjectiveBase o in q.m_Objectives) sb.AppendLine("  obj: " + Describe(o));
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalQuests.txt"), sb.ToString());
+                return count + " quests written to HexRevivalQuests.txt";
             }
             if (sub == "nodes")
             {
