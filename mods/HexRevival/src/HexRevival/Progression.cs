@@ -190,20 +190,22 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Haus of each "SHROOM HAUS n" scene (Src.Game numbers them 1-6, no kind). PLACEHOLDER: the
-        /// sheet's order (Artifact, Blood, Diamond, Sapphire, Ruby, Wild) is assumed to follow the
-        /// numbers; Haus 1 (Sporemist Hollow) = Artifact is confirmed by Guide2016 and hex-server.
+        /// Haus kind of each Shroom Haus node. The game numbers its Hauses without naming the kind
+        /// (Src.Game), so the kinds are inferred (PLACEHOLDER, see docs/PROGRESSION.md):
+        /// Sporemist Hollow = Artifact (Guide2016, hex-server); Blau Flats = Sapphire ("blau" = blue);
+        /// Uuug's Oasis = Ruby (desert, only Ruby decks nearby); Lena Grotto = Blood (Blood decks
+        /// nearby, dark grotto); Bauer Dunes = Diamond (Diamond decks nearby); Hoff Mines = Wild (the one left).
         /// </summary>
-        private static readonly string[] HausByNumber = { "Artifact", "Blood", "Diamond", "Sapphire", "Ruby", "Wild" };
+        private static readonly Dictionary<string, string> HausByNode = new Dictionary<string, string>
+        {
+            { "Node004", "Artifact" }, { "Node042", "Diamond" }, { "Node025", "Blood" },
+            { "Node077", "Sapphire" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
+        };
 
         private static string ShroomHausCard(string node)
         {
-            string scenes = Campaign.NodeScenes(node).ToUpperInvariant();
-            int i = scenes.IndexOf("SHROOM HAUS ");
-            int n = 0;
-            if (i >= 0 && i + 12 < scenes.Length) int.TryParse(scenes.Substring(i + 12, 1), out n);
-            string kind = n >= 1 && n <= HausByNumber.Length ? HausByNumber[n - 1] : "Artifact";
-            if (n < 1) Debug.Log("[HexRevival] [Progression] Shroom Haus number not found in '" + scenes + "': Artifact Haus");
+            string kind;
+            if (!HausByNode.TryGetValue(node, out kind)) { kind = "Artifact"; Debug.Log("[HexRevival] [Progression] unknown Shroom Haus " + node + ": Artifact Haus"); }
             string[] cards = ShroomHauses[kind];
             return cards[UnityEngine.Random.Range(0, cards.Length)];
         }
@@ -219,7 +221,7 @@ namespace HexRevival
             // Taming quest ("AZ01 Tamed", Src.Game + Src.HexServer): an opponent troop tamed with the
             // taming item (IntAttr Tamed) and sent to the void is captured: 1 copy, once per champion and creature.
             List<string> extra = new List<string>();
-            if (node == "Node066" && Campaign.LastEvent == "Diff_6" && !Saves.Current.Claims.Contains(champId + ":aom6"))
+            if (node == "Node066" && Campaign.BattleDifficulty == 6 && !Saves.Current.Claims.Contains(champId + ":aom6"))
             {
                 Saves.Current.Claims.Add(champId + ":aom6");
                 extra.Add(ArmyOfMyth6Card);

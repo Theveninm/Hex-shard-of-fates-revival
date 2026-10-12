@@ -828,6 +828,18 @@ namespace HexRevival
                     if (parts.Length > 1 && parts[1] == "names") return Loot.DumpNames();
                     if (parts.Length > 2 && parts[1] == "find") return Loot.Find(string.Join(" ", parts, 2, parts.Length - 2));
                     return Loot.Check();
+                case "winbattle":   // dev: win the current battle
+                    if (Server.CurrentSession == null) return "no game";
+                    CheatMenu.EndAsWin(Server.CurrentSession);
+                    return "won";
+                case "res":   // dev: resource pools of both players
+                    {
+                        if (Server.CurrentSession == null) return "no game";
+                        List<string> o = new List<string>();
+                        foreach (Player p in Server.CurrentSession.GetAllPlayers())
+                            if (p != null) o.Add(p.m_PlayerId + " res=" + p.m_CurrentResourcePool + "/" + p.m_TotalResourcePool);
+                        return string.Join(", ", o.ToArray()) + " phase=" + Server.CurrentSession.CurrentTurnPhase;
+                    }
                 case "collsets":
                     {
                         // dev: copies owned per card set, from collection.txt

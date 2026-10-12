@@ -52,7 +52,7 @@ replace that default the first time a champion completes them (one time per cham
 | Node055 Deep Desert | Hard Wurms (Wormoid Queen) | Wormoid Hydra | LootTables2016 |
 | Node078 Skittering Ridge | Killipede's Revenge ("The Blood Beneath": the flask) | Contract Killing | LootTables2016; the game gave it at the turn-in (Rizzix / Gurtok), given on the win |
 | Node053 South Desert | Gnomes at Home ("Gnomes Come Home": Herbert found) | Gnome Wayfarer | LootTables2016; the game gave it at the turn-in (Vincent), given at the camp |
-| Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"); the difficulty itself is not applied yet |
+| Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"). Once the army is beaten, the node offers the game's "Repeat Encounters" dialogue (level 1, or the army starting with 1 to 6 resources in play: Game) |
 | Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 | 1 card of the Haus's 3 | LootTables2016; Haus order assumed (PLACEHOLDER, see below) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
 | Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
@@ -70,11 +70,13 @@ Race items (LootTables2016), in race order Human, Elf, Coyotle, Orc / Dwarf, Nec
 Shroom Hauses (LootTables2016): Artifact (Builder Bot, Deployment Orders, Tricerobot), Blood (Elegy of
 Death, Raving Ghoul, Rotting Away), Diamond (Form Ranks, Ethereal Healer, Dandelion Faerie), Sapphire
 (Morphology, Chaotic Murmurs, Heroic Echo), Ruby (Skittering Skarn, Fuel for the Fire, Emberbrute),
-Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses 1 to 6 (Sporemist Hollow,
-Bauer Dunes, Lena Grotto, Blau Flats, Hoff Mines, Uuug's Oasis) without naming the kind: Haus 1 =
-Artifact is confirmed (Guide2016, hex-server), the others are assumed to follow the sheet's order
-(PLACEHOLDER: the Shroomkin dialogues give no hint). The client sends a "shroom_choice" event, so the
-game's own choice window could be restored later.
+Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses without naming the kind, and the Shroomkin dialogues give no hint, so
+the kinds are inferred from place names and the shard colours of the AI decks of nearby battles
+(PLACEHOLDER): Sporemist Hollow = Artifact (Guide2016, hex-server: certain), Blau Flats = Sapphire
+("blau" = blue), Uuug's Oasis = Ruby (in the desert, only Ruby decks nearby), Lena Grotto = Blood
+(Blood and Wild decks nearby), Bauer Dunes = Diamond (Diamond and Wild decks nearby), Hoff Mines =
+Wild (the one left; no battle nearby). The client sends a "shroom_choice" event, so the game's own
+choice window could be restored later.
 
 Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;

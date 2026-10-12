@@ -49,6 +49,7 @@ namespace HexRevival
             public string Encounter;     // EncounterScene GUID
             public string Conversation;  // ConversationTemplate GUID
             public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
+            public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
         }
 
         private static List<MapNode> s_Nodes;
@@ -151,6 +152,22 @@ namespace HexRevival
             return v.ToString();
         }
 
+        /// <summary>Resources the AI starts with in play in the next campaign battle (Army of Myth difficulty).</summary>
+        private static int s_Difficulty;
+
+        /// <summary>Called on every server update (Server.Flush): applies the difficulty once the mulligan is over.</summary>
+        public static void OnSessionTick(StandaloneSession ss)
+        {
+            if (s_Difficulty <= 0 || ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
+            Player ai = Cheats.FindPlayer(ss, "ai");
+            if (ai != null)
+            {
+                Cheats.AddResources(ss, ai, s_Difficulty);
+                Debug.Log("[HexRevival] [Campaign] difficulty: AI starts with " + s_Difficulty + " resource(s)");
+            }
+            s_Difficulty = 0;
+        }
+
         /// <summary>Last campaign event sent by the client (e.g. the conversation choice "Diff_6" of the Army of Myth).</summary>
         public static string LastEvent;
 
@@ -189,6 +206,8 @@ namespace HexRevival
                 EncounterScene es = s as EncounterScene;
                 if (es != null && NameNumber(es.m_Name, "AZ1-NODE") == number) n.Scenes += es.m_Name + " / " + es.m_Title + " | ";
             }
+            foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+                if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number && c.m_Name.ToUpperInvariant().Contains("REPEAT ENCOUNTERS")) n.RepeatConversation = c.m_Id.ToString();
             foreach (SceneData s in tm.CampaignScenes.Values)
             {
                 EncounterScene es = s as EncounterScene;
@@ -385,14 +404,16 @@ namespace HexRevival
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["name"] = n.Name;
                 d["node"] = n.Id;
-                d["type"] = n.Type;
+                bool repeat = n.RepeatConversation != null && st.Completed.Contains(n.Id);
+                d["type"] = repeat ? "Convo" : n.Type;
                 d["visible"] = visible;
                 d["enabled"] = visible;
                 d["completed"] = st.Completed.Contains(n.Id);
-                d["repeatable"] = false;
+                d["repeatable"] = repeat;
                 d["allow_cancel"] = true;
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
-                if (n.Conversation != null) d["conversationId"] = n.Conversation;
+                if (repeat) d["conversationId"] = n.RepeatConversation;
+                else if (n.Conversation != null) d["conversationId"] = n.Conversation;
                 gs.VisLocs.Add(new Location(d));
                 Dictionary<string, object> nd = new Dictionary<string, object>();
                 nd["id"] = n.Id;
@@ -585,6 +606,16 @@ namespace HexRevival
                 case "start":
                     if (active != null && active.Encounter != null) StartBattle(st, active);
                     break;
+                default:
+                    // Army of Myth repeat: "Diff_N" = fight the army with N resources in play (0 = level 1); "Cancel" = no fight.
+                    int diff;
+                    if (active != null && active.Encounter != null && evt.StartsWith("Diff_") && int.TryParse(evt.Substring(5), out diff))
+                    {
+                        s_Difficulty = diff;
+                        StartBattle(st, active);
+                    }
+                    else if (evt == "Cancel") st.ALoc = null;
+                    break;
             }
             Save();
             Answer(st, callback);
@@ -606,8 +637,13 @@ namespace HexRevival
         // Encounter battles
         // ------------------------------------------------------------------
 
+        /// <summary>Difficulty of the campaign battle in progress (Army of Myth: resources the AI started with), for its rewards.</summary>
+        public static int BattleDifficulty { get; private set; }
+
         private static void StartBattle(CampState st, MapNode node)
         {
+            BattleDifficulty = s_Difficulty;
+            Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
             UID deck = UID.Invalid;
             try
             {
@@ -622,19 +658,21 @@ namespace HexRevival
             Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
         }
 
-        /// <summary>Called when a match ends (AuthoritativeSessionBase.EndGame postfix).</summary>
         /// <summary>Called once when a match ends. Returns false if it was not a campaign battle.</summary>
         public static bool OnGameEnded(bool won)
         {
+            s_Difficulty = 0;
             CampState st = s_Battle;
+            // BattleDifficulty is read by the rewards below, then reset
             if (st == null) return false;
             s_Battle = null;
             MapNode node = st.ALoc != null ? FindNode(st.ALoc) : null;
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
             Save();
-            Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
+            Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
             if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id);
+            BattleDifficulty = 0;
             return true;
         }
 
@@ -675,6 +713,88 @@ namespace HexRevival
                 }
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalConvs.txt"), sb.ToString());
                 return count + " conversations written to HexRevivalConvs.txt";
+            }
+            if (sub == "fight" && parts.Length > 2)
+            {
+                // dev: "camp fight Node066 Diff_6" = start that node's battle for the current champion's campaign, as if the event had been chosen
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                CampState st = Get(champ, false);
+                MapNode n = FindNode(parts[2]);
+                if (st == null || n == null || n.Encounter == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
+                st.ALoc = n.Name;
+                LastEvent = parts.Length > 3 ? parts[3] : "start";
+                int diff;
+                if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
+                StartBattle(st, n);
+                return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
+            }
+            if (sub == "scene" && parts.Length > 2)
+            {
+                // dev: every field of the encounter scenes whose name contains the filter, to HexRevivalScenes.txt
+                string filter = string.Join(" ", parts, 2, parts.Length - 2).ToUpperInvariant();
+                StringBuilder sb = new StringBuilder();
+                int count = 0;
+                foreach (SceneData sd in Singleton<TemplateManager>.Instance.CampaignScenes.Values)
+                {
+                    if (sd == null || sd.m_Name == null || !sd.m_Name.ToUpperInvariant().Contains(filter)) continue;
+                    count++;
+                    sb.AppendLine("=== " + sd.m_Name).AppendLine(Describe(sd));
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalScenes.txt"), sb.ToString());
+                return count + " scene(s) written to HexRevivalScenes.txt";
+            }
+            if (sub == "colors")
+            {
+                // dev: shard colours of the AI decks of the battles near each Shroom Haus (up to 3 steps away)
+                BuildMap();
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                StringBuilder sb = new StringBuilder();
+                foreach (MapNode h in s_Nodes)
+                {
+                    if (!h.Scenes.ToUpperInvariant().Contains("SHROOM HAUS")) continue;
+                    Dictionary<string, int> dist = new Dictionary<string, int> { { h.Id, 0 } };
+                    Queue<string> q = new Queue<string>();
+                    q.Enqueue(h.Id);
+                    while (q.Count > 0)
+                    {
+                        string cur = q.Dequeue();
+                        if (dist[cur] >= 3) continue;
+                        foreach (string nb in Neighbours(cur)) if (!dist.ContainsKey(nb)) { dist[nb] = dist[cur] + 1; q.Enqueue(nb); }
+                    }
+                    Dictionary<string, int> colors = new Dictionary<string, int>();
+                    List<string> near = new List<string>();
+                    foreach (KeyValuePair<string, int> kv in dist)
+                    {
+                        MapNode n = FindNode(kv.Key);
+                        if (n == null || n.Encounter == null) continue;
+                        EncounterScene es = tm.CampaignScenes[new ResourceId(n.Encounter)] as EncounterScene;
+                        if (es == null) continue;
+                        near.Add(n.Id + "(" + kv.Value + ")");
+                        foreach (EncounterPlayer pl in es.m_EncounterPlayers)
+                        {
+                            if (!pl.m_IsAI) continue;
+                            ResourceId deckId = pl.m_EncounterDeck;
+                            EncounterDeck ed;
+                            if (tm.EncounterDecks.TryGetValue(deckId, out ed) && ed != null) deckId = ed.m_DeckTemplateId;
+                            DeckTemplate d;
+                            if (!tm.Decks.TryGetValue(deckId, out d) || d == null) continue;
+                            foreach (TemplateCardStack cs in d.m_DeckResources)
+                            {
+                                CardTemplate ct = tm.GetCardTemplate(cs.m_idTemplate);
+                                if (ct == null || ct.m_Threshold == null) continue;
+                                foreach (CardThreshold th in ct.m_Threshold)
+                                {
+                                    string k = th.m_ColorFlags.ToString();
+                                    int c; colors.TryGetValue(k, out c); colors[k] = c + cs.m_Count;
+                                }
+                            }
+                        }
+                    }
+                    List<string> cl = new List<string>();
+                    foreach (KeyValuePair<string, int> kv in colors) cl.Add(kv.Key + "=" + kv.Value);
+                    sb.AppendLine(h.Id + " " + h.Name + ": " + string.Join(" ", cl.ToArray()) + "  near " + string.Join(",", near.ToArray()));
+                }
+                return sb.ToString();
             }
             if (sub == "nodes")
             {
