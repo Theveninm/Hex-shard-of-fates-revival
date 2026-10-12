@@ -170,7 +170,7 @@ namespace HexRevival
             try
             {
                 if (!(self is StandaloneSession) || player == null) return;
-                if (player.IsAI() || player.m_PlayerId.GetUIDType() == UID.Type.AIPlayer)
+                if (player.IsAI() || Server.IsAIId(player.m_PlayerId))
                 {
                     if (s_PendingAIDeck != null)
                     {
@@ -215,7 +215,8 @@ namespace HexRevival
                 for (int i = 0; i < aiCount; i++)
                 {
                     PlayerState playerState = new PlayerState();
-                    playerState.PlayerId = new UID(UID.Type.AIPlayer, (ulong)(1000 + i));
+                    bool tutorial = encounterData.SessionFlags.HasAnyFlags(ESessionFlags.IsTutorial);
+                    playerState.PlayerId = new UID(tutorial ? UID.Type.ServiceAI : UID.Type.AIPlayer, (ulong)(1000 + i));
                     AIPlayer aiPlayer = new AIPlayer(playerState);
 
                     SessionClient sessionClient = new SessionClient(BuildSessionState(sessionServer, encounterData), self);

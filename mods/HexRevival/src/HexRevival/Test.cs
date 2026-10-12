@@ -265,6 +265,7 @@ namespace HexRevival
             {
                 LocalServer.Pump();
                 Campaign.Pump();
+                Tutorial.Tick();
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
                     Time.timeScale = m_Speed;
@@ -288,6 +289,7 @@ namespace HexRevival
 
                 PollCommands(gc);
                 WriteStatus(gc);
+                TutorialAutoStep(gc);
                 if (m_AutoAI && Gauntlet.Enabled())
                 {
                     try { Gauntlet.FrameCheck(GetServer(gc), gc.Player); }
@@ -413,7 +415,7 @@ namespace HexRevival
                 foreach (Player p in ss.GetAllPlayers())
                 {
                     if (p == null) continue;
-                    srv += " " + (p.IsAI() || p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer ? "AI" : "P") + ":hp="
+                    srv += " " + (p.IsAI() || Server.IsAIId(p.m_PlayerId) ? "AI" : "P") + ":hp="
                         + (p.m_ChampionCard != null ? p.m_ChampionCard.CurrentDefenseValue : 0)
                         + ",main=" + p.GetCardCollection(ECardCollections.Hand).CardCount
                         + ",play=" + p.GetCardCollection(ECardCollections.Warzone).CardCount
@@ -667,6 +669,50 @@ namespace HexRevival
         }
 
         /// <summary>Inventory of the visible NGUI UI (sprites, atlases, fonts) to reproduce its style.</summary>
+        /// <summary>
+        /// dev: "click &lt;text&gt;" = clicks the first visible button whose path or label contains the text
+        /// (NGUI OnClick, as a mouse click would); "click" alone lists the clickable buttons.
+        /// </summary>
+        private static string UiClick(string text)
+        {
+            List<string> found = new List<string>();
+            foreach (Collider c in UnityEngine.Object.FindObjectsOfType<Collider>())
+            {
+                if (c == null || !c.enabled || !c.gameObject.activeInHierarchy) continue;
+                if (c.GetComponent<UIWidget>() == null && c.GetComponent<UIButton>() == null && c.GetComponent<UIEventListener>() == null) continue;
+                string path = c.name;
+                Transform t = c.transform.parent;
+                for (int i = 0; i < 4 && t != null; i++, t = t.parent) path = t.name + "/" + path;
+                string label = "";
+                foreach (UILabel l in c.GetComponentsInChildren<UILabel>()) if (!string.IsNullOrEmpty(l.text)) { label = l.text.Replace("\n", " "); break; }
+                if (text.Length == 0) { found.Add(path + (label.Length > 0 ? " \"" + label + "\"" : "")); continue; }
+                if (path.IndexOf(text, StringComparison.OrdinalIgnoreCase) < 0 && label.IndexOf(text, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                // The game's click bindings act only on a left mouse click (UICamera.currentKey). NGUI
+                // buttons ignore a click while another one is being handled (UIButton.current): their
+                // delegates are run directly, the other components get OnClick as from a mouse click.
+                KeyCode key = UICamera.currentKey;
+                UICamera.currentKey = KeyCode.Mouse0;
+                try
+                {
+                    foreach (MonoBehaviour m in c.GetComponents<MonoBehaviour>())
+                    {
+                        if (m == null || !m.enabled) continue;
+                        UIButton b = m as UIButton;
+                        UIEventTrigger et = m as UIEventTrigger;
+                        if (b != null) { UIButton prev = UIButton.current; UIButton.current = b; EventDelegate.Execute(b.onClick); UIButton.current = prev; continue; }
+                        if (et != null) { EventDelegate.Execute(et.onClick); continue; }
+                        MethodInfo onClick = m.GetType().GetMethod("OnClick", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+                        if (onClick != null) onClick.Invoke(m, null);
+                    }
+                }
+                finally { UICamera.currentKey = key; }
+                List<string> comps = new List<string>();
+                foreach (Component k in c.GetComponents<Component>()) if (k != null) comps.Add(k.GetType().Name);
+                return "clicked " + path + (label.Length > 0 ? " \"" + label + "\"" : "") + " [" + string.Join(",", comps.ToArray()) + "]";
+            }
+            return text.Length == 0 ? string.Join("\n", found.ToArray()) : "no button " + text;
+        }
+
         private static string UiDump(string filter)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -714,6 +760,89 @@ namespace HexRevival
                 foreach (UIAtlas a in Resources.FindObjectsOfTypeAll<UIAtlas>()) sb.Append("ATLAS ").Append(a.name).Append(" sprites=").Append(a.spriteList != null ? a.spriteList.Count : 0).Append('\n');
             }
             return sb.ToString();
+        }
+
+        // dev: "tutorial auto" plays the tutorial's expected actions (one every 1.5 s) and logs them to HexRevival.tutorial.log
+        private float m_TutorialAutoNext = -1f;
+        private float m_TutorialAutoIdleSince;
+
+        private void TutorialAutoStep(StandaloneGameClient gc)
+        {
+            if (m_TutorialAutoNext < 0f || Time.realtimeSinceStartup < m_TutorialAutoNext) return;
+            m_TutorialAutoNext = Time.realtimeSinceStartup + 1.5f;
+            string log = Path.Combine(LocalServer.Root, "HexRevival.tutorial.log");
+            string step = Execute(gc, "tutorial step");
+            if (step == "no tutorial running")
+            {
+                if (m_TutorialAutoIdleSince == 0f) m_TutorialAutoIdleSince = Time.realtimeSinceStartup;
+                if (Time.realtimeSinceStartup - m_TutorialAutoIdleSince > 30f)
+                {
+                    m_TutorialAutoNext = -1f;
+                    File.AppendAllText(log, DateTime.Now.ToString("HH:mm:ss") + " end, state " + gc.StateManager.CurrentGameState + "\n");
+                }
+                return;
+            }
+            m_TutorialAutoIdleSince = 0f;
+            string dbg = Execute(gc, "tutorial debug");
+            int bar = dbg.IndexOf(" | AI");
+            File.AppendAllText(log, DateTime.Now.ToString("HH:mm:ss") + " " + step + "\n    " + Execute(gc, "tutorial state") + (bar >= 0 ? dbg.Substring(bar) : "") + "\n");
+        }
+
+        private Game.Shared.Tutorial.TurnPhaseActionBase m_TutorialPlayed;
+        private int m_TutorialWaits;
+
+        // dev: a target window is open (spell or ability being played): picks the first card the tutorial accepts
+        private static string TutorialTarget(UIBattle ub)
+        {
+            BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+            object top = null;
+            foreach (object st in (System.Collections.IEnumerable)typeof(UIBattle).GetField("m_StateStack", bf).GetValue(ub)) { top = st; break; }
+            BattleStateTargetBase target = top as BattleStateTargetBase;
+            if (target == null) return null;
+            MethodInfo can = typeof(BattleStateTargetBase).GetMethod("CanAddTarget", bf);
+            System.Collections.IDictionary views = typeof(UIBattle).GetField("m_CardViews", bf).GetValue(ub) as System.Collections.IDictionary;
+            foreach (object v in views.Values)
+            {
+                GoCardView cv = v as GoCardView;
+                if (cv == null || cv.Card == null) continue;
+                bool ok;
+                try { ok = (bool)can.Invoke(top, new object[] { cv }); } catch { ok = false; }
+                if (!ok) continue;
+                target.OnClick(cv);
+                target.OnButton("Accept", 0);
+                return "target " + cv.Card.Name + " (" + top.GetType().Name + ")";
+            }
+            return "no valid target in " + top.GetType().Name;
+        }
+
+        // dev: the blocks the tutorial asks for, declared in the blockers window as a player would
+        private static string TutorialBlock(Game.Shared.Tutorial.TurnPhaseActionDefendWithCards a, UIBattle ub)
+        {
+            BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+            object top = null;
+            object stack = typeof(UIBattle).GetField("m_StateStack", bf).GetValue(ub);
+            foreach (object st in (System.Collections.IEnumerable)stack) { top = st; break; }
+            if (!(top is BattleStateDeclareBlockers)) return "blockers window not open (" + (top != null ? top.GetType().Name : "none") + ")";
+            Dictionary<SessionCardId, List<SessionCardId>> decl = (Dictionary<SessionCardId, List<SessionCardId>>)typeof(BattleStateDeclareBlockers).GetField("m_BlockingDeclarations", bf).GetValue(top);
+            decl.Clear();
+            UID me = ub.Player.m_PlayerId;
+            foreach (Game.Shared.Tutorial.TutorialDefense d in a.Defenses)
+            {
+                SessionCardId attacker = SessionCardId.Invalid;
+                List<SessionCardId> blockers = new List<SessionCardId>();
+                List<ResourceId> wanted = new List<ResourceId>(d.m_DefendingCardIds);
+                foreach (KeyValuePair<SessionCardId, CardRepresentation> c in ub.State.Cards)
+                {
+                    if ((c.Value.Collection & ECardCollections.Warzone) == 0) continue;
+                    if (c.Value.Controller != me && c.Value.TemplateId == d.m_AttackingCardId) attacker = c.Key;
+                    else if (c.Value.Controller == me && wanted.Remove(c.Value.TemplateId)) blockers.Add(c.Key);
+                }
+                if (attacker.IsValid()) decl[attacker] = blockers;
+            }
+            typeof(BattleStateDeclareBlockers).GetMethod("Commit", bf).Invoke(top, null);
+            System.Text.StringBuilder r = new System.Text.StringBuilder();
+            foreach (KeyValuePair<SessionCardId, List<SessionCardId>> kv in decl) r.Append(ub.State.Cards[kv.Key].Name).Append(" by ").Append(kv.Value.Count).Append(' ');
+            return decl.Count + " attacker(s) blocked: " + r;
         }
 
         private string Execute(StandaloneGameClient gc, string cmd)
@@ -802,6 +931,194 @@ namespace HexRevival
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
                 case "toggles": return Settings.DumpToggles();
+                case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
+                case "modal":   // dev: "modal 1|2|3" = presses that button of the visible modal popups
+                    {
+                        int n = 0;
+                        foreach (UIModalPopupViewModel mp in UnityEngine.Object.FindObjectsOfType<UIModalPopupViewModel>())
+                        {
+                            if (mp == null || !mp.IsVisible()) continue;
+                            n++;
+                            if (parts.Length > 1 && parts[1] == "1") mp.OnClickButton1();
+                            else if (parts.Length > 1 && parts[1] == "2") mp.OnClickButton2();
+                            else if (parts.Length > 1 && parts[1] == "3") mp.OnClickButton3();
+                        }
+                        return n + " visible modal popup(s)";
+                    }
+                case "shot":   // dev: screenshot of the game window to HexRevivalShot.png (written at the end of the frame)
+                    Application.CaptureScreenshot(System.IO.Path.Combine(LocalServer.Root, "HexRevivalShot.png"));
+                    return "shot";
+                case "tutorial":   // dev: the game's tutorial battle (as its "Tutorial" buttons do)
+                    {
+                        Reckoning.Game.SceneData scene;
+                        bool known = Singleton<Reckoning.Game.TemplateManager>.Instance.CampaignScenes.TryGetValue(Game.Shared.Resources.BuiltInResources.BattleSceneTutorialTemplate, out scene);
+                        if (!known) return "tutorial scene not in the game data";
+                        if (parts.Length > 1 && parts[1] == "actions")
+                        {
+                            // dev: the tutorial's script (turn, active player, phase, who acts, action, tip)
+                            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                            int i = 0;
+                            foreach (Game.Shared.Tutorial.TurnPhaseActionBase a in ((Game.Shared.Tutorial.TutorialTemplate)scene).m_TutorialActions)
+                                sb.Append(i++).Append(" t").Append(a.m_Turn).Append(' ').Append(a.m_ActivePlayer).Append(' ').Append(a.m_TurnPhase).Append(" by ").Append(a.m_ActionPerformer)
+                                  .Append(' ').Append(a.BuildActionName()).Append(string.IsNullOrEmpty(a.m_TipText) ? "" : " tip=" + a.m_TipText).Append('\n');
+                            return sb.ToString();
+                        }
+                        if (parts.Length > 1 && parts[1] == "step")
+                        {
+                            // dev: does the tutorial's current player action, as the player would
+                            UIBattle ub = UIBattle.Instance;
+                            if (ub == null || ub.TutorialManager == null) return "no tutorial running";
+                            string targeted = TutorialTarget(ub);
+                            if (targeted != null) return targeted;
+                            UITutorialRewards rewards = UnityEngine.Object.FindObjectOfType<UITutorialRewards>();
+                            if (rewards != null && rewards.IsVisible()) { rewards.HandleAccept(); return "rewards window accepted"; }
+                            Game.Shared.Tutorial.TurnPhaseActionBase a = ub.TutorialManager.CurrentAction;
+                            bool uiAction = a == null || a is Game.Shared.Tutorial.TurnPhaseActionShowTip || a is Game.Shared.Tutorial.TurnPhaseActionShowSummary
+                                || a is Game.Shared.Tutorial.TurnPhaseActionStartConversation || a is Game.Shared.Tutorial.TurnPhaseActionPassPriority;
+                            if (uiAction)
+                            {
+                                string r;
+                                if (a is Game.Shared.Tutorial.TurnPhaseActionStartConversation) r = UiClick("Answer_Grid/0");
+                                else if (a is Game.Shared.Tutorial.TurnPhaseActionShowSummary)
+                                {
+                                    r = UiClick("TutorialSummaryWindow/Button_Confirm");
+                                    if (r.StartsWith("no button")) r = UiClick("ContinueButton");
+                                }
+                                else r = UiClick("PassButton_Standard");
+                                if (r.StartsWith("no button") && a is Game.Shared.Tutorial.TurnPhaseActionShowTip)
+                                {
+                                    // tips shown with the coin flip or the starting hand window: "Go First" / "Keep"
+                                    BindingFlags sbf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+                                    foreach (object st in (System.Collections.IEnumerable)typeof(UIBattle).GetField("m_StateStack", sbf).GetValue(ub))
+                                    {
+                                        BattleStateShowTip tip = st as BattleStateShowTip;
+                                        if (tip != null) { tip.OnButton(a.m_TurnPhase == ETurnPhases.PickGoesFirst ? "PlayFirst" : "KeepHand", 0); r = "dialog answered"; }
+                                        break;
+                                    }
+                                }
+                                return (a != null ? a.BuildActionName() : "no action") + ": " + r;
+                            }
+                            ClientSessionBase cs = Singleton<Main>.Instance.m_GameClient.Session as ClientSessionBase;
+                            if (a is Game.Shared.Tutorial.TurnPhaseActionDefendWithCards)
+                                return "block: " + TutorialBlock((Game.Shared.Tutorial.TurnPhaseActionDefendWithCards)a, ub);
+                            if (a is Game.Shared.Tutorial.TurnPhaseActionAttackWithCards)
+                            {
+                                // the attackers the script names, as a player would pick them (the action's own
+                                // PerformActionForPlayer attacks with every troop that can)
+                                List<ResourceId> wanted = new List<ResourceId>(((Game.Shared.Tutorial.TurnPhaseActionAttackWithCards)a).m_AttackingCardTemplateIds);
+                                List<SessionCardId> attackers = new List<SessionCardId>();
+                                foreach (SessionCardId id in ub.State.GetCardsInCollection(ECardCollections.Warzone, ub.Player.m_PlayerId))
+                                    if (ub.State.HasUsage(id, ECardUsage.Attack) && wanted.Remove(ub.State.Cards[id].TemplateId)) attackers.Add(id);
+                                SessionCardId target = SessionCardId.Invalid;
+                                foreach (KeyValuePair<UID, PlayerRepresentation> pr in ub.State.Players) if (pr.Key != ub.Player.m_PlayerId) target = pr.Value.ChampionSessionCardId;
+                                ub.Player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration> { new CommitTroopsToAttackTransaction.AttackDeclaration(target, attackers) });
+                                ub.TutorialManager.PlayerActionWasPerformed(a);
+                                return "attack with " + attackers.Count;
+                            }
+                            if (a is Game.Shared.Tutorial.TurnPhaseActionPlayCard)
+                            {
+                                // as from the hand: the client moves the script on when the card's play animation ends
+                                if (ReferenceEquals(a, m_TutorialPlayed))
+                                {
+                                    // the script's own play data does not fit every card (e.g. Bravery): moves on after a while
+                                    if (++m_TutorialWaits < 6) return "waiting for " + a.BuildActionName();
+                                    ub.TutorialManager.PlayerActionWasPerformed(a);
+                                    return "gave up waiting for " + a.BuildActionName();
+                                }
+                                m_TutorialPlayed = a;
+                                m_TutorialWaits = 0;
+                                a.PerformActionForPlayer(Singleton<Main>.Instance.m_GameClient.Player, cs);
+                                return "played " + a.BuildActionName();
+                            }
+                            a.PerformActionForPlayer(Singleton<Main>.Instance.m_GameClient.Player, cs);
+                            ub.TutorialManager.PlayerActionWasPerformed(a);
+                            return "performed " + a.BuildActionName();
+                        }
+                        if (parts.Length > 1 && parts[1] == "debug")
+                        {
+                            // dev: coin flip flags of UIBattle and the client tutorial manager's internals
+                            UIBattle ub = UIBattle.Instance;
+                            if (ub == null) return "no battle";
+                            BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+                            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                            foreach (string f in new[] { "m_Started", "m_EnableCoinFlip", "m_CoinFlipStarted", "m_CoinFlipping", "m_CoinFlipDone", "m_CoinFlipSkip", "m_ReadyToPlay" })
+                            {
+                                FieldInfo fi = typeof(UIBattle).GetField(f, bf);
+                                sb.Append(f).Append('=').Append(fi != null ? fi.GetValue(ub) : "?").Append(' ');
+                            }
+                            object toss = typeof(UIBattle).GetField("m_CoinToss", bf).GetValue(ub);
+                            if (toss != null) sb.Append("toss.ready=").Append(toss.GetType().GetField("m_isReadyForGame", bf).GetValue(toss)).Append(' ');
+                            object stack = typeof(UIBattle).GetField("m_StateStack", bf).GetValue(ub);
+                            if (stack != null) foreach (object st in (System.Collections.IEnumerable)stack) sb.Append("[").Append(st.GetType().Name).Append("]");
+                            if (ub.TutorialManager != null)
+                            {
+                                object tm = ub.TutorialManager;
+                                for (Type t = tm.GetType(); t != null; t = t.BaseType)
+                                    foreach (FieldInfo fi in t.GetFields(bf | BindingFlags.DeclaredOnly))
+                                    {
+                                        object v = fi.GetValue(tm);
+                                        System.Collections.ICollection col = v as System.Collections.ICollection;
+                                        sb.Append(' ').Append(fi.Name).Append('=').Append(col != null ? "#" + col.Count : v is Game.Shared.Tutorial.TurnPhaseActionBase ? ((Game.Shared.Tutorial.TurnPhaseActionBase)v).BuildActionName() : (v != null ? v.ToString() : "null"));
+                                    }
+                            }
+                            // the AI's tutorial script
+                            foreach (LocalPlayer lp in gc.m_LocalPlayerMap.Values)
+                            {
+                                if (lp == null || lp.AITactical == null || lp == gc.Player) continue;
+                                Game.Shared.Tutorial.TutorialManager atm = typeof(Game.Shared.AI.AITactical).GetField("m_TutorialManager", bf).GetValue(lp.AITactical) as Game.Shared.Tutorial.TutorialManager;
+                                ClientSessionBase acs = lp.m_Session as ClientSessionBase;
+                                if (acs != null) sb.Append(" | AIsession phase=").Append(acs.CurrentPhase).Append(" combats=").Append(acs.Cache.Combats.Count).Append(" prio=").Append(lp.IsPriorityPlayer());
+                                if (parts.Length > 2 && parts[2] == "tick") sb.Append(" tick=").Append(lp.AITactical.TryAIUpdate());
+                                if (parts.Length > 2 && parts[2] == "resync") { lp.RequestPriorityResync(); sb.Append(" resync requested"); }
+                                if (atm != null) sb.Append(" | AI current=").Append(atm.m_CurrentAction != null ? atm.m_CurrentAction.BuildActionName() : "none").Append(" next=").Append(atm.NextActionDescription).Append(" reins=").Append(atm.IsOnReins());
+                            }
+                            return sb.ToString();
+                        }
+                        if (parts.Length > 1 && parts[1] == "pending")
+                        {
+                            // dev: the current account plays the tutorial on its next visit of the home screen, as a new account
+                            Saves.Current.TutorialPending = true;
+                            Saves.SaveCurrent();
+                            return "tutorial pending";
+                        }
+                        if (parts.Length > 1 && parts[1] == "menu")
+                        {
+                            // dev: opens the game's menu (Esc) and lists its visible buttons
+                            UISystemMenuViewModel m = UISystem.SetTaggedUIElementVisible("SystemMenu", true, true) as UISystemMenuViewModel;
+                            if (m == null) return "no menu";
+                            return "exitTutorial enabled=" + m.Context.IsExitTutorialEnabled + " shown=" + (m.MenuButtons.ExitTutorial != null && m.MenuButtons.ExitTutorial.gameObject.activeInHierarchy);
+                        }
+                        if (parts.Length > 1 && parts[1] == "auto")
+                        {
+                            m_TutorialAutoNext = Time.realtimeSinceStartup + 1.5f;
+                            m_TutorialAutoIdleSince = 0f;
+                            return "tutorial auto: on";
+                        }
+                        if (parts.Length > 1 && parts[1] == "state")
+                        {
+                            UIBattle ub = UIBattle.Instance;
+                            if (ub == null || ub.TutorialManager == null) return "no tutorial running";
+                            ClientSessionBase cs = Singleton<Main>.Instance.m_GameClient.Session as ClientSessionBase;
+                            return "current=" + (ub.TutorialManager.m_CurrentAction != null ? ub.TutorialManager.m_CurrentAction.BuildActionName() + " t" + ub.TutorialManager.m_CurrentAction.m_Turn + " " + ub.TutorialManager.m_CurrentAction.m_TurnPhase : "none")
+                                + " next=" + ub.TutorialManager.NextActionDescription + " reins=" + ub.TutorialManager.IsOnReins()
+                                + (cs != null ? " phase=" + cs.CurrentPhase + " active=" + (cs.ActivePlayer != null ? cs.ActivePlayer.m_PlayerId + " turn " + cs.Cache.Players[cs.ActivePlayer.m_PlayerId].TurnNumber : "-")
+                                   + " chain=" + (cs.Chain.PeekAbility() != null) : "");
+                        }
+                        Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(Reckoning.Game.EGameState.Battle, new Game.Client.GameState.BattleStateContext
+                        {
+                            m_SceneTemplateId = Game.Shared.Resources.BuiltInResources.BattleSceneTutorialTemplate,
+                            m_IsMandatoryTutorial = parts.Length > 1 && parts[1] == "mandatory"
+                        });
+                        return "tutorial: " + scene.GetType().Name;
+                    }
+                case "accountnew":   // dev: shows the "new account" screen of the account menu (login screen)
+                    {
+                        AccountMenu am = UnityEngine.Object.FindObjectOfType<AccountMenu>();
+                        if (am == null) return "no account menu";
+                        FieldInfo f = typeof(AccountMenu).GetField("m_Screen", BindingFlags.Instance | BindingFlags.NonPublic);
+                        f.SetValue(am, Enum.Parse(f.FieldType, "Create"));
+                        return "create screen";
+                    }
                 case "gostate":   // dev: e.g. "gostate PremiumStore"
                     {
                         Reckoning.Game.EGameState st = (Reckoning.Game.EGameState)Enum.Parse(typeof(Reckoning.Game.EGameState), parts[1]);

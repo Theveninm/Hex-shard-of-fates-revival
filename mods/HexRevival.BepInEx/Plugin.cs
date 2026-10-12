@@ -114,6 +114,14 @@ namespace HexRevival
             apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
             // End-of-battle campaign events of the game's rules (princess saved, creatures tamed...).
+            apply("AuthoritativeSessionBase.PerformTutorialBoardSetup", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AuthoritativeSessionBase), "PerformTutorialBoardSetup"), postfix: new HarmonyMethod(typeof(Hooks), "Tutorial_BoardSetup")));
+            apply("TutorialManager..ctor", () => harmony.Patch(AccessTools.Constructor(typeof(Game.Shared.Tutorial.TutorialManager), new[] { typeof(Game.Shared.ClientSessionBase), typeof(Game.Shared.Tutorial.EPlayerType) }),
+                prefix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPre"), postfix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPost")));
+            apply("UITutorialRewards.Launch", () => harmony.Patch(AccessTools.Method(typeof(UITutorialRewards), "Launch"), prefix: new HarmonyMethod(typeof(Hooks), "TutorialRewards_Launch")));
+            apply("AITactical.AIUpdate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "AIUpdate", new[] { typeof(Game.Shared.Mechanics.ETurnPhases) }), prefix: new HarmonyMethod(typeof(Hooks), "AITactical_AIUpdate")));
+            apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
+            apply("Player.HasStop", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Player), "HasStop"), postfix: new HarmonyMethod(typeof(Hooks), "Player_HasStop")));
+            apply("UICoinToss.TurnOffCoinTossEffects", () => harmony.Patch(AccessTools.Method(typeof(UICoinToss), "TurnOffCoinTossEffects"), postfix: new HarmonyMethod(typeof(Hooks), "CoinToss_TurnOff")));
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
             {
@@ -294,6 +302,14 @@ namespace HexRevival
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Session_PublishEvent(string __0) { Campaign.OnPublishEvent(__0); }
+        public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
+        public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
+        public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }
+        public static void TutorialRewards_Launch(System.Collections.Generic.IEnumerable<Game.Shared.ResourceId> __0) { Tutorial.OnRewards(__0); }
+        public static void TutorialManager_CtorPre(Game.Shared.ClientSessionBase __0) { Tutorial.BeforeScriptCopy(__0); }
+        public static void TutorialManager_CtorPost(Game.Shared.Tutorial.TutorialManager __instance) { Tutorial.AfterScriptCopy(__instance); }
+        public static void Player_HasStop(Game.Shared.Player __instance, Game.Shared.Player __0, Game.Shared.Mechanics.ETurnPhases __1, ref bool __result) { if (!__result) __result = Tutorial.ScriptStop(__instance, __0, __1); }
+        public static void Tutorial_BoardSetup(bool __result) { if (__result) Tutorial.OnBoardReset(); }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
 
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)

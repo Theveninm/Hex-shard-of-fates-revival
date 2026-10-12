@@ -29,6 +29,8 @@ namespace HexRevival
             public int AccountXp;          // total account XP
             public int XpInPeriod;         // XP earned in the current daily period
             public DateTime PeriodStart;   // first win of the current daily period
+            /// <summary>The game's tutorial is to be played at the next login (chosen when the account was created).</summary>
+            public bool TutorialPending;
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -82,10 +84,10 @@ namespace HexRevival
             return null;
         }
 
-        public static Info Create(string name, bool unlockAll)
+        public static Info Create(string name, bool unlockAll, bool tutorial = false)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
-            Info i = new Info { Name = name, UnlockAll = unlockAll, Gold = unlockAll ? UnlockedGold : StartingGold, LastPlayed = DateTime.Now };
+            Info i = new Info { Name = name, UnlockAll = unlockAll, Gold = unlockAll ? UnlockedGold : StartingGold, LastPlayed = DateTime.Now, TutorialPending = tutorial };
             Write(i);
             return i;
         }
@@ -133,6 +135,7 @@ namespace HexRevival
                     else if (k == "xp") int.TryParse(v, out i.AccountXp);
                     else if (k == "xpperiod") int.TryParse(v, out i.XpInPeriod);
                     else if (k == "periodstart") { long t; if (long.TryParse(v, out t)) i.PeriodStart = new DateTime(t); }
+                    else if (k == "tutorial") i.TutorialPending = v == "1";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -155,6 +158,7 @@ namespace HexRevival
                     "xp=" + i.AccountXp,
                     "xpperiod=" + i.XpInPeriod,
                     "periodstart=" + i.PeriodStart.Ticks,
+                    "tutorial=" + (i.TutorialPending ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

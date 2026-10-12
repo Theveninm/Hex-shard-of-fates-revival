@@ -134,7 +134,7 @@ namespace HexRevival
         {
             List<UID> winners = new List<UID>(), losers = new List<UID>();
             foreach (Player p in ss.GetAllPlayers())
-                if (p != null) (p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer ? losers : winners).Add(p.m_PlayerId);
+                if (p != null) (Server.IsAIId(p.m_PlayerId) ? losers : winners).Add(p.m_PlayerId);
             ss.EndGame(winners, losers, true);
             Server.MarkDirty();
         }
@@ -143,7 +143,7 @@ namespace HexRevival
         {
             List<UID> winners = new List<UID>(), losers = new List<UID>();
             foreach (Player p in ss.GetAllPlayers())
-                if (p != null) (p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer ? losers : winners).Add(p.m_PlayerId);
+                if (p != null) (Server.IsAIId(p.m_PlayerId) ? losers : winners).Add(p.m_PlayerId);
             ss.EndGame(winners, losers, true);
             Server.MarkDirty();
             m_Open = false;

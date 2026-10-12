@@ -709,10 +709,13 @@ namespace HexRevival
             if (session != null && ReferenceEquals(session, s_EndedSession)) return;
             s_EndedSession = session;
             if (Saves.Current == null) return;
+            // The tutorial gives nothing (it can be replayed at will from the menus).
+            StandaloneSession ss = session as StandaloneSession;
+            if (ss != null && ss.m_EncounterData != null && ss.m_EncounterData.SessionFlags.HasAnyFlags(ESessionFlags.IsTutorial)) return;
             bool won = false;
             if (winners != null)
                 foreach (UID u in winners)
-                    if (u.GetUIDType() != UID.Type.AIPlayer) won = true;
+                    if (!Server.IsAIId(u)) won = true;
             if (!Campaign.OnGameEnded(won) && won) OnOtherBattleWon();
         }
     }

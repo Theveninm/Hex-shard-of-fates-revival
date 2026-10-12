@@ -14,6 +14,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   - or one of your own decks played by the AI.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
+- The game's **tutorial** (5 short guided battles), offered when you create an account (a box to
+  untick if you don't want it), left at any time from the menu (Esc), replayable from Help.
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 

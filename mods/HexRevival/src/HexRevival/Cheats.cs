@@ -140,7 +140,7 @@ namespace HexRevival
             foreach (Player p in ss.GetAllPlayers())
             {
                 if (p == null) continue;
-                bool isAI = p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer;
+                bool isAI = Server.IsAIId(p.m_PlayerId);
                 if (isAI == wantAI) return p;
             }
             return null;

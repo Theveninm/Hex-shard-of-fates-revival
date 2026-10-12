@@ -121,6 +121,14 @@ Known but not given yet:
 Champion levels follow the game's XP table (Game): level 2 at 1,000 XP … 15 at 110,000.
 Talent points per level: 1 (PLACEHOLDER).
 
+## Tutorial
+
+The game's own tutorial (5 scripted battles, Game). It starts after creating an account when "Play
+the tutorial" is ticked, as the game did after account creation; unlike the game's first tutorial it
+can be left from the menu. Between rounds the game shows its "Tutorial Rewards" window ("You've been
+rewarded with some new cards!", Game) with 3 cards: these cards are given, once per account
+(progression accounts; an "unlock everything" account already owns them).
+
 ## Account level (Wiki2019)
 
 - Account XP per win: 50 for PvE (campaign, Quick Match and practice against the AI).

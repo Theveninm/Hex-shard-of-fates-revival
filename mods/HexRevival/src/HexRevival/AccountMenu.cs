@@ -7,7 +7,7 @@ namespace HexRevival
 {
     /// <summary>
     /// Account selection, drawn over the game's login screen: the list of local saves, with
-    /// "Create a new account" at the top (name + "unlock everything").
+    /// "Create a new account" at the top (name, "unlock everything", "play the tutorial").
     /// Choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
     /// </summary>
     public class AccountMenu : MonoBehaviour
@@ -19,6 +19,7 @@ namespace HexRevival
         private Vector2 m_Scroll;
         private string m_Name = "";
         private bool m_Unlock;
+        private bool m_Tutorial = true;
         private string m_Error;
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
@@ -116,7 +117,7 @@ namespace HexRevival
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none))
             {
                 m_Screen = Screen.Create;
-                m_Name = ""; m_Unlock = false; m_Error = null;
+                m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
             }
 
             for (int i = 0; i < m_Saves.Count; i++)
@@ -147,6 +148,8 @@ namespace HexRevival
 
             m_Unlock = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
             y += 84 * S;
+            m_Tutorial = Checkbox(new Rect(area.x, y, area.width, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
+            y += 104 * S;
 
             if (!string.IsNullOrEmpty(m_Error))
                 GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
@@ -158,7 +161,7 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial));
             }
         }
 
@@ -172,7 +175,7 @@ namespace HexRevival
             GUI.DrawTexture(new Rect(box.x + 2, box.y + 2, box.width - 4, box.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.5f)));
             if (value) GUI.DrawTexture(new Rect(box.x + 7 * S, box.y + 7 * S, box.width - 14 * S, box.height - 14 * S), GameSkin.Solid(GameSkin.Gold));
             GameSkin.Label(new Rect(box.xMax + 14 * S, r.y, r.width - box.width - 14 * S, 36 * S), title, GameSkin.Style("title", 18, hover ? Color.white : GameSkin.Gold));
-            GUI.Label(new Rect(box.xMax + 14 * S, r.y + 34 * S, r.width - box.width - 14 * S, 30 * S), desc, GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
+            GUI.Label(new Rect(box.xMax + 14 * S, r.y + 34 * S, r.width - box.width - 14 * S, r.height - 34 * S), desc, GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
             return GUI.Button(r, GUIContent.none, GUIStyle.none) ? !value : value;
         }
     }

@@ -117,7 +117,7 @@ namespace HexRevival
             if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
-            if (OnLandingPage()) { EnsureLandingButton(); EnsureLogoutButton(); }
+            if (OnLandingPage()) { EnsureLandingButton(); EnsureLogoutButton(); Tutorial.OnLandingPage(); }
             else { m_LandingButton = null; m_LogoutButton = null; }
         }
 

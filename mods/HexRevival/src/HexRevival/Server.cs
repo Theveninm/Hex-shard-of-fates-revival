@@ -84,10 +84,29 @@ namespace HexRevival
                 foreach (KeyValuePair<ResourceId, int> kv in d) sb.Append(kv.Key).Append('=').Append(kv.Value).Append(',');
         }
 
+        /// <summary>
+        /// Id of the AI player. The mod's AI is an AIPlayer id; in the tutorial it is a ServiceAI id
+        /// as on the original servers, because the tutorial script tells the sides apart by id type.
+        /// </summary>
+        public static bool IsAIId(UID id)
+        {
+            UID.Type t = id.GetUIDType();
+            return t == UID.Type.AIPlayer || t == UID.Type.ServiceAI;
+        }
+
         private static string PlayerSig(Player p)
         {
             int hp = (p.m_ChampionCard != null) ? p.m_ChampionCard.CurrentDefenseValue : 0;
-            return string.Concat(hp, "|", p.m_ChargePoints, "|", p.m_CurrentResourcePool, "|", p.m_TotalResourcePool, "|", p.m_SpellPoints, "|", p.m_ResourceThresholds.Count);
+            return string.Concat(hp, "|", p.m_ChargePoints, "|", p.m_CurrentResourcePool, "|", p.m_TotalResourcePool, "|", p.m_SpellPoints, "|", p.m_ResourceThresholds.Count, "|", TurnsTaken(p));
+        }
+
+        /// <summary>
+        /// Turns this player has started (the game's own count, StartTurnState). The client reads it as the
+        /// player's turn number: the tutorial script is written per player turn ("turn 1" = the player's first).
+        /// </summary>
+        private static int TurnsTaken(Player p)
+        {
+            return p.m_ChampionCard != null ? p.m_ChampionCard.Get(TACAttrs.PlayerGameStats, IntAttrs.TurnsTaken) : 0;
         }
 
 
@@ -1038,7 +1057,7 @@ namespace HexRevival
             e.Resources = player.m_CurrentResourcePool;
             e.TotalResources = player.m_TotalResourcePool;
             e.SpellPoints = player.m_SpellPoints;
-            e.TurnNumber = self.m_TotalTurnsTaken;
+            e.TurnNumber = TurnsTaken(player);
             e.RemainingTime = TimeSpan.FromMinutes(10.0);
             e.DeckSleeveId = player.m_DeckSleeveId;
             e.MaxHandSize = player.CalculateMaximumHandSize();
