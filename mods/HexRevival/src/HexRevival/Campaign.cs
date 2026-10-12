@@ -106,6 +106,51 @@ namespace HexRevival
             set.Add(b);
         }
 
+        private static string Txt(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            try { string l = Localization.TryGet(s); if (!string.IsNullOrEmpty(l)) s = l; } catch { }
+            return s.Replace("\n", " ").Replace("\r", " ");
+        }
+
+        /// <summary>Type and public fields of an object (one level; lists and template ids shown by name when possible).</summary>
+        private static string Describe(object o, int depth = 0)
+        {
+            if (o == null) return "null";
+            if (depth > 3) return o.GetType().Name;
+            StringBuilder sb = new StringBuilder(o.GetType().Name + " {");
+            foreach (FieldInfo f in o.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                object v; try { v = f.GetValue(o); } catch { continue; }
+                sb.Append(" " + f.Name + "=" + Value(v, depth + 1));
+            }
+            return sb.Append(" }").ToString();
+        }
+
+        private static string Value(object v, int depth = 0)
+        {
+            if (v == null) return "null";
+            if (v is string) return "\"" + v + "\"";
+            if (v is ResourceId)
+            {
+                ResourceId id = (ResourceId)v;
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                CardTemplate ct = tm.GetCardTemplate(id);
+                if (ct != null) return id + "(card " + ct.m_Name + ")";
+                InventoryItemData it = tm.GetInventoryItem(id);
+                if (it != null) return id + "(item " + it.m_Name + ")";
+                return id.ToString();
+            }
+            System.Collections.IEnumerable e = v as System.Collections.IEnumerable;
+            if (e != null)
+            {
+                List<string> l = new List<string>();
+                foreach (object x in e) { l.Add(x != null && x.GetType().IsClass && !(x is string) && !(x is ResourceId) ? Describe(x, depth + 1) : Value(x, depth + 1)); if (l.Count > 20) break; }
+                return "[" + string.Join(", ", l.ToArray()) + "]";
+            }
+            return v.ToString();
+        }
+
         /// <summary>True when the node is a battle (its rewards come with the win, not with a conversation).</summary>
         public static bool NodeHasBattle(string node)
         {
@@ -599,6 +644,34 @@ namespace HexRevival
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
             if (sub == "rewards") return DumpRewards();
+            if (sub == "convs")
+            {
+                // dev: text and events of the AZ1 conversations (all, or those whose name contains the filter) to HexRevivalConvs.txt
+                string filter = parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2).ToUpperInvariant() : "";
+                StringBuilder sb = new StringBuilder();
+                int count = 0;
+                foreach (ConversationTemplate c in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)
+                {
+                    if (c == null || !c.m_Name.StartsWith("AZ1") || (filter != "" && !c.m_Name.ToUpperInvariant().Contains(filter))) continue;
+                    count++;
+                    sb.AppendLine("=== " + c.m_Name + " (" + c.m_OwnerName + ")");
+                    foreach (KeyValuePair<int, ConversationQuestion> q in c.m_Questions)
+                    {
+                        sb.AppendLine("Q" + q.Key + ": " + Txt(q.Value.m_QuestionText));
+                        foreach (int aid in q.Value.m_AnswerIds)
+                        {
+                            ConversationAnswer a;
+                            if (!c.m_Answers.TryGetValue(aid, out a)) continue;
+                            sb.AppendLine("   A" + aid + " -> Q" + a.m_NextQuestionId + ": " + Txt(a.m_AnswerText));
+                            foreach (object pr in a.m_Prerequisites) sb.AppendLine("      if " + Describe(pr));
+                            foreach (object ev in a.m_EventsToFireWhenSelected) sb.AppendLine("      fire " + Describe(ev));
+                            foreach (object ev in a.m_OnSelectedEvents) sb.AppendLine("      do " + Describe(ev));
+                        }
+                    }
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalConvs.txt"), sb.ToString());
+                return count + " conversations written to HexRevivalConvs.txt";
+            }
             if (sub == "nodes")
             {
                 // dev: every AZ1 node with its scenes and conversations, to HexRevivalNodes.txt
