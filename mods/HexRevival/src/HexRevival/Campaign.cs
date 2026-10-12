@@ -163,7 +163,8 @@ namespace HexRevival
             Player ai = Cheats.FindPlayer(ss, "ai");
             if (ai != null)
             {
-                Cheats.AddResources(ss, ai, s_Difficulty);
+                // "starts the game with N resources in play": resources only, no shard thresholds (checked in game by the user)
+                Cheats.AddResourcesOnly(ss, ai, s_Difficulty);
                 Debug.Log("[HexRevival] [Campaign] difficulty: AI starts with " + s_Difficulty + " resource(s)");
             }
             s_Difficulty = 0;
