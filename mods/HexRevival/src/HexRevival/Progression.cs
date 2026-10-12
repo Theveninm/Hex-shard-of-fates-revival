@@ -202,6 +202,35 @@ namespace HexRevival
             { "Node077", "Sapphire" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
         };
 
+        /// <summary>Card template ids offered by a Shroom Haus (the game's choice window).</summary>
+        public static List<string> ShroomHausChoices(string node)
+        {
+            string kind;
+            if (!HausByNode.TryGetValue(node, out kind)) kind = "Artifact";
+            List<string> res = new List<string>();
+            foreach (string name in ShroomHauses[kind])
+            {
+                Loot.Drop d = Loot.Resolve(name, true);
+                if (d != null && d.Card != null) res.Add(d.Card.m_Id.ToString());
+            }
+            return res;
+        }
+
+        /// <summary>Card picked in a Shroom Haus window: grants it with the node's reward (once). False if the choice is not offered.</summary>
+        public static bool OnShroomHausChoice(ulong champId, string node, string templateId)
+        {
+            if (templateId == null || !ShroomHausChoices(node).Contains(templateId)) { Debug.LogWarning("[HexRevival] [Progression] Shroom Haus choice rejected: " + templateId); return false; }
+            string key = champId + ":" + node;
+            if (Saves.Current.Claims.Contains(key)) return true;
+            Saves.Current.Claims.Add(key);
+            Reward r;
+            if (!AZ1.TryGetValue(node, out r)) r = new Reward { OneTime = true };
+            CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(templateId));
+            Reward chosen = new Reward { Gold = r.Gold, Xp = r.Xp, Cards = new[] { t.m_Name }, OneTime = true, Source = r.Source };
+            Grant(champId, chosen, node, "Shroom Haus " + node);
+            return true;
+        }
+
         private static string ShroomHausCard(string node)
         {
             string kind;
@@ -281,7 +310,7 @@ namespace HexRevival
         public static void OnCampaignConversationDone(ulong champId, string node)
         {
             Reward r;
-            if (!AZ1.TryGetValue(node, out r) || !r.OneTime || Campaign.NodeHasBattle(node)) return;
+            if (!AZ1.TryGetValue(node, out r) || !r.OneTime || r.ShroomHaus || Campaign.NodeHasBattle(node)) return;
             string key = champId + ":" + node;
             if (Saves.Current.Claims.Contains(key)) return;
             Saves.Current.Claims.Add(key);

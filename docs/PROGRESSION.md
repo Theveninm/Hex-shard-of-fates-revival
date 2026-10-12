@@ -44,7 +44,7 @@ replace that default the first time a champion completes them (one time per cham
 | Node | Encounter | Reward | Source |
 |---|---|---|---|
 | Node003 Dunnwood | Wild Cub ("Feralroot Bear") | Dire Toad, 150 gold | Guide2016 |
-| Node004 Sporemist Hollow | Shroomkin Haus (conversation) | 1 card of the Haus's 3, 100 gold | Guide2016, LootTables2016 (cards); the game let the player choose, the mod picks at random: PLACEHOLDER |
+| Node004 Sporemist Hollow | Shroomkin Haus (conversation, then the game's card choice window) | 1 card of the Haus's 3, chosen by the player, 100 gold | Guide2016, LootTables2016 (cards) |
 | Node009 The Sutherland | Cockatwice | Chickatwice, 200 gold | Guide2016 |
 | Node010 Sylvan Peninsula | Squashing Pumpkins | 1 AZ1 pack, 200 gold | Guide2016 ("Wandering Abomination"); node inferred from the route |
 | Node006 Horwich Sea | The Sea Witch Unfettered ("Hag") | Kiss of the Princess | LootTables2016 ("Hag Sorceress"); the Enchanted Frog condition is not checked |
@@ -53,7 +53,7 @@ replace that default the first time a champion completes them (one time per cham
 | Node078 Skittering Ridge | Killipede's Revenge ("The Blood Beneath": the flask) | Contract Killing | LootTables2016; the game gave it at the turn-in (Rizzix / Gurtok), given on the win |
 | Node053 South Desert | Gnomes at Home ("Gnomes Come Home": Herbert found) | Gnome Wayfarer | LootTables2016; the game gave it at the turn-in (Vincent), given at the camp |
 | Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"). Once the army is beaten, the node offers the game's "Repeat Encounters" dialogue (level 1, or the army starting with 1 to 6 resources in play: Game) |
-| Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 | 1 card of the Haus's 3 | LootTables2016; Haus order assumed (PLACEHOLDER, see below) |
+| Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 (same flow) | 1 card of the Haus's 3, chosen | LootTables2016; Haus kinds inferred (PLACEHOLDER, see below; Uuug's Oasis = Ruby confirmed by a let's play) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
 | Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
 | Node017 Cave-In / Node034 Ambling Mesa | "Find the Cave-In / Ambling Mesa" (Underworld / Ardent) | race card | LootTables2016; given at the node, quest not checked |
@@ -74,9 +74,10 @@ Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses 
 the kinds are inferred from place names and the shard colours of the AI decks of nearby battles
 (PLACEHOLDER): Sporemist Hollow = Artifact (Guide2016, hex-server: certain), Blau Flats = Sapphire
 ("blau" = blue), Uuug's Oasis = Ruby (in the desert, only Ruby decks nearby), Lena Grotto = Blood
-(Blood and Wild decks nearby), Bauer Dunes = Diamond (Diamond and Wild decks nearby), Hoff Mines =
-Wild (the one left; no battle nearby). The client sends a "shroom_choice" event, so the game's own
-choice window could be restored later.
+(Blood and Wild decks nearby; Uuug's Oasis = Ruby is confirmed by a let's play), Bauer Dunes = Diamond (Diamond and Wild decks nearby), Hoff Mines =
+Wild (the one left; no battle nearby). After the Shroomkin's conversation the location opens the game's
+choice window ("ShroomHaus" location with the 3 card ids), and the client's "shroom_choice" event
+gives the card picked.
 
 Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;

@@ -49,6 +49,7 @@ namespace HexRevival
             public string Encounter;     // EncounterScene GUID
             public string Conversation;  // ConversationTemplate GUID
             public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
+            public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
         }
 
@@ -273,6 +274,7 @@ namespace HexRevival
             public HashSet<string> Visible = new HashSet<string>();
             public List<string> VisitedNodes = new List<string>();
             public List<string> VisitedPaths = new List<string>();
+            public HashSet<string> HausReady = new HashSet<string>(); // Shroom Hauses whose card choice window is open (after the Shroomkin's conversation)
             public ulong CampId { get { return ChampId; } } // one campaign per champion
         }
 
@@ -338,7 +340,7 @@ namespace HexRevival
         }
 
         // File: one line per champion:
-        // champId|started|lastNode|completed,..|visible,..|visitedNodes,..|visitedPaths,..
+        // champId|started|lastNode|completed,..|visible,..|visitedNodes,..|visitedPaths,..|hausReady,..
         private static void LoadAll()
         {
             if (s_States != null) return;
@@ -355,6 +357,7 @@ namespace HexRevival
                     st.Visible.UnionWith(SplitList(p[4]));
                     st.VisitedNodes.AddRange(SplitList(p[5]));
                     st.VisitedPaths.AddRange(SplitList(p[6]));
+                    if (p.Length > 7) st.HausReady.UnionWith(SplitList(p[7]));
                     s_States[st.ChampId] = st;
                 }
             }
@@ -371,7 +374,8 @@ namespace HexRevival
                 foreach (CampState st in s_States.Values)
                     lines.Add(string.Join("|", new[] { st.ChampId.ToString(), st.Started ? "1" : "0", st.LastNode,
                         string.Join(",", new List<string>(st.Completed).ToArray()), string.Join(",", new List<string>(st.Visible).ToArray()),
-                        string.Join(",", st.VisitedNodes.ToArray()), string.Join(",", st.VisitedPaths.ToArray()) }));
+                        string.Join(",", st.VisitedNodes.ToArray()), string.Join(",", st.VisitedPaths.ToArray()),
+                        string.Join(",", new List<string>(st.HausReady).ToArray()) }));
                 File.WriteAllLines(FilePath, lines.ToArray());
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] save: " + e); }
@@ -414,6 +418,16 @@ namespace HexRevival
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
                 if (repeat) d["conversationId"] = n.RepeatConversation;
                 else if (n.Conversation != null) d["conversationId"] = n.Conversation;
+                if (n.IsHaus && st.HausReady.Contains(n.Id) && !st.Completed.Contains(n.Id))
+                {
+                    // The game's card choice window (Src.Game, as hex-server serves it): 3 card templates to pick from.
+                    d["type"] = "ShroomHaus";
+                    d.Remove("conversationId");
+                    d["autostart"] = true;
+                    d["choices"] = new List<object>(Progression.ShroomHausChoices(n.Id).ToArray());
+                    d["selection-type"] = "Shroomkin_Haus";
+                    d["selection-desc"] = "Shroomkin_Instructions";
+                }
                 gs.VisLocs.Add(new Location(d));
                 Dictionary<string, object> nd = new Dictionary<string, object>();
                 nd["id"] = n.Id;
@@ -590,9 +604,23 @@ namespace HexRevival
                     if (arg0 != null) st.LastNode = arg0;
                     break;
                 case "conv_done":
+                    if (active != null && active.IsHaus && !st.Completed.Contains(active.Id))
+                    {
+                        // Shroomkin's conversation done: the card choice window opens next (location stays active).
+                        st.HausReady.Add(active.Id);
+                        break;
+                    }
+                    goto case "empty_done";
+                case "shroom_choice":
+                    if (active != null && active.IsHaus && !st.Completed.Contains(active.Id) && Progression.OnShroomHausChoice(st.ChampId, active.Id, arg0))
+                    {
+                        st.HausReady.Remove(active.Id);
+                        Complete(st, active);
+                        st.ALoc = null;
+                    }
+                    break;
                 case "empty_done":
                 case "display_done":
-                case "shroom_choice":
                 case "count_choice":
                 case "accept":
                     if (active != null) Complete(st, active);
@@ -727,6 +755,20 @@ namespace HexRevival
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
                 StartBattle(st, n);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
+            }
+            if (sub == "renode" && parts.Length > 2)
+            {
+                // dev: "camp renode Node035" = make a node new again for the current champion (not completed, rewards claimable)
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                CampState st = Get(champ, false);
+                MapNode n = FindNode(parts[2]);
+                if (st == null || n == null) return "no campaign or node";
+                st.Completed.Remove(n.Id);
+                st.HausReady.Remove(n.Id);
+                Saves.Current.Claims.Remove(champ + ":" + n.Id);
+                Saves.SaveCurrent();
+                Save();
+                return n.Id + " reset for champion " + champ + " (reopen the map to see it)";
             }
             if (sub == "scene" && parts.Length > 2)
             {
