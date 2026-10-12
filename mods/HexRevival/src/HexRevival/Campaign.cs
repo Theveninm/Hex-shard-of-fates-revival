@@ -756,6 +756,18 @@ namespace HexRevival
                 StartBattle(st, n);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
             }
+            if (sub == "loc" && parts.Length > 2)
+            {
+                // dev: the location data sent to the client for a node, for the current champion
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                CampState st = Get(champ, false);
+                MapNode mn = FindNode(parts[2]);
+                if (st == null || mn == null) return "no campaign or node";
+                GameplayState gs = BuildState(st);
+                foreach (Location l in gs.VisLocs)
+                    if (l.Node == mn.Id) return "champion " + champ + " completed=" + st.Completed.Contains(mn.Id) + " repeatConv=" + mn.RepeatConversation + " type=" + l.Type + " conv=" + l.ConversationID + " enc=" + l.Encounter;
+                return "not found";
+            }
             if (sub == "renode" && parts.Length > 2)
             {
                 // dev: "camp renode Node035" = make a node new again for the current champion (not completed, rewards claimable)
