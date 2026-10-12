@@ -61,6 +61,19 @@ namespace HexRevival
             try { foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Profile] decks: " + e); }
 
+            // Champions created before starter decks existed get one now (collection and decks reloaded).
+            try
+            {
+                if (Champions.EnsureDecks().Count > 0)
+                {
+                    bits.Cards.Clear();
+                    foreach (card_instance_bits c in Collection.Build(reckId)) bits.Cards.Add(c);
+                    bits.Decks.Clear();
+                    foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d);
+                }
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] champion decks: " + e); }
+
             Type respType = typeof(PlayerProfile).Assembly.GetType("Game.Client.Network.Profile.GetUserProfileInfoResponse");
             object resp = Activator.CreateInstance(respType);
             SetMember(resp, "ReckoningBits", bits);

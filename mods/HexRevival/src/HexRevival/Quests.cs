@@ -111,26 +111,54 @@ namespace HexRevival
         }
 
         private static Dictionary<ulong, Dictionary<string, Progress>> s_Progress;
+        /// <summary>Per champion facts used by quests (battles won, nodes visited, choices), saved with them.</summary>
+        private static Dictionary<ulong, Dictionary<string, string>> s_Flags;
 
         private static string FilePath { get { return Saves.File("quests.txt"); } }
 
         /// <summary>Forgets the loaded progress (account switch).</summary>
-        public static void Reset() { s_Progress = null; }
+        public static void Reset() { s_Progress = null; s_Flags = null; }
+
+        public static string Flag(ulong champ, string key)
+        {
+            Of(champ);
+            Dictionary<string, string> f;
+            string v;
+            return s_Flags.TryGetValue(champ, out f) && f.TryGetValue(key, out v) ? v : null;
+        }
+
+        /// <summary>Sets (or removes, value null) a flag.</summary>
+        public static void SetFlag(ulong champ, string key, string value)
+        {
+            Of(champ);
+            Dictionary<string, string> f;
+            if (!s_Flags.TryGetValue(champ, out f)) s_Flags[champ] = f = new Dictionary<string, string>();
+            if (value == null) f.Remove(key); else f[key] = value;
+            Save();
+        }
 
         private static Dictionary<string, Progress> Of(ulong champ)
         {
             if (s_Progress == null)
             {
                 s_Progress = new Dictionary<ulong, Dictionary<string, Progress>>();
+                s_Flags = new Dictionary<ulong, Dictionary<string, string>>();
                 try
                 {
                     if (File.Exists(FilePath))
                         foreach (string line in File.ReadAllLines(FilePath))
                         {
-                            // champ|script|finished|done objectives (comma separated)
+                            // champ|script|finished|done objectives (comma separated), or champ|#flag|key|value
                             string[] p = line.Split('|');
                             if (p.Length < 4) continue;
                             ulong c = ulong.Parse(p[0]);
+                            if (p[1] == "#flag")
+                            {
+                                Dictionary<string, string> f;
+                                if (!s_Flags.TryGetValue(c, out f)) s_Flags[c] = f = new Dictionary<string, string>();
+                                f[p[2]] = p[3];
+                                continue;
+                            }
                             Progress pr = new Progress { Finished = p[2] == "1" };
                             foreach (string s in p[3].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) pr.Done.Add(int.Parse(s));
                             Dictionary<string, Progress> m;
@@ -153,6 +181,9 @@ namespace HexRevival
                 foreach (KeyValuePair<ulong, Dictionary<string, Progress>> c in s_Progress)
                     foreach (KeyValuePair<string, Progress> q in c.Value)
                         lines.Add(c.Key + "|" + q.Key + "|" + (q.Value.Finished ? "1" : "0") + "|" + string.Join(",", new List<int>(q.Value.Done).ConvertAll(x => x.ToString()).ToArray()));
+                foreach (KeyValuePair<ulong, Dictionary<string, string>> c in s_Flags)
+                    foreach (KeyValuePair<string, string> f in c.Value)
+                        lines.Add(c.Key + "|#flag|" + f.Key.Replace("|", "/") + "|" + (f.Value ?? "").Replace("|", "/"));
                 File.WriteAllLines(FilePath, lines.ToArray());
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Quests] save: " + e); }
@@ -167,6 +198,27 @@ namespace HexRevival
         public static bool IsStarted(ulong champ, string script) { return Get(champ, script) != null; }
         public static bool IsFinished(ulong champ, string script) { Progress p = Get(champ, script); return p != null && p.Finished; }
         public static bool IsActive(ulong champ, string script) { Progress p = Get(champ, script); return p != null && !p.Finished; }
+
+        /// <summary>True when the objective at this location of the quest is done (or the quest finished).</summary>
+        public static bool DoneLoc(ulong champ, string script, string locId)
+        {
+            Def d = GetDef(script);
+            Progress p = Get(champ, script);
+            if (d == null || p == null) return false;
+            if (p.Finished) return true;
+            for (int i = 0; i < d.Objectives.Count; i++) if (d.Objectives[i].LocId == locId) return p.Done.Contains(i);
+            return false;
+        }
+
+        /// <summary>Completes the objective at this location of an active quest.</summary>
+        public static void CompleteLoc(ulong champ, string script, string locId)
+        {
+            Def d = GetDef(script);
+            Progress p = Get(champ, script);
+            if (d == null || p == null || p.Finished) return;
+            for (int i = 0; i < d.Objectives.Count; i++)
+                if (d.Objectives[i].LocId == locId && !p.Done.Contains(i)) { Complete(champ, d, p, i); break; }
+        }
 
         /// <summary>Index of the first objective not done (Objectives.Count when all are done).</summary>
         public static int FirstOpen(Def d, Progress p)
@@ -193,7 +245,15 @@ namespace HexRevival
         {
             Def d = GetDef(script);
             if (d == null || IsStarted(champ, script)) return;
-            Of(champ)[script] = new Progress();
+            Progress p = new Progress();
+            Of(champ)[script] = p;
+            // Battles already won before the quest was given count (the map lets them be fought first).
+            for (int i = 0; i < d.Objectives.Count; i++)
+            {
+                Objective o = d.Objectives[i];
+                if (o.Kind == "Encounter" && !o.Taming && o.Encounter != null && Flag(champ, "won:" + o.Encounter) != null) p.Done.Add(i);
+            }
+            if (script == "az01_q_cross_the_river" && Flag(champ, "won:Node014") != null) p.Done.Add(0);
             Save();
             Debug.Log("[HexRevival] [Quests] " + champ + " started " + script);
             NotifyStarted(champ, d);
@@ -236,6 +296,13 @@ namespace HexRevival
         private static void Complete(ulong champ, Def d, Progress p, int objective)
         {
             p.Done.Add(objective);
+            // Objectives the mod does not track (collect counters; a "C" turn-in right after its "B" step) follow automatically.
+            for (int i = FirstOpen(d, p); i < d.Objectives.Count; i = FirstOpen(d, p))
+            {
+                Objective o = d.Objectives[i];
+                if (o.Kind == "Collect" || (o.Kind == "Conversation" && o.LocId.EndsWith("C") && i > 0 && d.Objectives[i - 1].LocId.EndsWith("B"))) p.Done.Add(i);
+                else break;
+            }
             if (FirstOpen(d, p) >= d.Objectives.Count)
             {
                 p.Finished = true;
@@ -451,6 +518,11 @@ namespace HexRevival
             if (u.Contains("WINSTON - STEP 1")) Start(champ, "az01_q_cross_the_river");
             if (u.Contains("WALLACE - STEP 1")) Start(champ, "az01_q_cross_the_river_part2");
             if (u.Contains("ROBOT - STEP 1")) Start(champ, "az01_three_braves");
+            if (u.Contains("WARREN - STEP 1A")) CompleteLoc(champ, "az01_q_cross_the_river_part2", "Step3");
+            if (u.Contains("ROBOT - STEP 2 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step1B");
+            if (u.Contains("ROBOT - STEP 3 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step2B");
+            if (u.Contains("ROBOT - STEP 4 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step3B");
+            if (u.Contains("BLUEJAY - STEP 4")) CompleteLoc(champ, "az01_three_braves", "Step6");
         }
 
         // ------------------------------------------------------------------
@@ -463,6 +535,28 @@ namespace HexRevival
             ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
             if (parts.Length > 2 && parts[1] == "start") { Start(champ, parts[2]); return "started " + parts[2]; }
             if (parts.Length > 2 && parts[1] == "reset") { Of(champ).Remove(parts[2]); Save(); return "reset " + parts[2]; }
+            if (parts.Length > 1 && parts[1] == "convs")
+            {
+                // dev: conversations that complete each conversation objective, to HexRevivalQuestConvs.txt
+                List<string> lines = new List<string>();
+                foreach (string script in AZ1Scripts)
+                {
+                    Def d = GetDef(script);
+                    if (d == null) continue;
+                    foreach (Objective ob in d.Objectives)
+                    {
+                        if (ob.Kind != "Conversation") continue;
+                        foreach (string c in ob.Conversations)
+                        {
+                            ConversationTemplate t = null;
+                            try { t = Singleton<TemplateManager>.Instance.GetConversationTemplate(new ResourceId(c)); } catch { }
+                            lines.Add(script + " " + ob.LocId + " " + c + " = " + (t == null ? "?" : t.m_Name));
+                        }
+                    }
+                }
+                File.WriteAllLines(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalQuestConvs.txt"), lines.ToArray());
+                return lines.Count + " lines written to HexRevivalQuestConvs.txt";
+            }
             List<string> o = new List<string>();
             foreach (KeyValuePair<string, Progress> q in Of(champ))
                 o.Add(q.Key + (q.Value.Finished ? " finished" : " done=" + string.Join(",", new List<int>(q.Value.Done).ConvertAll(x => x.ToString()).ToArray())));

@@ -112,13 +112,8 @@ namespace HexRevival
             { "Node055", new Reward { Cards = new[] { "Wormoid Hydra" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
             // Razortooth Forest, Savage Lord: 200 gold (guide 2016); hex-server later saw 300 gold + 200 XP
             { "Node014", new Reward { Gold = 200, Xp = 200, OneTime = true, Source = Src.Guide2016, Note = "XP from hex-server" } },
-            // Bridge over the Zila - West: "Cross the Zila River" turn-in (quest condition not modelled yet)
-            { "Node015", new Reward { Packs = 1, RaceQuest = "zila", Gold = 300, OneTime = true, Source = Src.Guide2016, Note = "race equipment from the loot tables; quest not checked" } },
-            // Cave-In (Underworld) / Ambling Mesa (Ardent): "Find the Cave-In / Ambling Mesa" quest item
             // Shadowgrove, Corrupt Dryad: AZ1 pack + race equipment; 250 XP (hex-server)
             { "Node018", new Reward { Packs = 1, RaceQuest = "dryad", Xp = 250, OneTime = true, Source = Src.Guide2016 } },
-            // Bridge over the Zodiac - East: "Cross the Zodiac River" turn-in (guide's "Zila East"), AZ1 pack + race card
-            { "Node030", new Reward { Packs = 1, RaceQuest = "zodiac", OneTime = true, Source = Src.Guide2016, Note = "node inferred; quest not checked" } },
         };
 
         /// <summary>Race order of the RaceRewards rows (as in the loot tables).</summary>
@@ -280,6 +275,9 @@ namespace HexRevival
         {
             { "az01_ar_find_ambling_mesa", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
             { "az01_uw_find_cave_in", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
+            // Bridge quests (Src.Guide2016; race items Src.LootTables2016), given at the turn-in.
+            { "az01_q_cross_the_river", new Reward { Packs = 1, RaceQuest = "zila", Gold = 300, Source = Src.Guide2016 } },
+            { "az01_q_cross_the_river_part2", new Reward { Packs = 1, RaceQuest = "zodiac", Source = Src.Guide2016 } },
             { "q_blood_beneath", new Reward { Cards = new[] { "Contract Killing" }, Gold = QuestGold, Source = Src.LootTables2016 } },
             { "q_gnomes_come_home", new Reward { Cards = new[] { "Gnome Wayfarer" }, Gold = QuestGold, Source = Src.LootTables2016 } },
         };

@@ -175,6 +175,83 @@ namespace HexRevival
         public static string LastEvent;
 
         /// <summary>True when the node is a battle (its rewards come with the win, not with a conversation).</summary>
+        // ------------------------------------------------------------------
+        // Conversation shown by a node (quest steps, faction variants, battle outcomes)
+        // ------------------------------------------------------------------
+
+        private static readonly Dictionary<string, List<ConversationTemplate>> s_NodeConvs = new Dictionary<string, List<ConversationTemplate>>();
+
+        /// <summary>Every conversation of a node ("AZ1 - Node 012 - ...").</summary>
+        private static List<ConversationTemplate> NodeConvs(MapNode n)
+        {
+            List<ConversationTemplate> l;
+            if (s_NodeConvs.TryGetValue(n.Id, out l)) return l;
+            l = new List<ConversationTemplate>();
+            string number = NodeNumber(n.Id);
+            if (number != null)
+                foreach (ConversationTemplate c in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)
+                    if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number) l.Add(c);
+            s_NodeConvs[n.Id] = l;
+            return l;
+        }
+
+        private static string ConvName(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return "";
+            ConversationTemplate c = Singleton<TemplateManager>.Instance.GetConversationTemplate(new ResourceId(id));
+            return c == null ? "?" : c.m_Name;
+        }
+
+        /// <summary>Conversations shown after a battle (success / fail) or for repeats.</summary>
+        private static bool IsOutcome(string name)
+        {
+            string u = name.ToUpperInvariant();
+            return u.Contains("SUCCESS") || u.Contains("FAIL") || u.Contains("REPEAT ENCOUNTERS");
+        }
+
+        /// <summary>Conversation of a non-battle node for this champion: quest step rules first, else the best matching one.</summary>
+        private static string NodeConversation(ulong champ, MapNode n)
+        {
+            List<KeyValuePair<string, string>> convs = new List<KeyValuePair<string, string>>();
+            foreach (ConversationTemplate c in NodeConvs(n))
+                if (Quests.MatchesChampion(c.m_Name, champ)) convs.Add(new KeyValuePair<string, string>(c.m_Name, c.m_Id.ToString()));
+            string picked = NodeScripts.Pick(champ, n.Id, convs);
+            if (picked != null) return picked;
+            ConversationTemplate best = null;
+            foreach (ConversationTemplate c in NodeConvs(n))
+                if (Quests.MatchesChampion(c.m_Name, champ) && !IsOutcome(c.m_Name) && (best == null || ConversationRank(c.m_Name) < ConversationRank(best.m_Name))) best = c;
+            return best == null ? n.Conversation : best.m_Id.ToString();
+        }
+
+        /// <summary>Conversation shown before a node's battle (null if none).</summary>
+        private static string Prelude(ulong champ, MapNode n)
+        {
+            if (NodeScripts.HasRules(n.Id)) return NodeConversation(champ, n);
+            ConversationTemplate best = null;
+            foreach (ConversationTemplate c in NodeConvs(n))
+                if (Quests.MatchesChampion(c.m_Name, champ) && !IsOutcome(c.m_Name) && Quests.RoleOf(c.m_Name) == Quests.Role.None
+                    && (best == null || ConversationRank(c.m_Name) < ConversationRank(best.m_Name))) best = c;
+            return best != null ? best.m_Id.ToString() : null;
+        }
+
+        /// <summary>Conversation shown after a node's battle ("... Success" / "... Fail", by the choice made before it).</summary>
+        private static string Outcome(ulong champ, MapNode n, bool won)
+        {
+            string choice = Quests.Flag(champ, "choice:" + n.Id);
+            ConversationTemplate best = null;
+            int bestScore = -1;
+            foreach (ConversationTemplate c in NodeConvs(n))
+            {
+                string u = c.m_Name.ToUpperInvariant();
+                if (!Quests.MatchesChampion(c.m_Name, champ) || !(won ? u.Contains("SUCCESS") : u.Contains("FAIL"))) continue;
+                int score = 1;
+                if (u.Contains("CHOSE NOT")) score = choice == "choice_NoHelp" ? 3 : 0;
+                else if (u.Contains("CHOSE TO")) score = choice == "choice_Help" ? 3 : choice == null ? 2 : 0;
+                if (score > bestScore) { bestScore = score; best = c; }
+            }
+            return best != null ? best.m_Id.ToString() : null;
+        }
+
         public static bool NodeHasBattle(string node)
         {
             MapNode n = FindNode(node);
@@ -210,7 +287,7 @@ namespace HexRevival
                 if (es != null && NameNumber(es.m_Name, "AZ1-NODE") == number) n.Scenes += es.m_Name + " / " + es.m_Title + " | ";
             }
             foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
-                if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number && c.m_Name.ToUpperInvariant().Contains("REPEAT ENCOUNTERS")) n.RepeatConversation = c.m_Id.ToString();
+                if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number && c.m_Name.ToUpperInvariant().Contains("REPEAT ENCOUNTERS") && !NodeScripts.HasRules(n.Id)) n.RepeatConversation = c.m_Id.ToString();
             foreach (SceneData s in tm.CampaignScenes.Values)
             {
                 EncounterScene es = s as EncounterScene;
@@ -433,6 +510,39 @@ namespace HexRevival
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
                 if (repeat) d["conversationId"] = n.RepeatConversation;
                 else if (n.Conversation != null) d["conversationId"] = n.Conversation;
+                if (!repeat && n.Panorama == null && !n.IsHaus)
+                {
+                    string outcome = Quests.Flag(st.ChampId, "outcome:" + n.Id);
+                    if (outcome != null)
+                    {
+                        // Battle just ended: its success / fail conversation opens by itself.
+                        d["type"] = "Convo";
+                        d["conversationId"] = outcome;
+                        d["completed"] = false;
+                        d["autostart"] = true;
+                    }
+                    else if (n.Encounter != null)
+                    {
+                        // Battle node: its conversation first, then (prelude seen) the battle starts by itself.
+                        string prelude = !st.Completed.Contains(n.Id) ? Prelude(st.ChampId, n) : null;
+                        if (prelude != null && Quests.Flag(st.ChampId, "prelude:" + n.Id) == null)
+                        {
+                            d["type"] = "Convo";
+                            d["conversationId"] = prelude;
+                        }
+                        else if (prelude != null) d["autostart"] = true;
+                    }
+                    else
+                    {
+                        string conv = NodeConversation(st.ChampId, n);
+                        if (conv != null) d["conversationId"] = conv;
+                        if (NodeScripts.HasRules(n.Id) && st.Completed.Contains(n.Id))
+                        {
+                            d["completed"] = false;
+                            d["repeatable"] = true;
+                        }
+                    }
+                }
                 if (n.Panorama != null)
                 {
                     // Hub: a reusable portal to its panorama (never completed, Src.Game location type Panorama).
@@ -816,6 +926,23 @@ namespace HexRevival
                     if (arg0 != null) st.LastNode = arg0;
                     break;
                 case "conv_done":
+                    if (active != null && Quests.Flag(st.ChampId, "outcome:" + active.Id) != null)
+                    {
+                        // End of the battle's outcome conversation.
+                        Quests.SetFlag(st.ChampId, "outcome:" + active.Id, null);
+                        st.ALoc = null;
+                        break;
+                    }
+                    if (active != null && active.Encounter != null && !st.Completed.Contains(active.Id) && active.RepeatConversation == null
+                        && Prelude(st.ChampId, active) != null && Quests.Flag(st.ChampId, "prelude:" + active.Id) == null)
+                    {
+                        // Prelude seen: the battle comes next, unless the player avoided it (sneak past, bribe).
+                        Quests.SetFlag(st.ChampId, "prelude:" + active.Id, "1");
+                        string choice = Quests.Flag(st.ChampId, "choice:" + active.Id);
+                        if (choice == "choice_sneak" || choice == "choice_Bribe") { Complete(st, active); st.ALoc = null; }
+                        break;
+                    }
+                    if (active != null) Quests.SetFlag(st.ChampId, "visited:" + active.Id, "1");
                     if (active != null && active.IsHaus && !st.Completed.Contains(active.Id))
                     {
                         // Shroomkin's conversation done: the card choice window opens next (location stays active).
@@ -835,12 +962,20 @@ namespace HexRevival
                 case "display_done":
                 case "count_choice":
                 case "accept":
+                {
+                    // Conversation just shown (computed before the node is completed: the rules depend on it).
+                    string convId = null;
+                    if (active != null && evt == "conv_done")
+                    {
+                        if (active.RepeatConversation != null && st.Completed.Contains(active.Id)) convId = active.RepeatConversation;
+                        else if (active.Encounter == null && active.Panorama == null && !active.IsHaus) convId = NodeConversation(st.ChampId, active);
+                        if (convId == null) convId = active.Conversation;
+                    }
                     if (active != null) Complete(st, active);
                     st.ALoc = null;
                     if (active != null && evt == "conv_done")
                     {
                         Progression.OnCampaignConversationDone(st.ChampId, active.Id);
-                        string convId = active.RepeatConversation != null && st.Completed.Contains(active.Id) ? active.RepeatConversation : active.Conversation;
                         ConversationTemplate ct = convId != null ? Singleton<TemplateManager>.Instance.GetConversationTemplate(new ResourceId(convId)) : null;
                         if (ct != null)
                         {
@@ -849,6 +984,7 @@ namespace HexRevival
                         }
                     }
                     break;
+                }
                 case "enc_cancel":
                 case "cancel":
                     st.ALoc = null;
@@ -860,7 +996,20 @@ namespace HexRevival
                 default:
                     // Army of Myth repeat: "Diff_N" = fight the army with N resources in play (0 = level 1); "Cancel" = no fight.
                     int diff;
-                    if (active != null && active.Encounter != null && evt.StartsWith("Diff_") && int.TryParse(evt.Substring(5), out diff))
+                    if (evt.StartsWith("choice_") && active != null)
+                    {
+                        // Dialogue choices that change what follows (help or not, sneak, bribe, robot install).
+                        Quests.SetFlag(st.ChampId, "choice:" + active.Id, evt);
+                        if (evt == "choice_install" || evt == "choice_no_install") Quests.SetFlag(st.ChampId, "robot", evt);
+                        if (evt == "choice_Bribe" && Saves.Current != null)
+                        {
+                            // PLACEHOLDER cost: the dialogue asks for "a lot of gold", 1000 assumed.
+                            Saves.Current.Gold = Math.Max(0L, Saves.Current.Gold - 1000);
+                            Saves.SaveCurrent();
+                            try { GameClient.Instance.PlayerProfile.UpdateBalance((int)Saves.Current.Gold, (int)Saves.Current.Platinum); } catch { }
+                        }
+                    }
+                    else if (active != null && active.Encounter != null && evt.StartsWith("Diff_") && int.TryParse(evt.Substring(5), out diff))
                     {
                         s_Difficulty = diff;
                         StartBattle(st, active);
@@ -904,6 +1053,11 @@ namespace HexRevival
             {
                 PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(st.ChampId);
                 if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
+                else
+                {
+                    ulong id = Champions.EnsureDeck(st.ChampId);
+                    if (id != 0) deck = new UID(UID.Type.Deck, id);
+                }
             }
             catch { }
             s_Battle = st;
@@ -927,7 +1081,24 @@ namespace HexRevival
             st.ALoc = null;
             Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
-            if (won && node != null && node.Encounter != null) Quests.OnEncounterWon(st.ChampId, node.Encounter, Progression.AnyTamed());
+            if (won && node != null && node.Encounter != null)
+            {
+                Quests.SetFlag(st.ChampId, "won:" + node.Encounter, "1");
+                Quests.SetFlag(st.ChampId, "won:" + node.Id, "1");
+                if (node.Id == "Node014") Quests.CompleteLoc(st.ChampId, "az01_q_cross_the_river", "Step1");
+                Quests.OnEncounterWon(st.ChampId, node.Encounter, Progression.AnyTamed());
+            }
+            if (node != null)
+            {
+                Quests.SetFlag(st.ChampId, "prelude:" + node.Id, null);
+                string outcome = Outcome(st.ChampId, node, won);
+                if (outcome != null)
+                {
+                    Quests.SetFlag(st.ChampId, "outcome:" + node.Id, outcome);
+                    st.ALoc = node.Name;
+                    Save();
+                }
+            }
             if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id);
             BattleDifficulty = 0;
             return true;
@@ -984,6 +1155,26 @@ namespace HexRevival
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
                 StartBattle(st, n);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
+            }
+            if (sub == "goto" && parts.Length > 2)
+            {
+                // dev: "camp goto Node012" = put the champion on a node (revealed) and select it on the open map
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                CampState st = Get(champ, false);
+                MapNode mn = FindNode(parts[2]);
+                if (st == null || mn == null) return "no campaign or node";
+                st.Visible.Add(mn.Id);
+                Reveal(st, mn.Id);
+                st.LastNode = mn.Id;
+                st.ALoc = mn.Name;
+                Save();
+                GameplayState gs = BuildState(st);
+                UICampaignZoneVMBase vm = UnityEngine.Object.FindObjectOfType<UICampaignZoneVMBase>();
+                if (vm == null) return "campaign map not open";
+                typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { st.CampId, gs });
+                typeof(UICampaignZoneVMBase).GetMethod("OnHandleStateChange", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(vm, new object[] { gs });
+                Location loc = gs.VisLocs.Find(l => l.Node == mn.Id);
+                return mn.Id + " " + mn.Name + ": type=" + loc.Type + " conv=" + loc.ConversationID + " " + ConvName(loc.ConversationID);
             }
             if (sub == "open")
             {

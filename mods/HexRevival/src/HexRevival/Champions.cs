@@ -151,6 +151,42 @@ namespace HexRevival
             return null;
         }
 
+        /// <summary>Deck of a champion, created from its race's starter deck if it has none.</summary>
+        public static ulong EnsureDeck(ulong championId)
+        {
+            deck_bits created;
+            return EnsureDeck(championId, out created);
+        }
+
+        /// <summary>Gives a starter deck to every champion without one; returns the decks created.</summary>
+        public static List<deck_bits> EnsureDecks()
+        {
+            List<deck_bits> res = new List<deck_bits>();
+            foreach (champion_bits c in new List<champion_bits>(s_Champions))
+            {
+                deck_bits created;
+                EnsureDeck(c.Id, out created);
+                if (created != null) res.Add(created);
+            }
+            return res;
+        }
+
+        private static ulong EnsureDeck(ulong championId, out deck_bits created)
+        {
+            created = null;
+            champion_bits c = Find(championId);
+            if (c == null) return 0UL;
+            if (c.LastDeckID != 0) return c.LastDeckID;
+            Reckoning.Game.DeckTemplate starter = null;
+            try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
+            Collection.GrantDeck(starter);
+            created = Decks.CreateForChampion(c.Name, c.Id, starter);
+            c.LastDeckID = created.Id;
+            Save();
+            Debug.Log("[HexRevival] [Champions] champion " + c.Id + " had no deck: starter deck " + c.LastDeckID + " created");
+            return c.LastDeckID;
+        }
+
         /// <summary>New deck created for a champion (first save): it becomes its deck.</summary>
         public static void SetDeck(ulong championId, ulong deckId)
         {
