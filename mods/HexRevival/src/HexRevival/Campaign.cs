@@ -151,6 +151,9 @@ namespace HexRevival
             return v.ToString();
         }
 
+        /// <summary>Last campaign event sent by the client (e.g. the conversation choice "Diff_6" of the Army of Myth).</summary>
+        public static string LastEvent;
+
         /// <summary>True when the node is a battle (its rewards come with the win, not with a conversation).</summary>
         public static bool NodeHasBattle(string node)
         {
@@ -549,6 +552,7 @@ namespace HexRevival
             if (st == null) return;
             string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
             Debug.Log("[HexRevival] [Campaign] event " + evt + (arg0 != null ? " " + arg0 : ""));
+            if (evt != "visit_node" && evt != "visit_path" && evt != "pass_node") LastEvent = evt;
             MapNode active = st.ALoc != null ? FindNode(st.ALoc) : null;
             switch (evt)
             {

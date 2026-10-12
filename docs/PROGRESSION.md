@@ -50,6 +50,9 @@ replace that default the first time a champion completes them (one time per cham
 | Node006 Horwich Sea | The Sea Witch Unfettered ("Hag") | Kiss of the Princess | LootTables2016 ("Hag Sorceress"); the Enchanted Frog condition is not checked |
 | Node013 Zila River | Gnash Bridges ("Piranhas") | Piranha Swarm | LootTables2016 (hex-server's Ravenous Piranha is a non-collectible token) |
 | Node055 Deep Desert | Hard Wurms (Wormoid Queen) | Wormoid Hydra | LootTables2016 |
+| Node078 Skittering Ridge | Killipede's Revenge ("The Blood Beneath": the flask) | Contract Killing | LootTables2016; the game gave it at the turn-in (Rizzix / Gurtok), given on the win |
+| Node053 South Desert | Gnomes at Home ("Gnomes Come Home": Herbert found) | Gnome Wayfarer | LootTables2016; the game gave it at the turn-in (Vincent), given at the camp |
+| Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"); the difficulty itself is not applied yet |
 | Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 | 1 card of the Haus's 3 | LootTables2016; Haus order assumed (PLACEHOLDER, see below) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
 | Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
@@ -70,7 +73,8 @@ Death, Raving Ghoul, Rotting Away), Diamond (Form Ranks, Ethereal Healer, Dandel
 Wild (Feralroot Jaguar, Walking Hive, Thornsprout). The game numbers its Hauses 1 to 6 (Sporemist Hollow,
 Bauer Dunes, Lena Grotto, Blau Flats, Hoff Mines, Uuug's Oasis) without naming the kind: Haus 1 =
 Artifact is confirmed (Guide2016, hex-server), the others are assumed to follow the sheet's order
-(PLACEHOLDER).
+(PLACEHOLDER: the Shroomkin dialogues give no hint). The client sends a "shroom_choice" event, so the
+game's own choice window could be restored later.
 
 Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;
@@ -83,9 +87,6 @@ game names. The dev command `loot check` lists the reward names that match nothi
 Known but not given yet:
 - Crayburn Castle (dungeon not implemented): 150 gold (Guide2016) and 4 cards by race (LootTables2016),
   e.g. Human: Noble Citizenry, Phoenix Guard Trainer, Captain of the Dragon Guard, Shards of Fate.
-- Multi-step quests (LootTables2016; turned in at the Cave-In / Ambling Mesa hubs, quest steps not
-  modelled): The Blood Beneath (Contract Killing; Blood Gate, Node037), Army of Myth "6" (Spectral
-  Caller; Forsaken Plateau, Node066), Gnomes Come Home (Gnome Wayfarer; desert, Node053-063).
 - Dungeon packs (Tranquil Dream, Fort Romor, The Usurper, Smoldering Dead, Devonshire Keep): their
   contents are in the loot tables, the dungeons are not implemented.
 - AZ2.

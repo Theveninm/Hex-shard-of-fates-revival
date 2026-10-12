@@ -89,6 +89,12 @@ namespace HexRevival
             { "Node003", new Reward { Cards = new[] { "Dire Toad" }, Gold = 150, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
             // Sporemist Hollow, Shroomkin Haus: one card out of the Haus's 3 (picked at random: PLACEHOLDER until the choice window exists)
             { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016, Note = "card picked at random among the Haus's 3 (the game let the player choose)" } },
+            // Skittering Ridge, Killipede's Revenge: the flask of "The Blood Beneath" (Src.LootTables2016: Contract Killing;
+            // the game gave it at the turn-in to Rizzix / Gurtok, quest steps not modelled: given on the win)
+            { "Node078", new Reward { Cards = new[] { "Contract Killing" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "given on the win instead of the turn-in" } },
+            // South Desert, Gnomes at Home: Herbert found, "Gnomes Come Home" (Src.LootTables2016: Gnome Wayfarer;
+            // the game gave it at the turn-in to Vincent, quest steps not modelled: given at the camp)
+            { "Node053", new Reward { Cards = new[] { "Gnome Wayfarer" }, OneTime = true, Source = Src.LootTables2016, Note = "given at Herbert's camp instead of the turn-in" } },
             // Other Shroom Hauses (scenes "SHROOM HAUS 2..6 - REWARD"): the Haus's card only (no source for gold)
             { "Node042", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
             { "Node025", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
@@ -147,12 +153,9 @@ namespace HexRevival
             new[] { "Hatchery Priest", "Incubation Webs", "Vicious Vivisector", "Shield Bot" },
         };
 
-        /// <summary>
-        /// Other quest rewards, Src.LootTables2016, not given yet (the quest steps are not modelled):
-        /// The Blood Beneath (Blood Gate, Node037), Army of Myth "6" (Forsaken Plateau, Node066),
-        /// Gnomes Come Home (desert, Node053-063).
-        /// </summary>
-        private static readonly string[] UnmappedQuestCards = { "Contract Killing", "Spectral Caller", "Gnome Wayfarer" };
+        /// <summary>Army of Myth won at difficulty 6 (the army starts with 6 resources, choice "Diff_6"): Src.LootTables2016 "Army of Myth 6".</summary>
+        private const string ArmyOfMyth6Card = "Spectral Caller";
+        private static readonly string[] UnmappedQuestCards = { ArmyOfMyth6Card };
 
         /// <summary>Shroom Haus card choices by Haus, Src.LootTables2016 ("Shroom Hauses" sheet). The Haus is recognised from the node's scene names.</summary>
         private static readonly Dictionary<string, string[]> ShroomHauses = new Dictionary<string, string[]>
@@ -216,6 +219,11 @@ namespace HexRevival
             // Taming quest ("AZ01 Tamed", Src.Game + Src.HexServer): an opponent troop tamed with the
             // taming item (IntAttr Tamed) and sent to the void is captured: 1 copy, once per champion and creature.
             List<string> extra = new List<string>();
+            if (node == "Node066" && Campaign.LastEvent == "Diff_6" && !Saves.Current.Claims.Contains(champId + ":aom6"))
+            {
+                Saves.Current.Claims.Add(champId + ":aom6");
+                extra.Add(ArmyOfMyth6Card);
+            }
             foreach (CardTemplate t in TamedCreatures())
             {
                 string key = champId + ":tamed:" + t.m_Name;
