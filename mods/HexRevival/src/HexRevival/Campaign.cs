@@ -545,9 +545,9 @@ namespace HexRevival
                 if (n.Encounter != null) d["encounter"] = n.Encounter;
                 if (repeat) d["conversationId"] = n.RepeatConversation;
                 else if (n.Conversation != null) d["conversationId"] = n.Conversation;
-                if (!repeat && n.Panorama == null && !n.IsHaus)
+                string outcome = n.Panorama == null && !n.IsHaus ? Quests.Flag(st.ChampId, "outcome:" + n.Id) : null;
+                if (outcome != null || (!repeat && n.Panorama == null && !n.IsHaus))
                 {
-                    string outcome = Quests.Flag(st.ChampId, "outcome:" + n.Id);
                     if (outcome != null)
                     {
                         // Battle just ended: its success / fail conversation opens by itself.
@@ -968,7 +968,7 @@ namespace HexRevival
                         st.ALoc = null;
                         break;
                     }
-                    if (active != null && active.Encounter != null && !st.Completed.Contains(active.Id) && active.RepeatConversation == null
+                    if (active != null && active.Encounter != null && !st.Completed.Contains(active.Id)
                         && Prelude(st.ChampId, active) != null && Quests.Flag(st.ChampId, "prelude:" + active.Id) == null)
                     {
                         // Without Herbert's gnomes the wormoid queen stays underground: nothing to fight (Src.Game dialogue).
@@ -1190,7 +1190,8 @@ namespace HexRevival
         {
             CampState st = Get(champ, false);
             MapNode active = st != null && st.ALoc != null ? FindNode(st.ALoc) : null;
-            if (active == null || (active.Encounter == null && s_Battle == null)) { QuestSim.Note("  (no battle here)"); return; }
+            // A battle already started by the dialogue (Army of Myth "Diff_N") is fought even after the conversation closed.
+            if (s_Battle == null && (active == null || active.Encounter == null)) { QuestSim.Note("  (no battle here)"); return; }
             if (s_Battle == null) StartBattle(st, active);
             OnGameEnded(won);
         }
@@ -1453,7 +1454,7 @@ namespace HexRevival
                     if (number != null)
                         foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
                             if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number) convs += c.m_Name + " | ";
-                    lines.Add(n.Id + "\t" + n.Name + "\t" + n.Type + "\tSCENES: " + n.Scenes + "\tCONVS: " + convs);
+                    lines.Add(n.Id + "\t" + n.Name + "\t" + n.Type + "\tENC: " + n.Encounter + "\tSCENES: " + n.Scenes + "\tCONVS: " + convs);
                 }
                 File.WriteAllLines(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalNodes.txt"), lines.ToArray());
                 return lines.Count + " nodes written to HexRevivalNodes.txt";

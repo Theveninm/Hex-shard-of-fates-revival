@@ -47,18 +47,24 @@ replace that default the first time a champion completes them (one time per cham
 | Node004 Sporemist Hollow | Shroomkin Haus (conversation, then the game's card choice window) | 1 card of the Haus's 3, chosen by the player, 100 gold | Guide2016, LootTables2016 (cards) |
 | Node009 The Sutherland | Cockatwice | Chickatwice, 200 gold | Guide2016 |
 | Node010 Sylvan Peninsula | Squashing Pumpkins | 1 AZ1 pack, 200 gold | Guide2016 ("Wandering Abomination"); node inferred from the route |
-| Node006 Horwich Sea | The Sea Witch Unfettered ("Hag") | Kiss of the Princess | LootTables2016 ("Hag Sorceress"); the Enchanted Frog condition is not checked |
+| Node006 Horwich Sea | The Sea Witch Unfettered ("Hag") | Kiss of the Princess if Princess Daphne is saved (game event `savedprincess`), else 100 gold + 100 XP and the card stays to win | LootTables2016 ("Hag Sorceress"), Game (event) |
 | Node013 Zila River | Gnash Bridges ("Piranhas") | Piranha Swarm | LootTables2016 (hex-server's Ravenous Piranha is a non-collectible token) |
 | Node055 Deep Desert | Hard Wurms (Wormoid Queen) | Wormoid Hydra | LootTables2016 |
-| Node078 Skittering Ridge | Killipede's Revenge ("The Blood Beneath": the flask) | Contract Killing | LootTables2016; the game gave it at the turn-in (Rizzix / Gurtok), given on the win |
-| Node053 South Desert | Gnomes at Home ("Gnomes Come Home": Herbert found) | Gnome Wayfarer | LootTables2016; the game gave it at the turn-in (Vincent), given at the camp |
 | Node066 Forsaken Plateau | Army of Myth won at difficulty 6 (the army starts with 6 resources) | Spectral Caller | LootTables2016 ("Army of Myth 6"). Once the army is beaten, the node offers the game's "Repeat Encounters" dialogue (level 1, or the army starting with 1 to 6 resources in play: Game) |
 | Node042, 025, 077, 029, 035 | Shroom Hauses 2 to 6 (same flow) | 1 card of the Haus's 3, chosen | LootTables2016; Haus kinds partly inferred (PLACEHOLDER, see below) |
 | Node014 Razortooth Forest | Savage Lord | 200 gold, 200 XP | Guide2016 (gold), HexServer (XP) |
-| Node015 Bridge over the Zila - West | "Cross the Zila River" turn-in (conversation) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item); quest condition not checked yet |
-| Node017 Cave-In / Node034 Ambling Mesa | "Find the Cave-In / Ambling Mesa" (Underworld / Ardent) | race card | LootTables2016; given at the node, quest not checked |
 | Node018 Shadowgrove | Corrupt Dryad | 1 AZ1 pack, race equipment, 250 XP | Guide2016, LootTables2016 (race item), HexServer (XP) |
-| Node030 Bridge over the Zodiac - East | "Cross the Zodiac River" turn-in (conversation) | 1 AZ1 pack, race card | Guide2016 ("Zila East", node inferred), LootTables2016 (race card) |
+
+### Quest rewards (given at the quest's turn-in)
+
+| Quest | Reward | Source |
+|---|---|---|
+| Cross the Zila River (Winston / Weston) | 1 AZ1 pack, race equipment, 300 gold | Guide2016, LootTables2016 (race item) |
+| Cross the Zodiac River (Wallace / Warren) | 1 AZ1 pack, race card | Guide2016, LootTables2016 (race card) |
+| The Blood Beneath (Rizzix / Gurtok) | Contract Killing, 300 gold | LootTables2016 (card); gold PLACEHOLDER |
+| Gnomes Come Home (Vincent) | Gnome Wayfarer, 300 gold | LootTables2016 (card); gold PLACEHOLDER |
+| Find the Cave-In / Ambling Mesa | race card | LootTables2016 |
+| Any other quest (Army of Myth, Three Braves, Sea Witch, Tamed...) | 300 gold | PLACEHOLDER (reward unknown) |
 
 Race items (LootTables2016), in race order Human, Elf, Coyotle, Orc / Dwarf, Necrotic, Shin'hare, Vennen:
 
@@ -80,6 +86,26 @@ gives the card picked.
 Taming quest ("Tamed"): when a campaign battle is won and an opponent troop marked as tamed by the
 taming item ended in the void, the creature's card is given (1 copy, once per champion and creature;
 Game: the Tamed marker, HexServer: the capture rule).
+
+Quests (Game: the quest templates, their objectives and the numbered conversations of each quest
+giver). A node's dialogue follows the champion's progress in the quest (e.g. "Robot - Step 3 -
+Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sources:
+
+- Gates: the Brink Ridge blockade (fight, sneak, or bribe for 1,000 gold: Game, the guard's answer),
+  the Blood Gate (open once "The Blood Beneath" is started: the Blood Key), the Masked Army at the
+  Vale of Oberon (open once Usurper / Fort Romor is started).
+- Sapphire Gate: where the Sapphire Key came from is unknown, the gate is open (PLACEHOLDER).
+- Gaal fortunes: 100 gold (Game, the dialogue); the fortune is a random "Fortune of ..." card of the
+  game, applied at the start of the next campaign battle only (PLACEHOLDER: which fortune and how
+  long it lasted are unknown).
+- Gnomes Come Home: the gnomes found in the Lost Gnomes camp follow the champion; the Deep Desert
+  battle happens only with them, and Herbert's camp completes the escort.
+- Not playable yet: objectives in dungeons (Tranquil Dream, Smoldering Dead, Devonshire Keep,
+  Usurper, Fort Romor), the boat to AZ2, the zombie invasion variants of some nodes.
+
+The dev command `sim` plays a quest script on a throwaway champion (e.g. `sim new Human; visit
+Node046; talk; visit Node047; talk; fight win; ...`) and writes the dialogues, quest steps and
+rewards to HexRevivalSim.txt, without touching the account in use.
 
 The loot tables are kept as published (`data/az1_pack_loot_tables.csv`); their misspelt names are
 corrected in `data/loot_name_fixes.csv`, applied by `tools/gen_loot.py`, so the mod only uses exact

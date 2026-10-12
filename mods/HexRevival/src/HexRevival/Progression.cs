@@ -88,12 +88,9 @@ namespace HexRevival
         {
             // Dunnwood, Wild Cub (the guide's "Feralroot Bear")
             { "Node003", new Reward { Cards = new[] { "Dire Toad" }, Gold = 150, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
-            // Sporemist Hollow, Shroomkin Haus: one card out of the Haus's 3 (picked at random: PLACEHOLDER until the choice window exists)
-            { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016, Note = "card picked at random among the Haus's 3 (the game let the player choose)" } },
-            // Skittering Ridge, Killipede's Revenge: the flask of "The Blood Beneath" (Src.LootTables2016: Contract Killing;
-            // the game gave it at the turn-in to Rizzix / Gurtok, quest steps not modelled: given on the win)
-            // South Desert, Gnomes at Home: Herbert found, "Gnomes Come Home" (Src.LootTables2016: Gnome Wayfarer;
-            // the game gave it at the turn-in to Vincent, quest steps not modelled: given at the camp)
+            // Sporemist Hollow, Shroomkin Haus: the card the player picks among the Haus's 3 (the game's choice window)
+            { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016 } },
+            // Quest cards given at a turn-in (Contract Killing, Gnome Wayfarer...) are in QuestRewards below.
             // Other Shroom Hauses (scenes "SHROOM HAUS 2..6 - REWARD"): the Haus's card only (no source for gold)
             { "Node042", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
             { "Node025", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
