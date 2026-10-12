@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """From scan.tsv + frames: reward windows (cropped, clean OCR) and Shroom Haus choices, with the last
 map location seen before. usage: events.py <dir>   (dir has f/ and scan.tsv) -> prints events"""
-import sys, os, re, subprocess, difflib, cv2
+import sys, os, re, subprocess, difflib, cv2, tempfile
+TESS = os.environ.get('TESSERACT', 'tesseract')
+TMP = os.path.join(tempfile.gettempdir(), 'hex_ocr_%d.png' % os.getpid())
 d = sys.argv[1]; step = 3
 here = os.path.dirname(os.path.abspath(__file__))
 names = {}
@@ -23,8 +25,8 @@ def ocr(img, crop):
     x0, y0, x1, y1 = crop
     g = cv2.cvtColor(img[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY)
     g = 255 - cv2.resize(g, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('/tmp/ev.png', g)
-    return subprocess.run(['tesseract', '/tmp/ev.png', '-', '--psm', '6'], capture_output=True, text=True).stdout
+    cv2.imwrite(TMP, g)
+    return subprocess.run([TESS, TMP, '-', '--psm', '6'], capture_output=True, text=True).stdout
 def name(s):
     m = difflib.get_close_matches(s.lower().strip(' .:|'), list(names.keys()), n=1, cutoff=0.75)
     return names[m[0]] if m else None

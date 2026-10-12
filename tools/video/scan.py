@@ -2,8 +2,10 @@
 """Resumable frame scanner: OCR of changed frames (preprocessed), matched against game names.
 usage: scan.py <framedir> <out.tsv> <step_seconds> [max_seconds_of_work]
 Output lines: time<TAB>matched names (;)<TAB>raw text (shortened)"""
-import sys, os, glob, subprocess, time, re, difflib
+import sys, os, glob, subprocess, time, re, difflib, tempfile
 import cv2, numpy as np
+TESS = os.environ.get('TESSERACT', 'tesseract')
+TMP = os.path.join(tempfile.gettempdir(), 'hex_ocr_%d.png' % os.getpid())
 fd, out, step = sys.argv[1], sys.argv[2], int(sys.argv[3])
 budget = float(sys.argv[4]) if len(sys.argv) > 4 else 160
 t0 = time.time()
@@ -36,8 +38,8 @@ with open(out, 'a', encoding='utf-8') as f:
         g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
         g = cv2.resize(g, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_CUBIC)
         g = 255 - g
-        cv2.imwrite('/tmp/scan.png', g)
-        txt = subprocess.run(['tesseract', '/tmp/scan.png', '-', '--psm', '11'], capture_output=True, text=True).stdout
+        cv2.imwrite(TMP, g)
+        txt = subprocess.run([TESS, TMP, '-', '--psm', '11'], capture_output=True, text=True).stdout
         lines = [re.sub(r'\s+', ' ', l).strip() for l in txt.split('\n') if len(l.strip()) >= 4]
         found = []
         cands = set(lines)

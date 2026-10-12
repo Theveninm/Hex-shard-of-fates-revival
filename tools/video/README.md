@@ -11,3 +11,10 @@ Extracts campaign rewards from gameplay videos the user already has, without any
    just before as context.
 
 Needs ffmpeg, tesseract (eng), python3 with opencv and numpy. Videos are not part of the repository.
+
+## Background analysis on Windows
+
+Copy `analyser.bat`, `watch.py`, `scan.py`, `events.py` and the two name lists into a `_tools` folder
+inside the video folder, then run `analyser.bat`: it installs Python, FFmpeg and Tesseract with winget
+if needed, then analyses every finished video (and the ones downloaded later) into `_resultats`:
+one `NNN.txt` per video, `resultats.txt` for all of them, `journal.txt` for progress.
