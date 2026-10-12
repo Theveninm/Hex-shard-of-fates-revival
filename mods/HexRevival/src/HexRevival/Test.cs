@@ -828,6 +828,11 @@ namespace HexRevival
                     if (parts.Length > 1 && parts[1] == "names") return Loot.DumpNames();
                     if (parts.Length > 2 && parts[1] == "find") return Loot.Find(string.Join(" ", parts, 2, parts.Length - 2));
                     return Loot.Check();
+                case "unclaim":   // dev: forget a one-time reward ("unclaim 1:aom6"; no argument: list)
+                    if (parts.Length < 2) return string.Join(",", new List<string>(Saves.Current.Claims).ToArray());
+                    bool removed = Saves.Current.Claims.Remove(parts[1]);
+                    Saves.SaveCurrent();
+                    return removed ? "removed " + parts[1] : "not found";
                 case "winbattle":   // dev: win the current battle
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAsWin(Server.CurrentSession);

@@ -666,12 +666,16 @@ namespace HexRevival
         // Encounter battles
         // ------------------------------------------------------------------
 
+        /// <summary>Node of the campaign battle in progress (the client may end the conversation that launched it before the battle ends).</summary>
+        private static string s_BattleNode;
+
         /// <summary>Difficulty of the campaign battle in progress (Army of Myth: resources the AI started with), for its rewards.</summary>
         public static int BattleDifficulty { get; private set; }
 
         private static void StartBattle(CampState st, MapNode node)
         {
             BattleDifficulty = s_Difficulty;
+            s_BattleNode = node.Id;
             Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
             UID deck = UID.Invalid;
             try
@@ -695,7 +699,8 @@ namespace HexRevival
             // BattleDifficulty is read by the rewards below, then reset
             if (st == null) return false;
             s_Battle = null;
-            MapNode node = st.ALoc != null ? FindNode(st.ALoc) : null;
+            MapNode node = s_BattleNode != null ? FindNode(s_BattleNode) : st.ALoc != null ? FindNode(st.ALoc) : null;
+            s_BattleNode = null;
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
             Save();
