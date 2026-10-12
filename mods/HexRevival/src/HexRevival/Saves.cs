@@ -18,6 +18,8 @@ namespace HexRevival
         public class Info
         {
             public string Name;
+            /// <summary>Folder outside the account list (quest simulation), null for accounts.</summary>
+            public string Folder;
             public bool UnlockAll;
             public long Gold;
             public long Platinum;
@@ -45,7 +47,15 @@ namespace HexRevival
         public static string File(string name)
         {
             if (s_Current == null) throw new InvalidOperationException("no save selected");
-            return Path.Combine(Path.Combine(RootDir, s_Current.Name), name);
+            return Path.Combine(s_Current.Folder ?? Path.Combine(RootDir, s_Current.Name), name);
+        }
+
+        /// <summary>Replaces the save in use without logging in (quest simulation); returns the previous one.</summary>
+        internal static Info Swap(Info save)
+        {
+            Info old = s_Current;
+            s_Current = save;
+            return old;
         }
 
         /// <summary>Saves, most recently played first.</summary>

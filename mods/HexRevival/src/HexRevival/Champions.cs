@@ -77,6 +77,9 @@ namespace HexRevival
             return new List<champion_bits>(s_Champions);
         }
 
+        /// <summary>Reloads the champions of the save in use.</summary>
+        public static void Reload() { Load(s_ReckId, null); }
+
         private static champion_bits New(ulong id, string name)
         {
             champion_bits c = new champion_bits();

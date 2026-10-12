@@ -113,6 +113,8 @@ namespace HexRevival
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItemEvent"));
             apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
+            // End-of-battle campaign events of the game's rules (princess saved, creatures tamed...).
+            apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
             {
                 MethodInfo m = AccessTools.Method(typeof(AuthoritativeSessionBase), "EndGame", new[] { typeof(List<UID>), typeof(List<UID>), typeof(bool) });
@@ -291,6 +293,7 @@ namespace HexRevival
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
+        public static void Session_PublishEvent(string __0) { Campaign.OnPublishEvent(__0); }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
 
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)

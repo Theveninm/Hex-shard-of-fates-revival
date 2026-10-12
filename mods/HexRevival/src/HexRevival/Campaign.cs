@@ -52,6 +52,7 @@ namespace HexRevival
             public string Panorama;      // hub panorama scene (Cave-In, Ambling Mesa, Thunderfield): NPCs and quest givers
             public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
+            public string FightEncounter; // battle started by a dialogue choice "choice_fight" (Brink Ridge blockade)
         }
 
         private static List<MapNode> s_Nodes;
@@ -154,13 +155,27 @@ namespace HexRevival
             return v.ToString();
         }
 
+        /// <summary>End-of-battle events published by the game's rules (Src.Game: HandleGameplayChallenges), e.g. "savedprincess", "tamed".</summary>
+        public static readonly HashSet<string> BattleEvents = new HashSet<string>();
+        private static bool s_FortuneApplied;
+
+        /// <summary>StandaloneSession.PublishEvent (Harmony prefix): records the event of the battle in progress.</summary>
+        public static void OnPublishEvent(string key)
+        {
+            if (key == null) return;
+            BattleEvents.Add(key);
+            Debug.Log("[HexRevival] [Campaign] battle event " + key);
+        }
+
         /// <summary>Resources the AI starts with in play in the next campaign battle (Army of Myth difficulty).</summary>
         private static int s_Difficulty;
 
         /// <summary>Called on every server update (Server.Flush): applies the difficulty once the mulligan is over.</summary>
         public static void OnSessionTick(StandaloneSession ss)
         {
-            if (s_Difficulty <= 0 || ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
+            if (ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
+            if (s_Battle != null && !s_FortuneApplied) { s_FortuneApplied = true; Fortunes.Apply(ss, s_Battle.ChampId); }
+            if (s_Difficulty <= 0) return;
             Player ai = Cheats.FindPlayer(ss, "ai");
             if (ai != null)
             {
@@ -221,6 +236,22 @@ namespace HexRevival
             foreach (ConversationTemplate c in NodeConvs(n))
                 if (Quests.MatchesChampion(c.m_Name, champ) && !IsOutcome(c.m_Name) && (best == null || ConversationRank(c.m_Name) < ConversationRank(best.m_Name))) best = c;
             return best == null ? n.Conversation : best.m_Id.ToString();
+        }
+
+        /// <summary>
+        /// Conversations that leave the way closed (Src.Game dialogues): bridges whose keeper waits for
+        /// the quest, the Blood Gate without its key, the Masked Army without a faction quest, the Brink
+        /// Ridge blockade unless the player sneaked past or paid.
+        /// </summary>
+        private static bool IsGate(ulong champ, MapNode n, string convId)
+        {
+            string u = ConvName(convId).ToUpperInvariant();
+            if (u.Contains("BLOCKADE - STEP"))
+            {
+                string choice = Quests.Flag(champ, "choice:" + n.Id);
+                return choice != "choice_sneak" && choice != "choice_Bribe";
+            }
+            return (u.Contains("STEP 1B") && u.Contains("NOT BEATEN")) || u.Contains("STEP 1 - LOCKED") || u.Contains("MASKED ARMY - STEP 1");
         }
 
         /// <summary>Conversation shown before a node's battle (null if none).</summary>
@@ -286,6 +317,10 @@ namespace HexRevival
                 EncounterScene es = s as EncounterScene;
                 if (es != null && NameNumber(es.m_Name, "AZ1-NODE") == number) n.Scenes += es.m_Name + " / " + es.m_Title + " | ";
             }
+            // Brink Ridge: the blockade's battle scene is "NODE 19A" (Src.Game).
+            if (n.Id == "Node019")
+                foreach (SceneData s in tm.CampaignScenes.Values)
+                    if (s is EncounterScene && s.m_Name != null && s.m_Name.Replace(" ", "").ToUpperInvariant().StartsWith("AZ1-NODE19A-")) n.FightEncounter = s.m_Id.ToString();
             foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
                 if (c != null && NameNumber(c.m_Name, "AZ1-NODE") == number && c.m_Name.ToUpperInvariant().Contains("REPEAT ENCOUNTERS") && !NodeScripts.HasRules(n.Id)) n.RepeatConversation = c.m_Id.ToString();
             foreach (SceneData s in tm.CampaignScenes.Values)
@@ -600,7 +635,7 @@ namespace HexRevival
         private const int AnswerDelayFrames = 5;
         private static readonly List<KeyValuePair<int, Action>> s_Answers = new List<KeyValuePair<int, Action>>();
 
-        private static void Enqueue(Action a) { s_Answers.Add(new KeyValuePair<int, Action>(Time.frameCount + AnswerDelayFrames, a)); }
+        private static void Enqueue(Action a) { if (QuestSim.Active) return; s_Answers.Add(new KeyValuePair<int, Action>(Time.frameCount + AnswerDelayFrames, a)); }
 
         /// <summary>Called every frame (main thread).</summary>
         public static void Pump()
@@ -700,7 +735,7 @@ namespace HexRevival
                     if (q != null)
                     {
                         bool started = Quests.IsStarted(champ, q), finished = Quests.IsFinished(champ, q);
-                        if (r == Quests.Role.End && Quests.TurnInReady(champ, q)) { cr = 0; t = true; }
+                        if (r == Quests.Role.End && Quests.TurnInReady(champ, q, c.m_Id.ToString())) { cr = 0; t = true; }
                         else if (r == Quests.Role.Start && !started && Quests.CanStart(champ, q)) { cr = 1; g = true; }
                         else if (r == Quests.Role.NotComplete && started && !finished) cr = 2;
                         else if (r == Quests.Role.Repeat && finished) cr = 3;
@@ -936,6 +971,8 @@ namespace HexRevival
                     if (active != null && active.Encounter != null && !st.Completed.Contains(active.Id) && active.RepeatConversation == null
                         && Prelude(st.ChampId, active) != null && Quests.Flag(st.ChampId, "prelude:" + active.Id) == null)
                     {
+                        // Without Herbert's gnomes the wormoid queen stays underground: nothing to fight (Src.Game dialogue).
+                        if (ConvName(Prelude(st.ChampId, active)).ToUpperInvariant().Contains("NO GNOMES IN DECK")) { st.ALoc = null; break; }
                         // Prelude seen: the battle comes next, unless the player avoided it (sneak past, bribe).
                         Quests.SetFlag(st.ChampId, "prelude:" + active.Id, "1");
                         string choice = Quests.Flag(st.ChampId, "choice:" + active.Id);
@@ -971,6 +1008,19 @@ namespace HexRevival
                         else if (active.Encounter == null && active.Panorama == null && !active.IsHaus) convId = NodeConversation(st.ChampId, active);
                         if (convId == null) convId = active.Conversation;
                     }
+                    if (active != null && evt == "conv_done" && active.FightEncounter != null && Quests.Flag(st.ChampId, "choice:" + active.Id) == "choice_fight")
+                    {
+                        // Dialogue ending in a fight: the battle decides whether the node is passed.
+                        Quests.SetFlag(st.ChampId, "choice:" + active.Id, null);
+                        StartBattle(st, active, active.FightEncounter);
+                        break;
+                    }
+                    if (active != null && evt == "conv_done" && IsGate(st.ChampId, active, convId))
+                    {
+                        // The way stays closed: the node is not completed, so what lies beyond is not revealed.
+                        st.ALoc = null;
+                        break;
+                    }
                     if (active != null) Complete(st, active);
                     st.ALoc = null;
                     if (active != null && evt == "conv_done")
@@ -996,14 +1046,15 @@ namespace HexRevival
                 default:
                     // Army of Myth repeat: "Diff_N" = fight the army with N resources in play (0 = level 1); "Cancel" = no fight.
                     int diff;
-                    if (evt.StartsWith("choice_") && active != null)
+                    if (evt == "gaal_camp_accept") Fortunes.Buy(st.ChampId);
+                    else if (evt.StartsWith("choice_") && active != null)
                     {
                         // Dialogue choices that change what follows (help or not, sneak, bribe, robot install).
                         Quests.SetFlag(st.ChampId, "choice:" + active.Id, evt);
                         if (evt == "choice_install" || evt == "choice_no_install") Quests.SetFlag(st.ChampId, "robot", evt);
                         if (evt == "choice_Bribe" && Saves.Current != null)
                         {
-                            // PLACEHOLDER cost: the dialogue asks for "a lot of gold", 1000 assumed.
+                            // Src.Game: the guard's answer "Fine. [Pay 1000 gold]".
                             Saves.Current.Gold = Math.Max(0L, Saves.Current.Gold - 1000);
                             Saves.SaveCurrent();
                             try { GameClient.Instance.PlayerProfile.UpdateBalance((int)Saves.Current.Gold, (int)Saves.Current.Platinum); } catch { }
@@ -1043,7 +1094,9 @@ namespace HexRevival
         /// <summary>Difficulty of the campaign battle in progress (Army of Myth: resources the AI started with), for its rewards.</summary>
         public static int BattleDifficulty { get; private set; }
 
-        private static void StartBattle(CampState st, MapNode node)
+        private static void StartBattle(CampState st, MapNode node) { StartBattle(st, node, node.Encounter); }
+
+        private static void StartBattle(CampState st, MapNode node, string encounter)
         {
             BattleDifficulty = s_Difficulty;
             s_BattleNode = node.Id;
@@ -1064,7 +1117,9 @@ namespace HexRevival
             // The battle HUD reads the level from the profile's current champion.
             try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, st.ChampId); }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Campaign] current champion: " + e.Message); }
-            Enqueue(() => Patches.StartMatch(deck, new ResourceId(node.Encounter), null, "campaign " + node.Name));
+            BattleEvents.Clear();
+            s_FortuneApplied = false;
+            Enqueue(() => Patches.StartMatch(deck, new ResourceId(encounter), null, "campaign " + node.Name));
         }
 
         /// <summary>Called once when a match ends. Returns false if it was not a campaign battle.</summary>
@@ -1081,6 +1136,7 @@ namespace HexRevival
             st.ALoc = null;
             Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
+            QuestSim.Note("  battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
             if (won && node != null && node.Encounter != null)
             {
                 Quests.SetFlag(st.ChampId, "won:" + node.Encounter, "1");
@@ -1103,6 +1159,74 @@ namespace HexRevival
             BattleDifficulty = 0;
             return true;
         }
+
+        // ------------------------------------------------------------------
+        // Quest simulation helpers (see QuestSim)
+        // ------------------------------------------------------------------
+
+        /// <summary>New campaign for a simulated champion, the whole map visible.</summary>
+        internal static void SimStart(ulong champ)
+        {
+            CampState st = Get(champ, true);
+            BuildMap();
+            foreach (MapNode n in s_Nodes) st.Visible.Add(n.Id);
+            Save();
+        }
+
+        /// <summary>What the client would show at a node: type, conversation, flags.</summary>
+        internal static string SimDescribe(ulong champ, string node)
+        {
+            CampState st = Get(champ, false);
+            MapNode mn = FindNode(node);
+            if (st == null || mn == null) return "no campaign or node " + node;
+            Location l = BuildState(st).VisLocs.Find(x => x.Node == mn.Id);
+            if (l == null) return mn.Id + ": not sent";
+            return mn.Id + " " + mn.Name + ": " + l.Type + (l.ConversationID != null ? " \"" + ConvName(l.ConversationID) + "\"" : "")
+                + (l.AutoStart ? " autostart" : "") + (l.Completed ? " completed" : "") + (l.Repeatable ? " repeatable" : "");
+        }
+
+        /// <summary>Battle at the active node, won or lost (no match is played).</summary>
+        internal static void SimFight(ulong champ, bool won)
+        {
+            CampState st = Get(champ, false);
+            MapNode active = st != null && st.ALoc != null ? FindNode(st.ALoc) : null;
+            if (active == null || (active.Encounter == null && s_Battle == null)) { QuestSim.Note("  (no battle here)"); return; }
+            if (s_Battle == null) StartBattle(st, active);
+            OnGameEnded(won);
+        }
+
+        /// <summary>Enters a hub: the NPCs and what each offers.</summary>
+        internal static string SimHub(ulong champ, string node)
+        {
+            CampState st = Get(champ, false);
+            MapNode mn = FindNode(node);
+            if (st == null || mn == null || mn.Panorama == null) return "not a hub: " + node;
+            EnterPanorama(st, mn);
+            return SimNpcs(champ);
+        }
+
+        internal static string SimNpcs(ulong champ)
+        {
+            PanoState ps;
+            if (!s_Pano.TryGetValue(champ, out ps)) return "not in a hub";
+            List<string> l = new List<string>();
+            foreach (Npc n in HubNpcs(champ, ps.Node)) l.Add(n.Name + (n.Give ? " [!]" : n.TurnIn ? " [?]" : "") + " \"" + n.ConvName + "\"");
+            return string.Join("\n    ", l.ToArray());
+        }
+
+        /// <summary>Talks to a hub NPC (whole conversation).</summary>
+        internal static string SimNpc(ulong champ, string npc)
+        {
+            PanoState ps;
+            if (!s_Pano.TryGetValue(champ, out ps)) return "not in a hub";
+            Npc n = HubNpcs(champ, ps.Node).Find(x => string.Equals(x.Name, npc, StringComparison.OrdinalIgnoreCase));
+            if (n == null) return "no NPC " + npc;
+            ps.ALoc = n.Name;
+            PanoEvent(champ, "conv_done", null);
+            return n.Name + ": \"" + n.ConvName + "\"";
+        }
+
+        internal static void SimLeaveHub(ulong champ) { s_Pano.Remove(champ); }
 
         // ------------------------------------------------------------------
         // Test command
@@ -1148,13 +1272,21 @@ namespace HexRevival
                 ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
                 CampState st = Get(champ, false);
                 MapNode n = FindNode(parts[2]);
-                if (st == null || n == null || n.Encounter == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
+                string enc = n != null ? n.Encounter ?? n.FightEncounter : null;
+                if (st == null || enc == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
                 st.ALoc = n.Name;
                 LastEvent = parts.Length > 3 ? parts[3] : "start";
                 int diff;
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
-                StartBattle(st, n);
+                StartBattle(st, n, enc);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
+            }
+            if (sub == "fortune")
+            {
+                // dev: "camp fortune" = a gaal reading for the current champion (pays 100 gold)
+                ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                Fortunes.Buy(champ);
+                return "fortune " + Quests.Flag(champ, "fortune");
             }
             if (sub == "goto" && parts.Length > 2)
             {

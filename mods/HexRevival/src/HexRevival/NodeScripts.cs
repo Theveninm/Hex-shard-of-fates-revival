@@ -66,24 +66,46 @@ namespace HexRevival
                 R("Bluejay - Step 5", c => true) } },
             // Gaal fortune tellers: first meeting, then the repeat dialogue.
             { "Node007", new[] {
+                R("Step 3 Player already has fortune", c => Fortunes.Has(c) && Quests.Flag(c, "visited:Node007") != null),
                 R("Step 1 First encounter", c => Quests.Flag(c, "visited:Node007") == null),
                 R("Step 2 Repeat", c => true) } },
             { "Node016", new[] {
-                R("Step 1 First encounter (", c => Quests.Flag(c, "visited:Node016") == null),
-                R("Simza the gaal - Step 1 First encounter", c => Quests.Flag(c, "visited:Node016") == null),
+                R("Step 1 First encounter - Player already has fortune", c => Fortunes.Has(c) && Quests.Flag(c, "visited:Node016") == null),
+                R("Step 3 Player already has fortune", c => Fortunes.Has(c)),
+                R("Step 1 First encounter", c => Quests.Flag(c, "visited:Node016") == null),
                 R("Step 2 Repeat", c => true) } },
             { "Node048", new[] {
+                R("Step 1 First encounter - Player already has fortune", c => Fortunes.Has(c) && Quests.Flag(c, "visited:Node048") == null),
+                R("Step 3 Player already has fortune", c => Fortunes.Has(c)),
                 R("Step 1 First encounter", c => Quests.Flag(c, "visited:Node048") == null),
                 R("Step 2 Repeat", c => true) } },
+            // Gnomes Come Home: Herbert's camps and the desert crossing.
+            { "Node057", new[] {
+                R("Lost Gnomes - Step 1", c => S(c, Quests.Gnomes) && !D(c, Quests.Gnomes, "Step1")),
+                R("Lost Gnomes - Step 2", c => true) } },
+            { "Node053", new[] {
+                R("Abandoned Camp - Step 4", c => Quests.EscortingGnomes(c)),
+                R("Abandoned Camp - Step 2", c => Quests.Flag(c, "visited:Node053") != null),
+                R("Abandoned Camp - Step 1", c => true) } },
+            { "Node055", new[] {
+                R("Gnomes In Deck (Fight)", c => Quests.EscortingGnomes(c)),
+                R("No Gnomes In Deck", c => true) } },
+            // Masked Army at the Vale of Oberon: the way south needs the faction's quest (Usurper / Fort Romor).
+            { "Node00R", new[] {
+                R("Masked Army - Step 3", c => F(c, "az01_q_usurper") || F(c, "az01_q_fort_romor")),
+                R("Masked Army - Step 2", c => S(c, "az01_q_usurper") || S(c, "az01_q_fort_romor")),
+                R("Masked Army - Step 1", c => true) } },
+            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open).
+            { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {
-                R("Blockade - Step 2 (Blockade", c => true),
                 R("Blockade - Step 2", c => true) } },
             { "Node044", new[] {
                 R("Bungle in the Jungle - Step 2", c => S(c, "q_gnomes_come_home")),
                 R("Bungle in the Jungle - Step 1", c => true) } },
+            // Blood Gate: open with the Blood Key that Rizzix / Gurtok give with "The Blood Beneath".
             { "Node037", new[] {
-                R("Blood Gate - Step 2", c => D(c, "q_blood_beneath", "Step1")),
+                R("Blood Gate - Step 2", c => S(c, "q_blood_beneath")),
                 R("Blood Gate - Step 1", c => true) } },
         };
 
@@ -95,6 +117,9 @@ namespace HexRevival
             foreach (Rule r in rules)
             {
                 if (!r.When(champ)) continue;
+                // A name ending with the rule's text first ("Step 1 First encounter" is not "... - Player already has fortune").
+                foreach (KeyValuePair<string, string> c in convs)
+                    if (c.Key.TrimEnd().EndsWith(r.Name, StringComparison.OrdinalIgnoreCase)) return c.Value;
                 foreach (KeyValuePair<string, string> c in convs)
                     if (c.Key.IndexOf(r.Name, StringComparison.OrdinalIgnoreCase) >= 0) return c.Value;
             }

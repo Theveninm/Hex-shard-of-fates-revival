@@ -39,6 +39,7 @@ namespace HexRevival
             public string Dungeon;        // dungeon id (Dungeon)
             public List<string> Conversations = new List<string>(); // completing conversations (Conversation)
             public bool Taming;           // "Tame X and win match": needs a captured creature
+            public string Title;          // objective text shown by the journal (English)
         }
 
         public class Def
@@ -82,6 +83,7 @@ namespace HexRevival
                 {
                     Objective ob = new Objective { LocId = o.m_QuestLocationId };
                     string title = o.m_Title != null && o.m_Title.Count > 0 ? o.m_Title[0].m_Text : "";
+                    ob.Title = title;
                     QuestObjectiveEncounter enc = o as QuestObjectiveEncounter;
                     QuestObjectiveDungeon dun = o as QuestObjectiveDungeon;
                     QuestObjectiveConversation conv = o as QuestObjectiveConversation;
@@ -227,19 +229,30 @@ namespace HexRevival
             return d.Objectives.Count;
         }
 
-        /// <summary>True when the quest waits for its turn-in conversation (every objective before it done).</summary>
-        public static bool TurnInReady(ulong champ, string script)
+        /// <summary>
+        /// True when the quest waits for this turn-in conversation: every objective before it done, and
+        /// the open objective is this conversation or the quest's final turn-in.
+        /// </summary>
+        public static bool TurnInReady(ulong champ, string script, string convId)
         {
             Def d = GetDef(script);
             Progress p = Get(champ, script);
             if (d == null || p == null || p.Finished) return false;
             int i = FirstOpen(d, p);
-            return i < d.Objectives.Count && d.Objectives[i].Kind == "Conversation";
+            if (i >= d.Objectives.Count || d.Objectives[i].Kind != "Conversation") return false;
+            // Templates often list one faction's turn-in only: the last objective accepts any turn-in of the quest.
+            return d.Objectives[i].Conversations.Contains(convId) || i == d.Objectives.Count - 1;
         }
 
         // ------------------------------------------------------------------
         // Changes
         // ------------------------------------------------------------------
+
+        private static void Log(string message)
+        {
+            Debug.Log("[HexRevival] [Quests] " + message);
+            QuestSim.Note("  quest: " + message);
+        }
 
         public static void Start(ulong champ, string script)
         {
@@ -255,7 +268,7 @@ namespace HexRevival
             }
             if (script == "az01_q_cross_the_river" && Flag(champ, "won:Node014") != null) p.Done.Add(0);
             Save();
-            Debug.Log("[HexRevival] [Quests] " + champ + " started " + script);
+            Log(champ + " started " + script);
             NotifyStarted(champ, d);
         }
 
@@ -296,24 +309,24 @@ namespace HexRevival
         private static void Complete(ulong champ, Def d, Progress p, int objective)
         {
             p.Done.Add(objective);
-            // Objectives the mod does not track (collect counters; a "C" turn-in right after its "B" step) follow automatically.
+            // Objectives the mod does not track (a "C" turn-in right after its "B" step) follow automatically.
             for (int i = FirstOpen(d, p); i < d.Objectives.Count; i = FirstOpen(d, p))
             {
                 Objective o = d.Objectives[i];
-                if (o.Kind == "Collect" || (o.Kind == "Conversation" && o.LocId.EndsWith("C") && i > 0 && d.Objectives[i - 1].LocId.EndsWith("B"))) p.Done.Add(i);
+                if (o.Kind == "Conversation" && o.LocId.EndsWith("C") && i > 0 && d.Objectives[i - 1].LocId.EndsWith("B")) p.Done.Add(i);
                 else break;
             }
             if (FirstOpen(d, p) >= d.Objectives.Count)
             {
                 p.Finished = true;
-                Debug.Log("[HexRevival] [Quests] " + champ + " finished " + d.Script);
+                Log(champ + " finished " + d.Script);
                 Save();
                 NotifyUpdated(champ, d);
                 Progression.OnQuestFinished(champ, d.Script);
                 OnFinished(champ, d.Script);
                 return;
             }
-            Debug.Log("[HexRevival] [Quests] " + champ + " " + d.Script + ": objective " + d.Objectives[objective].LocId + " done");
+            Log(champ + " " + d.Script + ": objective " + d.Objectives[objective].LocId + " done");
             Save();
             NotifyUpdated(champ, d);
         }
@@ -388,7 +401,7 @@ namespace HexRevival
             {
                 if (i > last && !p.Done.Contains(i)) continue;
                 Objective o = d.Objectives[i];
-                if (o.Kind == "Collect") continue; // counters (gnomes) are not tracked yet
+                if (o.LocId.EndsWith("_INFO")) continue; // counters (number of gnomes) are not tracked
                 Dictionary<string, object> l = new Dictionary<string, object>();
                 l["name"] = o.LocId;
                 l["node"] = o.LocId;
@@ -418,6 +431,7 @@ namespace HexRevival
 
         internal static void Invoke(string handler, object notify)
         {
+            if (QuestSim.Active) return; // simulation: the client is not told
             try
             {
                 object mgr = GameClient.Instance.CampaignMgr;
@@ -441,6 +455,11 @@ namespace HexRevival
             new[] { "USURPER", "az01_q_usurper" }, new[] { "FORT ROMOR", "az01_q_fort_romor" },
             new[] { "STARTS AZ2", "q_go_to_az2" },
         };
+
+        public const string Gnomes = "q_gnomes_come_home";
+
+        /// <summary>Gnomes Come Home: Herbert's team found and not yet back at the camp (they travel with the champion).</summary>
+        public static bool EscortingGnomes(ulong champ) { return DoneLoc(champ, Gnomes, "Step1") && !DoneLoc(champ, Gnomes, "Step2"); }
 
         public enum Role { None, Start, NotComplete, End, Repeat }
 
@@ -518,6 +537,8 @@ namespace HexRevival
             if (u.Contains("WINSTON - STEP 1")) Start(champ, "az01_q_cross_the_river");
             if (u.Contains("WALLACE - STEP 1")) Start(champ, "az01_q_cross_the_river_part2");
             if (u.Contains("ROBOT - STEP 1")) Start(champ, "az01_three_braves");
+            // Gnomes Come Home: Herbert's team brought back to the abandoned camp.
+            if (u.Contains("ABANDONED CAMP - STEP 4")) { CompleteLoc(champ, Gnomes, "Step2_INFO"); CompleteLoc(champ, Gnomes, "Step2"); }
             if (u.Contains("WARREN - STEP 1A")) CompleteLoc(champ, "az01_q_cross_the_river_part2", "Step3");
             if (u.Contains("ROBOT - STEP 2 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step1B");
             if (u.Contains("ROBOT - STEP 3 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step2B");
@@ -532,9 +553,29 @@ namespace HexRevival
         /// <summary>"quest [start|done script]": quests of the current champion.</summary>
         public static string Command(string[] parts)
         {
-            ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+            ulong champ = parts.Length > 2 && parts[1] == "of" ? ulong.Parse(parts[2]) : GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
             if (parts.Length > 2 && parts[1] == "start") { Start(champ, parts[2]); return "started " + parts[2]; }
             if (parts.Length > 2 && parts[1] == "reset") { Of(champ).Remove(parts[2]); Save(); return "reset " + parts[2]; }
+            if (parts.Length > 1 && parts[1] == "defs")
+            {
+                // dev: every AZ1 quest with its objectives, to HexRevivalQuests.txt
+                Load();
+                List<string> lines = new List<string>();
+                foreach (string script in AZ1Scripts)
+                {
+                    Def d = GetDef(script);
+                    if (d == null) { lines.Add(script + ": NOT FOUND"); continue; }
+                    lines.Add("=== " + script);
+                    for (int i = 0; i < d.Objectives.Count; i++)
+                    {
+                        Objective ob = d.Objectives[i];
+                        lines.Add("  " + i + " " + ob.LocId + " " + ob.Kind + (ob.Taming ? " (taming)" : "") + " enc=" + ob.Encounter + " dun=" + ob.Dungeon
+                            + " convs=" + string.Join(",", ob.Conversations.ToArray()) + " | " + (ob.Title ?? "").Replace("\n", " "));
+                    }
+                }
+                File.WriteAllLines(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalQuests.txt"), lines.ToArray());
+                return lines.Count + " lines written to HexRevivalQuests.txt";
+            }
             if (parts.Length > 1 && parts[1] == "convs")
             {
                 // dev: conversations that complete each conversation objective, to HexRevivalQuestConvs.txt

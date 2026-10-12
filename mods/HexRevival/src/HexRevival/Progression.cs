@@ -71,6 +71,7 @@ namespace HexRevival
             public string RaceQuest;                    // key of RaceRewards: the item of the champion's race
             public bool ShroomHaus;                     // one of the Haus's 3 cards (see ShroomHauses)
             public bool OneTime;                        // once per champion
+            public string NeedsEvent;                   // the cards need this end-of-battle event (Src.Game: HandleGameplayChallenges)
             public Src Source;
             public string Note;
         }
@@ -107,7 +108,7 @@ namespace HexRevival
             // hex-server's "Ravenous Piranha" is a non-collectible token of the encounter)
             { "Node013", new Reward { Cards = new[] { "Piranha Swarm" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
             // Horwich Sea, The Sea Witch Unfettered (conversations "Hag", "Hag - Princess Revert"): Src.LootTables2016 "Hag Sorceress"
-            { "Node006", new Reward { Cards = new[] { "Kiss of the Princess" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "given on the win; the Enchanted Frog condition is not checked" } },
+            { "Node006", new Reward { Cards = new[] { "Kiss of the Princess" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "the card needs Princess Daphne saved (game event savedprincess)", NeedsEvent = "savedprincess" } },
             // Deep Desert, Hard Wurms (conversations "Wormoid Queen Tunnels/Surfaces"): Src.LootTables2016 "Wormoid Queen"
             { "Node055", new Reward { Cards = new[] { "Wormoid Hydra" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
             // Razortooth Forest, Savage Lord: 200 gold (guide 2016); hex-server later saw 300 gold + 200 XP
@@ -237,6 +238,12 @@ namespace HexRevival
             Reward special = AZ1.TryGetValue(node, out r) ? r : null;
             bool claimed = special != null && special.OneTime && Saves.Current.Claims.Contains(champId + ":" + node);
             Reward give = special != null && !claimed ? special : DefaultBattle;
+            if (give.NeedsEvent != null && !Campaign.BattleEvents.Contains(give.NeedsEvent))
+            {
+                // Condition not met: the battle's gold and XP only, the node stays claimable for its cards.
+                give = new Reward { Gold = give.Gold, Xp = give.Xp, Source = give.Source };
+                Saves.Current.Claims.Remove(champId + ":" + node);
+            }
             if (special != null && special.OneTime && !claimed) Saves.Current.Claims.Add(champId + ":" + node);
             // Taming quest ("AZ01 Tamed", Src.Game + Src.HexServer): an opponent troop tamed with the
             // taming item (IntAttr Tamed) and sent to the void is captured: 1 copy, once per champion and creature.
@@ -265,7 +272,7 @@ namespace HexRevival
         }
 
         /// <summary>True when an opponent troop was captured with the taming item in the match that ended.</summary>
-        public static bool AnyTamed() { return TamedCreatures().Count > 0; }
+        public static bool AnyTamed() { return QuestSim.Active ? QuestSim.Tamed : TamedCreatures().Count > 0; }
 
         /// <summary>
         /// Quest rewards, given at the turn-in (Src.LootTables2016 for the cards; the race card of the
@@ -295,29 +302,31 @@ namespace HexRevival
         /// <summary>Opponent troops of the match that ended, in the void with the Tamed marker.</summary>
         private static List<CardTemplate> TamedCreatures()
         {
+            // The game's taming effect voids the creature and records its card id in the human
+            // champion's TamedCards list (Src.Game: TACAbilityEffectTemplate.Tame).
             List<CardTemplate> res = new List<CardTemplate>();
             try
             {
-                object session = Server.CurrentSession;
-                if (session == null) return res;
-                FieldInfo f = null;
-                for (Type t = session.GetType(); t != null && f == null; t = t.BaseType)
-                    f = t.GetField("m_Players", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly);
-                System.Collections.IEnumerable players = f != null ? f.GetValue(session) as System.Collections.IEnumerable : null;
-                if (players == null) return res;
-                foreach (object o in players)
+                StandaloneSession ss = Server.CurrentSession;
+                if (ss == null) return res;
+                List<Card> all = new List<Card>();
+                Game.Shared.Player human = null;
+                foreach (Game.Shared.Player p in ss.GetAllPlayers())
                 {
-                    Game.Shared.Player p = o as Game.Shared.Player;
-                    if (p == null || !p.IsAI() || p.m_Void == null) continue;
-                    foreach (Card c in p.m_Void.m_Cards)
-                    {
-                        if (c == null || !c.IsTroop()) continue;
-                        bool tamed = c.GetBool(IntAttrs.Tamed) || c.GetCardContext().GetBool(IntAttrs.Tamed) || c.GetOrCreate(TACAttrs.PermanentData).GetBool(IntAttrs.Tamed);
-                        if (!tamed) continue;
-                        CardTemplate t = c.m_OriginalCardTemplateId.IsValid ? Singleton<TemplateManager>.Instance.GetCardTemplate(c.m_OriginalCardTemplateId) : null;
-                        if (t == null) t = c.m_CardTemplate;
-                        if (t != null && !res.Exists(x => x.m_Name == t.m_Name)) res.Add(t);
-                    }
+                    if (p == null) continue;
+                    all.AddRange(p.GetAllCards());
+                    if (!p.IsAI()) human = p;
+                }
+                TACList tamed = human != null && human.m_ChampionCard != null ? human.m_ChampionCard.Get(TACAttrs.PermanentData, ListAttrs.TamedCards) : null;
+                if (tamed == null) return res;
+                foreach (TAC t in tamed)
+                {
+                    int id = t.Get(IntAttrs.Id);
+                    Card c = all.Find(x => x != null && (int)x.m_SessionCardId.InstanceId == id);
+                    if (c == null) continue;
+                    CardTemplate tpl = c.m_OriginalCardTemplateId.IsValid ? Singleton<TemplateManager>.Instance.GetCardTemplate(c.m_OriginalCardTemplateId) : null;
+                    if (tpl == null) tpl = c.m_CardTemplate;
+                    if (tpl != null && !res.Exists(x => x.m_Name == tpl.m_Name)) res.Add(tpl);
                 }
                 if (res.Count > 0) Debug.Log("[HexRevival] [Progression] tamed: " + string.Join(", ", res.ConvertAll(x => x.m_Name).ToArray()));
             }
@@ -348,6 +357,12 @@ namespace HexRevival
             List<string> names = new List<string>(r.Cards);
             if (r.RaceQuest != null) { string n = RaceReward(champId, r.RaceQuest); if (n != null) names.Add(n); }
             if (r.ShroomHaus) names.Add(ShroomHausCard(node));
+            if (QuestSim.Active)
+            {
+                // Simulation: the reward is only described (nothing is given to the account in use).
+                QuestSim.Note("  REWARD " + what + ": " + r.Gold + " gold, " + r.Xp + " XP, " + r.Packs + " pack(s)" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : ""));
+                return;
+            }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
             for (int i = 0; i < r.Packs; i++) foreach (Loot.Drop d in Loot.Open(Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
             if (r.Gold > 0)
