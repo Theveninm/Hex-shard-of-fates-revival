@@ -265,6 +265,7 @@ namespace HexRevival
             {
                 Objective o = d.Objectives[i];
                 if (o.Kind == "Encounter" && !o.Taming && o.Encounter != null && Flag(champ, "won:" + o.Encounter) != null) p.Done.Add(i);
+                if (o.Kind == "Dungeon" && o.Dungeon != null && Flag(champ, "dungeon:" + ObjectiveDungeon(script, o)) != null) p.Done.Add(i);
             }
             if (script == "az01_q_cross_the_river" && Flag(champ, "won:Node014") != null) p.Done.Add(0);
             Save();
@@ -304,6 +305,33 @@ namespace HexRevival
                     Complete(champ, d, q.Value, i);
                 }
             }
+        }
+
+        /// <summary>A dungeon was finished (its last battle won): completes the dungeon objectives naming it.</summary>
+        public static void OnDungeonDone(ulong champ, string dungeonId)
+        {
+            SetFlag(champ, "dungeon:" + dungeonId, "1");
+            foreach (KeyValuePair<string, Progress> q in new List<KeyValuePair<string, Progress>>(Of(champ)))
+            {
+                if (q.Value.Finished) continue;
+                Def d = GetDef(q.Key);
+                if (d == null) continue;
+                for (int i = 0; i < d.Objectives.Count; i++)
+                {
+                    Objective o = d.Objectives[i];
+                    if (q.Value.Done.Contains(i) || o.Kind != "Dungeon" || ObjectiveDungeon(q.Key, o) != dungeonId) continue;
+                    Complete(champ, d, q.Value, i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Dungeon an objective really asks for. The Usurper quest's objective names Fort Romor's
+        /// template (Src.Game data error: the two faction quests were copied from each other).
+        /// </summary>
+        private static string ObjectiveDungeon(string script, Objective o)
+        {
+            return script == "az01_q_usurper" ? Dungeons.UsurperId : o.Dungeon;
         }
 
         private static void Complete(ulong champ, Def d, Progress p, int objective)

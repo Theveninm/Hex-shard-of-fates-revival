@@ -53,6 +53,7 @@ namespace HexRevival
             public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
             public string FightEncounter; // battle started by a dialogue choice "choice_fight" (Brink Ridge blockade)
+            public string Dungeon;        // dungeon entered from this node (Dungeons key)
         }
 
         private static List<MapNode> s_Nodes;
@@ -83,6 +84,8 @@ namespace HexRevival
                 n.Name = string.IsNullOrEmpty(title) || names.Contains(title) ? n.Id : title;
                 names.Add(n.Name);
                 ResolveContent(n, tm);
+                n.Dungeon = Dungeons.AtNode(n.Id);
+                if (n.Dungeon != null) { n.Type = "Dungeon"; n.Encounter = null; n.Conversation = null; n.RepeatConversation = null; }
                 s_Nodes.Add(n);
             }
 
@@ -174,7 +177,7 @@ namespace HexRevival
         public static void OnSessionTick(StandaloneSession ss)
         {
             if (ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
-            if (s_Battle != null && !s_FortuneApplied) { s_FortuneApplied = true; Fortunes.Apply(ss, s_Battle.ChampId); }
+            if (s_BattleChamp != 0 && !s_FortuneApplied) { s_FortuneApplied = true; Fortunes.Apply(ss, s_BattleChamp); }
             if (s_Difficulty <= 0) return;
             Player ai = Cheats.FindPlayer(ss, "ai");
             if (ai != null)
@@ -406,7 +409,8 @@ namespace HexRevival
         private static CampState s_Battle; // campaign whose encounter is being played
 
         /// <summary>Champion playing the current campaign battle (0 outside campaign battles).</summary>
-        public static ulong BattleChampion { get { return s_Battle != null ? s_Battle.ChampId : 0UL; } }
+        public static ulong BattleChampion { get { return s_BattleChamp; } }
+        private static ulong s_BattleChamp;
 
         private static string FilePath { get { return Saves.File("campaign.txt"); } }
 
@@ -415,6 +419,7 @@ namespace HexRevival
         {
             s_Pano.Clear();
             Quests.Reset();
+            Dungeons.Reset();
             s_States = null;
             s_Battle = null;
         }
@@ -587,6 +592,16 @@ namespace HexRevival
                     d["completed"] = false;
                     d["repeatable"] = true;
                 }
+                if (n.Dungeon != null)
+                {
+                    // Dungeon entrance: "start" enters the dungeon's own map (see Dungeons), as often as wanted.
+                    d["type"] = "Dungeon";
+                    d.Remove("conversationId");
+                    d.Remove("autostart");
+                    d["completed"] = false;
+                    d["repeatable"] = st.Completed.Contains(n.Id);
+                    d["event"] = "start";
+                }
                 if (n.IsHaus && st.HausReady.Contains(n.Id) && !st.Completed.Contains(n.Id))
                 {
                     // The game's card choice window (Src.Game, as hex-server serves it): 3 card templates to pick from.
@@ -668,7 +683,7 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         private const ulong PanoBase = 1000000;
-        private static bool IsPanoCamp(ulong id) { return id >= PanoBase && !Quests.IsQuestCamp(id); }
+        private static bool IsPanoCamp(ulong id) { return id >= PanoBase && id < Dungeons.DunBase; }
 
         /// <summary>Panorama level of each hub (Src.HexServer, read from the client's asset bundles).</summary>
         private static readonly Dictionary<string, string[]> PanoramaAssets = new Dictionary<string, string[]>
@@ -814,6 +829,47 @@ namespace HexRevival
             });
         }
 
+        /// <summary>Caches a state and calls back (a few frames later, like a network answer).</summary>
+        internal static void Deliver(ulong campId, GameplayState gs, ClientCampaignManager.StateCallback callback)
+        {
+            Enqueue(() =>
+            {
+                MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
+                cache.Invoke(null, new object[] { campId, gs });
+                if (callback != null) callback(gs);
+            });
+        }
+
+        /// <summary>Server notification moving the client to another campaign (AREA, PANORAMA, DUNGEON).</summary>
+        internal static void Notify(ulong campId, ulong champ, string reason, string type, GameplayState gs)
+        {
+            Enqueue(() => Quests.Invoke("HandleOnNotifyCampUpdate", new CampSysGeneral.Any.CampUpdateNotify(0, campId, champ, reason, type, true, gs, null)));
+        }
+
+        /// <summary>Back to the AZ1 map from a dungeon, on the dungeon's node (or the map's start).</summary>
+        internal static void ReturnToArea(ulong champ, string node)
+        {
+            CampState st = Get(champ, true);
+            MapNode n = node != null ? FindNode(node) : null;
+            if (n != null) { st.LastNode = n.Id; st.Visible.Add(n.Id); }
+            st.ALoc = null;
+            Save();
+            Notify(st.CampId, champ, "return_parent", "AREA", BuildState(st));
+        }
+
+        /// <summary>A dungeon was finished: its AZ1 node is completed (what lies beyond is revealed).</summary>
+        internal static void OnDungeonDone(ulong champ, string node)
+        {
+            MapNode n = node != null ? FindNode(node) : null;
+            if (n == null) return;
+            CampState st = Get(champ, true);
+            Complete(st, n);
+            Save();
+        }
+
+        internal static IEnumerable<string> EventStrings(object[] args) { return Strings(args); }
+        internal static string ConversationName(string id) { return ConvName(id); }
+
         private static void PanoEvent(ulong champ, string evt, ClientCampaignManager.StateCallback callback)
         {
             PanoState ps;
@@ -839,6 +895,14 @@ namespace HexRevival
 
         public static void QueryCurrentCampaign(ulong champId, ClientCampaignManager.StateCallback callback)
         {
+            // Inside a dungeon (or a new champion: Castle Crayburn first).
+            GameplayState dg = Dungeons.Current(champId, !HasSave(champId));
+            if (dg != null)
+            {
+                try { GameClient.Instance.PlayerProfile.GetPvEChampionById(champId).SourceBits.LastCampaignID = dg.CampID; } catch { }
+                Deliver(dg.CampID, dg, callback);
+                return;
+            }
             CampState st = Get(champId, true);
             try
             {
@@ -859,6 +923,8 @@ namespace HexRevival
             List<CampSummary> res = new List<CampSummary>();
             foreach (ulong id in ids)
             {
+                if (Quests.IsQuestCamp(id)) continue;
+                if (Dungeons.IsDunCamp(id)) { Dungeons.GetSummary(id, res); continue; }
                 if (IsPanoCamp(id)) { res.Add(PanoSummary(id - PanoBase)); continue; }
                 CampState st = Get(id, false);
                 if (st != null) res.Add(Summary(st));
@@ -874,6 +940,7 @@ namespace HexRevival
             if (st != null && (type == CampaignType.AREA || type == CampaignType.ANY))
                 res.Add(new TemplateInfo(st.CampId, CampaignType.AREA, GameClient.Instance.PlayerProfile.ReckoningID, AZ1Name, 1, null));
             if (type == CampaignType.QUEST || type == CampaignType.ANY) res.AddRange(Quests.ActiveInfos(champId));
+            if (type == CampaignType.DUNGEON || type == CampaignType.ANY) Dungeons.ActiveInfos(champId, res);
             TemplateInfo[] arr = res.ToArray();
             Enqueue(() => callback(arr));
         }
@@ -881,14 +948,16 @@ namespace HexRevival
         public static void QueryState(ulong campId, ClientCampaignManager.StateCallback callback)
         {
             if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.QueryState(campId, callback); return; }
             if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
             Answer(Get(campId, false), callback);
         }
 
         public static void Start(ulong campId, ClientCampaignManager.StateCallback callback)
         {
-            if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
             if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.QueryState(campId, callback); return; }
+            if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
             CampState st = Get(campId, false);
             if (st != null && !st.Started) { st.Started = true; Save(); }
             Answer(st, callback);
@@ -896,6 +965,7 @@ namespace HexRevival
 
         public static void Forfeit(ulong campId, ClientCampaignManager.StateCallback callback)
         {
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.Forfeit(campId); return; }
             if (IsPanoCamp(campId)) { LeavePanorama(campId - PanoBase); return; }
             CampState st = Get(campId, false);
             if (st != null) st.ALoc = null;
@@ -904,6 +974,7 @@ namespace HexRevival
 
         public static void StartLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
         {
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.StartLocation(campId, location, callback); return; }
             if (IsPanoCamp(campId))
             {
                 PanoState ps;
@@ -926,6 +997,7 @@ namespace HexRevival
 
         public static void FinishLocation(ulong campId, string location, ClientCampaignManager.StateCallback callback)
         {
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.SendEvent(campId, "conv_done", null, callback); return; }
             if (IsPanoCamp(campId)) { PanoEvent(campId - PanoBase, "conv_done", callback); return; }
             CampState st = Get(campId, false);
             if (st == null) return;
@@ -938,8 +1010,9 @@ namespace HexRevival
 
         public static void SendEvent(ulong campId, string evt, object[] args, ClientCampaignManager.StateCallback callback)
         {
-            if (IsPanoCamp(campId)) { Debug.Log("[HexRevival] [Campaign] panorama event " + evt); PanoEvent(campId - PanoBase, evt, callback); return; }
             if (Quests.IsQuestCamp(campId)) return;
+            if (Dungeons.IsDunCamp(campId)) { Dungeons.SendEvent(campId, evt, args, callback); return; }
+            if (IsPanoCamp(campId)) { Debug.Log("[HexRevival] [Campaign] panorama event " + evt); PanoEvent(campId - PanoBase, evt, callback); return; }
             CampState st = Get(campId, false);
             if (st == null) return;
             string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
@@ -951,6 +1024,9 @@ namespace HexRevival
                 case "visit_node":
                     if (arg0 != null && !st.VisitedNodes.Contains(arg0)) st.VisitedNodes.Add(arg0);
                     if (arg0 != null) st.LastNode = arg0;
+                    // A dungeon's node does not bar the way: what lies beyond is revealed once there.
+                    MapNode visited = arg0 != null ? FindNode(arg0) : null;
+                    if (visited != null && visited.Dungeon != null) Reveal(st, visited.Id);
                     break;
                 case "visit_path":
                     // The client sends the path names as one string array inside the arguments.
@@ -1040,6 +1116,14 @@ namespace HexRevival
                     st.ALoc = null;
                     break;
                 case "start":
+                    if (active != null && active.Dungeon != null)
+                    {
+                        st.ALoc = null;
+                        st.LastNode = active.Id;
+                        Save();
+                        Dungeons.Enter(st.ChampId, active.Dungeon);
+                        return;
+                    }
                     if (active != null && active.Panorama != null) { EnterPanorama(st, active); break; }
                     if (active != null && active.Encounter != null) StartBattle(st, active);
                     break;
@@ -1101,31 +1185,40 @@ namespace HexRevival
             BattleDifficulty = s_Difficulty;
             s_BattleNode = node.Id;
             Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
+            s_Battle = st;
+            LaunchBattle(st.ChampId, encounter, node.Name);
+        }
+
+        /// <summary>Starts a campaign battle (map node or dungeon room) with the champion's deck.</summary>
+        internal static void LaunchBattle(ulong champId, string encounter, string label)
+        {
             UID deck = UID.Invalid;
             try
             {
-                PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(st.ChampId);
+                PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(champId);
                 if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
                 else
                 {
-                    ulong id = Champions.EnsureDeck(st.ChampId);
+                    ulong id = Champions.EnsureDeck(champId);
                     if (id != 0) deck = new UID(UID.Type.Deck, id);
                 }
             }
             catch { }
-            s_Battle = st;
+            s_BattleChamp = champId;
             // The battle HUD reads the level from the profile's current champion.
-            try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, st.ChampId); }
+            try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, champId); }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Campaign] current champion: " + e.Message); }
             BattleEvents.Clear();
             s_FortuneApplied = false;
-            Enqueue(() => Patches.StartMatch(deck, new ResourceId(encounter), null, "campaign " + node.Name));
+            Enqueue(() => Patches.StartMatch(deck, new ResourceId(encounter), null, "campaign " + label));
         }
 
         /// <summary>Called once when a match ends. Returns false if it was not a campaign battle.</summary>
         public static bool OnGameEnded(bool won)
         {
             s_Difficulty = 0;
+            s_BattleChamp = 0;
+            if (Dungeons.OnGameEnded(won)) return true;
             CampState st = s_Battle;
             // BattleDifficulty is read by the rewards below, then reset
             if (st == null) return false;
@@ -1239,6 +1332,14 @@ namespace HexRevival
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
             if (sub == "rewards") return DumpRewards();
+            if (sub == "scene" && parts.Length > 2)
+            {
+                // dev: "camp scene <exact encounter name>" = the encounter scene's fields
+                string name = string.Join(" ", parts, 2, parts.Length - 2);
+                foreach (SceneData s in Singleton<TemplateManager>.Instance.CampaignScenes.Values)
+                    if (s != null && string.Equals(s.m_Name, name, StringComparison.OrdinalIgnoreCase)) return Describe(s);
+                return "no scene " + name;
+            }
             if (sub == "convs")
             {
                 // dev: text and events of the AZ1 conversations (all, or those whose name contains the filter) to HexRevivalConvs.txt
@@ -1247,7 +1348,7 @@ namespace HexRevival
                 int count = 0;
                 foreach (ConversationTemplate c in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)
                 {
-                    if (c == null || !c.m_Name.StartsWith("AZ1") || (filter != "" && !c.m_Name.ToUpperInvariant().Contains(filter))) continue;
+                    if (c == null || (filter == "" && !c.m_Name.StartsWith("AZ1")) || (filter != "" && !c.m_Name.ToUpperInvariant().Contains(filter))) continue;
                     count++;
                     sb.AppendLine("=== " + c.m_Name + " (" + c.m_OwnerName + ")");
                     foreach (KeyValuePair<int, ConversationQuestion> q in c.m_Questions)
@@ -1441,6 +1542,57 @@ namespace HexRevival
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalQuests.txt"), sb.ToString());
                 return count + " quests written to HexRevivalQuests.txt";
             }
+            if (sub == "dungeondump")
+            {
+                // dev: every DungeonTemplate (AZ1 map and dungeons) with its nodes, their scripted events
+                // and the map prefab's objects, to HexRevivalDungeons.txt
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                StringBuilder sb = new StringBuilder();
+                foreach (SceneData s in tm.CampaignScenes.Values)
+                {
+                    DungeonTemplate dt = s as DungeonTemplate;
+                    if (dt == null) continue;
+                    sb.AppendLine("=== DUNGEON " + dt.m_Id + " '" + dt.m_Name + "' bg='" + dt.m_BackgroundTexture + "' status=" + dt.m_ImplStatus + " tag=" + dt.m_BuildTag + " filter=" + dt.m_DeckFilter + " desc='" + Txt(dt.m_Description) + "'");
+                    if (dt.m_DungeonMods != null && dt.m_DungeonMods.Count > 0) sb.AppendLine("  mods " + Value(dt.m_DungeonMods));
+                    foreach (DungeonItemData it in dt.m_ItemData)
+                    {
+                        sb.AppendLine("  item " + it.m_ID + " node=" + it.m_MapNodeId + " '" + it.m_Name + "' title='" + it.m_Title + "' totem=" + it.m_TotemType + " terrain=" + it.m_TerrainType + " scape=" + it.m_NodeScapePath + "/" + it.m_NodeScapeArtNumber);
+                        if (it.m_EventsToFireWhenVisited != null)
+                            foreach (object ev in it.m_EventsToFireWhenVisited) sb.AppendLine("    ev " + DescribeEvent(ev, tm));
+                    }
+                }
+                foreach (string folder in new[] { "crayburncastle", "tranquildream", "fortromor", "theusurper", "smolderingdead", "devonshirekeep" })
+                {
+                    string path = "campaign/az01/" + folder + "/prefabs/nodes";
+                    sb.AppendLine("=== PREFAB " + path);
+                    try
+                    {
+                        GameObject prefab = Resources.Load(path) as GameObject;
+                        if (prefab == null) { sb.AppendLine("  not found"); continue; }
+                        foreach (Transform t in prefab.GetComponentsInChildren<Transform>(true))
+                        {
+                            if (t == prefab.transform) continue;
+                            if (t.parent != prefab.transform && !t.name.StartsWith("Path_") && !t.name.StartsWith("Node")) continue;
+                            List<string> comps = new List<string>();
+                            foreach (Component c in t.GetComponents<Component>()) if (c != null && !(c is Transform)) comps.Add(c.GetType().Name);
+                            UIDungeonMapNodeData nd = t.GetComponent<UIDungeonMapNodeData>();
+                            sb.AppendLine("  " + t.name + " parent=" + (t.parent != null ? t.parent.name : "-") + " [" + string.Join(",", comps.ToArray()) + "]"
+                                + (nd != null ? " fork=" + nd.IsPathFork + " pos=" + t.localPosition : ""));
+                        }
+                    }
+                    catch (Exception e) { sb.AppendLine("  error " + e.Message); }
+                }
+                sb.AppendLine("=== CONVERSATIONS");
+                foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+                {
+                    if (c == null || c.m_Name == null) continue;
+                    string u = c.m_Name.ToUpperInvariant();
+                    if (u.Contains("CRAYBURN") || u.Contains("TRANQUIL") || u.Contains("ROMOR") || u.Contains("USURPER") || u.Contains("SMOLDERING") || u.Contains("DEVONSHIRE") || u.Contains("SISTER MIDNIGHT"))
+                        sb.AppendLine("  conv " + c.m_Id + " '" + c.m_Name + "' owner='" + c.m_OwnerName + "'");
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalDungeons.txt"), sb.ToString());
+                return "written HexRevivalDungeons.txt (" + sb.Length + " chars)";
+            }
             if (sub == "nodes")
             {
                 // dev: every AZ1 node with its scenes and conversations, to HexRevivalNodes.txt
@@ -1532,6 +1684,30 @@ namespace HexRevival
             Game.Shared.Rewards.RewardLootTable l = it as Game.Shared.Rewards.RewardLootTable;
             if (l != null) return "loot x" + l.m_Amount + " (" + l.m_Entries.Count + " entries)";
             return it != null ? it.GetType().Name : "null";
+        }
+
+        /// <summary>A node's scripted event (dev dump): its type and the templates it names.</summary>
+        private static string DescribeEvent(object ev, TemplateManager tm)
+        {
+            if (ev == null) return "null";
+            StringBuilder sb = new StringBuilder(ev.GetType().Name);
+            foreach (FieldInfo f in ev.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                object v; try { v = f.GetValue(ev); } catch { continue; }
+                if (v == null) continue;
+                string val;
+                if (v is ResourceId)
+                {
+                    ResourceId id = (ResourceId)v;
+                    SceneData sd; ConversationTemplate ct;
+                    if (tm.CampaignScenes.TryGetValue(id, out sd)) val = "scene '" + sd.m_Name + "' " + id;
+                    else if (tm.ConversationTemplates.TryGetValue(id, out ct) && ct != null) val = "conv '" + ct.m_Name + "' " + id;
+                    else val = Value(v);
+                }
+                else val = Value(v);
+                sb.Append(' ').Append(f.Name).Append('=').Append(val);
+            }
+            return sb.ToString();
         }
 
         private static string Dump(string filter)

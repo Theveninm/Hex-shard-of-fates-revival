@@ -85,13 +85,69 @@ shows a second XP line for **Necrotic** "Efficient" (+10% XP, +2% gold at maximu
 "Intellectual Pursuits" (+5% XP, +3% gold at maximum level). Not applied yet: Vennen "Clergy's
 Collection" (+3% gold) and the Warrior talent "Deep Pockets" (both need checking: are they racial or picked?).
 
+### Dungeons
+
+The AZ1 dungeons are played on their own map (the client's dungeon prefabs), entered from their AZ1
+node and replayable once finished: Castle Crayburn (the starting dungeon of every new champion),
+the Tranquil Dream (Node040), Fort Romor (Node011, Underworld quest), The Usurper (Node008, Ardent
+quest), the Smoldering Dead (Node024) and Devonshire Keep (Node068). The game data only lists the
+rooms; each room is rebuilt as conversation → battle → success / fail conversation from the
+conversation and encounter names (Game) and the videos. Rules:
+
+- Dungeon lives (Game: TalentManager.GetTotalDungeonLives, 3 + talents): a lost battle costs one, the
+  room can be tried again; the last one ends the run (the game's "Dungeon failed" window, back to
+  the AZ1 map, everything to do again). The lives left are shown by the mod (the client does not).
+  Castle Crayburn has no limit. Leaving a dungeon (back button) abandons the run.
+- Dialogue choices (Game: the answers' events): the Thorn Knight's crypt can be left alone, the
+  Minstrel's Gallery tripwires disabled (no battle), the Oratory's battle is the burning zombies
+  (ruby pried out, "Devonshire Keep H2") or the dead knight ("H1").
+- The Tranquil Dream: the creature of each room is drawn per run (Video: it changed between
+  champions); its strength (Easy / Medium / Hard) is the points of the answer given in its tale
+  (Game: one/two/three_point_answer), and Sister Midnight's form ("an echo of your will", Game) the
+  total of the five answers (which form for which total: PLACEHOLDER, gentlest Instinct → fiercest
+  Savagery). Rewards follow the fight's rank (Video).
+- Fort Romor: rooms in the template's order, as the gate's description places them (Game);
+  each room's foe is its conversation's speaker: Stables → Legionnaire of Gawaine, Barracks →
+  Rhonwen, Command Post → Commander Hawthorne; the Defense (3 battles: Lords Benjamin, Alexander,
+  Adam) opens once the three are taken.
+- The Usurper: Shepherd's Rest battle by who is dead (Ghuuhg in the Hall of Vermin, Mistsim in the
+  Chamber of Awakening, or both); one of the two halls is enough to go on.
+- Finishing a dungeon completes the quest objectives naming it (the Usurper quest's objective names
+  Fort Romor's template, a game data error, handled).
+- Not done: the first-attempt bonus gold of the game's hint ("a small amount of bonus gold if you
+  manage to defeat an enemy on your first attempt": amount unknown); the Crayburn watchtower's
+  training battle (its encounter is not in the game data).
+
+Battle rewards (Video unless noted; gold and XP on every win, items on the first win):
+
+| Dungeon | Room → foe | Gold | XP | Items |
+|---|---|---|---|---|
+| Castle Crayburn | Castle Gatehouse, Tower Gatehouse (race opponents) | 50 | 100 | — |
+| Castle Crayburn | Tower of Penworth | 0 | 0 | (the quest's reward follows) |
+| Tranquil Dream | creature 1 / 2 / 3 / 4 / 5 | 125 (PLACEHOLDER) / 125 / 250 / 250 / 300 | 125 (PLACEHOLDER) / 150 / 175 / 200 / 250 | — |
+| Tranquil Dream | Sister Midnight | 450 | 350 | Tranquil Dream Pack |
+| Fort Romor | Commander Hawthorne / Legionnaire / Rhonwen | 150 / 200 / 250 | 100 / 150 / 200 | — |
+| Fort Romor | Lord Benjamin / Alexander / Adam | 300 / 400 / 500 | 225 / 250 / 450 | Fort Romor Pack (Adam) |
+| The Usurper | Gardrag / Grim Skull Sorcerers / Ghuuhg / Mistsim | 150 / 200 / 250 / 300 | 100 / 150 / 200 / 225 | — |
+| The Usurper | Finanif (Shepherd's Rest) | 300 (PLACEHOLDER) | 225 (PLACEHOLDER) | — |
+| The Usurper | Verrev | 500 | 450 | The Usurper Pack |
+| Smoldering Dead | Sir Bryce / Moxom (entrance) / Raving Ghoul / Blight Magus / King Edmund | 150 / 200 / 350 / 450 | 125 / 150 / 200 / 250 | — |
+| Smoldering Dead | Ancient Thorn Knight | 600 | 300 | Voracious Vultures |
+| Smoldering Dead | Inferno Goliath (Burial Vault) | 650 | 500 | Smoldering Dead Pack |
+| Devonshire Keep | A / C / D / K | 150 / 75 / 400 / 550 | 125 / 200 / 250 / 400 | — |
+| Devonshire Keep | E, F, G, H (knight / zombies), I, J | PLACEHOLDER 250-400 | PLACEHOLDER 225-300 | — |
+| Devonshire Keep | L (Wiktor) | 750 | 650 | Devonshire Keep Pack |
+
+The dev commands `dun check` (every name resolved for every race), `dun enter <dungeon>`, `dun click
+<node>` and the `sim` steps `dungeon <key>`, `room <Room> [win|lose] [event ...]`, `dleave` test them.
+
 ### Quest rewards (given at the turn-in, Video)
 
 The reward window right after the quest giver's last conversation.
 
 | Quest (giver) | Gold | XP | Items |
 |---|---|---|---|
-| Crayburn Castle (Margugram / Balthasar / Xarlot...) | 150 | 500 | Crayburn Castle Pack: 4 race cards (LootTables2016; Vennen: Entangling Webs) + the race's AZ1 rare (Iddi, Nerissa, Zilth seen) — castle not implemented |
+| Crayburn Castle (Margugram / Balthasar / Xarlot...) | 150 | 500 | Crayburn Castle Pack: 4 race cards (LootTables2016; Vennen: Entangling Webs) + the race's AZ1 rare (Iddi, Nerissa, Zilth seen), at the end of the castle |
 | Cross the Zila River (Weston) | 300 | 300 | AZ1 pack, race equipment |
 | Find the Cave-In (Fahrny) / Ambling Mesa (Feather Drifting) | 350 | 350 | AZ1 pack, race card |
 | Cross the Zodiac River (Wallace / Warren) | 400 | 300 | AZ1 pack, race card |
@@ -102,8 +158,9 @@ The reward window right after the quest giver's last conversation.
 | The Blood Beneath (Rizzix / Gurtok) | 750 | 500 | Contract Killing, AZ1 pack |
 | Find Myaa (first meeting) | 0 | 100 | — |
 | Army of Myth (Myaa) | 350 | 350 | AZ1 pack |
-| Tranquil Dream (Fahrny) | 0 (500 in early 2016) | 700 | Tranquil Dream Pack (dungeon not implemented) |
-| Fort Romor (Wyatt) | 0 (1000 in early 2016) | 900 | Fort Romor Pack (dungeon not implemented) |
+| Tranquil Dream (Fahrny / Feather Drifting) | 0 (500 in early 2016) | 700 | Tranquil Dream Pack |
+| Fort Romor (Wyatt) | 0 (1000 in early 2016) | 900 | Fort Romor Pack |
+| The Usurper (Sagebrush) | 0 (PLACEHOLDER, as Fort Romor) | 900 (PLACEHOLDER) | The Usurper Pack (PLACEHOLDER) |
 | Smoldering Dead (Myaa) | 550 | 1200 | AZ1 pack |
 | Devonshire Keep (Myaa) | 600 (Elf; none on the Necrotic run) | 1500 | Devonshire Keep Pack, sleeve Chronicles of Entrath: Chapter 1 |
 | Any other quest | 300 | 0 | PLACEHOLDER (reward unknown) |
@@ -142,8 +199,7 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
   long it lasted are unknown).
 - Gnomes Come Home: the gnomes found in the Lost Gnomes camp follow the champion; the Deep Desert
   battle happens only with them, and Herbert's camp completes the escort.
-- Not playable yet: objectives in dungeons (Tranquil Dream, Smoldering Dead, Devonshire Keep,
-  Usurper, Fort Romor), the boat to AZ2, the zombie invasion variants of some nodes.
+- Not playable yet: the boat to AZ2, the zombie invasion variants of some nodes.
 
 The dev command `sim` plays a quest script on a throwaway champion (e.g. `sim new Human; visit
 Node046; talk; visit Node047; talk; fight win; ...`) and writes the dialogues, quest steps and
@@ -154,10 +210,7 @@ corrected in `data/loot_name_fixes.csv`, applied by `tools/gen_loot.py`, so the 
 game names. The dev command `loot check` lists the reward names that match nothing in the game.
 
 Known but not given yet:
-- Crayburn Castle (dungeon not implemented): see the quest rewards above.
-- Dungeon packs (Tranquil Dream, Fort Romor, The Usurper, Smoldering Dead, Devonshire Keep): their
-  contents are in the loot tables, the dungeons are not implemented.
-- AZ2.
+- AZ2 (and its dungeons, Brutecrown Bluff, the Kraken).
 
 Champion levels follow the game's XP table (Game): level 2 at 1,000 XP … 15 at 110,000.
 Talent points per level: 1 (PLACEHOLDER).

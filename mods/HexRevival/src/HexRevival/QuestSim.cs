@@ -25,6 +25,9 @@ namespace HexRevival
     ///   hub &lt;Node&gt;           enters a hub (Cave-In Node017, Ambling Mesa Node034): lists the NPCs
     ///   npc &lt;Name&gt;           talks to a hub NPC
     ///   leave                 leaves the hub
+    ///   dungeon &lt;key&gt;        enters a dungeon (crayburn, tranquildream, fortromor, usurper, smoldering, devonshire)
+    ///   room &lt;Room&gt; [win|lose] [event ...]  plays a dungeon room (conversations with these dialogue events, battle)
+    ///   dleave                leaves the dungeon (forfeit)
     ///   quests                quest progress of the champion
     /// The report is written to HexRevivalSim.txt.
     /// </summary>
@@ -124,6 +127,16 @@ namespace HexRevival
                     break;
                 case "leave":
                     Campaign.SimLeaveHub(Champ);
+                    break;
+                case "dungeon":
+                    Note("  " + Dungeons.SimEnter(Champ, p[1]));
+                    break;
+                case "room":
+                    Note("  " + Dungeons.SimRoom(Champ, p[1], p.Length < 3 || p[2] != "lose", p.Length > 3 ? new List<string>(p).GetRange(3, p.Length - 3).ToArray() : new string[0]));
+                    Note("    " + Dungeons.SimMap(Champ));
+                    break;
+                case "dleave":
+                    Dungeons.SimForfeit(Champ);
                     break;
                 case "quests":
                     Note("  " + Quests.Command(new[] { "quest", "of", Champ.ToString() }));

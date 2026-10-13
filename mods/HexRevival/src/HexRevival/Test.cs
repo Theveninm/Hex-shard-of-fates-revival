@@ -928,6 +928,7 @@ namespace HexRevival
                 case "cheat": return Cheats.Execute(gc, parts);
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
+                case "dun": return Dungeons.Command(parts);
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
                 case "toggles": return Settings.DumpToggles();
@@ -1156,6 +1157,10 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAsWin(Server.CurrentSession);
                     return "won";
+                case "losebattle":   // dev: lose the current battle
+                    if (Server.CurrentSession == null) return "no game";
+                    CheatMenu.EndAs(Server.CurrentSession, false);
+                    return "lost";
                 case "res":   // dev: resource pools of both players
                     {
                         if (Server.CurrentSession == null) return "no game";

@@ -130,11 +130,14 @@ namespace HexRevival
         }
 
         /// <summary>Ends the battle as a win for the human player (also the dev command "winbattle").</summary>
-        internal static void EndAsWin(StandaloneSession ss)
+        internal static void EndAsWin(StandaloneSession ss) { EndAs(ss, true); }
+
+        /// <summary>Ends the match now, won or lost by the human player.</summary>
+        internal static void EndAs(StandaloneSession ss, bool won)
         {
             List<UID> winners = new List<UID>(), losers = new List<UID>();
             foreach (Player p in ss.GetAllPlayers())
-                if (p != null) (Server.IsAIId(p.m_PlayerId) ? losers : winners).Add(p.m_PlayerId);
+                if (p != null) (Server.IsAIId(p.m_PlayerId) == won ? losers : winners).Add(p.m_PlayerId);
             ss.EndGame(winners, losers, true);
             Server.MarkDirty();
         }

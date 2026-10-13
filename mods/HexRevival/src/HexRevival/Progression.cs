@@ -68,7 +68,8 @@ namespace HexRevival
         {
             public int Gold, Xp;                        // given on every win (Src.Video: repeated fights paid again)
             public string[] Cards = new string[0];     // card, equipment or stardust names, 1 copy each (first win only)
-            public int Packs;                           // Adventure Zone 1 (Howling Plains) packs, see Loot (first win only)
+            public int Packs;                           // packs, see Loot (first win only)
+            public string PackName;                     // pack table (Loot): null = Adventure Zone 1 (Howling Plains)
             public int RandomEquipment;                 // random equipment pieces (first win only)
             public string RaceQuest;                    // key of RaceRewards: the item of the champion's race
             public bool ShroomHaus;                     // one of the Haus's 3 cards (see ShroomHauses)
@@ -77,7 +78,7 @@ namespace HexRevival
             public string Note;
 
             public bool HasItems { get { return Cards.Length > 0 || Packs > 0 || RandomEquipment > 0 || RaceQuest != null || ShroomHaus; } }
-            public Reward GoldXpOnly() { return new Reward { Gold = Gold, Xp = Xp, Source = Source }; }
+            public Reward GoldXpOnly() { return new Reward { Gold = Gold, Xp = Xp, Source = Source, PackName = PackName }; }
         }
 
         /// <summary>Default for a campaign battle with no known reward. Src.HexServer: ~100 gold and 100 XP.</summary>
@@ -136,7 +137,76 @@ namespace HexRevival
             { "Node071", new Reward { Gold = 250, Xp = 250, RandomEquipment = 3, Source = Src.Video } },   // Valley of Sighs, The Killipede
             { "Node075", R(450, 250) },                                       // Eagle Mesa, Elimination Specialist / Earthcaller
             { "Node078", new Reward { Gold = 600, Xp = 350, Packs = 2, Source = Src.Video } },   // Skittering Ridge, Killipede's Revenge
+
+            // ---- Dungeon battles (key "<dungeon>/<node>[/<fight>]", see Dungeons): Src.Video (MyHotStream
+            // Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted.
+            // Castle Crayburn (the castle's own reward is the quest's, see OnCrayburnDone)
+            { "crayburn/CastleGate", R(50, 100) },
+            { "crayburn/TowerGate", R(50, 100) },
+            { "crayburn/PenworthTower", R(0, 0) },
+            // The Tranquil Dream: by the fight's rank, not the creature (1st fight not read: PLACEHOLDER 125 / 125)
+            { "tranquildream/rank1", new Reward { Gold = 125, Xp = 125, Source = Src.Placeholder } },
+            { "tranquildream/rank2", R(125, 150) },
+            { "tranquildream/rank3", R(250, 175) },
+            { "tranquildream/rank4", R(250, 200) },
+            { "tranquildream/rank5", R(300, 250) },
+            { "tranquildream/midnight", new Reward { Gold = 450, Xp = 350, Packs = 1, PackName = "Tranquil Dream", Source = Src.Video } },
+            // Fort Romor (Underworld)
+            // (the videos' rewards are per foe: Hawthorne 150/100, Legionnaire 200/150, Rhonwen 250/200; each
+            // room's foe is its conversation's speaker, see Dungeons)
+            { "fortromor/CmdPost", R(150, 100) },
+            { "fortromor/Stables", R(200, 150) },
+            { "fortromor/Barracks", R(250, 200) },
+            { "fortromor/Defense/1", R(300, 225) },
+            { "fortromor/Defense/2", R(400, 250) },
+            { "fortromor/Defense/3", new Reward { Gold = 500, Xp = 450, Packs = 1, PackName = "Fort Romor", Source = Src.Video } },
+            // The Usurper (Ardent)
+            { "usurper/NodeA", R(150, 100) },
+            { "usurper/NodeB", R(200, 150) },
+            { "usurper/NodeC", R(250, 200) },
+            { "usurper/NodeD", R(300, 225) },
+            { "usurper/NodeE", new Reward { Gold = 300, Xp = 225, Source = Src.Placeholder } },   // Finanif: not read
+            { "usurper/NodeG", new Reward { Gold = 500, Xp = 450, Packs = 1, PackName = "The Usurper", Source = Src.Video } },
+            // The Smoldering Dead
+            { "smoldering/NodeA", R(150, 125) },
+            { "smoldering/NodeB", R(200, 150) },
+            { "smoldering/NodeC", R(600, 300, "Voracious Vultures") },
+            { "smoldering/NodeD", R(350, 200) },
+            { "smoldering/NodeF", R(450, 250) },
+            { "smoldering/NodeG", new Reward { Gold = 650, Xp = 500, Packs = 1, PackName = "Smoldering Dead", Source = Src.Video } },
+            // Devonshire Keep: read for A, C, D, K, L; the others are PLACEHOLDER (between their neighbours)
+            { "devonshire/NodeA", R(150, 125) },
+            { "devonshire/NodeC", new Reward { Gold = 75, Xp = 200, Source = Src.Video } },
+            { "devonshire/NodeD", R(400, 250) },
+            { "devonshire/NodeE", new Reward { Gold = 250, Xp = 225, Source = Src.Placeholder } },
+            { "devonshire/NodeF", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder } },
+            { "devonshire/NodeG", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder, Note = "XP 250: Src.Video" } },
+            { "devonshire/NodeH/1", new Reward { Gold = 250, Xp = 225, Source = Src.Placeholder } },
+            { "devonshire/NodeH/2", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder } },
+            { "devonshire/NodeI", new Reward { Gold = 350, Xp = 275, Source = Src.Placeholder } },
+            { "devonshire/NodeJ", new Reward { Gold = 400, Xp = 300, Source = Src.Placeholder } },
+            { "devonshire/NodeK", R(550, 400) },
+            { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
         };
+
+        /// <summary>
+        /// Turn-in of the race's "Crayburn Castle" quest at the end of the castle (Src.Video: 150 gold,
+        /// 500 XP and the Crayburn Castle Pack, i.e. its cards, see CrayburnCards).
+        /// </summary>
+        public static void OnCrayburnDone(ulong champId)
+        {
+            champion_bits c = Champions.Get(champId);
+            string[] cards = new string[0];
+            if (c != null)
+            {
+                string race = c.Race.ToString().Replace("'", "").Replace("_", "");
+                for (int i = 0; i < Races.Length; i++) if (string.Equals(Races[i], race, StringComparison.OrdinalIgnoreCase)) cards = CrayburnCards[i];
+            }
+            string key = champId + ":crayburn";
+            if (Saves.Current.Claims.Contains(key)) return;
+            Saves.Current.Claims.Add(key);
+            Grant(champId, new Reward { Gold = 150, Xp = 500, Cards = cards, Source = Src.Video }, null, "quest Crayburn Castle");
+        }
 
         /// <summary>Race order of the RaceRewards rows (as in the loot tables).</summary>
         private static readonly string[] Races = { "Human", "Elf", "Coyotle", "Orc", "Dwarf", "Necrotic", "Shinhare", "Vennen" };
@@ -294,7 +364,7 @@ namespace HexRevival
             }
             if (extra.Count > 0)
             {
-                Reward withTamed = new Reward { Gold = give.Gold, Xp = give.Xp, Packs = give.Packs, RandomEquipment = give.RandomEquipment, RaceQuest = give.RaceQuest, ShroomHaus = give.ShroomHaus, Source = give.Source };
+                Reward withTamed = new Reward { Gold = give.Gold, Xp = give.Xp, Packs = give.Packs, PackName = give.PackName, RandomEquipment = give.RandomEquipment, RaceQuest = give.RaceQuest, ShroomHaus = give.ShroomHaus, Source = give.Source };
                 List<string> all = new List<string>(give.Cards);
                 all.AddRange(extra);
                 withTamed.Cards = all.ToArray();
@@ -333,10 +403,11 @@ namespace HexRevival
             // Army of Myth (Myaa)
             { "q_army_of_myth", new Reward { Gold = 350, Xp = 350, Packs = 1, Source = Src.Video } },
             // Dungeon quests: the dungeon packs are given once the dungeons are implemented (see docs/PROGRESSION.md)
-            { "q_tranquil_dream", new Reward { Xp = 700, Source = Src.Video, Note = "+ Tranquil Dream Pack" } },
-            { "az01_q_fort_romor", new Reward { Xp = 900, Source = Src.Video, Note = "+ Fort Romor Pack (early 2016: also 1000 gold)" } },
+            { "q_tranquil_dream", new Reward { Xp = 700, Packs = 1, PackName = "Tranquil Dream", Source = Src.Video } },
+            { "az01_q_fort_romor", new Reward { Xp = 900, Packs = 1, PackName = "Fort Romor", Source = Src.Video, Note = "early 2016: also 1000 gold" } },
+            { "az01_q_usurper", new Reward { Xp = 900, Packs = 1, PackName = "The Usurper", Source = Src.Placeholder, Note = "not seen: as Fort Romor, the other faction's quest" } },
             { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
-            { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "+ Devonshire Keep Pack; gold seen on the Elf run only" } },
+            { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Packs = 1, PackName = "Devonshire Keep", Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "gold seen on the Elf run only" } },
         };
 
         /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>
@@ -414,7 +485,7 @@ namespace HexRevival
                 return;
             }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
-            for (int i = 0; i < r.Packs; i++) foreach (Loot.Drop d in Loot.Open(Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
+            for (int i = 0; i < r.Packs; i++) foreach (Loot.Drop d in Loot.Open(r.PackName ?? Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
             for (int i = 0; i < r.RandomEquipment; i++) AddDrop(Loot.RandomEquipment(Loot.AZ1Pack), cards, items, shown);
             // Racial talents add their bonus as a second line, as the game showed it (Src.Video, Src.Game)
             int xpPct, goldPct;
