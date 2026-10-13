@@ -7,15 +7,13 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Campaign and dungeon pack contents, from the community "AZ1 Loot Tables" spreadsheet (2016,
-    /// Src.LootTables2016; data/az1_pack_loot_tables.csv, generated into LootData.cs): for each pack,
-    /// the cards, equipment and unique equipment seen, with their % drop chance over the packs opened
-    /// (1162 Adventure Zone 1 packs).
-    ///
-    /// The per-category totals are round numbers (AZ1: cards 50%, equipment 200%, unique 1%), so a
-    /// pack is modelled as that many expected drops per category: the whole part always drops, the
-    /// rest is a chance (AZ1: 2 equipment, a card 1 time in 2). Each drop is picked weighted by its %.
-    /// This reading of the percentages is an assumption (PLACEHOLDER): the sheet does not say.
+    /// Campaign and dungeon pack contents. What a pack holds comes from the reward windows of gameplay
+    /// videos (Src.Video, 25+ packs opened, 2016-2017): 2 commons of the first PvP sets (Shards of
+    /// Fate, Shattered Destiny, Armies of Myth) + 1 card of the pack's own list + 1 equipment + either
+    /// a 2nd equipment or a stardust (about 1 time in 3). Which card and which equipment: the community
+    /// "AZ1 Loot Tables" spreadsheet (2016, Src.LootTables2016; data/az1_pack_loot_tables.csv,
+    /// generated into LootData.cs), each pick weighted by its % drop chance; its unique equipment
+    /// (1% in total) is kept as a 1-in-100 extra.
     /// </summary>
     public static class Loot
     {
@@ -58,26 +56,76 @@ namespace HexRevival
             return s_Packs;
         }
 
+        /// <summary>PvP sets of the 2 commons of a campaign pack (Src.Video).</summary>
+        private static readonly string[] CommonSets = { "Shards of Fate", "Shattered Destiny", "Armies of Myth" };
+
+        /// <summary>Chance that the 5th slot is a stardust instead of a 2nd equipment (Src.Video: about 1 time in 3).</summary>
+        private const float StardustChance = 1f / 3f;
+
+        /// <summary>
+        /// Stardust of the 5th slot. Seen: Common, Uncommon, Rare, and Legendary once (Src.Video);
+        /// the weights are a PLACEHOLDER.
+        /// </summary>
+        private static readonly KeyValuePair<string, float>[] Stardusts =
+        {
+            new KeyValuePair<string, float>("Common Stardust", 35), new KeyValuePair<string, float>("Uncommon Stardust", 35),
+            new KeyValuePair<string, float>("Rare Stardust", 25), new KeyValuePair<string, float>("Legendary Stardust", 5),
+        };
+
         /// <summary>Opens a pack of the table (e.g. AZ1Pack); unknown names are skipped (see the "loot check" command).</summary>
         public static List<Drop> Open(string pack)
         {
             List<Drop> res = new List<Drop>();
             PackTable t;
             if (!Packs().TryGetValue(pack, out t)) return res;
-            foreach (KeyValuePair<char, List<Entry>> kv in t.Cat)
+            foreach (string setName in new[] { RandomOf(CommonSets), RandomOf(CommonSets) })
             {
-                float total = 0;
-                foreach (Entry e in kv.Value) total += e.Pct;
-                float expected = total / 100f;
-                int n = (int)expected;
-                if (UnityEngine.Random.value < expected - n) n++;
-                for (int i = 0; i < n; i++)
-                {
-                    Drop d = Resolve(Pick(kv.Value, total), kv.Key == 'c');
-                    if (d != null) res.Add(d);
-                }
+                CardTemplate c = Progression.RandomCard(SetByName(setName), Game.Shared.Mechanics.ERarity.Common, null);
+                if (c != null) res.Add(new Drop { Card = c });
             }
+            Add(res, t, 'c', true);
+            Add(res, t, 'e', false);
+            if (UnityEngine.Random.value < StardustChance) { Drop d = Resolve(PickStardust(), false); if (d != null) res.Add(d); }
+            else Add(res, t, 'e', false);
+            if (UnityEngine.Random.value < 0.01f) Add(res, t, 'u', false);
             return res;
+        }
+
+        /// <summary>One random equipment of a pack's list (rewards of "2 / 3 random equipment", Src.Video).</summary>
+        public static Drop RandomEquipment(string pack)
+        {
+            List<Drop> res = new List<Drop>();
+            PackTable t;
+            if (Packs().TryGetValue(pack, out t)) Add(res, t, 'e', false);
+            return res.Count > 0 ? res[0] : null;
+        }
+
+        private static void Add(List<Drop> res, PackTable t, char cat, bool card)
+        {
+            List<Entry> l;
+            if (!t.Cat.TryGetValue(cat, out l) || l.Count == 0) return;
+            float total = 0;
+            foreach (Entry e in l) total += e.Pct;
+            Drop d = Resolve(Pick(l, total), card);
+            if (d != null) res.Add(d);
+        }
+
+        private static string RandomOf(string[] l) { return l[UnityEngine.Random.Range(0, l.Length)]; }
+
+        private static string PickStardust()
+        {
+            float total = 0;
+            foreach (KeyValuePair<string, float> kv in Stardusts) total += kv.Value;
+            float v = UnityEngine.Random.value * total;
+            foreach (KeyValuePair<string, float> kv in Stardusts) { v -= kv.Value; if (v <= 0) return kv.Key; }
+            return Stardusts[0].Key;
+        }
+
+        private static CardSetTemplate SetByName(string name)
+        {
+            foreach (CardSetTemplate s in Singleton<TemplateManager>.Instance.CardSets.Values)
+                if (s != null && s.m_Name == name) return s;
+            return null;
         }
 
         private static string Pick(List<Entry> l, float total)
@@ -124,7 +172,10 @@ namespace HexRevival
             s_Items = new Dictionary<string, ResourceId>(StringComparer.OrdinalIgnoreCase);
             foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {
-                if (!(item is InventoryEquipmentData) || string.IsNullOrEmpty(item.m_Name)) continue;
+                // equipment, stardust and deck sleeves (campaign rewards, Src.Video)
+                string type = item != null ? item.GetType().Name : "";
+                bool other = type == "InventoryStardust" || type == "InventoryDeckSleeve";
+                if (!(item is InventoryEquipmentData) && !other || string.IsNullOrEmpty(item.m_Name)) continue;
                 string k = item.m_Name.Trim();
                 if (!s_Items.ContainsKey(k)) s_Items[k] = item.m_Id;
             }

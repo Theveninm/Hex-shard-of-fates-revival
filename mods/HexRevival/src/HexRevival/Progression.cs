@@ -35,6 +35,7 @@ namespace HexRevival
             Forum2017,     // official forum "Spending $$$ for HEX" guide, February 2017
             LootTables2016,// community spreadsheet "AZ1 Loot Tables", 2016 (data/az1_pack_loot_tables.csv)
             SteamGuide2016,// "HexTCG Comprehensive New Player Guide", Steam, 2016
+            Video,         // reward windows read on gameplay videos (2016-2018), see docs/PROGRESSION.md
             Placeholder,   // no source: chosen for the mod
         }
 
@@ -65,53 +66,76 @@ namespace HexRevival
 
         private class Reward
         {
-            public int Gold, Xp;
-            public string[] Cards = new string[0];     // card or equipment names, 1 copy each
-            public int Packs;                           // Adventure Zone 1 (Howling Plains) packs, see Loot
+            public int Gold, Xp;                        // given on every win (Src.Video: repeated fights paid again)
+            public string[] Cards = new string[0];     // card, equipment or stardust names, 1 copy each (first win only)
+            public int Packs;                           // Adventure Zone 1 (Howling Plains) packs, see Loot (first win only)
+            public int RandomEquipment;                 // random equipment pieces (first win only)
             public string RaceQuest;                    // key of RaceRewards: the item of the champion's race
             public bool ShroomHaus;                     // one of the Haus's 3 cards (see ShroomHauses)
-            public bool OneTime;                        // once per champion
-            public string NeedsEvent;                   // the cards need this end-of-battle event (Src.Game: HandleGameplayChallenges)
+            public string NeedsEvent;                   // the items need this end-of-battle event (Src.Game: HandleGameplayChallenges)
             public Src Source;
             public string Note;
+
+            public bool HasItems { get { return Cards.Length > 0 || Packs > 0 || RandomEquipment > 0 || RaceQuest != null || ShroomHaus; } }
+            public Reward GoldXpOnly() { return new Reward { Gold = Gold, Xp = Xp, Source = Source }; }
         }
 
-        /// <summary>Default for any campaign battle won (every win). Src.HexServer: ~100 gold and 100 XP.</summary>
+        /// <summary>Default for a campaign battle with no known reward. Src.HexServer: ~100 gold and 100 XP.</summary>
         private static readonly Reward DefaultBattle = new Reward { Gold = 100, Xp = 100, Source = Src.HexServer };
 
+        private static Reward R(int gold, int xp, params string[] cards) { return new Reward { Gold = gold, Xp = xp, Cards = cards, Source = Src.Video }; }
+
         /// <summary>
-        /// AZ1 rewards by map node, given when the node's battle is won or its conversation completed
-        /// (whichever comes first, once per champion). Src.Guide2016 unless noted; race items from
-        /// Src.LootTables2016; XP from Src.HexServer where known, else the default 100.
+        /// AZ1 battle rewards by map node (Src.Video: the battle's reward window, same values for the
+        /// three champions seen, Dec 2016-2017 client; docs/PROGRESSION.md lists each source video).
+        /// Gold and XP are given on every win, the items on the first win only. Rewards given by a
+        /// quest giver after the fight are quest rewards (QuestRewards), not battle rewards.
+        /// Tamed creatures (Dire Toad, Chickatwice, Bubblebee...) are only given when tamed (see TamedCreatures).
         /// </summary>
         private static readonly Dictionary<string, Reward> AZ1 = new Dictionary<string, Reward>
         {
-            // Dunnwood, Wild Cub (the guide's "Feralroot Bear")
-            { "Node003", new Reward { Cards = new[] { "Dire Toad" }, Gold = 150, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
-            // Sporemist Hollow, Shroomkin Haus: the card the player picks among the Haus's 3 (the game's choice window)
-            { "Node004", new Reward { ShroomHaus = true, Gold = 100, OneTime = true, Source = Src.Guide2016 } },
-            // Quest cards given at a turn-in (Contract Killing, Gnome Wayfarer...) are in QuestRewards below.
-            // Other Shroom Hauses (scenes "SHROOM HAUS 2..6 - REWARD"): the Haus's card only (no source for gold)
-            { "Node042", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
-            { "Node025", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
-            { "Node077", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
-            { "Node029", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
-            { "Node035", new Reward { ShroomHaus = true, OneTime = true, Source = Src.LootTables2016 } },
-            // The Sutherland, Cockatwice
-            { "Node009", new Reward { Cards = new[] { "Chickatwice" }, Gold = 200, Xp = 100, OneTime = true, Source = Src.Guide2016 } },
-            // Sylvan Peninsula, Squashing Pumpkins: matched to the guide's "Wandering Abomination" (order of the route; hex-server also gives a pack here)
-            { "Node010", new Reward { Packs = 1, Gold = 200, Xp = 100, OneTime = true, Source = Src.Guide2016, Note = "node inferred from the route" } },
-            // Zila River, Gnash Bridges (conversation "Piranhas"): Piranha Swarm (Src.LootTables2016, "Piranhas";
-            // hex-server's "Ravenous Piranha" is a non-collectible token of the encounter)
-            { "Node013", new Reward { Cards = new[] { "Piranha Swarm" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
-            // Horwich Sea, The Sea Witch Unfettered (conversations "Hag", "Hag - Princess Revert"): Src.LootTables2016 "Hag Sorceress"
-            { "Node006", new Reward { Cards = new[] { "Kiss of the Princess" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016, Note = "the card needs Princess Daphne saved (game event savedprincess)", NeedsEvent = "savedprincess" } },
-            // Deep Desert, Hard Wurms (conversations "Wormoid Queen Tunnels/Surfaces"): Src.LootTables2016 "Wormoid Queen"
-            { "Node055", new Reward { Cards = new[] { "Wormoid Hydra" }, Gold = 100, Xp = 100, OneTime = true, Source = Src.LootTables2016 } },
-            // Razortooth Forest, Savage Lord: 200 gold (guide 2016); hex-server later saw 300 gold + 200 XP
-            { "Node014", new Reward { Gold = 200, Xp = 200, OneTime = true, Source = Src.Guide2016, Note = "XP from hex-server" } },
-            // Shadowgrove, Corrupt Dryad: AZ1 pack + race equipment; 250 XP (hex-server)
-            { "Node018", new Reward { Packs = 1, RaceQuest = "dryad", Xp = 250, OneTime = true, Source = Src.Guide2016 } },
+            { "Node003", R(150, 100) },                                       // Dunnwood, Wild Cub (Feralroot Bear)
+            // Sporemist Hollow and the other Shroomkin Hauses: the card picked only, no gold (Src.Video, 3 champions)
+            { "Node004", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node042", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node025", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node077", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node029", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node035", new Reward { ShroomHaus = true, Source = Src.Video } },
+            { "Node005", new Reward { Xp = 200, Packs = 1, Source = Src.Video } },      // Fonferek Thicket, Mind-Controlled Manti
+            // Horwich Sea, The Sea Witch Unfettered: Kiss of the Princess needs Princess Daphne saved (game event savedprincess)
+            { "Node006", new Reward { Gold = 500, Xp = 250, Packs = 1, Cards = new[] { "Kiss of the Princess" }, NeedsEvent = "savedprincess", Source = Src.Video, Note = "card: Src.LootTables2016" } },
+            { "Node009", R(200, 100, "Effigy of Nulzann") },                  // The Sutherland, Cockatwice
+            { "Node010", new Reward { Gold = 200, Xp = 100, Packs = 1, Source = Src.Video } },   // Sylvan Peninsula, Wandering Abomination
+            { "Node013", R(500, 600, "Piranha Swarm") },                     // Zila River, Gnash Bridges (Swarm of Piranhas)
+            { "Node014", R(300, 200) },                                       // Razortooth Forest, Savage Lord
+            { "Node018", new Reward { Xp = 250, Packs = 1, RaceQuest = "dryad", Source = Src.Video } },   // Shadowgrove, Corrupt Dryad
+            { "Node019", R(0, 200) },                                         // Brink Ridge, Human Blockade (zombie variant: 250 gold, 250 XP)
+            { "Node021", R(300, 200, "Conflagration Staff") },               // Clark Foothills, Bloated Zombie
+            // Lake Wyalusing, Guru of the Wounded Petal
+            { "Node022", new Reward { Gold = 400, Xp = 250, Packs = 1, Cards = new[] { "Uzume, Grand Concubunny Sleeve" }, Source = Src.Video } },
+            { "Node023", new Reward { Gold = 250, Xp = 250, Packs = 1, Source = Src.Video } },   // Zombie Mob
+            { "Node026", R(450, 250) },                                       // Furious Taskmaster / Brood Creeper
+            { "Node028", new Reward { Gold = 500, Xp = 500, Packs = 1, Source = Src.Video } },   // Garden of Ophelia, Overgrown Garden
+            { "Node031", R(400, 200) },                                       // Zodiac River, Water Elemental
+            { "Node033", R(400, 200) },                                       // Indigo River, Water Elemental
+            { "Node032", new Reward { Xp = 200, Packs = 1, Source = Src.Video } },               // Zodiac River - North, Fae Tricksters
+            { "Node039", R(0, 150) },                                         // Moonrise Canyon, Ambling Bluff
+            { "Node041", R(500, 250, "Common Stardust", "Uncommon Stardust") },   // Sunsoul Basin, Heart of the Phoenix
+            { "Node045", R(400, 200) },                                       // The Burk Heart, Necrophage Sensei / Ashwood Maestro
+            { "Node047", new Reward { Xp = 200, RandomEquipment = 2, Source = Src.Video } },     // Indigo Plains, Little Sky
+            { "Node050", R(500, 200) },                                       // Crescent Mesa, Pale Moon
+            { "Node052", R(0, 150) },                                         // Badlands, Old Dirty Bustard (Sandstone Rumbler)
+            { "Node055", R(0, 180, "Wormoid Hydra") },                        // Deep Desert, Hard Wurms (Wormoid Queen)
+            { "Node058", R(0, 60) }, { "Node059", R(0, 60) }, { "Node060", R(0, 60) },   // gnome escort wurms
+            { "Node062", R(0, 90) }, { "Node063", R(0, 90) },                 // adult wurms (Wormoid, Wormoid Hydra)
+            { "Node064", R(350, 250) },                                       // The Scar, Dusty Robots (Excavation Bot)
+            { "Node065", R(0, 200, "Rare Stardust") },                        // Sky'le Tepui, Red Thunder
+            { "Node066", R(150, 200) },                                       // Forsaken Plateau, Army of Myth
+            { "Node067", new Reward { Xp = 250, Packs = 1, Source = Src.Video } },               // Devonshire Hills, Bone Goliath
+            { "Node071", new Reward { Gold = 250, Xp = 250, RandomEquipment = 3, Source = Src.Video } },   // Valley of Sighs, The Killipede
+            { "Node075", R(450, 250) },                                       // Eagle Mesa, Elimination Specialist / Earthcaller
+            { "Node078", new Reward { Gold = 600, Xp = 350, Packs = 2, Source = Src.Video } },   // Skittering Ridge, Killipede's Revenge
         };
 
         /// <summary>Race order of the RaceRewards rows (as in the loot tables).</summary>
@@ -127,19 +151,23 @@ namespace HexRevival
         };
 
         /// <summary>
-        /// Crayburn Castle rewards by race: 4 cards each, Src.LootTables2016 ("Crayburn Packs"; the sheet
-        /// also names each race's PvP champion). Not given yet: the castle dungeon is not implemented.
+        /// Crayburn Castle Pack by race (given with 150 gold and 500 XP at the turn-in of the race's
+        /// "Crayburn Castle" quest, Src.Video): 4 cards, Src.LootTables2016 ("Crayburn Packs"; Vennen
+        /// "Entangling Webs" from Src.Video, the sheet says "Incubation Webs"), then the race's AZ1 rare:
+        /// the companion champion of its Crayburn training (Src.Video for Necrotic Iddi, Elf Nerissa,
+        /// Vennen Zilth; inferred for the others from the AZ0 encounters, Src.Game).
+        /// Not given yet: the castle dungeon is not implemented.
         /// </summary>
         private static readonly string[][] CrayburnCards =
         {
-            new[] { "Noble Citizenry", "Phoenix Guard Trainer", "Captain of the Dragon Guard", "Shards of Fate" },
-            new[] { "Rotroot Enchanter", "Emberleaf Wardancer", "Merry Minstrels", "Rootforged Regalia" },
-            new[] { "Nightsky Stargazer", "Brightmoon Brave", "Tyrannosaurus Hex", "Shards of Fate" },
-            new[] { "Darkspire Priestess", "Mazat Spearman", "Wrathseeker", "Assault Bot" },
-            new[] { "Axe Bot", "Researcher Adept", "War Bot Bunker", "Construction Plans: War Hulk" },
-            new[] { "Call the Grave", "Spiritbound Spy", "Deepgaze Acolyte", "Shards of Fate" },
-            new[] { "Concubunny", "Tyrannosaurus Hex", "Shroomtank", "Ebony Pawn" },
-            new[] { "Hatchery Priest", "Incubation Webs", "Vicious Vivisector", "Shield Bot" },
+            new[] { "Noble Citizenry", "Phoenix Guard Trainer", "Captain of the Dragon Guard", "Shards of Fate", "Gareth Kay" },
+            new[] { "Rotroot Enchanter", "Emberleaf Wardancer", "Merry Minstrels", "Rootforged Regalia", "Nerissa" },
+            new[] { "Nightsky Stargazer", "Brightmoon Brave", "Tyrannosaurus Hex", "Shards of Fate", "Whispering Breeze" },
+            new[] { "Darkspire Priestess", "Mazat Spearman", "Wrathseeker", "Assault Bot", "Moqui" },
+            new[] { "Axe Bot", "Researcher Adept", "War Bot Bunker", "Construction Plans: War Hulk", "Glendower" },
+            new[] { "Call the Grave", "Spiritbound Spy", "Deepgaze Acolyte", "Shards of Fate", "Iddi" },
+            new[] { "Concubunny", "Tyrannosaurus Hex", "Shroomtank", "Ebony Pawn", "Sora" },
+            new[] { "Hatchery Priest", "Entangling Webs", "Vicious Vivisector", "Shield Bot", "Zilth" },
         };
 
         /// <summary>Army of Myth won at difficulty 6 (the army starts with 6 resources, choice "Diff_6"): Src.LootTables2016 "Army of Myth 6".</summary>
@@ -161,6 +189,7 @@ namespace HexRevival
         public static IEnumerable<string> FixedRewardNames()
         {
             foreach (Reward r in AZ1.Values) foreach (string c in r.Cards) yield return c;
+            foreach (Reward r in QuestRewards.Values) foreach (string c in r.Cards) yield return c;
             foreach (string[] l in RaceRewards.Values) foreach (string c in l) yield return c;
             foreach (string[] l in CrayburnCards) foreach (string c in l) yield return c;
             foreach (string c in UnmappedQuestCards) yield return c;
@@ -180,15 +209,15 @@ namespace HexRevival
 
         /// <summary>
         /// Haus kind of each Shroom Haus node. The game numbers its Hauses without naming the kind
-        /// (Src.Game). Confirmed: Sporemist Hollow = Artifact (Guide2016, hex-server), Uuug's Oasis =
-        /// Ruby and Lena Grotto = Diamond (let's plays seen by the user). Inferred (PLACEHOLDER):
-        /// Blau Flats = Sapphire ("blau" = blue), Bauer Dunes = Wild (Wild decks nearby), Hoff Mines =
-        /// Blood (the one left; dark humid cave).
+        /// (Src.Game). Sporemist Hollow = Artifact (Guide2016, Src.Video), Uuug's Oasis = Ruby and Lena
+        /// Grotto = Diamond (let's plays), Bauer Dunes = Sapphire and Blau Flats = Blood (Src.Video: the
+        /// node selected on the map right before the Haus's choice window); Hoff Mines = Wild (the one left;
+        /// a Wild choice was seen on video, its node not).
         /// </summary>
         private static readonly Dictionary<string, string> HausByNode = new Dictionary<string, string>
         {
-            { "Node004", "Artifact" }, { "Node042", "Wild" }, { "Node025", "Diamond" },
-            { "Node077", "Sapphire" }, { "Node029", "Blood" }, { "Node035", "Ruby" },
+            { "Node004", "Artifact" }, { "Node042", "Sapphire" }, { "Node025", "Diamond" },
+            { "Node077", "Blood" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
         };
 
         /// <summary>Card template ids offered by a Shroom Haus (the game's choice window).</summary>
@@ -213,9 +242,9 @@ namespace HexRevival
             if (Saves.Current.Claims.Contains(key)) return true;
             Saves.Current.Claims.Add(key);
             Reward r;
-            if (!AZ1.TryGetValue(node, out r)) r = new Reward { OneTime = true };
+            if (!AZ1.TryGetValue(node, out r)) r = new Reward();
             CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(templateId));
-            Reward chosen = new Reward { Gold = r.Gold, Xp = r.Xp, Cards = new[] { t.m_Name }, OneTime = true, Source = r.Source };
+            Reward chosen = new Reward { Gold = r.Gold, Xp = r.Xp, Cards = new[] { t.m_Name }, Source = r.Source };
             Grant(champId, chosen, node, "Shroom Haus " + node);
             return true;
         }
@@ -233,15 +262,21 @@ namespace HexRevival
         {
             Reward r;
             Reward special = AZ1.TryGetValue(node, out r) ? r : null;
-            bool claimed = special != null && special.OneTime && Saves.Current.Claims.Contains(champId + ":" + node);
-            Reward give = special != null && !claimed ? special : DefaultBattle;
-            if (give.NeedsEvent != null && !Campaign.BattleEvents.Contains(give.NeedsEvent))
+            string key = champId + ":" + node;
+            Reward give;
+            if (special == null) give = DefaultBattle;
+            else if (!special.HasItems || Saves.Current.Claims.Contains(key)) give = special.GoldXpOnly();
+            else if (special.NeedsEvent != null && !Campaign.BattleEvents.Contains(special.NeedsEvent))
             {
-                // Condition not met: the battle's gold and XP only, the node stays claimable for its cards.
-                give = new Reward { Gold = give.Gold, Xp = give.Xp, Source = give.Source };
-                Saves.Current.Claims.Remove(champId + ":" + node);
+                // Condition not met: gold and XP only, the items stay to win.
+                give = special.GoldXpOnly();
+                if (special.Packs > 0) give.Packs = special.Packs;   // the pack does not depend on the event (Src.Video)
             }
-            if (special != null && special.OneTime && !claimed) Saves.Current.Claims.Add(champId + ":" + node);
+            else
+            {
+                give = special;
+                Saves.Current.Claims.Add(key);
+            }
             // Taming quest ("AZ01 Tamed", Src.Game + Src.HexServer): an opponent troop tamed with the
             // taming item (IntAttr Tamed) and sent to the void is captured: 1 copy, once per champion and creature.
             List<string> extra = new List<string>();
@@ -252,14 +287,14 @@ namespace HexRevival
             }
             foreach (CardTemplate t in TamedCreatures())
             {
-                string key = champId + ":tamed:" + t.m_Name;
-                if (Saves.Current.Claims.Contains(key) || Array.Exists(give.Cards, x => string.Equals(x, t.m_Name, StringComparison.OrdinalIgnoreCase))) continue;
-                Saves.Current.Claims.Add(key);
+                string tameKey = champId + ":tamed:" + t.m_Name;
+                if (Saves.Current.Claims.Contains(tameKey) || Array.Exists(give.Cards, x => string.Equals(x, t.m_Name, StringComparison.OrdinalIgnoreCase))) continue;
+                Saves.Current.Claims.Add(tameKey);
                 extra.Add(t.m_Name);
             }
             if (extra.Count > 0)
             {
-                Reward withTamed = new Reward { Gold = give.Gold, Xp = give.Xp, Packs = give.Packs, RaceQuest = give.RaceQuest, ShroomHaus = give.ShroomHaus, Source = give.Source };
+                Reward withTamed = new Reward { Gold = give.Gold, Xp = give.Xp, Packs = give.Packs, RandomEquipment = give.RandomEquipment, RaceQuest = give.RaceQuest, ShroomHaus = give.ShroomHaus, Source = give.Source };
                 List<string> all = new List<string>(give.Cards);
                 all.AddRange(extra);
                 withTamed.Cards = all.ToArray();
@@ -272,18 +307,36 @@ namespace HexRevival
         public static bool AnyTamed() { return QuestSim.Active ? QuestSim.Tamed : TamedCreatures().Count > 0; }
 
         /// <summary>
-        /// Quest rewards, given at the turn-in (Src.LootTables2016 for the cards; the race card of the
-        /// "Find the Cave-In / Ambling Mesa" quests). Gold for quests without a known reward: PLACEHOLDER.
+        /// Quest rewards, given at the turn-in (Src.Video: the reward window after the quest giver's
+        /// last conversation, Dec 2016-2017 client, Necrotic and Elf; race items Src.LootTables2016).
         /// </summary>
         private static readonly Dictionary<string, Reward> QuestRewards = new Dictionary<string, Reward>
         {
-            { "az01_ar_find_ambling_mesa", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
-            { "az01_uw_find_cave_in", new Reward { RaceQuest = "mesa", Source = Src.LootTables2016 } },
-            // Bridge quests (Src.Guide2016; race items Src.LootTables2016), given at the turn-in.
-            { "az01_q_cross_the_river", new Reward { Packs = 1, RaceQuest = "zila", Gold = 300, Source = Src.Guide2016 } },
-            { "az01_q_cross_the_river_part2", new Reward { Packs = 1, RaceQuest = "zodiac", Source = Src.Guide2016 } },
-            { "q_blood_beneath", new Reward { Cards = new[] { "Contract Killing" }, Gold = QuestGold, Source = Src.LootTables2016 } },
-            { "q_gnomes_come_home", new Reward { Cards = new[] { "Gnome Wayfarer" }, Gold = QuestGold, Source = Src.LootTables2016 } },
+            // Find the Cave-In (Fahrny) / the Ambling Mesa (Feather Drifting)
+            { "az01_ar_find_ambling_mesa", new Reward { Gold = 350, Xp = 350, Packs = 1, RaceQuest = "mesa", Source = Src.Video } },
+            { "az01_uw_find_cave_in", new Reward { Gold = 350, Xp = 350, Packs = 1, RaceQuest = "mesa", Source = Src.Video } },
+            // Cross the Zila River (Weston) and the Zodiac River (Wallace / Warren)
+            { "az01_q_cross_the_river", new Reward { Gold = 300, Xp = 300, Packs = 1, RaceQuest = "zila", Source = Src.Video } },
+            { "az01_q_cross_the_river_part2", new Reward { Gold = 400, Xp = 300, Packs = 1, RaceQuest = "zodiac", Source = Src.Video } },
+            // Tamed (Takumi / Belarius, after the 5 creatures)
+            { "az01_tamed", new Reward { Gold = 400, Xp = 400, Packs = 1, Cards = new[] { "Containment Sphere" }, Source = Src.Video } },
+            // The Sea Witch (Ennis / Kian: the sea hag's saliva)
+            { "q_seawitch", new Reward { Gold = 500, Xp = 400, Packs = 2, Source = Src.Video } },
+            // Three Braves (Bluejay; same reward for both robot choices)
+            { "az01_three_braves", new Reward { Gold = 350, Xp = 350, Cards = new[] { "Rare Stardust" }, Source = Src.Video } },
+            // Gnomes Come Home (Vincent)
+            { "q_gnomes_come_home", new Reward { Gold = 500, Xp = 500, Packs = 1, Cards = new[] { "Gnome Wayfarer" }, Source = Src.Video } },
+            // The Blood Beneath (Rizzix / Gurtok: the flask)
+            { "q_blood_beneath", new Reward { Gold = 750, Xp = 500, Packs = 1, Cards = new[] { "Contract Killing" }, Source = Src.Video } },
+            // Find Myaa (first meeting)
+            { "q_find_myaa", new Reward { Xp = 100, Source = Src.Video } },
+            // Army of Myth (Myaa)
+            { "q_army_of_myth", new Reward { Gold = 350, Xp = 350, Packs = 1, Source = Src.Video } },
+            // Dungeon quests: the dungeon packs are given once the dungeons are implemented (see docs/PROGRESSION.md)
+            { "q_tranquil_dream", new Reward { Xp = 700, Source = Src.Video, Note = "+ Tranquil Dream Pack" } },
+            { "az01_q_fort_romor", new Reward { Xp = 900, Source = Src.Video, Note = "+ Fort Romor Pack (early 2016: also 1000 gold)" } },
+            { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
+            { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "+ Devonshire Keep Pack; gold seen on the Elf run only" } },
         };
 
         /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>
@@ -335,7 +388,7 @@ namespace HexRevival
         public static void OnCampaignConversationDone(ulong champId, string node)
         {
             Reward r;
-            if (!AZ1.TryGetValue(node, out r) || !r.OneTime || r.ShroomHaus || Campaign.NodeHasBattle(node)) return;
+            if (!AZ1.TryGetValue(node, out r) || r.ShroomHaus || Campaign.NodeHasBattle(node)) return;
             string key = champId + ":" + node;
             if (Saves.Current.Claims.Contains(key)) return;
             Saves.Current.Claims.Add(key);
@@ -362,14 +415,21 @@ namespace HexRevival
             }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
             for (int i = 0; i < r.Packs; i++) foreach (Loot.Drop d in Loot.Open(Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
+            for (int i = 0; i < r.RandomEquipment; i++) AddDrop(Loot.RandomEquipment(Loot.AZ1Pack), cards, items, shown);
+            // Racial talents add their bonus as a second line, as the game showed it (Src.Video, Src.Game)
+            int xpPct, goldPct;
+            RacialBonus(champId, out xpPct, out goldPct);
+            int bonusGold = r.Gold * goldPct / 100, bonusXp = r.Xp * xpPct / 100;
             if (r.Gold > 0)
             {
-                Saves.Current.Gold += r.Gold;
+                Saves.Current.Gold += r.Gold + bonusGold;
                 shown.Add(Action("GOLD", r.Gold, null));
+                if (bonusGold > 0) shown.Add(Action("GOLD", bonusGold, null));
             }
             int levels;
-            champion_bits champ = Champions.AddXp(champId, r.Xp, out levels);
+            champion_bits champ = Champions.AddXp(champId, r.Xp + bonusXp, out levels);
             if (r.Xp > 0) shown.Add(Action("XP", r.Xp, null));
+            if (bonusXp > 0) shown.Add(Action("XP", bonusXp, null));
             if (levels > 0) shown.Add(Action("LEVEL", levels * TalentPointsPerLevel, null));
             Saves.SaveCurrent();
 
@@ -389,6 +449,34 @@ namespace HexRevival
             catch (Exception e) { Debug.LogError("[HexRevival] [Progression] CacheRewards: " + e); }
             Debug.Log("[HexRevival] [Progression] " + what + ": " + r.Gold + " gold, " + r.Xp + " XP, " + cards.Count + " card(s), " + items.Count + " item(s)" + (levels > 0 ? ", level up" : ""));
             AddAccountXp(PveWinXp);
+        }
+
+        /// <summary>
+        /// Racial talents of the champion's class (Src.Game: ChampionClassData, ChampionTalentData; level 1,
+        /// no talent point): Necrotic "Efficient" +10% XP, +2% gold at maximum level; Human "Intellectual
+        /// Pursuits" +5% XP, +3% gold at maximum level. The Necrotic line is seen on every reward window
+        /// of two Necrotic champions (Src.Video: 100 + 10 XP, 350 + 7 gold at level 21).
+        /// </summary>
+        private static void RacialBonus(ulong champId, out int xpPct, out int goldPct)
+        {
+            xpPct = goldPct = 0;
+            champion_bits c = Champions.Get(champId);
+            if (c == null) return;
+            bool maxLevel = c.Level >= MaxChampionLevel();
+            if (c.Race == ERace.Necrotic) { xpPct = 10; if (maxLevel) goldPct = 2; }
+            else if (c.Race == ERace.Human) { xpPct = 5; if (maxLevel) goldPct = 3; }
+        }
+
+        private static int MaxChampionLevel()
+        {
+            int max = 1;
+            foreach (XpTable t in Singleton<TemplateManager>.Instance.XpTables.Values)
+            {
+                if (t == null) continue;
+                foreach (XpTableItem i in t.m_XpTable) if (i.m_Level > max) max = i.m_Level;
+                break;
+            }
+            return max;
         }
 
         /// <summary>Card or equipment: added to the save, listed in the loot window (silently: CacheRewards gives it to the client).</summary>
