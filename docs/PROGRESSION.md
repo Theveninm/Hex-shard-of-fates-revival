@@ -55,11 +55,12 @@ gives **100 gold + 100 champion XP** (HexServer). Battle rewards (Video unless n
 | Node013 Zila River | Gnash Bridges (Swarm of Piranhas) | 500 | 600 | Piranha Swarm |
 | Node014 Razortooth Forest | Savage Lord | 300 | 200 | — |
 | Node018 Shadowgrove | Corrupt Dryad | 0 | 250 | AZ1 pack, race equipment |
-| Node019 Brink Ridge | Human Blockade (zombie variant: 250 / 250) | 0 | 200 | — |
+| Node019 Brink Ridge | Human Blockade | 0 | 200 | — |
+| Node019 Brink Ridge | Barricade Zombie, once, after the Smoldering Dead (Video; scene 19B, variants B1-B3 unused: PLACEHOLDER) | 250 | 250 | — |
 | Node021 Clark Foothills | Bloated Zombie | 300 | 200 | Conflagration Staff |
 | Node022 Lake Wyalusing | Guru of the Wounded Petal | 400 | 250 | AZ1 pack, deck sleeve Uzume, Grand Concubunny |
-| Node023 | Zombie Mob | 250 | 250 | AZ1 pack |
-| Node026 | Furious Taskmaster / Brood Creeper | 450 | 250 | — |
+| Node023 Saramago Crater | Zombie Mob (soldiers of the other faction helped or not: 4 scenes 23A/23B, Game) | 250 | 250 | AZ1 pack |
+| Node026 Johannes Bog | Furious Taskmaster (Underworld) / Brood Creeper (Ardent) | 450 | 250 | — |
 | Node028 Garden of Ophelia | Overgrown Garden | 500 | 500 | AZ1 pack |
 | Node031, Node033 | Water Elemental | 400 | 200 | — (Bubblebee if tamed) |
 | Node032 Zodiac River - North | Fae Tricksters | 0 | 200 | AZ1 pack |
@@ -199,7 +200,9 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
   long it lasted are unknown).
 - Gnomes Come Home: the gnomes found in the Lost Gnomes camp follow the champion; the Deep Desert
   battle happens only with them, and Herbert's camp completes the escort.
-- Not playable yet: the boat to AZ2, the zombie invasion variants of some nodes.
+- Faction nodes: the template's Node023A/B and Node026A/B are one map node each (Node023, Node026),
+  the battle chosen by the faction and, at Node023, the help / no help answer.
+- Not playable yet: the boat to AZ2.
 
 The dev command `sim` plays a quest script on a throwaway champion (e.g. `sim new Human; visit
 Node046; talk; visit Node047; talk; fight win; ...`) and writes the dialogues, quest steps and

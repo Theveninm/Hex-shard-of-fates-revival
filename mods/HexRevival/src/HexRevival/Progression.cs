@@ -111,7 +111,8 @@ namespace HexRevival
             { "Node013", R(500, 600, "Piranha Swarm") },                     // Zila River, Gnash Bridges (Swarm of Piranhas)
             { "Node014", R(300, 200) },                                       // Razortooth Forest, Savage Lord
             { "Node018", new Reward { Xp = 250, Packs = 1, RaceQuest = "dryad", Source = Src.Video } },   // Shadowgrove, Corrupt Dryad
-            { "Node019", R(0, 200) },                                         // Brink Ridge, Human Blockade (zombie variant: 250 gold, 250 XP)
+            { "Node019", R(0, 200) },                                         // Brink Ridge, Human Blockade
+            { "Node019B", R(250, 250) },                                      // Brink Ridge, Barricade Zombie (after the Smoldering Dead)
             { "Node021", R(300, 200, "Conflagration Staff") },               // Clark Foothills, Bloated Zombie
             // Lake Wyalusing, Guru of the Wounded Petal
             { "Node022", new Reward { Gold = 400, Xp = 250, Packs = 1, Cards = new[] { "Uzume, Grand Concubunny Sleeve" }, Source = Src.Video } },

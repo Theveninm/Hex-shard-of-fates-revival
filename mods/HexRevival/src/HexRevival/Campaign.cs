@@ -8,7 +8,9 @@ using Game.Client.Campaign;
 using Game.Client.GameState;
 using Game.Shared;
 using Game.Shared.Campaign.Messages;
+using Game.Shared.Domain;
 using Game.Shared.Eval.Data;
+using Game.Shared.Mechanics;
 using Reckoning.Game;
 using Reckoning.Game.Conversations;
 using UnityEngine;
@@ -54,6 +56,7 @@ namespace HexRevival
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
             public string FightEncounter; // battle started by a dialogue choice "choice_fight" (Brink Ridge blockade)
             public string Dungeon;        // dungeon entered from this node (Dungeons key)
+            public Dictionary<string, string> Variants; // battle by faction and dialogue choice ("UW:help", "AR"...), see FactionNodes
         }
 
         private static List<MapNode> s_Nodes;
@@ -88,6 +91,7 @@ namespace HexRevival
                 if (n.Dungeon != null) { n.Type = "Dungeon"; n.Encounter = null; n.Conversation = null; n.RepeatConversation = null; }
                 s_Nodes.Add(n);
             }
+            AddFactionNodes(tm);
 
             // Paths: the map prefab holds one object per path, named "Path_NodeA_NodeB".
             try
@@ -104,6 +108,66 @@ namespace HexRevival
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] map paths: " + e); }
             Debug.Log("[HexRevival] [Campaign] AZ1: " + s_Nodes.Count + " nodes, " + s_Edges.Count + " connected");
+        }
+
+        /// <summary>
+        /// Map nodes whose battle depends on the faction (Src.Game): the template has "Node023A/B" and
+        /// "Node026A/B", the map prefab one "Node023" / "Node026"; their conversations ("Node 23 -
+        /// Zombies - ARDENT", "Node 26 - Bog - Underworld player"...) are per faction. Node 23: the
+        /// soldiers of the other faction surrounded by zombies, helped or not (choice_Help / choice_NoHelp).
+        /// </summary>
+        private static readonly Dictionary<string, string[]> FactionNodes = new Dictionary<string, string[]>
+        {
+            { "Node023", new[] { "Node023A", "UW:help", "AZ 1 - NODE 23A - HUMANS CHOICE HELP", "UW:nohelp", "AZ 1 - NODE 23A_2 - HUMANS NO HELP",
+                "AR:help", "AZ 1 - NODE 23B - NECROTIC CHOICE HELP", "AR:nohelp", "AZ 1 - NODE 23B_2 - NECROTIC NO HELP" } },
+            { "Node026", new[] { "Node026A", "UW", "AZ 1 - NODE 26 - WAYWARD ORCS", "AR", "AZ 1 - NODE 26B - WAYWARD VENNEN" } },
+        };
+
+        private static void AddFactionNodes(TemplateManager tm)
+        {
+            Dictionary<string, string> scenes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SceneData sc in tm.CampaignScenes.Values)
+                if (sc is EncounterScene && sc.m_Name != null && !scenes.ContainsKey(sc.m_Name.Trim())) scenes[sc.m_Name.Trim()] = sc.m_Id.ToString();
+            foreach (KeyValuePair<string, string[]> kv in FactionNodes)
+            {
+                if (s_Nodes.Exists(x => x.Id == kv.Key)) continue;
+                MapNode a = s_Nodes.Find(x => x.Id == kv.Value[0]);
+                // The template's variants are not on the map: one node replaces them.
+                s_Nodes.RemoveAll(x => x.Id.StartsWith(kv.Key) && x.Id.Length == kv.Key.Length + 1);
+                MapNode n = new MapNode { Id = kv.Key, Name = a != null ? a.Name : kv.Key, Variants = new Dictionary<string, string>() };
+                ResolveContent(n, tm);
+                for (int i = 1; i + 1 < kv.Value.Length; i += 2)
+                {
+                    string id;
+                    if (scenes.TryGetValue(kv.Value[i + 1], out id)) n.Variants[kv.Value[i]] = id;
+                    else Debug.LogError("[HexRevival] [Campaign] " + kv.Key + ": no scene " + kv.Value[i + 1]);
+                    if (id != null && n.Encounter == null) n.Encounter = id;
+                }
+                if (n.Encounter != null) { n.Type = "Encounter"; n.Conversation = null; }
+                s_Nodes.Add(n);
+            }
+        }
+
+        /// <summary>
+        /// Zombie blockade at Brink Ridge (Src.Video: the Ardent champion fought a Barricade Zombie there after
+        /// the Smoldering Dead; Src.Game: scenes "NODE 19B - ZOMBIE BLOCKADE", variants B1-B3 unused:
+        /// PLACEHOLDER). Its encounter while it is to be fought, else null.
+        /// </summary>
+        private static string ZombieBlockade(ulong champ)
+        {
+            if (Quests.Flag(champ, "dungeon:a8d2ad0e-306e-4d07-9cd1-e4d7c82cdf1c") == null || Quests.Flag(champ, "won:Node019B") != null) return null;
+            MapNode b = FindNode("Node019B");
+            return b != null ? b.Encounter : null;
+        }
+
+        /// <summary>The node's battle for this champion (faction, dialogue choice).</summary>
+        private static string EncOf(ulong champ, MapNode n)
+        {
+            if (n.Variants == null) return n.Encounter;
+            champion_bits c = Champions.Get(champ);
+            string f = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
+            string v, choice = Quests.Flag(champ, "choice:" + n.Id) == "choice_NoHelp" ? "nohelp" : "help";
+            return n.Variants.TryGetValue(f + ":" + choice, out v) || n.Variants.TryGetValue(f, out v) ? v : n.Encounter;
         }
 
         private static void AddEdge(string a, string b)
@@ -547,7 +611,7 @@ namespace HexRevival
                 d["completed"] = st.Completed.Contains(n.Id) && !repeat;
                 d["repeatable"] = repeat;
                 d["allow_cancel"] = true;
-                if (n.Encounter != null) d["encounter"] = n.Encounter;
+                if (n.Encounter != null) d["encounter"] = EncOf(st.ChampId, n);
                 if (repeat) d["conversationId"] = n.RepeatConversation;
                 else if (n.Conversation != null) d["conversationId"] = n.Conversation;
                 string outcome = n.Panorama == null && !n.IsHaus ? Quests.Flag(st.ChampId, "outcome:" + n.Id) : null;
@@ -602,6 +666,18 @@ namespace HexRevival
                     d["repeatable"] = st.Completed.Contains(n.Id);
                     d["event"] = "start";
                 }
+                string zombies = n.Id == "Node019" ? ZombieBlockade(st.ChampId) : null;
+                if (zombies != null)
+                {
+                    // Brink Ridge after the Smoldering Dead: zombies hold the barricade (one battle).
+                    d["type"] = "Encounter";
+                    d["encounter"] = zombies;
+                    d.Remove("conversationId");
+                    d.Remove("autostart");
+                    d["completed"] = false;
+                    d["repeatable"] = false;
+                    gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(zombies, new Dictionary<string, object> { { "encscene", zombies } }));
+                }
                 if (n.IsHaus && st.HausReady.Contains(n.Id) && !st.Completed.Contains(n.Id))
                 {
                     // The game's card choice window (Src.Game, as hex-server serves it): 3 card templates to pick from.
@@ -620,8 +696,8 @@ namespace HexRevival
                 if (n.Encounter != null)
                 {
                     Dictionary<string, object> ed = new Dictionary<string, object>();
-                    ed["encscene"] = n.Encounter;
-                    gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(n.Encounter, ed));
+                    ed["encscene"] = EncOf(st.ChampId, n);
+                    gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(EncOf(st.ChampId, n), ed));
                 }
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
@@ -1116,6 +1192,7 @@ namespace HexRevival
                     st.ALoc = null;
                     break;
                 case "start":
+                    if (active != null && active.Id == "Node019" && ZombieBlockade(st.ChampId) != null) { StartBattle(st, active, ZombieBlockade(st.ChampId)); break; }
                     if (active != null && active.Dungeon != null)
                     {
                         st.ALoc = null;
@@ -1178,12 +1255,16 @@ namespace HexRevival
         /// <summary>Difficulty of the campaign battle in progress (Army of Myth: resources the AI started with), for its rewards.</summary>
         public static int BattleDifficulty { get; private set; }
 
-        private static void StartBattle(CampState st, MapNode node) { StartBattle(st, node, node.Encounter); }
+        private static void StartBattle(CampState st, MapNode node) { StartBattle(st, node, EncOf(st.ChampId, node)); }
+
+        /// <summary>Encounter of the battle in progress (the node's own, a variant, or a dialogue's fight).</summary>
+        private static string s_BattleEnc;
 
         private static void StartBattle(CampState st, MapNode node, string encounter)
         {
             BattleDifficulty = s_Difficulty;
             s_BattleNode = node.Id;
+            s_BattleEnc = encounter;
             Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
             s_Battle = st;
             LaunchBattle(st.ChampId, encounter, node.Name);
@@ -1230,17 +1311,21 @@ namespace HexRevival
             Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
             QuestSim.Note("  battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
-            if (won && node != null && node.Encounter != null)
+            string enc = s_BattleEnc ?? (node != null ? node.Encounter : null);
+            s_BattleEnc = null;
+            if (won && node != null && enc != null)
             {
-                Quests.SetFlag(st.ChampId, "won:" + node.Encounter, "1");
+                Quests.SetFlag(st.ChampId, "won:" + enc, "1");
                 Quests.SetFlag(st.ChampId, "won:" + node.Id, "1");
                 if (node.Id == "Node014") Quests.CompleteLoc(st.ChampId, "az01_q_cross_the_river", "Step1");
-                Quests.OnEncounterWon(st.ChampId, node.Encounter, Progression.AnyTamed());
+                Quests.OnEncounterWon(st.ChampId, enc, Progression.AnyTamed());
             }
             if (node != null)
             {
                 Quests.SetFlag(st.ChampId, "prelude:" + node.Id, null);
-                string outcome = Outcome(st.ChampId, node, won);
+                bool zombies = node.Id == "Node019" && enc != null && enc == ZombieBlockade(st.ChampId);
+                if (zombies && won) Quests.SetFlag(st.ChampId, "won:Node019B", "1");
+                string outcome = zombies ? null : Outcome(st.ChampId, node, won);
                 if (outcome != null)
                 {
                     Quests.SetFlag(st.ChampId, "outcome:" + node.Id, outcome);
@@ -1248,7 +1333,7 @@ namespace HexRevival
                     Save();
                 }
             }
-            if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id);
+            if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Id == "Node019" && Quests.Flag(st.ChampId, "won:Node019B") != null && enc != null && enc != node.FightEncounter ? "Node019B" : node.Id);
             BattleDifficulty = 0;
             return true;
         }
@@ -1284,6 +1369,7 @@ namespace HexRevival
             CampState st = Get(champ, false);
             MapNode active = st != null && st.ALoc != null ? FindNode(st.ALoc) : null;
             // A battle already started by the dialogue (Army of Myth "Diff_N") is fought even after the conversation closed.
+            if (s_Battle == null && active != null && active.Id == "Node019" && ZombieBlockade(champ) != null) StartBattle(st, active, ZombieBlockade(champ));
             if (s_Battle == null && (active == null || active.Encounter == null)) { QuestSim.Note("  (no battle here)"); return; }
             if (s_Battle == null) StartBattle(st, active);
             OnGameEnded(won);
