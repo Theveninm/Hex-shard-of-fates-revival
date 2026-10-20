@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Game.Client;
 using Game.Client.Campaign;
 using Game.Shared;
@@ -18,8 +19,9 @@ namespace HexRevival
 {
     /// <summary>
     /// AZ1 dungeons (Castle Crayburn, the Tranquil Dream, Fort Romor, the Usurper, the Smoldering
-    /// Dead, Devonshire Keep), played as the game's DUNGEON campaigns: their own map (the client's
-    /// prefab "campaign/az01/&lt;dungeon&gt;/prefabs/nodes"), entered from the AZ1 map node.
+    /// Dead, Devonshire Keep) and AZ2 dungeons (Brutecrown Bluff, the Great Machine Graveyard, the
+    /// Kraken, the Ruins of Kukatan), played as the game's DUNGEON campaigns: their own map (the
+    /// client's prefab "campaign/az0N/&lt;dungeon&gt;/prefabs/nodes"), entered from their zone's map node.
     ///
     /// The game's DungeonTemplates only list the rooms; what the server did in each room is lost.
     /// Each room is rebuilt here as a list of steps (a conversation, a battle and its success / fail
@@ -48,17 +50,24 @@ namespace HexRevival
         /// One step of a room. Names may hold tokens, resolved per champion and run:
         /// {R} race ("Shin'hare"), {F} faction ("Underworld" / "Ardent"), {C} the room's dream creature,
         /// {D} its difficulty, {RANK} the creature's rank, {FORM} Sister Midnight's form, {SHEP} who
-        /// died before the Shepherd's Rest. "a|b" = first name found. A name may also be a template id.
+        /// died before the Shepherd's Rest, {ALLY} / {RIVAL} the Brutecrown gnolls (and {ALLYN} / {RIVALN}
+        /// their scene number). {?X:yes:no} = "yes" if X is a cleared room, the champion's faction or a
+        /// run var set to "1", else "no". "a|b" = first name found. A name may also be a template id.
         /// </summary>
         private class Step
         {
             public string Conv, Enc, Success, Fail, Reward;
             public string[] Requires = new string[0];  // rooms that must be cleared first
             public bool RequireAny;                     // one of them is enough
+            public string[] Excludes = new string[0];  // the step is gone once one of these rooms is cleared
             // Dialogue choices (ServerScriptEvent of the conversation's answers): event -> the battle's
             // encounter (null: the step's own), Skip (no battle, the step is done) or Stay (nothing happens).
+            // Two events fired in the same conversation can be listed together: "a+b".
             public Dictionary<string, string> On;
+            public string Else;                         // outcome when the conversation fired none of them
             public Dictionary<string, string> OnReward; // event -> reward of that battle
+            public Dictionary<string, string> OnSuccess;// event -> success conversation of that battle
+            public string Sets;                         // "var=value" (tokens allowed) recorded when the step is done
         }
 
         private const string Skip = "<skip>", Stay = "<leave>";
@@ -80,8 +89,11 @@ namespace HexRevival
             public Dictionary<string, HashSet<string>> Edges;
             public string NodesPrefab { get { return FolderPath + "/prefabs/nodes"; } }
             public string BackgroundPrefab { get { return FolderPath + "/prefabs/background"; } }
+            // Public campaign vars the conversations test (Src.Game TestCampaignState): var -> room whose clearing sets it to 1.
+            public Dictionary<string, string> Flags = new Dictionary<string, string>();
             public Def Add(string id, params Step[] steps) { Rooms[id] = new Room { Id = id, Steps = new List<Step>(steps) }; return this; }
             public Def Final(string id) { Rooms[id].Final = true; return this; }
+            public Def Flag(string var, string room) { Flags[var] = room; return this; }
         }
 
         private static Step Talk(string conv) { return new Step { Conv = conv }; }
@@ -188,6 +200,121 @@ namespace HexRevival
                 .Add("NodeK", Fight(dk, "Bower", "Devonshire Keep K", "devonshire/NodeK"))
                 .Add("NodeL", Fight(dk, "Lord Devonshire's Bedchamber", "Devonshire Keep L", "devonshire/NodeL"))
                 .Final("NodeL"));
+
+            // ---- Adventure Zone 2 (Src.Game: the conversations' texts and events, the scenes' names) ----
+
+            // Brutecrown Bluff (Node 2; Tezozo / Reese at the Highland Ridge): King Kazraga's three daughters beaten
+            // (Burgg, Zagg, Vargar), then one of them chosen at her home. The champion plays as her against Nogg
+            // Nogg ("In this encounter, you will be playing as her!"), meets a spurned sister at the Crumbling Gates,
+            // then helps her overthrow Kazraga (his "In Game Conversation"s are played by the battle itself).
+            const string bb = "Brutecrown Bluff - ";
+            s_Defs.Add(new Def { Key = "brutecrown", Id = "b730906f-a446-4fe0-869a-147857e4396e", Name = "Brutecrown Bluff", Folder = "brutecrownbluff", Zone = "AZ2", AZ1Node = "Node002", Start = "NodeA" }
+                .Add("NodeA", Talk(bb + "Highland Ridge - {F}"))
+                .Add("NodeB", Fight(bb, "Stone Path", "Brutecrown Bluff B - Stone Path", "brutecrown/NodeB"))
+                .Add("NodeC", Fight(bb, "Kildonan Circle", "Brutecrown Bluff C - Kildonan Circle", "brutecrown/NodeC"))
+                .Add("NodeD", Fight(bb, "Pebble Hollow", "Brutecrown Bluff D - Pebble Hollow", "brutecrown/NodeD"))
+                .Add("NodeE", Shed("NodeE", "Vargar", "Vargar's Shed", "NodeD"))
+                .Add("NodeF", Shed("NodeF", "Burgg", "Burgg's Shanty", "NodeB"))
+                .Add("NodeG", Shed("NodeG", "Zagg", "Zagg's Tent", "NodeC"))
+                // H-1/2/3: the ally's battle, numbered as the "J-n (Helping <ally>)" scenes (PLACEHOLDER: H's are not labelled).
+                .Add("NodeH", new Step { Conv = bb + "Lair of Nogg Nogg", Enc = "Brutecrown Bluff H-{ALLYN} - Lair of the Beast", Success = bb + "Lair of Nogg Nogg - Success - {ALLY}", Fail = bb + "Lair of Nogg Nogg - Fail", Reward = "brutecrown/NodeH",
+                    Requires = Sheds, RequireAny = true })
+                .Add("NodeI", Talk(bb + "Crumbling Gates - {RIVAL}"))
+                .Add("NodeJ", new Step { Conv = bb + "Castle Ruins", Enc = "Brutecrown Bluff J-{ALLYN} (Helping {ALLY}) - Castle Ruins", Success = bb + "Castle Ruins - Success - {ALLY}", Fail = bb + "Castle Ruins - Fail", Reward = "brutecrown/NodeJ" },
+                    Talk(bb + "Castle Ruins - Success 2 - {F} - {ALLY}"))
+                .Final("NodeJ"));
+
+            // The Great Machine Graveyard (Node 44, the junkyard robot's quest): the Obsolete Junkyard Bot's head found at
+            // the entrance; its legs (Scraptooth Hills), battery (Valley of Rubbish) and arms (the Great Heap) won, its torso
+            // found in the Assembly Yard; then its three weapons, a Scrapborn daughter of Kazraga, and Scutt.
+            const string gm = "Great Machine Graveyard - ";
+            s_Defs.Add(new Def { Key = "machinegraveyard", Id = "c875a374-7871-4a51-bb2e-cca8d5061ae2", Name = "Great Machine Graveyard", Folder = "greatmachinegraveyard", Zone = "AZ2", AZ1Node = "Node044", Start = "NodeA" }
+                .Add("NodeA", Talk(gm + "Entrance"))
+                .Add("NodeB", Fight(gm, "Scraptooth Hills", "Great Machine Graveyard B - Scraptooth Hills", "machinegraveyard/NodeB"))
+                .Add("NodeC", Fight(gm, "Barking Cavern", "Great Machine Graveyard C - Barking Caverns", "machinegraveyard/NodeC"))
+                .Add("NodeD", Fight(gm, "Valley of Rubbish", "Great Machine Graveyard D - Valley of Rubbish", "machinegraveyard/NodeD"))
+                .Add("NodeE", Fight(gm, "Snarling Road", "Great Machine Graveyard E - Snarling Road", "machinegraveyard/NodeE"))
+                .Add("NodeF", Roundabout())
+                .Add("NodeG", Fight(gm, "Great Heap", "Great Machine Graveyard G - The Great Heap", "machinegraveyard/NodeG"))
+                .Add("NodeH", Talk(gm + "Assembly Yard"))
+                // The weapons (east, south-east, south of the yard). The bot installs each one where it is found: in the
+                // original it was back in the Assembly Yard ("After <weapon>", else "Repeating if no new weapon"), which
+                // would need a repeatable room; the bot follows the champion anyway (it speaks in the Colosseum).
+                .Add("NodeI", Fight(gm, "Big Magnet Thing", "Great Machine Graveyard I - Big Magnet Thing", "machinegraveyard/NodeI"), Talk(gm + "Assembly Yard - After Magnet Shield"))
+                .Add("NodeJ", Fight(gm, "Crusher", "Great Machine Graveyard J - The Crusher", "machinegraveyard/NodeJ"), Talk(gm + "Assembly Yard - After Big Bopper"))
+                .Add("NodeK", Fight(gm, "Melting Pot", "Great Machine Graveyard K - Melting Pot", "machinegraveyard/NodeK"), Talk(gm + "Assembly Yard - After Slag Cannon"))
+                // The sister spurned at Brutecrown Bluff, rebuilt by Scutt ("You make my stupid sister queen").
+                .Add("NodeM", new Step { Conv = gm + "Scraptooth Colosseum - Scrapborn {RIVAL}", Enc = "Great Machine Graveyard M{RIVALN} - Scraptooth Arena - {RIVAL}", Success = gm + "Scraptooth Colosseum Success", Fail = gm + "Scraptooth Colosseum Fail", Reward = "machinegraveyard/NodeM" })
+                .Add("NodeN", Fight(gm, "Scraptooth Throne Room", "Great Machine Graveyard N - Scraptooth Throne Room", "machinegraveyard/NodeN"))
+                .Flag("dross_key_found", "NodeC")      // the Barking Cavern's rusted key opens Dross' collar
+                .Final("NodeN"));
+
+            // The Kraken (Node 19; Blue Sparrow / Renner): Portsmeare's mind-controlled villagers, the sail through the
+            // storm to the sea hags' island, Queen Magaidh, Captain Bellamy's ghost ship, then the Kraken ("Kraken's Gold"
+            // battles). Not reproduced (no hook in the battles yet): the dungeon-long effects the conversations announce:
+            // the sea hags' curses and the tentacles' stolen cards (explained by "Curse Dungeon Explanation" and "Kraken's
+            // Tentacle First Appearance", in-battle conversations), the Town Square's library / armory bonus
+            // (choice_library / choice_armory), the Algae Cave's cost -1 and the Dark Chamber's +1 charge.
+            const string kr = "Kraken - ";
+            s_Defs.Add(new Def { Key = "kraken", Id = "6b73c598-3b92-46ea-bd57-62ca564b2e57", Name = "The Kraken", Folder = "kraken", Zone = "AZ2", AZ1Node = "Node019", Start = "Node000" }
+                .Add("Node000", Talk(kr + "Start"))
+                // "Mayor Died" follows Mayor Galway's death in the battle (an event of the battle, unknown): PLACEHOLDER, he lives.
+                .Add("NodeA", new Step { Conv = kr + "Mind Controlled Village", Enc = "Kraken's Gold A - Portsmere|Kraken's Gold - Portsmere", Success = kr + "Mind Controlled Village Success - Mayor Lived", Fail = kr + "Mind Controlled Village Fail", Reward = "kraken/NodeA" })
+                .Add("NodeB", Talk(kr + "Town Square - {F}"))
+                .Add("NodeD", Talk(kr + "Docks"))
+                .Add("NodeE", Fight(kr, "The Storm", "Kraken's Gold E - Into the Storm", "kraken/NodeE"))
+                .Add("NodeF", Fight(kr, "East Shore", "Kraken's Gold F - Crustac Ambush", "kraken/NodeF"))
+                .Add("NodeG", Fight(kr, "Briny Cavern", "Kraken's Gold G - Sea Hag", "kraken/NodeG"))
+                .Add("NodeH", Talk(kr + "Algae Cave"))
+                .Add("NodeI", Fight(kr, "South Shore", "Kraken's Gold I - Crustac Warlord", "kraken/NodeI"))
+                .Add("NodeJ", Fight(kr, "Gulfweed Grotto", "Kraken's Gold J - The Siren", "kraken/NodeJ"))
+                .Add("NodeK", Talk(kr + "Crystal Cavern"))
+                .Add("NodeL", Fight(kr, "Palace of the Hag Queen", "Kraken's Gold L - Hag Queen", "kraken/NodeL"))
+                .Add("NodeM", Talk(kr + "Dark Chamber"))
+                .Add("NodeN", Talk(kr + "Haunted Shore"))
+                .Add("NodeO", Fight(kr, "Ship Graveyard", "Kraken's Gold O - Ship Graveyard", "kraken/NodeO"))
+                .Add("NodeP", Fight(kr, "Lair of The Kraken", "Kraken's Gold P - The Kraken", "kraken/NodeP"))
+                .Final("NodeP"));
+
+            // The Ruins of Kukatan (Node 40; Cressida / Sahas, ended with Myaa): the jungle, then the ruins. The dead
+            // explorer's journal (Bone Thicket) reads the glyphs: with it the Mausoleum's trap is disabled, and the
+            // Perilous Hallway and the Etchings are the glyphs' memory game ("(Memory)" battles, "Mini-game" outcomes);
+            // without it, their traps. Then the goblin Lukaz on his behemoth, and laid low, at Echo Ridge. Not reproduced
+            // (no hook in the battles yet): the Dead End's Coins of Kismet and the Buzzing Tangle's Polyberry Pouch,
+            // given at the start of every game of the dungeon.
+            const string rk = "Ruins of Kukatan - ";
+            const string journal = "{?NodeT:Has:Does Not Have}";
+            s_Defs.Add(new Def { Key = "kukatan", Id = "d7dc66e5-a3e4-4713-92c9-68717ae87442", Name = "Ruins of Kukatan", Folder = "ruinsofkukatan", Zone = "AZ2", AZ1Node = "Node040", Start = "Node001" }
+                .Add("Node001", Talk(rk + "Entrance"))
+                .Add("NodeA", Fight(rk, "Stagnant Pool", "Ruins of Kukatan A - Stagnant Pool", "kukatan/NodeA"))
+                .Add("NodeB", Fight(rk, "Ramshackle Bridge", "Ruins of Kukatan B - Ramshackle Bridge", "kukatan/NodeB"))
+                .Add("NodeT", Talk(rk + "Bone Thicket"))
+                .Add("NodeC", Fight(rk, "Kukatan River", "Ruins of Kukatan C - Kuroko River", "kukatan/NodeC"))
+                .Add("NodeD", Talk(rk + "The Ruins"))
+                .Add("NodeE", Talk(rk + "Dark Corridor - Player " + journal + " Journal"))
+                // Explorers of the other faction: shin'hare for the Ardent, coyotle for the Underworld (F 01 = Ardent: PLACEHOLDER).
+                .Add("NodeF", Fight(rk, "Tomb of Lingerers - {F}", "Ruins of Kukatan F {?Ardent:01:02} - Tomb of Lingerers", "kukatan/NodeF"))
+                .Add("NodeG", Talk(rk + "Dead End"))
+                .Add("NodeH", new Step { Conv = rk + "Mausoleum - Player " + journal + " Journal", Sets = "journalH={?NodeT:1:0}" })
+                .Add("NodeI", Talk(rk + "Long Hallway - Player {?journalH:Used:Did Not Use} Journal in H"),
+                    new Step { Enc = "Ruins of Kukatan {?journalH:I-2 - Perilous Hallway (Memory):I - Perilous Hallway}", Success = rk + "Long Hallway - {?journalH:Mini-game:Trap} Success", Fail = rk + "Long Hallway - {?journalH:Mini-game:Trap} Fail", Reward = "kukatan/NodeI" })
+                // (the dump's J-2 scene name is cut short: "(Memory" without its parenthesis)
+                .Add("NodeJ", new Step { Conv = rk + "Etchings of the Lost Ones - Player " + journal + " Journal",
+                    Enc = "{?NodeT:Ruins of Kukatan J-2 Etchings of the Lost Ones (Memory:Ruins of Kukatan J - Etchings of the Lost Ones}",
+                    Success = rk + "Etchings of the Lost Ones - {?NodeT:Mini-game:Trap} Success", Fail = rk + "Etchings of the Lost Ones - {?NodeT:Mini-game:Trap} Fail", Reward = "kukatan/NodeJ" })
+                // A conversation room in the template, no K scene: its "Success" / "Fail" conversations are left out (PLACEHOLDER).
+                .Add("NodeK", Talk(rk + "Blind Hollow"))
+                .Add("NodeO", Fight(rk, "The Overgrowth", "Ruins of Kukatan O - The Overgrowth", "kukatan/NodeO"))
+                .Add("NodeR", Fight(rk, "Lumbering Copse", "Ruins of Kukatan R - Lumbering Copse", "kukatan/NodeR"))
+                .Add("NodeS", Talk(rk + "Buzzing Tangle"))
+                .Add("NodeP", Fight(rk, "Ceremonial Altar", "Ruins of Kukatan P - Nibblin Ceremony", "kukatan/NodeP"))
+                .Add("NodeQ", Fight(rk, "Tomb of Omens", "Ruins of Kukatan Q - Tomb of Omens", "kukatan/NodeQ"))
+                .Add("NodeL", Fight(rk, "Black Hall", "Ruins of Kukatan L - Black Hall", "kukatan/NodeL"))
+                .Add("NodeM", Fight(rk, "Forgotten Crypt", "Ruins of Kukatan M - Rear Entrance", "kukatan/NodeM"))
+                // Lukaz riding high, then laid low ("You belligerently busted my behemoth!" in between).
+                .Add("NodeN", new Step { Conv = rk + "Echo Ridge", Enc = "Ruins of Kukatan N-2 - Echo Ridge (Lukaz)", Success = rk + "Echo Ridge - Transition from Lukaz Riding High to Laid Low", Fail = rk + "Echo Ridge Fail", Reward = "kukatan/NodeN/1" },
+                    new Step { Enc = "Ruins of Kukatan N-1 - Echo Ridge (Lukaz, Laid Low)", Success = rk + "Echo Ridge Success", Fail = rk + "Echo Ridge Fail", Reward = "kukatan/NodeN/2" })
+                .Final("NodeN"));
             return s_Defs;
         }
 
@@ -203,6 +330,45 @@ namespace HexRevival
         {
             string c = "Fort Romor - Defense of Fort Romor (" + lord + ")";
             return new Step { Conv = c, Enc = "Fort Romor - " + lord, Success = c + " Success", Fail = c + " Fail", Reward = "fortromor/Defense/" + n, Requires = new[] { "NodeB", "NodeC", "NodeD" } };
+        }
+
+        // Kazraga's daughters in the order of their scenes ("J-1 (Helping Vargar)", "M1 ... - Vargar"...), and their homes.
+        private static readonly string[] Gnolls = { "Vargar", "Burgg", "Zagg" };
+        private static readonly string[] Sheds = { "NodeE", "NodeF", "NodeG" };
+
+        /// <summary>
+        /// Brutecrown Bluff: a daughter's home, open once she is beaten. "accept_gnoll" makes her the ally (one
+        /// only: the other homes close); "No, I want to talk to the other daughters first" leaves the room as it
+        /// was, and the next visit plays the "Repeating conversation".
+        /// </summary>
+        private static Step Shed(string room, string gnoll, string home, string beatenIn)
+        {
+            Step s = With(Talk("Brutecrown Bluff - " + home + " - {?left." + room + ":Repeating:First} conversation"), "accept_gnoll", Skip);
+            s.Else = Stay;
+            s.Requires = new[] { beatenIn };
+            s.Excludes = Array.FindAll(Sheds, x => x != room);
+            s.Sets = "ally=" + gnoll;
+            return s;
+        }
+
+        /// <summary>
+        /// The Great Machine Graveyard's Roundabout: Dross, Scutt's chained pet. Killed, or freed with the Barking
+        /// Cavern's key (free_dross): no battle. Freed by breaking his post (free_dross + alert_gnolls): the gnolls
+        /// come, "Dross escaped!". His collar's trap blown (alert_gnolls): "nothing remains of Dross".
+        /// </summary>
+        private static Step Roundabout()
+        {
+            const string gm = "Great Machine Graveyard - ";
+            Step s = With(new Step { Conv = gm + "Roundabout", Fail = gm + "Roundabout Fail", Reward = "machinegraveyard/NodeF" },
+                "free_dross", Skip,
+                "free_dross+alert_gnolls", "Great Machine Graveyard F - Roundabout",
+                "alert_gnolls", "Great Machine Graveyard F 2 - Roundabout (AI goes first)");   // PLACEHOLDER: the blast's victim plays second
+            s.OnSuccess = new Dictionary<string, string>
+            {
+                { "free_dross+alert_gnolls", gm + "Roundabout Success - Player chose 3" },
+                { "alert_gnolls", gm + "Roundabout Success - Player chose 2 or 4" },
+            };
+            return s;
         }
 
         private static Def ByKey(string key) { return Defs().Find(d => d.Key == key); }
@@ -431,7 +597,9 @@ namespace HexRevival
 
         private static bool Available(Run r, Step s)
         {
-            if (s == null || s.Requires.Length == 0) return true;
+            if (s == null) return true;
+            foreach (string q in s.Excludes) if (Cleared(r, q)) return false;
+            if (s.Requires.Length == 0) return true;
             int cleared = 0;
             foreach (string q in s.Requires) if (Cleared(r, q)) cleared++;
             return s.RequireAny ? cleared > 0 : cleared == s.Requires.Length;
@@ -461,9 +629,9 @@ namespace HexRevival
             if (s == null || s.IndexOf('{') < 0) return s;
             champion_bits c = Champions.Get(r.Champ);
             ERace race = c != null ? c.Race : ERace.Human;
-            string v;
+            string v, faction = race.GetFaction() == EFactions.Underworld ? "Underworld" : "Ardent";
             s = s.Replace("{R}", race == ERace.ShinHare ? "Shin'hare" : race.ToString());
-            s = s.Replace("{F}", race.GetFaction() == EFactions.Underworld ? "Underworld" : "Ardent");
+            s = s.Replace("{F}", faction);
             if (r.Vars.TryGetValue("c:" + node, out v)) s = s.Replace("{C}", v);
             if (s.Contains("{FORM}")) s = s.Replace("{FORM}", Form(r));
             if (s.Contains("{RANK}") || s.Contains("{D}"))
@@ -483,8 +651,40 @@ namespace HexRevival
                 bool g = Cleared(r, "NodeC"), m = Cleared(r, "NodeD");
                 s = g && m ? s.Replace("{SHEP}", "Both") : s.Replace("{SHEP} Dead", g ? "Ghuuhg Dead" : "Mistsim Dead|" + s.Replace("{SHEP} Dead", "Mistism Dead"));
             }
-            return s;
+            if (s.Contains("{ALLY") || s.Contains("{RIVAL"))
+            {
+                string ally = Ally(r), rival = Rival(ally);
+                s = s.Replace("{ALLYN}", GnollN(ally)).Replace("{ALLY}", ally).Replace("{RIVALN}", GnollN(rival)).Replace("{RIVAL}", rival);
+            }
+            return CondToken.Replace(s, m => Holds(r, m.Groups[1].Value, faction) ? m.Groups[2].Value : m.Groups[3].Value);
         }
+
+        /// <summary>{?X:yes:no}, see Step.</summary>
+        private static readonly Regex CondToken = new Regex(@"\{\?([^:{}]+):([^:{}]*):([^{}]*)\}");
+
+        private static bool Holds(Run r, string x, string faction)
+        {
+            string v;
+            if (RoomOf(r, x) != null) return Cleared(r, x);
+            return x == faction || (r.Vars.TryGetValue(x, out v) && v == "1");
+        }
+
+        /// <summary>The daughter the champion helps at Brutecrown Bluff (her home's step), kept for the Graveyard.</summary>
+        private static string Ally(Run r)
+        {
+            string v;
+            if (r.Vars.TryGetValue("ally", out v)) return v;
+            return Quests.Flag(r.Champ, "brutecrown:ally") ?? Gnolls[0];   // Brutecrown Bluff not played: PLACEHOLDER (Vargar)
+        }
+
+        /// <summary>
+        /// The spurned daughter met at the Crumbling Gates and, rebuilt by Scutt, in the Graveyard's Colosseum (her
+        /// words there: "Zagg once tell &lt;race&gt; that we meet again"; "Vargar remember"). Which of the two sisters:
+        /// PLACEHOLDER, the next one in the scenes' order (Zagg's "you want to make my idiot sister the queen" fits Burgg).
+        /// </summary>
+        private static string Rival(string ally) { return Gnolls[(Array.IndexOf(Gnolls, ally) + 1) % Gnolls.Length]; }
+
+        private static string GnollN(string gnoll) { return (Array.IndexOf(Gnolls, gnoll) + 1).ToString(); }
 
         private static int Points(Run r, string room) { string v; int n; return r.Vars.TryGetValue("pts:" + room, out v) && int.TryParse(v, out n) ? n : 0; }
 
@@ -510,7 +710,9 @@ namespace HexRevival
         {
             evt = null;
             string outcome;
-            if (s == null || s.On == null || !r.Vars.TryGetValue("choice:" + room, out evt) || !s.On.TryGetValue(evt, out outcome)) return null;
+            if (s == null || s.On == null) return null;
+            if (!r.Vars.TryGetValue("choice:" + room, out evt)) return s.Else;
+            if (!s.On.TryGetValue(evt, out outcome)) return null;
             return outcome ?? s.Enc;
         }
 
@@ -594,7 +796,8 @@ namespace HexRevival
                 gs.LocNodes.Add(new Node(n, new Dictionary<string, object> { { "id", n }, { "type", "DEFAULT" } }));
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
-            pub["CampaignGroup"] = "AZ1";
+            pub["CampaignGroup"] = d.Zone;
+            foreach (KeyValuePair<string, string> f in d.Flags) if (Cleared(r, f.Value)) pub[f.Key] = 1;
             pub["visited_nodes"] = new List<object>(r.VisitedNodes.ToArray());
             pub["visited_paths"] = new List<object>(r.VisitedPaths.ToArray());
             pub["quest_nodes"] = new List<object>();
@@ -659,6 +862,7 @@ namespace HexRevival
             Def d = r.Def;
             Quests.OnDungeonDone(r.Champ, d.Id);
             if (d.Key == "crayburn") Progression.OnCrayburnDone(r.Champ);
+            if (d.Key == "brutecrown") Quests.SetFlag(r.Champ, "brutecrown:ally", Ally(r));   // her spurned sister waits in the Graveyard
             Campaign.OnDungeonDone(r.Champ, d.Zone, d.AZ1Node);
             Leave(r, "finished");
         }
@@ -747,8 +951,9 @@ namespace HexRevival
                     string choiceEvt, choice = Choice(r, room, s, out choiceEvt);
                     if (choice == Stay)
                     {
-                        // Left without doing anything: the room stays as it was.
+                        // Left without doing anything: the room stays as it was ({?left.<room>:..} for the next visit).
                         r.Vars.Remove("choice:" + room);
+                        r.Vars["left." + room] = "1";
                         r.ALoc = null;
                         break;
                     }
@@ -759,7 +964,7 @@ namespace HexRevival
                         break;
                     }
                     r.Vars.Remove("choice:" + room);
-                    r.Steps[room] = Done(r, room) + 1;
+                    StepDone(r, room);
                     r.ALoc = null;
                     if (AfterStep(r, room)) return;
                     break;
@@ -778,7 +983,15 @@ namespace HexRevival
                 {
                     // Dialogue events: the choices that change the room, the Dream's tale answers.
                     Step cur = room != null ? Current(r, room) : null;
-                    if (cur != null && cur.On != null && cur.On.ContainsKey(evt)) r.Vars["choice:" + room] = evt;
+                    if (cur != null && cur.On != null)
+                    {
+                        // An answer may fire two events (the Roundabout's "free_dross" then "alert_gnolls"): their
+                        // pair is the choice when the step lists it; an event fired again keeps the choice.
+                        string prev;
+                        bool had = r.Vars.TryGetValue("choice:" + room, out prev);
+                        if (had && cur.On.ContainsKey(prev + "+" + evt)) r.Vars["choice:" + room] = prev + "+" + evt;
+                        else if (cur.On.ContainsKey(evt) && !(had && Array.IndexOf(prev.Split('+'), evt) >= 0)) r.Vars["choice:" + room] = evt;
+                    }
                     int pts = evt == "one_point_answer" ? 1 : evt == "two_point_answer" ? 2 : evt == "three_point_answer" ? 3 : 0;
                     if (pts > 0 && room != null) r.Vars["pts:" + room] = pts.ToString();
                     break;
@@ -786,6 +999,16 @@ namespace HexRevival
             }
             Save();
             Answer(r, callback);
+        }
+
+        /// <summary>The room's current step is done (its Sets var recorded, as things stand now).</summary>
+        private static void StepDone(Run r, string room)
+        {
+            Step s = Current(r, room);
+            string kv = s != null ? Resolve(r, room, s.Sets) : null;
+            int i = kv != null ? kv.IndexOf('=') : -1;
+            if (i > 0) r.Vars[kv.Substring(0, i)] = kv.Substring(i + 1);
+            r.Steps[room] = Done(r, room) + 1;
         }
 
         /// <summary>A step was done: the next one starts by itself (same room), or the dungeon is finished. True if the dungeon was left.</summary>
@@ -803,17 +1026,23 @@ namespace HexRevival
         // Battles
         // ------------------------------------------------------------------
 
-        private class Battle { public Run Run; public string Room; public Step Step; public string Reward; public string Enc; }
+        private class Battle { public Run Run; public string Room; public Step Step; public string Reward, Success, Enc; }
         private static Battle s_Battle;
 
         private static void StartBattle(Run r, string room, Step s, string enc)
         {
-            string evt, reward = s.Reward;
+            string evt;
             Choice(r, room, s, out evt);
-            if (evt != null && s.OnReward != null && s.OnReward.ContainsKey(evt)) reward = s.OnReward[evt];
-            s_Battle = new Battle { Run = r, Room = room, Step = s, Reward = Resolve(r, room, reward), Enc = enc };
+            s_Battle = new Battle { Run = r, Room = room, Step = s, Reward = Resolve(r, room, ByChoice(s.OnReward, evt, s.Reward)), Success = ByChoice(s.OnSuccess, evt, s.Success), Enc = enc };
             Debug.Log("[HexRevival] [Dungeons] battle " + r.Def.Name + " " + room + " (" + Resolve(r, room, s.Enc) + ")");
             Campaign.LaunchBattle(r.Champ, enc, r.Def.Name + " " + room);
+        }
+
+        /// <summary>The value given for the dialogue choice made (OnReward, OnSuccess), else the step's own.</summary>
+        private static string ByChoice(Dictionary<string, string> byEvent, string evt, string own)
+        {
+            string v;
+            return evt != null && byEvent != null && byEvent.TryGetValue(evt, out v) ? v : own;
         }
 
         /// <summary>Called once when a match ends. Returns false if it was not a dungeon battle.</summary>
@@ -834,9 +1063,9 @@ namespace HexRevival
             {
                 if (enc != null) Quests.SetFlag(r.Champ, "won:" + enc, "1");
                 if (enc != null) Quests.OnEncounterWon(r.Champ, enc, Progression.AnyTamed());
-                r.Outcome = Conv(r, room, b.Step.Success);
+                r.Outcome = Conv(r, room, b.Success);
                 if (r.Outcome != null) r.Vars["won"] = "1";
-                r.Steps[room] = Done(r, room) + 1;
+                StepDone(r, room);
                 if (b.Reward != null) Progression.OnCampaignBattleWon(r.Champ, b.Reward);
             }
             else
@@ -956,22 +1185,28 @@ namespace HexRevival
                             Step s = room.Steps[i];
                             foreach (string form in d.Key == "tranquildream" ? Forms : new[] { "" })
                             foreach (string cr in d.Key == "tranquildream" && Array.IndexOf(DreamRooms, room.Id) >= 0 ? Creatures : new[] { "Turtle" })
+                            foreach (string ally in d.Key == "brutecrown" || d.Key == "machinegraveyard" ? Gnolls : new string[] { null })
                             {
                                 r.Vars["form"] = form;
                                 r.Vars["c:" + room.Id] = cr;
+                                if (ally != null) r.Vars["ally"] = ally;
                                 List<string[]> names = new List<string[]> { new[] { "conv", s.Conv }, new[] { "enc", s.Enc }, new[] { "success", s.Success }, new[] { "fail", s.Fail } };
                                 if (s.On != null) foreach (string o in s.On.Values) if (o != null && o != Skip && o != Stay) names.Add(new[] { "enc", o });
+                                if (s.OnSuccess != null) foreach (string o in s.OnSuccess.Values) names.Add(new[] { "success", o });
                                 foreach (string[] kv in names)
                                 {
                                     if (kv[1] == null || kv[1].Length == 36) continue;
-                                    string name = ResolveFor(r, room.Id, kv[1], race);
-                                    count++;
-                                    foreach (string variant in Variants(name))
-                                        if ((kv[0] == "enc" ? Lookup(s_Encs, variant, false) : Lookup(s_Convs, variant, true)) == null)
-                                        {
-                                            string m = d.Name + " " + room.Id + " " + kv[0] + ": " + variant;
-                                            if (!missing.Contains(m)) missing.Add(m);
-                                        }
+                                    foreach (string branch in Branches(kv[1]))
+                                    {
+                                        string name = ResolveFor(r, room.Id, branch, race);
+                                        count++;
+                                        foreach (string variant in Variants(name))
+                                            if ((kv[0] == "enc" ? Lookup(s_Encs, variant, false) : Lookup(s_Convs, variant, true)) == null)
+                                            {
+                                                string m = d.Name + " " + room.Id + " " + kv[0] + ": " + variant;
+                                                if (!missing.Contains(m)) missing.Add(m);
+                                            }
+                                    }
                                 }
                             }
                         }
@@ -986,6 +1221,17 @@ namespace HexRevival
             s = s.Replace("{R}", race == ERace.ShinHare ? "Shin'hare" : race.ToString());
             s = s.Replace("{F}", race.GetFaction() == EFactions.Underworld ? "Underworld" : "Ardent");
             return Resolve(r, node, s);
+        }
+
+        /// <summary>The name with each way its {?X:yes:no} tokens can go.</summary>
+        private static List<string> Branches(string s)
+        {
+            Match m = CondToken.Match(s);
+            if (!m.Success) return new List<string> { s };
+            List<string> res = new List<string>();
+            foreach (int g in new[] { 2, 3 })
+                res.AddRange(Branches(s.Substring(0, m.Index) + m.Groups[g].Value + s.Substring(m.Index + m.Length)));
+            return res;
         }
 
         private static IEnumerable<string> Variants(string name)
@@ -1057,7 +1303,7 @@ namespace HexRevival
                     Run r = Get(champ);
                     Room room = r != null && parts.Length > 2 ? RoomOf(r, parts[2]) : null;
                     if (room == null) return "no such room";
-                    r.Steps[room.Id] = room.Steps.Count;
+                    while (Done(r, room.Id) < room.Steps.Count) StepDone(r, room.Id);
                     r.ALoc = null; r.Outcome = null;
                     Save();
                     if (room.Final) { Finish(r); return "finished"; }

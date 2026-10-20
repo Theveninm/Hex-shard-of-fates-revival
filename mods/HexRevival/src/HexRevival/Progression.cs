@@ -188,6 +188,52 @@ namespace HexRevival
             { "devonshire/NodeJ", new Reward { Gold = 400, Xp = 300, Source = Src.Placeholder } },
             { "devonshire/NodeK", R(550, 400) },
             { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
+
+            // ---- AZ2 dungeons. The final pack: named after the dungeon as in AZ1, but no AZ2 pack table yet (Loot
+            // skips it): PLACEHOLDER. Rooms not seen on video: PLACEHOLDER, rising towards the boss as in AZ1.
+            // Brutecrown Bluff (Burgg not seen)
+            { "brutecrown/NodeB", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
+            { "brutecrown/NodeC", R(250, 250) },                              // Zagg
+            { "brutecrown/NodeD", R(300, 300) },                              // Vargar
+            { "brutecrown/NodeH", R(400, 400) },                              // Nogg Nogg's Handler
+            { "brutecrown/NodeJ", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video, Note = "pack table: PLACEHOLDER" } },   // King Kazraga
+            // Great Machine Graveyard
+            { "machinegraveyard/NodeB", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeC", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeD", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeE", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeF", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeG", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeI", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeJ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeK", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeM", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
+            { "machinegraveyard/NodeN", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Great Machine Graveyard", Source = Src.Placeholder } },
+            // The Kraken
+            { "kraken/NodeA", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
+            { "kraken/NodeE", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "kraken/NodeF", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "kraken/NodeG", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kraken/NodeI", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kraken/NodeJ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "kraken/NodeL", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
+            { "kraken/NodeO", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
+            { "kraken/NodeP", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "The Kraken", Source = Src.Placeholder } },
+            // Ruins of Kukatan
+            { "kukatan/NodeA", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
+            { "kukatan/NodeB", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "kukatan/NodeC", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "kukatan/NodeF", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kukatan/NodeI", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kukatan/NodeJ", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kukatan/NodeO", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
+            { "kukatan/NodeR", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kukatan/NodeP", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
+            { "kukatan/NodeQ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "kukatan/NodeL", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
+            { "kukatan/NodeM", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
+            { "kukatan/NodeN/1", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
+            { "kukatan/NodeN/2", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Ruins of Kukatan", Source = Src.Placeholder } },
         };
 
         /// <summary>
