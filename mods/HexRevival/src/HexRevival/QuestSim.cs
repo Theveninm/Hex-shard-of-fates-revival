@@ -28,6 +28,7 @@ namespace HexRevival
     ///   dungeon &lt;key&gt;        enters a dungeon (crayburn, tranquildream, fortromor, usurper, smoldering, devonshire)
     ///   room &lt;Room&gt; [win|lose] [event ...]  plays a dungeon room (conversations with these dialogue events, battle)
     ///   dleave                leaves the dungeon (forfeit)
+    ///   zone AZ2              the champion goes to that zone (whole map visible)
     ///   quests                quest progress of the champion
     /// The report is written to HexRevivalSim.txt.
     /// </summary>
@@ -103,12 +104,12 @@ namespace HexRevival
                     break;
                 }
                 case "visit":
-                    Campaign.StartLocation(Champ, p[1], null);
+                    Campaign.StartLocation(Campaign.SimCamp(Champ), p[1], null);
                     Note("  " + Campaign.SimDescribe(Champ, p[1]));
                     break;
                 case "talk":
-                    for (int i = 1; i < p.Length; i++) Campaign.SendEvent(Champ, p[i], new object[0], null);
-                    Campaign.SendEvent(Champ, "conv_done", new object[0], null);
+                    for (int i = 1; i < p.Length; i++) Campaign.SendEvent(Campaign.SimCamp(Champ), p[i], new object[0], null);
+                    Campaign.SendEvent(Campaign.SimCamp(Champ), "conv_done", new object[0], null);
                     break;
                 case "fight":
                     Tamed = p.Length > 2 && p[2] == "tamed";
@@ -127,6 +128,12 @@ namespace HexRevival
                     break;
                 case "leave":
                     Campaign.SimLeaveHub(Champ);
+                    break;
+                case "zone":
+                    // the champion goes to that zone (whole map visible), as through the River of Whispers
+                    Quests.SetFlag(Champ, "zone", p[1].ToUpperInvariant());
+                    Campaign.SimStart(Champ);
+                    Note("  in " + p[1].ToUpperInvariant());
                     break;
                 case "dungeon":
                     Note("  " + Dungeons.SimEnter(Champ, p[1]));

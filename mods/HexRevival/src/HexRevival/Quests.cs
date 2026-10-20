@@ -36,6 +36,7 @@ namespace HexRevival
             public string LocId;          // m_QuestLocationId, shown by the journal
             public string Kind;           // Encounter, Dungeon, Conversation, Collect
             public string Encounter;      // encounter scene id (Encounter)
+            public List<string> AltEncounters = new List<string>(); // other scenes completing it (the other faction's variant)
             public string Dungeon;        // dungeon id (Dungeon)
             public List<string> Conversations = new List<string>(); // completing conversations (Conversation)
             public bool Taming;           // "Tame X and win match": needs a captured creature
@@ -58,6 +59,48 @@ namespace HexRevival
             "az01_q_usurper", "az01_q_fort_romor", "q_go_to_az2",
         };
 
+        /// <summary>The AZ2 quests. Their templates lost the ids of their objectives' battles, dungeons and conversations.</summary>
+        public static readonly string[] AZ2Scripts =
+        {
+            "q_alachian_sea", "q_ar_midnight_special", "q_boat_elementals", "q_boat_lobsters", "q_boat_pirates",
+            "q_brutecrown_bluff", "q_great_machine_graveyard", "q_kraken", "q_the_mithral_river", "q_petulent_picaroons",
+            "q_redhand_raiders", "q_ruins_of_kukatan", "q_the_new_land", "q_uw_victorias_secret",
+        };
+
+        private static IEnumerable<string> AllScripts() { foreach (string x in AZ1Scripts) yield return x; foreach (string x in AZ2Scripts) yield return x; }
+
+        /// <summary>
+        /// The AZ2 objectives' battles and dungeons, by name (Src.Game names matched to the objectives' texts;
+        /// both faction variants count). "quest|location" -> scene names, or "dungeon:" + template id.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> AZ2Objectives = new Dictionary<string, string[]>
+        {
+            { "q_alachian_sea|Fight1", new[] { "AZ 2 - NODE 8 - George Gorge - Flock of Seagulls" } },
+            { "q_alachian_sea|Fight2", new[] { "AZ 2 - NODE 15 - Holland Tideflats - Giant Jellyfish" } },
+            { "q_alachian_sea|Fight3", new[] { "AZ 2 - NODE 25 - Eslinger Isthmus - Dire Toad" } },
+            { "q_alachian_sea|Fight4", new[] { "AZ 2 - NODE 32 - Alachian Flats - Bog Walker" } },
+            { "q_ar_midnight_special|Fight1", new[] { "AZ2 - NODE 23A - Scamman Rock - Midnight Shepherd (vs. Ardent)" } },
+            { "q_boat_elementals|Fight1", new[] { "AZ 2 - NODE B01 - 1st Elementals" } },
+            { "q_boat_elementals|Fight2", new[] { "AZ 2 - NODE B06 - 2nd Elementals" } },
+            { "q_boat_elementals|Fight3", new[] { "AZ 2 - NODE B13 - 3rd Elemental Battle" } },
+            { "q_boat_lobsters|Fight1", new[] { "AZ 2 - NODE B03 - Lobster Grunt" } },
+            { "q_boat_lobsters|Fight2", new[] { "AZ 2 - NODE B08 - Lobster Wizard" } },
+            { "q_boat_lobsters|Fight3", new[] { "AZ 2 - NODE B16 - Lobster Lord" } },
+            { "q_boat_pirates|Fight1", new[] { "AZ 2 - NODE B05- Pirates on the seas" } },
+            { "q_boat_pirates|Fight2", new[] { "AZ 2 - NODE B15 - Pirates 2" } },
+            { "q_boat_pirates|Fight3", new[] { "AZ 2 - NODE B17 - Pirates 3" } },
+            { "q_brutecrown_bluff|Step1", new[] { "dungeon:b730906f-a446-4fe0-869a-147857e4396e" } },
+            { "q_great_machine_graveyard|Kill_Boss", new[] { "dungeon:c875a374-7871-4a51-bb2e-cca8d5061ae2" } },
+            { "q_kraken|Step1", new[] { "dungeon:6b73c598-3b92-46ea-bd57-62ca564b2e57" } },
+            // Ardent: Eurig the Robomancer (Mithral Falls); Underworld: Constantina (Mithral River) - PLACEHOLDER pairing
+            { "q_the_mithral_river|Fight1", new[] { "AZ 2 - NODE 48 - Mithral Falls - Eurig the Robomancer", "AZ 2 - NODE 46 - Mithral River - Constantina" } },
+            { "q_petulent_picaroons|Fight1", new[] { "AZ 2 - NODE 11 - Smuggler's Cove - Hired Horn Picaroon" } },
+            // the raiders: James River Road, Xentoth's Zealot (Ardent) / Lazghar Chul (Underworld) - PLACEHOLDER
+            { "q_redhand_raiders|Fight1", new[] { "AZ 2 - NODE 21A - James River Road - Xentoth's Zealot (vs. Ardent)", "AZ 2 - NODE 21B - James River Road - Lazghar Chul (vs. Underworld)" } },
+            { "q_ruins_of_kukatan|Step1", new[] { "dungeon:d7dc66e5-a3e4-4713-92c9-68717ae87442" } },
+            { "q_uw_victorias_secret|Fight1", new[] { "AZ 2 - NODE 14B - Peterson Woods - Princess Victoria (vs. Underworld)" } },
+        };
+
         private static Dictionary<string, Def> s_Defs;
 
         public static Def GetDef(string script)
@@ -74,10 +117,14 @@ namespace HexRevival
             Dictionary<string, QuestTemplate> byScript = new Dictionary<string, QuestTemplate>();
             foreach (QuestTemplate q in Singleton<TemplateManager>.Instance.QuestTemplates.Values)
                 if (q != null && !byScript.ContainsKey(q.m_ScriptName)) byScript[q.m_ScriptName] = q;
-            for (int i = 0; i < AZ1Scripts.Length; i++)
+            Dictionary<string, string> scenes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SceneData sc in Singleton<TemplateManager>.Instance.CampaignScenes.Values)
+                if (sc != null && sc.m_Name != null && !scenes.ContainsKey(sc.m_Name.Trim())) scenes[sc.m_Name.Trim()] = sc.m_Id.ToString();
+            List<string> scripts = new List<string>(AllScripts());
+            for (int i = 0; i < scripts.Count; i++)
             {
                 QuestTemplate q;
-                if (!byScript.TryGetValue(AZ1Scripts[i], out q)) { Debug.LogWarning("[HexRevival] [Quests] template not found: " + AZ1Scripts[i]); continue; }
+                if (!byScript.TryGetValue(scripts[i], out q)) { Debug.LogWarning("[HexRevival] [Quests] template not found: " + scripts[i]); continue; }
                 Def d = new Def { Script = q.m_ScriptName, Index = i };
                 foreach (QuestObjectiveBase o in q.m_Objectives)
                 {
@@ -96,6 +143,17 @@ namespace HexRevival
                         if (conv.m_ConversationIdList != null) foreach (ResourceId c in conv.m_ConversationIdList) if (c.IsValid) ob.Conversations.Add(c.ToString());
                     }
                     else ob.Kind = "Collect";
+                    string[] fix;
+                    if (AZ2Objectives.TryGetValue(q.m_ScriptName + "|" + ob.LocId, out fix))
+                        foreach (string name in fix)
+                        {
+                            if (name.StartsWith("dungeon:")) { ob.Kind = "Dungeon"; ob.Dungeon = name.Substring(8); continue; }
+                            string id;
+                            if (!scenes.TryGetValue(name, out id)) { Debug.LogWarning("[HexRevival] [Quests] " + q.m_ScriptName + " " + ob.LocId + ": no scene " + name); continue; }
+                            ob.Kind = "Encounter";
+                            if (ob.Encounter == null || ob.Encounter == ResourceId.Invalid.ToString() || !ob.Encounter.Contains("-") || ob.Encounter.StartsWith("00000000")) ob.Encounter = id;
+                            else ob.AltEncounters.Add(id);
+                        }
                     d.Objectives.Add(ob);
                 }
                 s_Defs[d.Script] = d;
@@ -264,7 +322,7 @@ namespace HexRevival
             for (int i = 0; i < d.Objectives.Count; i++)
             {
                 Objective o = d.Objectives[i];
-                if (o.Kind == "Encounter" && !o.Taming && o.Encounter != null && Flag(champ, "won:" + o.Encounter) != null) p.Done.Add(i);
+                if (o.Kind == "Encounter" && !o.Taming && o.Encounter != null && (Flag(champ, "won:" + o.Encounter) != null || o.AltEncounters.Exists(e => Flag(champ, "won:" + e) != null))) p.Done.Add(i);
                 if (o.Kind == "Dungeon" && o.Dungeon != null && Flag(champ, "dungeon:" + ObjectiveDungeon(script, o)) != null) p.Done.Add(i);
             }
             if (script == "az01_q_cross_the_river" && Flag(champ, "won:Node014") != null) p.Done.Add(0);
@@ -300,7 +358,7 @@ namespace HexRevival
                 for (int i = 0; i < d.Objectives.Count; i++)
                 {
                     Objective o = d.Objectives[i];
-                    if (q.Value.Done.Contains(i) || o.Kind != "Encounter" || o.Encounter != sceneId) continue;
+                    if (q.Value.Done.Contains(i) || o.Kind != "Encounter" || (o.Encounter != sceneId && !o.AltEncounters.Contains(sceneId))) continue;
                     if (o.Taming && !tamed) continue;
                     Complete(champ, d, q.Value, i);
                 }
@@ -482,6 +540,13 @@ namespace HexRevival
             new[] { "DEVONSHIRE KEEP", "q_devonshire_keep" }, new[] { "TRANQUIL DREAM", "q_tranquil_dream" },
             new[] { "USURPER", "az01_q_usurper" }, new[] { "FORT ROMOR", "az01_q_fort_romor" },
             new[] { "STARTS AZ2", "q_go_to_az2" },
+            // AZ2 (Wakuna / Naagaan givers, Node 57's Brutecrown Delta)
+            new[] { "ALACHIAN SEA", "q_alachian_sea" }, new[] { "MIDNIGHT SPECIAL", "q_ar_midnight_special" },
+            new[] { "BRUTECROWN", "q_brutecrown_bluff" }, new[] { "MACHINE GRAVEYARD", "q_great_machine_graveyard" },
+            new[] { "THE KRAKEN", "q_kraken" }, new[] { "MITHRIL RIVER", "q_the_mithral_river" },
+            new[] { "PICAROONS", "q_petulent_picaroons" }, new[] { "CROSSED DARK", "q_redhand_raiders" },
+            new[] { "RUINS OF KUKATAN", "q_ruins_of_kukatan" }, new[] { "THE NEW LAND", "q_the_new_land" },
+            new[] { "VICTORIA'S SECRET", "q_uw_victorias_secret" },
         };
 
         public const string Gnomes = "q_gnomes_come_home";
@@ -501,7 +566,7 @@ namespace HexRevival
         public static Role RoleOf(string convName)
         {
             string u = convName.ToUpperInvariant();
-            if (u.Contains("COMPLETED REPEATING")) return Role.Repeat;
+            if (u.Contains("COMPLETED REPEATING") || u.Contains("COMPLETE REPEATING") || u.Contains("REPEATING UNTIL")) return Role.Repeat;
             if (u.Contains("NOT COMPLETE")) return Role.NotComplete;
             if (u.Contains("QUEST END")) return Role.End;
             if (u.Contains("QUEST START") || u.Contains("STARTS AZ2")) return Role.Start;
@@ -572,6 +637,12 @@ namespace HexRevival
             if (u.Contains("ROBOT - STEP 3 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step2B");
             if (u.Contains("ROBOT - STEP 4 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step3B");
             if (u.Contains("BLUEJAY - STEP 4")) CompleteLoc(champ, "az01_three_braves", "Step6");
+            // AZ2 quests given on the map: Brutecrown Delta (Belarius / Takumi at McGinty Coast), the
+            // junkyard robot (Great Machine Graveyard), the harbor of Portsmeare (The New Land).
+            string script = QuestOf(convName);
+            if (script != null && RoleOf(convName) == Role.Start && u.StartsWith("AZ2")) Start(champ, script);
+            if (u.Contains("AZ2 - NODE 45 - ROBOT")) Start(champ, "q_great_machine_graveyard");
+            if (u.Contains("PORTSMEARE HARBOR")) CompleteLoc(champ, "q_the_new_land", "Step1");
         }
 
         // ------------------------------------------------------------------
@@ -589,7 +660,7 @@ namespace HexRevival
                 // dev: every AZ1 quest with its objectives, to HexRevivalQuests.txt
                 Load();
                 List<string> lines = new List<string>();
-                foreach (string script in AZ1Scripts)
+                foreach (string script in AllScripts())
                 {
                     Def d = GetDef(script);
                     if (d == null) { lines.Add(script + ": NOT FOUND"); continue; }
@@ -608,7 +679,7 @@ namespace HexRevival
             {
                 // dev: conversations that complete each conversation objective, to HexRevivalQuestConvs.txt
                 List<string> lines = new List<string>();
-                foreach (string script in AZ1Scripts)
+                foreach (string script in AllScripts())
                 {
                     Def d = GetDef(script);
                     if (d == null) continue;

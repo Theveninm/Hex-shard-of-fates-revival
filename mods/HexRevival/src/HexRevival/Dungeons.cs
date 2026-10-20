@@ -73,11 +73,13 @@ namespace HexRevival
         private class Def
         {
             public string Key, Id, Name, Folder, AZ1Node, Start;
+            public string Zone = "AZ1";                 // zone of the map node (AZ1Node is that zone's node)
+            public string FolderPath { get { return "campaign/" + (Zone == "AZ1" ? "az01" : "az02") + "/" + Folder; } }
             public bool Starter;                        // Castle Crayburn: lost battles are fought again
             public Dictionary<string, Room> Rooms = new Dictionary<string, Room>();
             public Dictionary<string, HashSet<string>> Edges;
-            public string NodesPrefab { get { return "campaign/az01/" + Folder + "/prefabs/nodes"; } }
-            public string BackgroundPrefab { get { return "campaign/az01/" + Folder + "/prefabs/background"; } }
+            public string NodesPrefab { get { return FolderPath + "/prefabs/nodes"; } }
+            public string BackgroundPrefab { get { return FolderPath + "/prefabs/background"; } }
             public Def Add(string id, params Step[] steps) { Rooms[id] = new Room { Id = id, Steps = new List<Step>(steps) }; return this; }
             public Def Final(string id) { Rooms[id].Final = true; return this; }
         }
@@ -206,7 +208,7 @@ namespace HexRevival
         private static Def ByKey(string key) { return Defs().Find(d => d.Key == key); }
 
         /// <summary>Dungeon entered from an AZ1 map node (null if none).</summary>
-        public static string AtNode(string az1Node) { Def d = Defs().Find(x => x.AZ1Node == az1Node); return d != null ? d.Key : null; }
+        public static string AtNode(string zone, string node) { Def d = Defs().Find(x => x.Zone == zone && x.AZ1Node == node); return d != null ? d.Key : null; }
 
         /// <summary>Paths of the dungeon's map, read from the client's prefab ("Path_A_B").</summary>
         private static Dictionary<string, HashSet<string>> Edges(Def d)
@@ -649,7 +651,7 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Dungeons] champion " + r.Champ + " leaves " + r.Def.Name + " (" + reason + ")");
             QuestSim.Note("  leaves " + r.Def.Name + " (" + reason + ")");
             EndRun(r);
-            Campaign.ReturnToArea(r.Champ, r.Def.AZ1Node);
+            Campaign.ReturnToArea(r.Champ, r.Def.Starter ? null : r.Def.Zone, r.Def.AZ1Node);
         }
 
         private static void Finish(Run r)
@@ -657,7 +659,7 @@ namespace HexRevival
             Def d = r.Def;
             Quests.OnDungeonDone(r.Champ, d.Id);
             if (d.Key == "crayburn") Progression.OnCrayburnDone(r.Champ);
-            Campaign.OnDungeonDone(r.Champ, d.AZ1Node);
+            Campaign.OnDungeonDone(r.Champ, d.Zone, d.AZ1Node);
             Leave(r, "finished");
         }
 
@@ -682,13 +684,13 @@ namespace HexRevival
             Run r = Get(campId - DunBase);
             if (r != null) { Answer(r, callback); return; }
             // No run any more (finished elsewhere): back to the AZ1 map.
-            Campaign.ReturnToArea(campId - DunBase, null);
+            Campaign.ReturnToArea(campId - DunBase, null, null);
         }
 
         public static void Forfeit(ulong campId)
         {
             Run r = Get(campId - DunBase);
-            if (r == null) { Campaign.ReturnToArea(campId - DunBase, null); return; }
+            if (r == null) { Campaign.ReturnToArea(campId - DunBase, null, null); return; }
             if (r.Def.Starter) { Debug.Log("[HexRevival] [Dungeons] forfeit ignored in " + r.Def.Name); return; }
             Leave(r, r.Lost ? "lost" : "forfeit");
         }
