@@ -89,6 +89,7 @@ namespace HexRevival
                 if (first == 0) first = c.Id;
             }
             SetField(self, "m_CurrentChampionId", first);
+            DeckTemplates.LoadInto(self);
         }
 
         private static PlayerChampion BuildChampion(UID reckoningId, string name)

@@ -104,12 +104,31 @@ namespace HexRevival
                 c.Race = add.Race; c.ChampionClass = add.ChampionClass; c.Gender = add.Gender;
                 c.OwnerChampionId = add.OwnerChampionId;
                 c.PetName = add.PetName ?? "";
-                // Like a new champion of the original game: it receives its race's starter deck.
-                Reckoning.Game.DeckTemplate starter = null;
-                try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
-                Collection.GrantDeck(starter);
-                deck_bits deck = Decks.CreateForChampion(c.Name, c.Id, starter);
-                c.LastDeckID = deck.Id;
+                deck_bits deck;
+                if (c.OwnerChampionId != 0)
+                {
+                    // Sub-champion (the AZ2 boat, created by the client when its campaign needs it): its deck is a
+                    // profile deck template, first a copy of its owner's deck (the client's deck editor does the same).
+                    deck = Decks.CreateForChampion(c.Name, c.Id, null);
+                    champion_bits owner = Find(c.OwnerChampionId);
+                    Game.Shared.Profile.ProfileDeckTemplate t = owner != null ? Decks.ToProfileTemplate(owner.LastDeckID) : null;
+                    if (t != null)
+                    {
+                        Reckoning.Game.ChampionTemplate ct = champion_bits.GetChampionTemplate(c.Level, c.Race, c.ChampionClass, c.Gender);
+                        if (ct != null) t.Champ = ct.m_Id;
+                        t.Name = c.Name;
+                        c.DeckTemplateId = DeckTemplates.Put(t, 0);
+                    }
+                }
+                else
+                {
+                    // Like a new champion of the original game: it receives its race's starter deck.
+                    Reckoning.Game.DeckTemplate starter = null;
+                    try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
+                    Collection.GrantDeck(starter);
+                    deck = Decks.CreateForChampion(c.Name, c.Id, starter);
+                    c.LastDeckID = deck.Id;
+                }
                 s_Champions.Add(c);
                 Save();
                 AddChampionResponse r = LocalServer.Ok<AddChampionResponse>();
@@ -180,6 +199,7 @@ namespace HexRevival
             champion_bits c = Find(championId);
             if (c == null) return 0UL;
             if (c.LastDeckID != 0) return c.LastDeckID;
+            if (c.OwnerChampionId != 0) return 0UL;   // a sub-champion plays its deck template (see Boat)
             Reckoning.Game.DeckTemplate starter = null;
             try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
             Collection.GrantDeck(starter);
@@ -216,6 +236,13 @@ namespace HexRevival
         }
 
         public static champion_bits Get(ulong id) { return Find(id); }
+
+        /// <summary>A champion's sub-champion of that class (the AZ2 boat), null if not created yet.</summary>
+        public static champion_bits SubChampion(ulong owner, EChampionClass cls)
+        {
+            foreach (champion_bits c in s_Champions) if (c.OwnerChampionId == owner && c.ChampionClass == cls) return c;
+            return null;
+        }
 
         private static champion_bits Find(ulong id)
         {

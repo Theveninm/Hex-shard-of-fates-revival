@@ -30,7 +30,7 @@ namespace HexRevival
     /// node's encounter or conversation from the game's templates. Completing a node reveals its
     /// neighbours. One campaign per champion, saved in HexRevival.campaign.txt.
     /// </summary>
-    public static class Campaign
+    public static partial class Campaign
     {
         /// <summary>
         /// An adventure zone: its map template (the DungeonTemplate listing the nodes), the client's map
@@ -329,6 +329,7 @@ namespace HexRevival
         {
             if (ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
             if (s_BattleChamp != 0 && !s_FortuneApplied) { s_FortuneApplied = true; Fortunes.Apply(ss, s_BattleChamp); }
+            if (s_BattleChamp != 0) TickShip(ss);
             if (s_Difficulty <= 0) return;
             Player ai = Cheats.FindPlayer(ss, "ai");
             if (ai != null)
@@ -877,6 +878,7 @@ namespace HexRevival
                     d["selection-type"] = "Shroomkin_Haus";
                     d["selection-desc"] = "Shroomkin_Instructions";
                 }
+                ShipLocation(st, n, d);
                 gs.VisLocs.Add(new Location(d));
                 Dictionary<string, object> nd = new Dictionary<string, object>();
                 nd["id"] = n.Id;
@@ -894,6 +896,7 @@ namespace HexRevival
             pub["visited_nodes"] = new List<object>(st.VisitedNodes.ToArray());
             pub["visited_paths"] = new List<object>(st.VisitedPaths.ToArray());
             pub["quest_nodes"] = new List<object>();
+            AddShipState(st, gs, pub);
             gs.PublicState = new QueryState(pub);
             return gs;
         }
@@ -915,7 +918,7 @@ namespace HexRevival
         private const int AnswerDelayFrames = 5;
         private static readonly List<KeyValuePair<int, Action>> s_Answers = new List<KeyValuePair<int, Action>>();
 
-        private static void Enqueue(Action a) { if (QuestSim.Active) return; s_Answers.Add(new KeyValuePair<int, Action>(Time.frameCount + AnswerDelayFrames, a)); }
+        internal static void Enqueue(Action a) { if (QuestSim.Active) return; s_Answers.Add(new KeyValuePair<int, Action>(Time.frameCount + AnswerDelayFrames, a)); }
 
         /// <summary>Called every frame (main thread).</summary>
         public static void Pump()
@@ -1304,6 +1307,7 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Campaign] event " + evt + (arg0 != null ? " " + arg0 : ""));
             if (evt != "visit_node" && evt != "visit_path" && evt != "pass_node") LastEvent = evt;
             MapNode active = st.ALoc != null ? FindNode(st.Z, st.ALoc) : null;
+            if (ShipEvent(st, evt, arg0, active)) { Save(); Answer(st, callback); return; }
             switch (evt)
             {
                 case "visit_node":
@@ -1479,7 +1483,15 @@ namespace HexRevival
             s_BattleEnc = encounter;
             Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
             s_Battle = st;
-            LaunchBattle(st.ChampId, encounter, node.Name);
+            ResetShipBattle();
+            LaunchBattle(Fighter(st, node), encounter, node.Name);
+        }
+
+        /// <summary>The profile's current champion, without the client's side effects (read by the battle HUD and the campaign screens).</summary>
+        private static void SetCurrentChampion(ulong champId)
+        {
+            try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, champId); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Campaign] current champion: " + e.Message); }
         }
 
         /// <summary>Starts a campaign battle (map node or dungeon room) with the champion's deck.</summary>
@@ -1489,7 +1501,9 @@ namespace HexRevival
             try
             {
                 PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(champId);
-                if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
+                ulong sub = SubChampionDeck(champId);
+                if (sub != 0) deck = new UID(UID.Type.Deck, sub);
+                else if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
                 else
                 {
                     ulong id = Champions.EnsureDeck(champId);
@@ -1499,8 +1513,7 @@ namespace HexRevival
             catch { }
             s_BattleChamp = champId;
             // The battle HUD reads the level from the profile's current champion.
-            try { typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, champId); }
-            catch (Exception e) { Debug.LogWarning("[HexRevival] [Campaign] current champion: " + e.Message); }
+            SetCurrentChampion(champId);
             BattleEvents.Clear();
             s_FortuneApplied = false;
             Enqueue(() => Patches.StartMatch(deck, new ResourceId(encounter), null, "campaign " + label));
@@ -1518,6 +1531,10 @@ namespace HexRevival
             s_Battle = null;
             MapNode node = s_BattleNode != null ? FindNode(st.Z, s_BattleNode) : st.ALoc != null ? FindNode(st.Z, st.ALoc) : null;
             s_BattleNode = null;
+            // A sea battle was the ship's: the champion is the current one again, the hull is what is left.
+            SetCurrentChampion(st.ChampId);
+            ulong fighter = node != null ? Fighter(st, node) : st.ChampId;
+            if (node != null && IsSea(node)) ShipBattleEnded(st.ChampId, won);
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
             Save();
@@ -1545,7 +1562,7 @@ namespace HexRevival
                     Save();
                 }
             }
-            if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Z == AZ1 && node.Id == "Node019" && Quests.Flag(st.ChampId, "won:Node019B") != null && enc != null && enc != node.FightEncounter ? "Node019B" : node.Key);
+            if (won && node != null) Progression.OnCampaignBattleWon(fighter, node.Z == AZ1 && node.Id == "Node019" && Quests.Flag(st.ChampId, "won:Node019B") != null && enc != null && enc != node.FightEncounter ? "Node019B" : node.Key);
             BattleDifficulty = 0;
             return true;
         }
@@ -1660,6 +1677,21 @@ namespace HexRevival
                     if (s != null && string.Equals(s.m_Name, name, StringComparison.OrdinalIgnoreCase)) return Describe(s);
                 // not an exact name: the dump below (names containing it)
             }
+            if (sub == "boatdump")
+            {
+                // dev: the boat champion templates and boat talents (AZ2 sea voyages) to HexRevivalBoat.txt
+                StringBuilder sb = new StringBuilder();
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                foreach (ChampionTemplate c in tm.Champions.Values)
+                    if (c != null && c.m_Class == EChampionClass.Boat)
+                        sb.AppendLine("champion " + c.m_Id + " '" + c.m_Name + "' type=" + c.m_ChampionType + " selectable=" + c.m_IsPlayerSelectable + " race=" + c.m_Race + " gender=" + c.m_Gender
+                            + " health=" + c.m_StartingHealth + " hand=" + c.m_StartingHandSize + " charges=" + c.m_StartingCharges + " set=" + c.m_SetId + " text=" + c.m_GameText);
+                foreach (ChampionTalentData t in tm.ChampionTalentTemplates.Values)
+                    if (t != null && t.m_Class == EChampionClass.Boat)
+                        sb.AppendLine("talent " + t.m_Id + " '" + t.m_Name + "' cost=" + t.m_Cost + " minlevel=" + t.m_MinLevel + " : " + t.m_Description);
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalBoat.txt"), sb.ToString());
+                return "boat data written to HexRevivalBoat.txt";
+            }
             if (sub == "convs")
             {
                 // dev: text and events of the AZ1 conversations (all, or those whose name contains the filter) to HexRevivalConvs.txt
@@ -1734,7 +1766,7 @@ namespace HexRevival
             {
                 // dev: open the campaign map of the current champion (or "camp open <champion id>")
                 ulong champ = parts.Length > 2 ? ulong.Parse(parts[2]) : GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
-                typeof(PlayerProfile).GetField("m_CurrentChampionId", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(GameClient.Instance.PlayerProfile, champ);
+                SetCurrentChampion(champ);
                 CampState cs = GetChamp(champ, true);
                 UICampaignZoneVMBase.StateContext ctx = new UICampaignZoneVMBase.StateContext { CampaignId = cs.CampId, CampaignType = CampaignType.AREA, CampaignName = cs.Z.Key };
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Dungeon, ctx);

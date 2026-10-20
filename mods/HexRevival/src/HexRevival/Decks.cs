@@ -84,6 +84,33 @@ namespace HexRevival
             return ToBits(d);
         }
 
+        /// <summary>
+        /// Playable copy of a sub-champion's deck template (the boat's deck lives in the profile's deck
+        /// templates, the match engine loads player decks): the champion's own stored deck, refilled. Returns its id.
+        /// </summary>
+        public static ulong FromTemplate(ulong championId, Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            StoredDeck d = null;
+            foreach (StoredDeck x in s_Decks.Values) if (x.PveChampion == championId) { d = x; break; }
+            if (d == null) { d = new StoredDeck { Id = s_NextId++, PveChampion = championId }; s_Decks[d.Id] = d; }
+            d.Name = t.Name ?? "";
+            d.PvpChampion = t.Champ;
+            d.Sleeve = t.Sleeve;
+            d.Cards.Clear();
+            d.Side.Clear();
+            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
+                for (int i = 0; i < c.Count; i++) (c.Res ? d.Side : d.Cards).Add(c.Temp);
+            Save();
+            return d.Id;
+        }
+
+        /// <summary>A player deck as a profile deck template (null if unknown).</summary>
+        public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
+        {
+            StoredDeck d;
+            return s_Decks.TryGetValue(deckId, out d) ? Game.Shared.Profile.ProfileDeckTemplate.FromDeckBits(ToBits(d)) : null;
+        }
+
         public class DeckInfo
         {
             public UID Id;

@@ -562,7 +562,9 @@ namespace HexRevival
             try
             {
                 MethodInfo m = typeof(ClientCampaignManager).GetMethod("CacheRewards", BindingFlags.Static | BindingFlags.NonPublic);
-                m.Invoke(null, new object[] { champId, up });
+                // A sub-champion's reward (the AZ2 ship) is shown on its owner's map, with the ship's XP bar.
+                ulong shownTo = champ != null && champ.OwnerChampionId != 0 ? champ.OwnerChampionId : champId;
+                m.Invoke(null, new object[] { shownTo, up });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Progression] CacheRewards: " + e); }
             Debug.Log("[HexRevival] [Progression] " + what + ": " + r.Gold + " gold, " + r.Xp + " XP, " + cards.Count + " card(s), " + items.Count + " item(s)" + (levels > 0 ? ", level up" : ""));

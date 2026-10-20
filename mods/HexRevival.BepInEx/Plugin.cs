@@ -103,6 +103,8 @@ namespace HexRevival
                 string name = m;
                 apply("ClientCampaignManager." + name, () => Prefix(harmony, ccm, name, null, "Campaign_" + name));
             }
+            // Profile deck templates (the AZ2 boat's deck, see DeckTemplates.cs).
+            apply("Profile.Network.DeckTemplateSave", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "DeckTemplateSave", null, "Profile_DeckTemplateSave"));
             // Local store (see Store.cs).
             apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
                 new[] { typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItems"));
@@ -302,6 +304,9 @@ namespace HexRevival
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Session_PublishEvent(string __0) { Campaign.OnPublishEvent(__0); }
+        public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
+            Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
+        { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }

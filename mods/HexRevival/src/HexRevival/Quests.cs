@@ -331,6 +331,18 @@ namespace HexRevival
             NotifyStarted(champ, d);
         }
 
+        /// <summary>Clears the objectives of an unfinished quest (the AZ2 sea quests: "Must defeat all 3 in one voyage").</summary>
+        public static void ResetProgress(ulong champ, string script)
+        {
+            Def d = GetDef(script);
+            Progress p = Get(champ, script);
+            if (d == null || p == null || p.Finished || p.Done.Count == 0) return;
+            p.Done.Clear();
+            Save();
+            Log(champ + " " + script + ": objectives reset");
+            NotifyUpdated(champ, d);
+        }
+
         /// <summary>A conversation was completed: completes the quest objectives it satisfies.</summary>
         public static void OnConversationDone(ulong champ, string conversationId, string turnInScript)
         {
@@ -655,6 +667,8 @@ namespace HexRevival
             ulong champ = parts.Length > 2 && parts[1] == "of" ? ulong.Parse(parts[2]) : GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
             if (parts.Length > 2 && parts[1] == "start") { Start(champ, parts[2]); return "started " + parts[2]; }
             if (parts.Length > 2 && parts[1] == "reset") { Of(champ).Remove(parts[2]); Save(); return "reset " + parts[2]; }
+            // dev: "quest flag boat:hull 25" sets a champion flag ("-" clears it)
+            if (parts.Length > 3 && parts[1] == "flag") { SetFlag(champ, parts[2], parts[3] == "-" ? null : parts[3]); return parts[2] + " = " + Flag(champ, parts[2]); }
             if (parts.Length > 1 && parts[1] == "defs")
             {
                 // dev: every AZ1 quest with its objectives, to HexRevivalQuests.txt
