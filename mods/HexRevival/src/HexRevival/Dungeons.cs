@@ -596,6 +596,9 @@ namespace HexRevival
             pub["visited_nodes"] = new List<object>(r.VisitedNodes.ToArray());
             pub["visited_paths"] = new List<object>(r.VisitedPaths.ToArray());
             pub["quest_nodes"] = new List<object>();
+            // Castle Crayburn (Src.Game "/IsStarterDungeon"): no back button (it would abandon the run:
+            // there is no map to go back to yet) and no deck editing. The home button keeps the run.
+            if (d.Starter) pub["IsStarterDungeon"] = true;
             gs.PublicState = new QueryState(pub);
             return gs;
         }
@@ -629,7 +632,7 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// A champion without any campaign yet starts in Castle Crayburn (as in the original game).
+        /// A champion who has not left the map's first node yet starts in Castle Crayburn (as in the original game).
         /// Returns the state of the run, or null if the champion plays the AZ1 map.
         /// </summary>
         public static GameplayState Current(ulong champ, bool newChampion)
@@ -686,6 +689,7 @@ namespace HexRevival
         {
             Run r = Get(campId - DunBase);
             if (r == null) { Campaign.ReturnToArea(campId - DunBase, null); return; }
+            if (r.Def.Starter) { Debug.Log("[HexRevival] [Dungeons] forfeit ignored in " + r.Def.Name); return; }
             Leave(r, r.Lost ? "lost" : "forfeit");
         }
 

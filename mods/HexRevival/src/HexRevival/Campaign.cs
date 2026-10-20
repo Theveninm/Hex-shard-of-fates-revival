@@ -499,6 +499,14 @@ namespace HexRevival
             return true;
         }
 
+        /// <summary>True once the champion has done something on the AZ1 map (beyond its first node).</summary>
+        public static bool HasProgress(ulong champId)
+        {
+            LoadAll();
+            CampState st;
+            return s_States.TryGetValue(champId, out st) && (st.Completed.Count > 1 || st.VisitedNodes.Count > 1);
+        }
+
         /// <summary>True if this champion has a saved campaign (used for LastCampaignID).</summary>
         public static bool HasSave(ulong champId)
         {
@@ -972,7 +980,7 @@ namespace HexRevival
         public static void QueryCurrentCampaign(ulong champId, ClientCampaignManager.StateCallback callback)
         {
             // Inside a dungeon (or a new champion: Castle Crayburn first).
-            GameplayState dg = Dungeons.Current(champId, !HasSave(champId));
+            GameplayState dg = Dungeons.Current(champId, !HasProgress(champId));
             if (dg != null)
             {
                 try { GameClient.Instance.PlayerProfile.GetPvEChampionById(champId).SourceBits.LastCampaignID = dg.CampID; } catch { }
@@ -1418,13 +1426,29 @@ namespace HexRevival
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "dump") return Dump(parts.Length > 2 ? parts[2] : "AZ");
             if (sub == "rewards") return DumpRewards();
+            if (sub == "deck" && parts.Length > 2)
+            {
+                // dev: "camp deck <encounter deck id>" = the AI deck's fields (champion, cards)
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                EncounterDeck ed = tm.GetEncounterDeck(new ResourceId(parts[2]));
+                DeckTemplate dt = ed != null ? tm.GetDeckTemplate(ed.m_DeckTemplateId) : tm.GetDeckTemplate(new ResourceId(parts[2]));
+                if (dt == null) return "no deck " + parts[2];
+                ChampionTemplate ch = tm.GetChampionTemplate(dt.m_ChampionId);
+                List<string> cards = new List<string>();
+                foreach (TemplateCardStack st in dt.m_DeckResources)
+                {
+                    CardTemplate ct = tm.GetCardTemplate(st.m_idTemplate);
+                    cards.Add(st.m_Count + "x " + (ct != null ? ct.m_Name : st.m_idTemplate.ToString()));
+                }
+                return "deck '" + dt.m_DeckName + "' champion " + (ch != null ? ch.m_Name + " (" + ch.m_StartingHealth + " health): " + Txt(ch.m_GameText) : "none") + "\ncards: " + string.Join(", ", cards.ToArray());
+            }
             if (sub == "scene" && parts.Length > 2)
             {
-                // dev: "camp scene <exact encounter name>" = the encounter scene's fields
+                // dev: "camp scene <exact encounter name>" = the encounter scene's fields (else the filter dump below)
                 string name = string.Join(" ", parts, 2, parts.Length - 2);
                 foreach (SceneData s in Singleton<TemplateManager>.Instance.CampaignScenes.Values)
                     if (s != null && string.Equals(s.m_Name, name, StringComparison.OrdinalIgnoreCase)) return Describe(s);
-                return "no scene " + name;
+                // not an exact name: the dump below (names containing it)
             }
             if (sub == "convs")
             {
