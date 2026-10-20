@@ -12,14 +12,19 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   - one of the game's ~270 campaign and dungeon encounters (with their special rules),
   - one of the game's prebuilt decks,
   - or one of your own decks played by the AI.
-- **Full collection**: every card (4 copies, unlimited basic shards) and every equipment.
+- **Campaign** (branch `campaign`): your campaign champions on the game's own world maps, the Howling
+  Plains (AZ1) and the Alachian Sea (AZ2, reached by boat), with their quests, hubs and dialogues,
+  the ten dungeons (Castle Crayburn to the Ruins of Kukatan) and the sea voyages of your own ship.
+  Rewards follow what gameplay videos of the original game show (see [docs/PROGRESSION.md](docs/PROGRESSION.md)).
+- **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
+  progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
 - The game's **tutorial** (5 short guided battles), offered when you create an account (a box to
   untick if you don't want it), left at any time from the menu (Esc), replayable from Help.
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): the campaign world map, Frost Ring Arena, Siege, Battlegrounds, multiplayer.
+Not available (yet): campaign mercenaries, Frost Ring Arena, Siege, Battlegrounds, multiplayer.
 
 ## Install and play
 
