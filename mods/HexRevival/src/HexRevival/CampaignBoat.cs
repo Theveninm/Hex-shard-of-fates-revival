@@ -171,9 +171,10 @@ namespace HexRevival
             }
             if (evt == "mermaidblessing")
             {
-                // PLACEHOLDER effect: the witch's blessing is not described anywhere; taken as 10 hull repaired.
+                // The witch's blessing (Src.Video): the card "Mermaid's Blessing" for the ship's next battle.
                 Quests.SetFlag(champ, "boat:blessed", "1");
-                SetHull(champ, Hull(champ) + 10);
+                champion_bits ship = Ship(champ);
+                Fortunes.Grant(ship != null ? ship.Id : champ, "Mermaid's Blessing");
                 return false;
             }
             if (evt == "conv_done" && active.Id == "NodeB11" && OnVoyage(champ))

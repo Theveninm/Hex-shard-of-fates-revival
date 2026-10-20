@@ -242,8 +242,9 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   Hull"), +5 after a win ("Repair Crew"); Water Town (NodeB11) repairs it fully; a new voyage starts
   repaired. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
   harbor.
-- Coralcove Rock's blessing (once per champion): effect unknown, 10 hull repaired (PLACEHOLDER). The
-  Lighthouse's "something useful" is not given (unknown).
+- Coralcove Rock's blessing (once per champion, Video: "a blessing for your next battle: Mermaid's
+  Blessing"): the game's "Mermaid's Blessing" card applied to the ship's next battle, like a gaal
+  fortune. The Lighthouse's "something useful" is not given (unknown).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
   (PLACEHOLDER: their giver is unknown); their progress is reset when a voyage begins or ends; the

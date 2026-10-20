@@ -54,6 +54,24 @@ namespace HexRevival
             if (!QuestSim.Active) Notices.Show(card.m_Name);
         }
 
+        /// <summary>
+        /// A blessing given by a conversation, held like a fortune for the next battle (the Coralcove witch's
+        /// "Mermaid's Blessing", Src.Video: "has granted you a blessing for your next battle"). False if the card is unknown.
+        /// </summary>
+        public static bool Grant(ulong champ, string cardName)
+        {
+            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+            {
+                if (t == null || t.m_Name != cardName) continue;
+                Quests.SetFlag(champ, "fortune", t.m_Id.ToString());
+                Debug.Log("[HexRevival] [Fortunes] " + champ + " blessed: " + cardName);
+                QuestSim.Note("  blessing: " + cardName);
+                if (!QuestSim.Active) Notices.Show(cardName);
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>Start of a campaign battle (after the mulligan): the fortune's abilities for the champion, then it is used up.</summary>
         public static void Apply(StandaloneSession ss, ulong champ)
         {
