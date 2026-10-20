@@ -205,7 +205,7 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
   battle happens only with them, and Herbert's camp completes the escort.
 - Faction nodes: the template's Node023A/B and Node026A/B are one map node each (Node023, Node026),
   the battle chosen by the faction and, at Node023, the help / no help answer.
-- Not playable yet: the boat to AZ2.
+- AZ2 is reached by the boat of "River of Whispers" (AZ1 Node00Y, see the AZ2 section).
 
 The dev command `sim` plays a quest script on a throwaway champion (e.g. `sim new Human; visit
 Node046; talk; visit Node047; talk; fight win; ...`) and writes the dialogues, quest steps and
@@ -215,11 +215,83 @@ The loot tables are kept as published (`data/az1_pack_loot_tables.csv`); their m
 corrected in `data/loot_name_fixes.csv`, applied by `tools/gen_loot.py`, so the mod only uses exact
 game names. The dev command `loot check` lists the reward names that match nothing in the game.
 
-Known but not given yet:
-- AZ2 (and its dungeons, Brutecrown Bluff, the Kraken).
 
 Champion levels follow the game's XP table (Game): level 2 at 1,000 XP … 15 at 110,000.
 Talent points per level: 1 (PLACEHOLDER).
+
+## Campaign (AZ2, the Alachian Sea)
+
+The AZ2 map (Game: its own DungeonTemplate and map prefab, shared background) is reached from AZ1 by the
+skiff of "River of Whispers" and left by the "Transfer To AZ1" node. The faction hubs are Wakuna (Ardent)
+and Naagaan (Underworld): only the champion's faction's hub has NPCs. The template's A/B node variants
+(Ardent / Underworld, a demon swap at Harp Rock) are one map node each, the battle chosen by faction or
+by the dialogue's event. Quest objectives without ids in the templates are matched by encounter name
+(`Quests.AZ2Objectives`; the Mithral River and Raiders of the Crossed Dark fights are PLACEHOLDER).
+
+### Sea voyages (Game)
+
+- Portsmeare Harbor (Node019B): the ship is named once ("Seas The Day", "Kraken's Gold", "The
+  Reckoning", "The Windy Way"), then the game's Ship Port window opens there: boat talents, the ship's
+  deck (the "Edit Deck" button), "Set Sail".
+- The ship is a sub-champion of class Boat (template "Boat", 40 health, Tattered Banner and cannon
+  abilities); it levels with the XP of sea battles (talent points: the game's rule, level - 1). Its
+  deck starts as a copy of the champion's deck. Gold goes to the account as usual. That sea battles
+  give XP to the ship rather than to the champion is a reading of the harbor master's dialogue
+  ("you may even learn a thing or two about sailing").
+- Hull = the ship's health, kept from one sea battle to the next: 40 ("Basic Hull"), 60 ("Heavy
+  Hull"), +5 after a win ("Repair Crew"); Water Town (NodeB11) repairs it fully; a new voyage starts
+  repaired. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
+  harbor.
+- Coralcove Rock's blessing (once per champion): effect unknown, 10 hull repaired (PLACEHOLDER). The
+  Lighthouse's "something useful" is not given (unknown).
+- Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
+  "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
+  (PLACEHOLDER: their giver is unknown); their progress is reset when a voyage begins or ends; the
+  harbor master (Node00B) takes the turn-ins ("Return to port" also ends the voyage). Rewards:
+  PLACEHOLDER (300 gold).
+- Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
+  Land".
+
+### Dungeons
+
+Brutecrown Bluff (Node002), the Great Machine Graveyard (Node044), the Kraken (Node019) and the Ruins
+of Kukatan (Node040), rebuilt like the AZ1 dungeons from the game's conversations and scenes (Game):
+Brutecrown's gnoll ally (the daughter beaten, then accepted in her home; the other two homes close) and
+the spurned sister met at the Crumbling Gates and as the Graveyard's Scrapborn; the Graveyard robot's
+weapons (Big Magnet Thing = Magnet Shield, Crusher = Big Bopper, Melting Pot = Slag Cannon); Dross's
+roundabout (no battle, the post broken, or the collar trap: the AI plays first); Kukatan's journal
+(Bone Thicket) choosing the "Memory" mini-game battles over the traps; Lukaz in two battles.
+PLACEHOLDER: which sister is spurned (the next after the ally), the Brutecrown ally used by the
+Graveyard when Brutecrown was not played (Vargar), "Mayor Died" in the Kraken (never chosen), the
+Kraken's curses and boons and Kukatan's coins (not reproduced in battle).
+
+### Rewards (Video, MyHotStream Underworld run, unless noted)
+
+| Battle | Gold | XP | Items |
+|---|---|---|---|
+| Lurking Crocodile (Node001) | 0 | 350 | a card (not identified, not given) |
+| Winter Moon (Node006) | 600 | 425 | AZ2 pack |
+| Flock of Seagulls (Node008) | 0 | 400 | Common Stardust |
+| Katsuhiro (Node009) | 0 | 450 | his mercenary (mercenaries not implemented) |
+| Hired Horn Picaroon (Node011) | 400 | 450 | AZ2 pack |
+| Orchin (Node013) | 0 | 500 | AZ2 pack |
+| Giant Jellyfish (Node015) | 0 | 500 | Rare Stardust |
+| Ayotochi Refugee (Node020) | 0 | 550 | Ricochet Blast |
+| Lazgar Chul (Node021) | 600 | 700 | AZ2 pack |
+| Darkspire Scout (Node022) | 0 | 575 | — |
+| Dire Toad (Node025) | 0 | 550 | Rare Stardust |
+| Puke Troll (Node028) | 400 | 450 | AZ2 pack |
+| Augustine (Node030) | 0 | 450 | his mercenary with his deck (not implemented) |
+| Bog Walker (Node032) | 0 | 425 | Uncommon Stardust |
+| Brutecrown Bluff: Zagg / Vargar / Nogg Nogg's Handler / King Kazraga | 250 / 300 / 400 / 500 | 250 / 300 / 400 / 500 | Brutecrown Bluff pack (Kazraga) |
+| Other AZ2 battles, sea battles, other dungeon rooms | PLACEHOLDER (100 / 100; dungeon rooms 200-500 rising to the boss, final pack) | | |
+
+| Quest (giver) | Gold | XP | Items |
+|---|---|---|---|
+| The Alachian Sea (Takumi) | 700 | 1100 | a card (not identified, not given) |
+| Petulant Picaroons (Bonewalker) | 500 | 800 | Hired Horn Cutthroat |
+| Brutecrown Bluff | 1100 | 1500 | Brutecrown Bluff pack |
+| The Kraken (Renner) | 1300 | 1800 | Kraken's Cove pack |
 
 ## Tutorial
 
@@ -280,8 +352,9 @@ The sheet's "cards 50%" only counted the zone cards and is not used as a per-pac
 PLACEHOLDER: 1 top card (legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have
 epics, otherwise rare), 3 uncommons, 13 commons, no basic shards.
 
-**Alachian Sea packs** (AZ2): no data. The AZ2 set has no commons in the game data: the booster split
-above is used with uncommons in the common slots (PLACEHOLDER).
+**Alachian Sea packs** (AZ2 campaign and dungeon packs): no drop table found. The campaign pack layout
+above, with the card and the equipment drawn from the game's AZ2 set (cards and equipment items) by
+rarity: uncommon 10, rare 3, legendary 1 (PLACEHOLDER).
 
 ## Matches outside the campaign
 
