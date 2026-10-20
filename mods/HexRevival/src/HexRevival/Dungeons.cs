@@ -50,8 +50,8 @@ namespace HexRevival
         /// One step of a room. Names may hold tokens, resolved per champion and run:
         /// {R} race ("Shin'hare"), {F} faction ("Underworld" / "Ardent"), {C} the room's dream creature,
         /// {D} its difficulty, {RANK} the creature's rank, {FORM} Sister Midnight's form, {SHEP} who
-        /// died before the Shepherd's Rest, {ALLY} / {RIVAL} the Brutecrown gnolls (and {ALLYN} / {RIVALN}
-        /// their scene number). {?X:yes:no} = "yes" if X is a cleared room, the champion's faction or a
+        /// died before the Shepherd's Rest, {ALLY} / {RIVAL} / {RIVAL2} the Brutecrown gnolls (and {ALLYN} / {RIVALN} /
+        /// {RIVAL2N} their scene number). {?X:yes:no} = "yes" if X is a cleared room, the champion's faction or a
         /// run var set to "1", else "no". "a|b" = first name found. A name may also be a template id.
         /// </summary>
         private class Step
@@ -219,7 +219,8 @@ namespace HexRevival
                 // H-1/2/3: the ally's battle, numbered as the "J-n (Helping <ally>)" scenes (PLACEHOLDER: H's are not labelled).
                 .Add("NodeH", new Step { Conv = bb + "Lair of Nogg Nogg", Enc = "Brutecrown Bluff H-{ALLYN} - Lair of the Beast", Success = bb + "Lair of Nogg Nogg - Success - {ALLY}", Fail = bb + "Lair of Nogg Nogg - Fail", Reward = "brutecrown/NodeH",
                     Requires = Sheds, RequireAny = true })
-                .Add("NodeI", Talk(bb + "Crumbling Gates - {RIVAL}"))
+                // Both spurned sisters speak at the gates (Src.Video, KVC: ally Zagg -> Vargar, then Burgg).
+                .Add("NodeI", Talk(bb + "Crumbling Gates - {RIVAL}"), Talk(bb + "Crumbling Gates - {RIVAL2}"))
                 .Add("NodeJ", new Step { Conv = bb + "Castle Ruins", Enc = "Brutecrown Bluff J-{ALLYN} (Helping {ALLY}) - Castle Ruins", Success = bb + "Castle Ruins - Success - {ALLY}", Fail = bb + "Castle Ruins - Fail", Reward = "brutecrown/NodeJ" },
                     Talk(bb + "Castle Ruins - Success 2 - {F} - {ALLY}"))
                 .Final("NodeJ"));
@@ -244,7 +245,9 @@ namespace HexRevival
                 .Add("NodeJ", Fight(gm, "Crusher", "Great Machine Graveyard J - The Crusher", "machinegraveyard/NodeJ"), Talk(gm + "Assembly Yard - After Big Bopper"))
                 .Add("NodeK", Fight(gm, "Melting Pot", "Great Machine Graveyard K - Melting Pot", "machinegraveyard/NodeK"), Talk(gm + "Assembly Yard - After Slag Cannon"))
                 // The sister spurned at Brutecrown Bluff, rebuilt by Scutt ("You make my stupid sister queen").
-                .Add("NodeM", new Step { Conv = gm + "Scraptooth Colosseum - Scrapborn {RIVAL}", Enc = "Great Machine Graveyard M{RIVALN} - Scraptooth Arena - {RIVAL}", Success = gm + "Scraptooth Colosseum Success", Fail = gm + "Scraptooth Colosseum Fail", Reward = "machinegraveyard/NodeM" })
+                // Both spurned sisters, one battle each (Src.Video, KVC four runs: ally Zagg -> Scrapborn Vargar, then Burgg).
+                .Add("NodeM", new Step { Conv = gm + "Scraptooth Colosseum - Scrapborn {RIVAL}", Enc = "Great Machine Graveyard M{RIVALN} - Scraptooth Arena - {RIVAL}", Success = gm + "Scraptooth Colosseum Success", Fail = gm + "Scraptooth Colosseum Fail", Reward = "machinegraveyard/NodeM" },
+                    new Step { Conv = gm + "Scraptooth Colosseum - Scrapborn {RIVAL2}", Enc = "Great Machine Graveyard M{RIVAL2N} - Scraptooth Arena - {RIVAL2}", Success = gm + "Scraptooth Colosseum Success", Fail = gm + "Scraptooth Colosseum Fail", Reward = "machinegraveyard/NodeM" })
                 .Add("NodeN", Fight(gm, "Scraptooth Throne Room", "Great Machine Graveyard N - Scraptooth Throne Room", "machinegraveyard/NodeN"))
                 .Flag("dross_key_found", "NodeC")      // the Barking Cavern's rusted key opens Dross' collar
                 .Final("NodeN"));
@@ -265,7 +268,7 @@ namespace HexRevival
                 .Add("NodeE", Fight(kr, "The Storm", "Kraken's Gold E - Into the Storm", "kraken/NodeE"))
                 .Add("NodeF", Fight(kr, "East Shore", "Kraken's Gold F - Crustac Ambush", "kraken/NodeF"))
                 .Add("NodeG", Fight(kr, "Briny Cavern", "Kraken's Gold G - Sea Hag", "kraken/NodeG"))
-                .Add("NodeH", Talk(kr + "Algae Cave"))
+                .Add("NodeH", new Step { Conv = kr + "Algae Cave", Reward = "kraken/NodeH" })   // "a couple of slime-covered coins": 200 gold (Src.Video)
                 .Add("NodeI", Fight(kr, "South Shore", "Kraken's Gold I - Crustac Warlord", "kraken/NodeI"))
                 .Add("NodeJ", Fight(kr, "Gulfweed Grotto", "Kraken's Gold J - The Siren", "kraken/NodeJ"))
                 .Add("NodeK", Talk(kr + "Crystal Cavern"))
@@ -293,7 +296,7 @@ namespace HexRevival
                 .Add("NodeD", Talk(rk + "The Ruins"))
                 .Add("NodeE", Talk(rk + "Dark Corridor - Player " + journal + " Journal"))
                 // Explorers of the other faction: shin'hare for the Ardent, coyotle for the Underworld (F 01 = Ardent: PLACEHOLDER).
-                .Add("NodeF", Fight(rk, "Tomb of Lingerers - {F}", "Ruins of Kukatan F {?Ardent:01:02} - Tomb of Lingerers", "kukatan/NodeF"))
+                .Add("NodeF", Fight(rk, "Tomb of Lingerers - {F}", "Ruins of Kukatan F {?Ardent:02:01} - Tomb of Lingerers", "kukatan/NodeF"))
                 .Add("NodeG", Talk(rk + "Dead End"))
                 .Add("NodeH", new Step { Conv = rk + "Mausoleum - Player " + journal + " Journal", Sets = "journalH={?NodeT:1:0}" })
                 .Add("NodeI", Talk(rk + "Long Hallway - Player {?journalH:Used:Did Not Use} Journal in H"),
@@ -653,8 +656,9 @@ namespace HexRevival
             }
             if (s.Contains("{ALLY") || s.Contains("{RIVAL"))
             {
-                string ally = Ally(r), rival = Rival(ally);
-                s = s.Replace("{ALLYN}", GnollN(ally)).Replace("{ALLY}", ally).Replace("{RIVALN}", GnollN(rival)).Replace("{RIVAL}", rival);
+                string ally = Ally(r), rival = Rival(ally, 0), rival2 = Rival(ally, 1);
+                s = s.Replace("{ALLYN}", GnollN(ally)).Replace("{ALLY}", ally).Replace("{RIVAL2N}", GnollN(rival2)).Replace("{RIVAL2}", rival2)
+                     .Replace("{RIVALN}", GnollN(rival)).Replace("{RIVAL}", rival);
             }
             return CondToken.Replace(s, m => Holds(r, m.Groups[1].Value, faction) ? m.Groups[2].Value : m.Groups[3].Value);
         }
@@ -678,11 +682,16 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// The spurned daughter met at the Crumbling Gates and, rebuilt by Scutt, in the Graveyard's Colosseum (her
-        /// words there: "Zagg once tell &lt;race&gt; that we meet again"; "Vargar remember"). Which of the two sisters:
-        /// PLACEHOLDER, the next one in the scenes' order (Zagg's "you want to make my idiot sister the queen" fits Burgg).
+        /// The two spurned daughters (n = 0, 1), met at the Crumbling Gates and, rebuilt by Scutt, in the Graveyard's
+        /// Colosseum, in the scenes' order (Src.Video, KVC: ally Zagg -> Vargar then Burgg; the order for the other
+        /// allies is not seen).
         /// </summary>
-        private static string Rival(string ally) { return Gnolls[(Array.IndexOf(Gnolls, ally) + 1) % Gnolls.Length]; }
+        private static string Rival(string ally, int n)
+        {
+            List<string> others = new List<string>(Gnolls);
+            others.Remove(ally);
+            return others[n];
+        }
 
         private static string GnollN(string gnoll) { return (Array.IndexOf(Gnolls, gnoll) + 1).ToString(); }
 
@@ -1009,6 +1018,8 @@ namespace HexRevival
             string kv = s != null ? Resolve(r, room, s.Sets) : null;
             int i = kv != null ? kv.IndexOf('=') : -1;
             if (i > 0) r.Vars[kv.Substring(0, i)] = kv.Substring(i + 1);
+            // A conversation step's own reward (the Kraken's Algae Cave coins), once per champion.
+            if (s != null && s.Enc == null && s.Reward != null) Progression.OnCampaignConversationDone(r.Champ, Resolve(r, room, s.Reward));
             r.Steps[room] = Done(r, room) + 1;
         }
 
@@ -1067,7 +1078,11 @@ namespace HexRevival
                 r.Outcome = Conv(r, room, b.Success);
                 if (r.Outcome != null) r.Vars["won"] = "1";
                 StepDone(r, room);
-                if (b.Reward != null) Progression.OnCampaignBattleWon(r.Champ, b.Reward);
+                // Bonus gold ("a small amount of bonus gold if you manage to defeat an enemy on your first attempt", game
+                // hint): Src.Video (KVC) shows it from the run's second win on, until the run's first defeat.
+                string w; int wins; r.Vars.TryGetValue("wins", out w); int.TryParse(w, out wins);
+                r.Vars["wins"] = (wins + 1).ToString();
+                if (b.Reward != null) Progression.OnCampaignBattleWon(r.Champ, b.Reward, wins > 0 && Losses(r) == 0);
             }
             else
             {

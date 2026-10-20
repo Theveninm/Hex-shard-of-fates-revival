@@ -251,8 +251,11 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
   (PLACEHOLDER: their giver is not on the videos, they are already in the tracker); their progress is
   reset when a voyage begins or ends; the harbor master (Node00B) takes the turn-ins ("Return to port"
-  also ends the voyage). Rewards: Pirates of the Alachian 500 gold, 1000 XP, Hired Horn Captain (Video);
-  the other two PLACEHOLDER (300 gold).
+  also ends the voyage). Rewards (Video): Pirates of the Alachian 500 gold, 1000 XP, Hired Horn Captain;
+  Stormwatch 500 / 1000 + AZ2 pack; Lobster Tale 500 / 1000 + Hardshell Sealord; the three done: Alachian
+  Sea Sleeve. A sea battle won again pays half its gold and a fifth of its XP (KVC: Overseer 200 / 130).
+- Hull: the KVC let's play (Jan 2017) shows it kept between the battles of a voyage (33 left, 33 at the
+  next start), MyHotStream (Oct-Dec 2017) full at each battle: the later client is followed.
 - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
   Land".
 
@@ -261,19 +264,29 @@ by the dialogue's event. Quest objectives without ids in the templates are match
 Brutecrown Bluff (Node002), the Great Machine Graveyard (Node044), the Kraken (Node019) and the Ruins
 of Kukatan (Node040), rebuilt like the AZ1 dungeons from the game's conversations and scenes (Game):
 Brutecrown's gnoll ally (the daughter beaten, then accepted in her home; the other two homes close) and
-the spurned sister met at the Crumbling Gates and as the Graveyard's Scrapborn; the Graveyard robot's
+the two spurned sisters, who both speak at the Crumbling Gates and are both fought as Scrapborn in the
+Graveyard's Colosseum (Video, KVC: ally Zagg -> Vargar then Burgg; the order for the other allies is the
+scenes' order, PLACEHOLDER); the Graveyard robot's
 weapons (Big Magnet Thing = Magnet Shield, Crusher = Big Bopper, Melting Pot = Slag Cannon); Dross's
 roundabout (no battle, the post broken, or the collar trap: the AI plays first); Kukatan's journal
-(Bone Thicket) choosing the "Memory" mini-game battles over the traps; Lukaz in two battles.
-PLACEHOLDER: which sister is spurned (the next after the ally), the Brutecrown ally used by the
-Graveyard when Brutecrown was not played (Vargar), "Mayor Died" in the Kraken (never chosen), the
-Kraken's curses and boons and Kukatan's coins (not reproduced in battle).
+(Bone Thicket) choosing the "Memory" mini-game battles over the traps; the Tomb of Lingerers' explorers
+of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ardent); Lukaz in two
+battles with one reward (Video: one window for Echo Ridge).
+Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your
+first attempt"; Video, KVC 5 runs): a second gold line of 25% on every dungeon win from the run's second
+on, until the run's first defeat. Not done: the optional "Challenge Completed" line (+100% gold, its
+in-battle objectives are not known), Pappy Jasper's Whip (an extra drop twice after a boss, trigger
+unknown).
+PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not played (Vargar),
+"Mayor Died" in the Kraken (never chosen), the Kraken's curses and boons (library: two actions draw a
+card; Algae Cave: two cards cost 1 less; Video texts) and Kukatan's coins (not reproduced in battle),
+the mercenaries Mayor Galway and Sister of the Herd.
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
 
 | Battle | Gold | XP | Items |
 |---|---|---|---|
-| Lurking Crocodile (Node001) | 0 | 350 | a card (not identified, not given) |
+| Lurking Crocodile (Node001) | 0 | 350 | Phoenix Guard Tactician (KVC) |
 | Winter Moon (Node006) | 600 | 425 | AZ2 pack |
 | Flock of Seagulls (Node008) | 0 | 400 | Common Stardust |
 | Katsuhiro (Node009) | 0 | 450 | his mercenary (mercenaries not implemented) |
@@ -287,21 +300,32 @@ Kraken's curses and boons and Kukatan's coins (not reproduced in battle).
 | Puke Troll (Node028) | 400 | 450 | AZ2 pack |
 | Augustine (Node030) | 0 | 450 | his mercenary with his deck (not implemented) |
 | Bog Walker (Node032) | 0 | 425 | Uncommon Stardust |
+| Sister of the Herd (Node038, KVC) | 0 | 625 | Aryndel Warden (+ her mercenary, not implemented) |
+| Monk of the Six Strikes (Node043, KVC) | 0 | 650 | Legendary Stardust |
 | Sea (Ardent run): Hired Horn Scum / Chumspike / Bloodhorn | 350 / 500 / 600 | 675 | Bloodhorn: 1 ship talent point |
 | Sea: Cloud Queen / Cloud King / Storm of the Century | 0 | 625 / 650 / 650 | AZ2 pack, 1 ship talent point each |
 | Sea: Hardshell Deepwalker / Saltmage / Overseer | 0 / 0 / 400 | 650 / 625 / 650 | Hardshell Infantry / Hardshell Wizard / — |
 | Sea: Lightning Armada / Kraken Guard Captain | 350 / 300 | 600 / 650 | — |
 | Sea: Scylla / Charybdis | 0 | 675 / 650 | AZ2 pack |
 | Sea: Old Man of the Sea (Hexlantis) | 0 | 700 | Old Man of the Sea |
-| Brutecrown Bluff: Zagg / Vargar / Nogg Nogg's Handler / King Kazraga | 250 / 300 / 400 / 500 | 250 / 300 / 400 / 500 | Brutecrown Bluff pack (Kazraga) |
-| Other AZ2 battles, other dungeon rooms | PLACEHOLDER (100 / 100; dungeon rooms 200-500 rising to the boss, final pack) | | |
+| Brutecrown Bluff: Burgg / Zagg / Vargar / Nogg Nogg's Handler / King Kazraga | 200 / 250 / 300 / 400 / 500 | 225 / 250 / 300 / 400 / 500 | Brutecrown Bluff pack (Kazraga) |
+| Graveyard: Bouncer B / Mangler C / Rummager D / Kuul'Dag E / Bender F / Dynamo Swarm G | 250 / 300 / 350 / 400 / 500 / 425 | 250 / 275 / 325 / 375 / 400 / 500 | — |
+| Graveyard: Crane Operator I, Crusher J, Narl K / each Scrapborn M / Scutt N | 650 / 575 / 750 | 750 / 550 / 1000 | Great Machine Graveyard pack (Scutt) |
+| Kraken: Galway A / Eye of the Storm E / Ambush F / Nairne G / Krharath I / Siren J | 200 / 250 / 300 / 400 / 450 / 500 | 225 / 250 / 300 / 350 / 400 / 450 | — |
+| Kraken: Algae Cave H (talk) / Magaidh L / Spirit of the Sea O / Kraken P | 200 / 550 / 600 / 750 | 0 / 500 / 550 / 600 | Kraken's Cove pack (P) |
+| Kukatan: A / B / C / O / F / R / I / J / L / P | 200 / 250 / 325 / 425 / 475 / 525 / 550 / 575 / 600 / 625 | 225 / 250 / 325 / 375 / 425 / 450 / 475 / 500 / 525 / 550 | — |
+| Kukatan: Exploding Zombies M / Lukaz N | 675 / 700 | 600 / 650 | 3 stardusts (Rare, Uncommon, Common) / Ruins of Kukatan pack |
+| Kukatan Q (Tomb of Omens), other AZ2 map battles | PLACEHOLDER (600 / 525; map 100 / 100) | | |
 
 | Quest (giver) | Gold | XP | Items |
 |---|---|---|---|
 | The Alachian Sea (Takumi) | 700 | 1100 | a card (not identified, not given) |
 | Petulant Picaroons (Bonewalker) | 500 | 800 | Hired Horn Cutthroat |
 | Brutecrown Bluff | 1100 | 1500 | Brutecrown Bluff pack |
-| The Kraken (Renner) | 1300 | 1800 | Kraken's Cove pack |
+| The Kraken (Renner / Blue Sparrow) | 1300 | 1800 | Kraken's Cove pack |
+| Great Machine Graveyard (Tezozo / Reese, KVC) | 1800 | 2400 | Great Machine Graveyard pack |
+| Ruins of Kukatan (Myaa, KVC) | 1500 | 2100 | Ruins of Kukatan pack, sleeve Chronicles of Entrath: Chapter 2 |
+| Raiders of the Crossed Dark (Two Tomahawks, KVC) | 750 | 1100 | Darkspire Acolyte |
 
 ## Tutorial
 

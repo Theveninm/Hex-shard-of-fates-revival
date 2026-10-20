@@ -75,11 +75,13 @@ namespace HexRevival
             public bool ShroomHaus;                     // one of the Haus's 3 cards (see ShroomHauses)
             public string NeedsEvent;                   // the items need this end-of-battle event (Src.Game: HandleGameplayChallenges)
             public int ShipTalentPoints;                // AZ2 ship talent points (first win only, Src.Video "N Ship Talent Point")
+            public int BonusGold;                       // second gold line (dungeons, see OnCampaignBattleWon)
             public Src Source;
             public string Note;
 
             public bool HasItems { get { return Cards.Length > 0 || Packs > 0 || RandomEquipment > 0 || RaceQuest != null || ShroomHaus || ShipTalentPoints > 0; } }
             public Reward GoldXpOnly() { return new Reward { Gold = Gold, Xp = Xp, Source = Source, PackName = PackName }; }
+            public Reward Copy() { return (Reward)MemberwiseClone(); }
         }
 
         /// <summary>Default for a campaign battle with no known reward. Src.HexServer: ~100 gold and 100 XP.</summary>
@@ -193,7 +195,9 @@ namespace HexRevival
             // ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the
             // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the Lurking Crocodile's card (not identified)
             // and the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
-            { "AZ2/Node001", new Reward { Xp = 350, Source = Src.Video, Note = "+ a card not identified" } },   // Lurking Crocodile
+            { "AZ2/Node001", R(0, 350, "Phoenix Guard Tactician") },        // Lurking Crocodile (KVC)
+            { "AZ2/Node038", new Reward { Xp = 625, Cards = new[] { "Aryndel Warden" }, Source = Src.Video, Note = "+ mercenary Sister of the Herd (not implemented)" } },
+            { "AZ2/Node043", R(0, 650, "Legendary Stardust") },               // Monk of the Six Strikes (KVC)
             { "AZ2/Node006", new Reward { Gold = 600, Xp = 425, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Winter Moon
             { "AZ2/Node008", R(0, 400, "Common Stardust") },                  // Flock of Seagulls
             { "AZ2/Node009", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Katsuhiro (not implemented)" } },
@@ -224,51 +228,53 @@ namespace HexRevival
             { "AZ2/NodeB17", new Reward { Gold = 600, Xp = 675, ShipTalentPoints = 1, Source = Src.Video } },   // Bloodhorn
             { "AZ2/NodeB18", R(0, 700, "Old Man of the Sea") },               // Old Man of the Sea (Hexlantis)
             { "AZ2/NodeB07", R(0, 0, "Sea Spirit") },                         // the Lighthouse: "something useful inside"
-            // ---- AZ2 dungeons. The final pack: named after the dungeon as in AZ1, but no AZ2 pack table yet (Loot
-            // skips it): PLACEHOLDER. Rooms not seen on video: PLACEHOLDER, rising towards the boss as in AZ1.
-            // Brutecrown Bluff (Burgg not seen)
-            { "brutecrown/NodeB", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
+            // ---- AZ2 dungeons (Src.Video: KVC let's play, Dec 2016-Jan 2017, each value seen in 2-4 runs; Brutecrown also
+            // MyHotStream). The bonus gold line of dungeon battles: see DungeonBonusGold.
+            // Brutecrown Bluff
+            { "brutecrown/NodeB", R(200, 225) },                              // Burgg
             { "brutecrown/NodeC", R(250, 250) },                              // Zagg
             { "brutecrown/NodeD", R(300, 300) },                              // Vargar
             { "brutecrown/NodeH", R(400, 400) },                              // Nogg Nogg's Handler
-            { "brutecrown/NodeJ", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video, Note = "pack table: PLACEHOLDER" } },   // King Kazraga
+            { "brutecrown/NodeJ", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video } },   // King Kazraga
             // Great Machine Graveyard
-            { "machinegraveyard/NodeB", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeC", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeD", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeE", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeF", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeG", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeI", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeJ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeK", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeM", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
-            { "machinegraveyard/NodeN", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Great Machine Graveyard", Source = Src.Placeholder } },
+            { "machinegraveyard/NodeB", R(250, 250) },                        // Scraptooth Bouncer
+            { "machinegraveyard/NodeC", R(300, 275) },                        // Scraptooth Mangler
+            { "machinegraveyard/NodeD", R(350, 325) },                        // Crazed Rummager
+            { "machinegraveyard/NodeE", R(400, 375) },                        // Kuul'Dag
+            { "machinegraveyard/NodeF", R(500, 400) },                        // Scraptooth Bender
+            { "machinegraveyard/NodeG", R(425, 500) },                        // Dynamo Swarm
+            { "machinegraveyard/NodeI", R(650, 750) },                        // Scraptooth Crane Operator
+            { "machinegraveyard/NodeJ", R(650, 750) },                        // Scraptooth Crusher
+            { "machinegraveyard/NodeK", R(650, 750) },                        // Narl
+            { "machinegraveyard/NodeM", R(575, 550) },                        // each Scrapborn sister
+            { "machinegraveyard/NodeN", new Reward { Gold = 750, Xp = 1000, Packs = 1, PackName = "Great Machine Graveyard", Source = Src.Video } },   // Scutt
             // The Kraken
-            { "kraken/NodeA", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
-            { "kraken/NodeE", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "kraken/NodeF", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "kraken/NodeG", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kraken/NodeI", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kraken/NodeJ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "kraken/NodeL", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
-            { "kraken/NodeO", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
-            { "kraken/NodeP", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "The Kraken", Source = Src.Placeholder } },
+            { "kraken/NodeA", R(200, 225) },                                  // Mayor Galway (his mercenary: not implemented)
+            { "kraken/NodeE", R(250, 250) },                                  // Eye of the Storm
+            { "kraken/NodeF", R(300, 300) },                                  // Hardshell Ambush
+            { "kraken/NodeG", R(400, 350) },                                  // Nairne, Sea Sorceress
+            { "kraken/NodeH", R(200, 0) },                                    // Algae Cave: "a couple of slime-covered coins"
+            { "kraken/NodeI", R(450, 400) },                                  // Krharath, Hardshell Warlord
+            { "kraken/NodeJ", R(500, 450) },                                  // The Siren
+            { "kraken/NodeL", R(550, 500) },                                  // Queen Magaidh
+            { "kraken/NodeO", R(600, 550) },                                  // Spirit of the Sea
+            { "kraken/NodeP", new Reward { Gold = 750, Xp = 600, Packs = 1, PackName = "Kraken's Cove", Source = Src.Video } },   // The Kraken
             // Ruins of Kukatan
-            { "kukatan/NodeA", new Reward { Gold = 200, Xp = 200, Source = Src.Placeholder } },
-            { "kukatan/NodeB", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "kukatan/NodeC", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "kukatan/NodeF", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kukatan/NodeI", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kukatan/NodeJ", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kukatan/NodeO", new Reward { Gold = 250, Xp = 250, Source = Src.Placeholder } },
-            { "kukatan/NodeR", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kukatan/NodeP", new Reward { Gold = 300, Xp = 300, Source = Src.Placeholder } },
-            { "kukatan/NodeQ", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "kukatan/NodeL", new Reward { Gold = 350, Xp = 350, Source = Src.Placeholder } },
-            { "kukatan/NodeM", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
-            { "kukatan/NodeN/1", new Reward { Gold = 400, Xp = 400, Source = Src.Placeholder } },
-            { "kukatan/NodeN/2", new Reward { Gold = 500, Xp = 500, Packs = 1, PackName = "Ruins of Kukatan", Source = Src.Placeholder } },
+            { "kukatan/NodeA", R(200, 225) },                                 // Mosquito Swarm
+            { "kukatan/NodeB", R(250, 250) },                                 // Nibblin Swarm
+            { "kukatan/NodeC", R(325, 325) },                                 // Crocodile River
+            { "kukatan/NodeO", R(425, 375) },                                 // Filk Ape (room by elimination)
+            { "kukatan/NodeF", R(475, 425) },                                 // Shin'hare / Coyotle Explorers
+            { "kukatan/NodeR", R(525, 450) },                                 // Hexshelled Turtle
+            { "kukatan/NodeI", R(550, 475) },                                 // the glyphs (memory or trap)
+            { "kukatan/NodeJ", R(575, 500) },
+            { "kukatan/NodeL", R(600, 525) },                                 // Crushing Walls
+            { "kukatan/NodeP", R(625, 550) },                                 // Nibblin Ceremony
+            { "kukatan/NodeQ", new Reward { Gold = 600, Xp = 525, Source = Src.Placeholder, Note = "Tomb of Omens never fought on video" } },
+            { "kukatan/NodeM", R(675, 600, "Rare Stardust", "Uncommon Stardust", "Common Stardust") },   // Exploding Zombies
+            // Lukaz: one reward window for Echo Ridge (Src.Video), given after the second battle.
+            { "kukatan/NodeN/1", new Reward { Source = Src.Video, Note = "one window for both Lukaz battles" } },
+            { "kukatan/NodeN/2", new Reward { Gold = 700, Xp = 650, Packs = 1, PackName = "Ruins of Kukatan", Source = Src.Video } },
         };
 
         /// <summary>
@@ -410,13 +416,21 @@ namespace HexRevival
         }
 
         /// <summary>Campaign battle won on a map node: rewards, champion XP, account XP.</summary>
-        public static void OnCampaignBattleWon(ulong champId, string node)
+        /// <summary>
+        /// A campaign battle won (map node, sea or dungeon room). bonusGold: dungeon battles' second gold line, 25% of
+        /// the gold (Src.Video, KVC: never on a run's first battle, then on every win until the first defeat of the run).
+        /// </summary>
+        public static void OnCampaignBattleWon(ulong champId, string node, bool bonusGold = false)
         {
             Reward r;
             Reward special = AZ1.TryGetValue(node, out r) ? r : null;
             string key = champId + ":" + node;
             Reward give;
+            bool seaRepeat = node.StartsWith("AZ2/NodeB") && Saves.Current.Claims.Contains(key + ":won");
+            if (node.StartsWith("AZ2/NodeB")) Saves.Current.Claims.Add(key + ":won");
             if (special == null) give = DefaultBattle;
+            // A sea battle won again (Src.Video, KVC): half the gold, a fifth of the XP (Overseer 200 / 130, Bloodhorn 300 / 135).
+            else if (seaRepeat) give = new Reward { Gold = special.Gold / 2, Xp = special.Xp / 5, Source = Src.Video };
             else if (!special.HasItems || Saves.Current.Claims.Contains(key)) give = special.GoldXpOnly();
             else if (special.NeedsEvent != null && !Campaign.BattleEvents.Contains(special.NeedsEvent))
             {
@@ -452,6 +466,7 @@ namespace HexRevival
                 withTamed.Cards = all.ToArray();
                 give = withTamed;
             }
+            if (bonusGold && give.Gold >= 4) { give = give.Copy(); give.BonusGold = give.Gold / 4; }
             Grant(champId, give, node, "campaign " + node);
         }
 
@@ -491,6 +506,11 @@ namespace HexRevival
             { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
             // AZ2 (Src.Video, Underworld run): the Alachian Sea (Takumi; its card not identified), Petulant Picaroons
             // (Bonewalker), Brutecrown Bluff, the Kraken (Renner)
+            { "q_boat_elementals", new Reward { Gold = 500, Xp = 1000, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Stormwatch (KVC)
+            { "q_boat_lobsters", new Reward { Gold = 500, Xp = 1000, Cards = new[] { "Hardshell Sealord" }, Source = Src.Video } },   // Lobster Tale (KVC)
+            { "q_great_machine_graveyard", new Reward { Gold = 1800, Xp = 2400, Packs = 1, PackName = "Great Machine Graveyard", Source = Src.Video } },
+            { "q_ruins_of_kukatan", new Reward { Gold = 1500, Xp = 2100, Packs = 1, PackName = "Ruins of Kukatan", Cards = new[] { "Chronicles of Entrath: Chapter 2 Sleeve" }, Source = Src.Video } },
+            { "q_redhand_raiders", new Reward { Gold = 750, Xp = 1100, Cards = new[] { "Darkspire Acolyte" }, Source = Src.Video } },   // Two Tomahawks (KVC)
             { "q_boat_pirates", new Reward { Gold = 500, Xp = 1000, Cards = new[] { "Hired Horn Captain" }, Source = Src.Video } },
             { "q_alachian_sea", new Reward { Gold = 700, Xp = 1100, Source = Src.Video, Note = "+ a card not identified" } },
             { "q_petulent_picaroons", new Reward { Gold = 500, Xp = 800, Cards = new[] { "Hired Horn Cutthroat" }, Source = Src.Video } },
@@ -516,6 +536,13 @@ namespace HexRevival
             Reward r;
             if (!QuestRewards.TryGetValue(script, out r)) r = new Reward { Gold = QuestGold, Source = Src.Placeholder };
             Grant(champId, r, null, "quest " + script);
+            // The three sea quests done: a sleeve, in its own window (Src.Video, KVC: after the last turn-in).
+            if (script.StartsWith("q_boat_") && Quests.IsFinished(champId, "q_boat_pirates") && Quests.IsFinished(champId, "q_boat_elementals")
+                && Quests.IsFinished(champId, "q_boat_lobsters") && !Saves.Current.Claims.Contains(champId + ":seasleeve"))
+            {
+                Saves.Current.Claims.Add(champId + ":seasleeve");
+                Grant(champId, R(0, 0, "Alachian Sea Sleeve"), null, "sea quests");
+            }
         }
 
         /// <summary>Opponent troops of the match that ended, in the void with the Tamed marker.</summary>
@@ -579,7 +606,7 @@ namespace HexRevival
             if (QuestSim.Active)
             {
                 // Simulation: the reward is only described (nothing is given to the account in use).
-                QuestSim.Note("  REWARD " + what + ": " + r.Gold + " gold, " + r.Xp + " XP, " + r.Packs + " pack(s)" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : ""));
+                QuestSim.Note("  REWARD " + what + ": " + r.Gold + " gold" + (r.BonusGold > 0 ? " + " + r.BonusGold + " bonus" : "") + ", " + r.Xp + " XP, " + r.Packs + " pack(s)" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : ""));
                 return;
             }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
@@ -594,6 +621,11 @@ namespace HexRevival
                 Saves.Current.Gold += r.Gold + bonusGold;
                 shown.Add(Action("GOLD", r.Gold, null));
                 if (bonusGold > 0) shown.Add(Action("GOLD", bonusGold, null));
+            }
+            if (r.BonusGold > 0)
+            {
+                Saves.Current.Gold += r.BonusGold;
+                shown.Add(Action("GOLD", r.BonusGold, null));
             }
             int levels;
             champion_bits champ = Champions.AddXp(champId, r.Xp + bonusXp, out levels);
