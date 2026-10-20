@@ -103,10 +103,13 @@ conversation and encounter names (Game) and the videos. Rules:
   Minstrel's Gallery tripwires disabled (no battle), the Oratory's battle is the burning zombies
   (ruby pried out, "Devonshire Keep H2") or the dead knight ("H1").
 - The Tranquil Dream: the creature of each room is drawn per run (Video: it changed between
-  champions); its strength (Easy / Medium / Hard) is the points of the answer given in its tale
-  (Game: one/two/three_point_answer), and Sister Midnight's form ("an echo of your will", Game) the
-  total of the five answers (which form for which total: PLACEHOLDER, gentlest Instinct → fiercest
-  Savagery). Rewards follow the fight's rank (Video).
+  champions); its strength follows the fight's rank (Video: 12, 12, 18, 18, 24 health, i.e. Easy,
+  Easy, Medium, Medium, Hard, in runs with different orders and answers), as do the rewards.
+  Sister Midnight's form ("an echo of your will", Game) comes from the total of the five tales'
+  answers (Game: one/two/three_point_answer). Video (MyHotStream, answers read from the dialogue
+  pointer): total 6 -> Conquest (Underworld 2016 and Ardent 2017 runs), total 11 -> Retribution
+  (2018 run); "What did you learn?" does not count. Totals of the other forms: PLACEHOLDER
+  (8-9 Cunning, 12-13 Instinct, 14-15 Savagery).
 - Fort Romor: rooms in the template's order, as the gate's description places them (Game);
   each room's foe is its conversation's speaker: Stables → Legionnaire of Gawaine, Barracks →
   Rhonwen, Command Post → Commander Hawthorne; the Defense (3 battles: Lords Benjamin, Alexander,

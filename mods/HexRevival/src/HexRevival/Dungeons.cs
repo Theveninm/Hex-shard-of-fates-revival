@@ -470,11 +470,9 @@ namespace HexRevival
                 int rank = 1;
                 foreach (string room in DreamRooms) if (Cleared(r, room)) rank++;
                 rank = Math.Min(rank, DreamRooms.Length);
-                // The creature's strength is the answer given in its tale: 1, 2 or 3 points (Src.Game:
-                // "one/two/three_point_answer" events; "it is the dreamer that shapes the Dream"); the
-                // rank decides it when no answer was recorded.
-                int pts = Points(r, node);
-                string d = pts == 1 ? "Easy" : pts == 2 ? "Medium" : pts == 3 ? "Hard" : rank <= 2 ? "Easy" : rank <= 4 ? "Medium" : "Hard";
+                // Its strength follows the rank too, whatever the tale's answer (Src.Video: 12, 12, 18, 18, 24
+                // health = Easy, Easy, Medium, Medium, Hard in two runs with different creature orders and answers).
+                string d = rank <= 2 ? "Easy" : rank <= 4 ? "Medium" : "Hard";
                 s = s.Replace("{RANK}", rank.ToString()).Replace("{D}", d);
             }
             if (s.Contains("{SHEP}"))
@@ -489,8 +487,10 @@ namespace HexRevival
         private static int Points(Run r, string room) { string v; int n; return r.Vars.TryGetValue("pts:" + room, out v) && int.TryParse(v, out n) ? n : 0; }
 
         /// <summary>
-        /// Sister Midnight's form, "an echo of your will" (Src.Game): from the points of the five tales'
-        /// answers, gentlest to fiercest (order of the forms: placeholder); drawn at random without answers.
+        /// Sister Midnight's form, "an echo of your will" (Src.Game): from the total points of the five tales'
+        /// answers (Src.Video, MyHotStream: total 6 -> Conquest twice, total 11 -> Retribution; the
+        /// "What did you learn?" answer does not count). The other forms' totals: PLACEHOLDER.
+        /// Drawn at random when the answers are unknown.
         /// </summary>
         private static string Form(Run r)
         {
@@ -501,7 +501,7 @@ namespace HexRevival
             return r.Vars.TryGetValue("form", out v) ? v : Forms[0];
         }
 
-        private static readonly string[] FormsByPoints = { "Instinct", "Cunning", "Retribution", "Conquest", "Savagery" };
+        private static readonly string[] FormsByPoints = { "Conquest", "Cunning", "Retribution", "Instinct", "Savagery" };   // totals 5-7, 8-9, 10-11, 12-13, 14-15
 
         /// <summary>Dialogue choice made in the room's conversation, as its outcome (encounter names, Skip, Stay); null if none.</summary>
         private static string Choice(Run r, string room, Step s, out string evt)
