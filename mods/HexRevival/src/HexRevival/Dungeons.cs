@@ -690,8 +690,9 @@ namespace HexRevival
 
         /// <summary>
         /// Sister Midnight's form, "an echo of your will" (Src.Game): from the total points of the five tales'
-        /// answers (Src.Video, MyHotStream: total 6 -> Conquest twice, total 11 -> Retribution; the
-        /// "What did you learn?" answer does not count). The other forms' totals: PLACEHOLDER.
+        /// answers (Src.Video: MyHotStream total 6 -> Conquest twice, total 11 -> Retribution; JBStevenson 2018
+        /// total 8 -> Savagery; the "What did you learn?" answer does not count). Cunning and Instinct were never
+        /// seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER.
         /// Drawn at random when the answers are unknown.
         /// </summary>
         private static string Form(Run r)
@@ -703,7 +704,7 @@ namespace HexRevival
             return r.Vars.TryGetValue("form", out v) ? v : Forms[0];
         }
 
-        private static readonly string[] FormsByPoints = { "Conquest", "Cunning", "Retribution", "Instinct", "Savagery" };   // totals 5-7, 8-9, 10-11, 12-13, 14-15
+        private static readonly string[] FormsByPoints = { "Conquest", "Savagery", "Retribution", "Cunning", "Instinct" };   // totals 5-7, 8-9, 10-11, 12-13, 14-15
 
         /// <summary>Dialogue choice made in the room's conversation, as its outcome (encounter names, Skip, Stay); null if none.</summary>
         private static string Choice(Run r, string room, Step s, out string evt)

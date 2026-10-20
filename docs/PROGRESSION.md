@@ -108,8 +108,9 @@ conversation and encounter names (Game) and the videos. Rules:
   Sister Midnight's form ("an echo of your will", Game) comes from the total of the five tales'
   answers (Game: one/two/three_point_answer). Video (MyHotStream, answers read from the dialogue
   pointer): total 6 -> Conquest (Underworld 2016 and Ardent 2017 runs), total 11 -> Retribution
-  (2018 run); "What did you learn?" does not count. Totals of the other forms: PLACEHOLDER
-  (8-9 Cunning, 12-13 Instinct, 14-15 Savagery).
+  (2018 run); JBStevenson (2018, Shin'hare): total 8 -> Savagery (its tooltip "Form of Savagery",
+  power Ferocious Might); "What did you learn?" does not count. Cunning and Instinct never seen:
+  12-13 Cunning, 14-15 Instinct, and the limits 7/8, 9/10 are PLACEHOLDER (three data points only).
 - Fort Romor: rooms in the template's order, as the gate's description places them (Game);
   each room's foe is its conversation's speaker: Stables → Legionnaire of Gawaine, Barracks →
   Rhonwen, Command Post → Commander Hawthorne; the Defense (3 battles: Lords Benjamin, Alexander,
