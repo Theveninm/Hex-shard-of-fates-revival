@@ -77,6 +77,9 @@ namespace HexRevival
         /// </summary>
         public static void OnSaveRequest(ProfileDeckTemplate template, ulong? deckTemplateId, Action<CustomNetworkResponse<Game.Shared.Profile.Network.Response>> notify)
         {
+            // The editor sends "ERROR" when the deck has no name of its own: the saved deck keeps its name.
+            ProfileDeckTemplate old = Get(deckTemplateId ?? 0);
+            if ((string.IsNullOrEmpty(template.Name) || template.Name == "ERROR") && old != null) template.Name = old.Name;
             ulong id = Put(template, deckTemplateId ?? 0);
             Debug.Log("[HexRevival] [DeckTemplates] saved " + id + " '" + template.Name + "'");
             if (notify == null) return;

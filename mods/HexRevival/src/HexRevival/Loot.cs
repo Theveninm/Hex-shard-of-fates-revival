@@ -72,42 +72,86 @@ namespace HexRevival
             new KeyValuePair<string, float>("Rare Stardust", 25), new KeyValuePair<string, float>("Legendary Stardust", 5),
         };
 
-        /// <summary>Opens a pack of the table (e.g. AZ1Pack); unknown names are skipped (see the "loot check" command).</summary>
+        /// <summary>
+        /// AZ2 packs (the zone's and its dungeons'): no drop table of them has been found, so their card and
+        /// equipment are drawn from the game's own AZ2 set (cards and equipment items), by rarity (PLACEHOLDER weights:
+        /// uncommon 10, rare 3, legendary 1), with the AZ1 pack layout.
+        /// </summary>
+        public const string AZ2Pack = "Adventure Zone 2";
+        private static readonly HashSet<string> AZ2Packs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { AZ2Pack, "Brutecrown Bluff", "Great Machine Graveyard", "The Kraken", "Ruins of Kukatan", "Kraken's Cove" };
+
+        /// <summary>Opens a pack of the table (e.g. AZ1Pack) or an AZ2 pack; unknown names are skipped (see the "loot check" command).</summary>
         public static List<Drop> Open(string pack)
         {
             List<Drop> res = new List<Drop>();
             PackTable t;
-            if (!Packs().TryGetValue(pack, out t)) return res;
+            if (!Packs().TryGetValue(pack, out t) && !AZ2Packs.Contains(pack)) return res;
             foreach (string setName in new[] { RandomOf(CommonSets), RandomOf(CommonSets) })
             {
                 CardTemplate c = Progression.RandomCard(SetByName(setName), Game.Shared.Mechanics.ERarity.Common, null);
                 if (c != null) res.Add(new Drop { Card = c });
             }
-            Add(res, t, 'c', true);
-            Add(res, t, 'e', false);
-            if (UnityEngine.Random.value < StardustChance) { Drop d = Resolve(PickStardust(), false); if (d != null) res.Add(d); }
-            else Add(res, t, 'e', false);
-            if (UnityEngine.Random.value < 0.01f) Add(res, t, 'u', false);
+            AddTo(res, t != null ? Pick(t, 'c', true) : AZ2Card());
+            AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment());
+            if (UnityEngine.Random.value < StardustChance) AddTo(res, Resolve(PickStardust(), false));
+            else AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment());
+            if (t != null && UnityEngine.Random.value < 0.01f) AddTo(res, Pick(t, 'u', false));
             return res;
         }
 
         /// <summary>One random equipment of a pack's list (rewards of "2 / 3 random equipment", Src.Video).</summary>
         public static Drop RandomEquipment(string pack)
         {
-            List<Drop> res = new List<Drop>();
             PackTable t;
-            if (Packs().TryGetValue(pack, out t)) Add(res, t, 'e', false);
-            return res.Count > 0 ? res[0] : null;
+            if (Packs().TryGetValue(pack, out t)) return Pick(t, 'e', false);
+            return AZ2Packs.Contains(pack) ? AZ2Equipment() : null;
         }
 
-        private static void Add(List<Drop> res, PackTable t, char cat, bool card)
+        private static void AddTo(List<Drop> res, Drop d) { if (d != null) res.Add(d); }
+
+        private static Game.Shared.Mechanics.ERarity AZ2Rarity()
+        {
+            float v = UnityEngine.Random.value * 14f;
+            return v < 10f ? Game.Shared.Mechanics.ERarity.Uncommon : v < 13f ? Game.Shared.Mechanics.ERarity.Rare : Game.Shared.Mechanics.ERarity.Legendary;
+        }
+
+        private static Drop AZ2Card()
+        {
+            CardTemplate c = Progression.RandomCard(SetByName("AZ2"), AZ2Rarity(), null);
+            return c != null ? new Drop { Card = c } : null;
+        }
+
+        private static Dictionary<Game.Shared.Mechanics.ERarity, List<ResourceId>> s_AZ2Equipment;
+
+        /// <summary>An equipment item of the AZ2 set (InventoryEquipmentData.m_SetId; the "AZ2 Equipment" card set only holds their pictures).</summary>
+        private static Drop AZ2Equipment()
+        {
+            if (s_AZ2Equipment == null)
+            {
+                s_AZ2Equipment = new Dictionary<Game.Shared.Mechanics.ERarity, List<ResourceId>>();
+                CardSetTemplate set = SetByName("AZ2");
+                foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                {
+                    InventoryEquipmentData eq = item as InventoryEquipmentData;
+                    if (eq == null || set == null || eq.m_SetId != set.m_Id) continue;
+                    List<ResourceId> l;
+                    if (!s_AZ2Equipment.TryGetValue(eq.m_Rarity, out l)) s_AZ2Equipment[eq.m_Rarity] = l = new List<ResourceId>();
+                    l.Add(eq.m_Id);
+                }
+            }
+            List<ResourceId> pool;
+            if (!s_AZ2Equipment.TryGetValue(AZ2Rarity(), out pool) || pool.Count == 0) return null;
+            return new Drop { Item = pool[UnityEngine.Random.Range(0, pool.Count)] };
+        }
+
+        private static Drop Pick(PackTable t, char cat, bool card)
         {
             List<Entry> l;
-            if (!t.Cat.TryGetValue(cat, out l) || l.Count == 0) return;
+            if (!t.Cat.TryGetValue(cat, out l) || l.Count == 0) return null;
             float total = 0;
             foreach (Entry e in l) total += e.Pct;
-            Drop d = Resolve(Pick(l, total), card);
-            if (d != null) res.Add(d);
+            return Resolve(Pick(l, total), card);
         }
 
         private static string RandomOf(string[] l) { return l[UnityEngine.Random.Range(0, l.Length)]; }
@@ -185,6 +229,23 @@ namespace HexRevival
         {
             CardSetTemplate s;
             return Singleton<TemplateManager>.Instance.CardSets.TryGetValue(t.m_SetId, out s) && s != null && (s.m_Name == "AZ1" || s.m_Name == "AZ2");
+        }
+
+        /// <summary>Dev command "loot eqsets": equipment items counted by their set and their equipment set.</summary>
+        public static string EquipmentSets()
+        {
+            Dictionary<string, int> n = new Dictionary<string, int>();
+            foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                InventoryEquipmentData eq = item as InventoryEquipmentData;
+                if (eq == null) continue;
+                CardSetTemplate s;
+                string k = (Singleton<TemplateManager>.Instance.CardSets.TryGetValue(eq.m_SetId, out s) && s != null ? s.m_Name : eq.m_SetId.ToString()) + " / " + eq.m_EquipmentSet + " / " + eq.m_BuildTag;
+                int c; n.TryGetValue(k, out c); n[k] = c + 1;
+            }
+            List<string> l = new List<string>();
+            foreach (KeyValuePair<string, int> kv in n) l.Add(kv.Value + "  " + kv.Key);
+            return string.Join("\n", l.ToArray());
         }
 
         /// <summary>Dev command "loot check": reward names that match no card or equipment of the game.</summary>

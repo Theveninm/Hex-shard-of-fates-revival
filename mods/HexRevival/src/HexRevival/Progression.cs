@@ -189,6 +189,23 @@ namespace HexRevival
             { "devonshire/NodeK", R(550, 400) },
             { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
 
+            // ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the
+            // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the Lurking Crocodile's card (not identified)
+            // and the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
+            { "AZ2/Node001", new Reward { Xp = 350, Source = Src.Video, Note = "+ a card not identified" } },   // Lurking Crocodile
+            { "AZ2/Node006", new Reward { Gold = 600, Xp = 425, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Winter Moon
+            { "AZ2/Node008", R(0, 400, "Common Stardust") },                  // Flock of Seagulls
+            { "AZ2/Node009", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Katsuhiro (not implemented)" } },
+            { "AZ2/Node011", new Reward { Gold = 400, Xp = 450, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Hired Horn Picaroon
+            { "AZ2/Node013", new Reward { Xp = 500, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Orchin
+            { "AZ2/Node015", R(0, 500, "Rare Stardust") },                    // Giant Jellyfish
+            { "AZ2/Node020", R(0, 550, "Ricochet Blast") },                   // Ayotochi Refugee
+            { "AZ2/Node021", new Reward { Gold = 600, Xp = 700, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Lazgar Chul
+            { "AZ2/Node022", R(0, 575) },                                     // Darkspire Scout
+            { "AZ2/Node025", R(0, 550, "Rare Stardust") },                    // Dire Toad
+            { "AZ2/Node028", new Reward { Gold = 400, Xp = 450, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Puke Troll
+            { "AZ2/Node030", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Augustine with his deck (not implemented)" } },
+            { "AZ2/Node032", R(0, 425, "Uncommon Stardust") },                // Bog Walker
             // ---- AZ2 dungeons. The final pack: named after the dungeon as in AZ1, but no AZ2 pack table yet (Loot
             // skips it): PLACEHOLDER. Rooms not seen on video: PLACEHOLDER, rising towards the boss as in AZ1.
             // Brutecrown Bluff (Burgg not seen)
@@ -454,6 +471,12 @@ namespace HexRevival
             { "az01_q_fort_romor", new Reward { Xp = 900, Packs = 1, PackName = "Fort Romor", Source = Src.Video, Note = "early 2016: also 1000 gold" } },
             { "az01_q_usurper", new Reward { Xp = 900, Packs = 1, PackName = "The Usurper", Source = Src.Placeholder, Note = "not seen: as Fort Romor, the other faction's quest" } },
             { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
+            // AZ2 (Src.Video, Underworld run): the Alachian Sea (Takumi; its card not identified), Petulant Picaroons
+            // (Bonewalker), Brutecrown Bluff, the Kraken (Renner)
+            { "q_alachian_sea", new Reward { Gold = 700, Xp = 1100, Source = Src.Video, Note = "+ a card not identified" } },
+            { "q_petulent_picaroons", new Reward { Gold = 500, Xp = 800, Cards = new[] { "Hired Horn Cutthroat" }, Source = Src.Video } },
+            { "q_brutecrown_bluff", new Reward { Gold = 1100, Xp = 1500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video } },
+            { "q_kraken", new Reward { Gold = 1300, Xp = 1800, Packs = 1, PackName = "Kraken's Cove", Source = Src.Video } },
             { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Packs = 1, PackName = "Devonshire Keep", Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "gold seen on the Elf run only" } },
         };
 

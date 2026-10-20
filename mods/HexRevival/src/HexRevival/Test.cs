@@ -1146,6 +1146,7 @@ namespace HexRevival
                         return string.Join(", ", o.ToArray());
                     }
                     if (parts.Length > 1 && parts[1] == "names") return Loot.DumpNames();
+                    if (parts.Length > 1 && parts[1] == "eqsets") return Loot.EquipmentSets();
                     if (parts.Length > 2 && parts[1] == "find") return Loot.Find(string.Join(" ", parts, 2, parts.Length - 2));
                     return Loot.Check();
                 case "unclaim":   // dev: forget a one-time reward ("unclaim 1:aom6"; no argument: list)
