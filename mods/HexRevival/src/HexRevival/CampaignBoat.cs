@@ -16,12 +16,15 @@ namespace HexRevival
     /// <summary>
     /// AZ2 sea voyages (Src.Game unless noted). At Portsmeare Harbor (Node019B) the champion names a ship once,
     /// then sets sail from the boat's talent window: the ship is a sub-champion of class Boat (template "Boat",
-    /// 40 health) with its own deck (a profile deck template, see DeckTemplates) and talents, levelled by sea battles.
+    /// 40 health) with its own deck (a profile deck template, see DeckTemplates) and talents.
     /// The client moves the token between the harbor and the sea (Node00B) itself and draws it as a boat
     /// while "champ_override" names the ship.
-    /// - Hull: the ship's health, kept from one sea battle to the next ("Basic Hull" 40, "Heavy Hull" 60,
-    ///   "Repair Crew" +5 after a win); Water Town repairs it. A battle lost (hull at 0) ends the voyage:
-    ///   the game's "zero hull" message, back to the harbor.
+    /// - Ship talent points (Src.Video): 3 when the ship is named, 1 for the first win over the Cloud Queen, the
+    ///   Cloud King, the Storm of the Century and Bloodhorn. The game counts talent points from the level
+    ///   (level - 1), so the ship's level carries them. Sea battles' XP goes to the champion (Src.Video).
+    /// - Hull: the talents say it persists across encounters, but every sea battle of the videos starts at full
+    ///   hull (40, "Heavy Hull" 60), even within one voyage (Src.Video): so does it here. A battle lost sinks the
+    ///   ship: the game's "Your boat has sunk!" message, back to the harbor.
     /// - The sea battles are fought again on each voyage, and the three sea quests must be done in one voyage:
     ///   their objectives are reset when a voyage begins or ends. The harbor master (Node00B) takes the turn-ins.
     /// - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the new land.
@@ -33,16 +36,13 @@ namespace HexRevival
         /// <summary>The ship names offered by the harbor's conversation (events Boat_Name_1..4).</summary>
         private static readonly string[] ShipNames = { "Seas The Day", "Kraken's Gold", "The Reckoning", "The Windy Way" };
         private static readonly ResourceId HeavyHull = new ResourceId("{80f783f1-8ae3-4dfc-a232-d5d27be74111}");
-        private static readonly ResourceId RepairCrew = new ResourceId("{171af2e2-e016-49fd-bbb0-9c2198c941d6}");
         /// <summary>Champion entry of the ship in the campaign state (the client creates the sub-champion from it).</summary>
         private const string ShipEntry = "Boat";
 
         /// <summary>Sea nodes (the client's own list, UIDungeonZoneViewModel.m_BoatNodeList).</summary>
         private static bool IsSea(MapNode n) { return n.Z == AZ2 && (n.Id == Port || n.Id.StartsWith("NodeB")); }
 
-        private static bool OnVoyage(ulong champ) { return Quests.Flag(champ, "boat:hull") != null; }
-
-        private static int Hull(ulong champ) { int h; return int.TryParse(Quests.Flag(champ, "boat:hull"), out h) ? h : 0; }
+        private static bool OnVoyage(ulong champ) { return Quests.Flag(champ, "boat:voyage") != null; }
 
         private static champion_bits Ship(ulong champ) { return Champions.SubChampion(champ, EChampionClass.Boat); }
 
@@ -50,7 +50,22 @@ namespace HexRevival
 
         private static int MaxHull(ulong champ) { return HasTalent(Ship(champ), HeavyHull) ? 60 : 40; }
 
-        private static void SetHull(ulong champ, int hull) { Quests.SetFlag(champ, "boat:hull", Math.Max(0, Math.Min(MaxHull(champ), hull)).ToString()); }
+        /// <summary>Ship talent points earned (naming, some sea battles): the ship's level is 1 + that.</summary>
+        internal static void AddShipTalentPoints(ulong champ, int n)
+        {
+            int had; int.TryParse(Quests.Flag(champ, "boat:points"), out had);
+            Quests.SetFlag(champ, "boat:points", (had + n).ToString());
+            SyncShipLevel(champ);
+        }
+
+        private static void SyncShipLevel(ulong champ)
+        {
+            champion_bits ship = Ship(champ);
+            int points; int.TryParse(Quests.Flag(champ, "boat:points"), out points);
+            if (ship == null || ship.Level == 1 + points) return;
+            Champions.SetLevel(ship.Id, 1 + points);
+            try { GameClient.Instance.PlayerProfile.GetPvEChampionById(ship.Id).SourceBits.Level = 1 + points; } catch { }
+        }
 
         /// <summary>Champion that fights at this node: the ship at sea, otherwise the champion.</summary>
         private static ulong Fighter(CampState st, MapNode n)
@@ -76,6 +91,7 @@ namespace HexRevival
         private static void AddShipState(CampState st, GameplayState gs, Dictionary<string, object> pub)
         {
             if (st.Z != AZ2) return;
+            SyncShipLevel(st.ChampId);   // the ship may have been created after its points were earned
             gs.Champions.Add(new Champion(ShipEntry, new Dictionary<string, object> { { "race", "None" }, { "class", "Boat" }, { "gender", "Female" } }));
             string name = Quests.Flag(st.ChampId, "boat:name");
             MapNode harbor = FindNode(AZ2, Harbor);
@@ -108,9 +124,9 @@ namespace HexRevival
                 d["repeatable"] = true;
                 d["autostart"] = st.ALoc == n.Name;
             }
-            else if (n.Id == Port || n.Id == Docks || n.Id == "NodeB11")
+            else if (n.Id == Port || n.Id == Docks)
             {
-                // The harbor master, the docks and Water Town's shipwrights: every time the ship is there.
+                // The harbor master and the docks: every time the ship is there.
                 d["completed"] = false;
                 d["repeatable"] = true;
             }
@@ -150,6 +166,7 @@ namespace HexRevival
                 // Naming conversation done: the talent window opens next (the location stays active).
                 Complete(st, active);
                 Quests.CompleteLoc(champ, "q_the_new_land", "Step1");
+                Progression.OnShipNamed(champ);
                 return true;
             }
             if (evt == "accept" && active.Id == Harbor) { SetSail(st); return true; }
@@ -171,22 +188,16 @@ namespace HexRevival
             }
             if (evt == "mermaidblessing")
             {
-                // The witch's blessing (Src.Video): the card "Mermaid's Blessing" for the ship's next battle.
+                // The witch's blessing (Src.Video: "Your starting hand size is increased by 1", 8 cards in the next battle).
                 Quests.SetFlag(champ, "boat:blessed", "1");
-                champion_bits ship = Ship(champ);
-                Fortunes.Grant(ship != null ? ship.Id : champ, "Mermaid's Blessing");
+                Quests.SetFlag(champ, "boat:blessing", "1");
                 return false;
             }
-            if (evt == "conv_done" && active.Id == "NodeB11" && OnVoyage(champ))
-            {
-                // Water Town: "The shipwrights of the town offer to repair the damage to your hull."
-                SetHull(champ, MaxHull(champ));
-                return false;
-            }
-            if (evt == "conv_done" && IsSea(active) && OnVoyage(champ) && Hull(champ) <= 0 && Quests.Flag(champ, "outcome:" + active.Key) != null)
+            if (evt == "conv_done" && IsSea(active) && Quests.Flag(champ, "boat:sunk") != null && Quests.Flag(champ, "outcome:" + active.Key) != null)
             {
                 // A sea battle lost: after its outcome conversation the voyage is over.
                 Quests.SetFlag(champ, "outcome:" + active.Key, null);
+                Quests.SetFlag(champ, "boat:sunk", null);
                 Quests.SetFlag(champ, "boat:failed", "1");
                 EndVoyage(st, Harbor);
                 return true;
@@ -194,11 +205,11 @@ namespace HexRevival
             return false;
         }
 
-        /// <summary>"Set Sail": a new voyage from the harbor master's quay (Node00B), hull repaired, the sea fought anew.</summary>
+        /// <summary>"Set Sail": a new voyage from the harbor master's quay (Node00B), the sea fought anew.</summary>
         private static void SetSail(CampState st)
         {
             ulong champ = st.ChampId;
-            SetHull(champ, MaxHull(champ));
+            Quests.SetFlag(champ, "boat:voyage", "1");
             foreach (MapNode n in st.Z.Nodes)
                 if (IsSea(n) && n.Id != "NodeB02" && n.Id != "NodeB07" && n.Id != "NodeB12") st.Completed.Remove(n.Id);
             // PLACEHOLDER: who gives the sea quests is unknown; they are given with the first voyage.
@@ -214,7 +225,7 @@ namespace HexRevival
         private static void EndVoyage(CampState st, string to)
         {
             ulong champ = st.ChampId;
-            Quests.SetFlag(champ, "boat:hull", null);
+            Quests.SetFlag(champ, "boat:voyage", null);
             foreach (string q in SeaQuests) Quests.ResetProgress(champ, q);
             Reveal(st, to);
             st.ALoc = null;
@@ -228,34 +239,31 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         private static bool s_HullApplied;
-        private static int s_HullSeen = -1;
 
-        /// <summary>Start of a sea battle (after the mulligan): the ship's health is its hull. Then follows it to the end.</summary>
+        /// <summary>Start of a sea battle (after the mulligan): full hull, and the witch's blessing (one more card).</summary>
         private static void TickShip(StandaloneSession ss)
         {
             champion_bits ship = Champions.Get(s_BattleChamp);
-            if (ship == null || ship.ChampionClass != EChampionClass.Boat) return;
+            if (s_HullApplied || ship == null || ship.ChampionClass != EChampionClass.Boat) return;
             Player human = Cheats.FindPlayer(ss, "j");
             if (human == null || human.m_ChampionCard == null) return;
-            if (!s_HullApplied)
+            s_HullApplied = true;
+            ss.SetChampionHealth(human.m_ChampionCard, MaxHull(ship.OwnerChampionId), false);
+            if (Quests.Flag(ship.OwnerChampionId, "boat:blessing") != null)
             {
-                s_HullApplied = true;
-                ss.SetChampionHealth(human.m_ChampionCard, Math.Max(1, Hull(ship.OwnerChampionId)), false);
-                Server.MarkDirty();
+                // The opening hand is already drawn here: the extra card is drawn now.
+                Quests.SetFlag(ship.OwnerChampionId, "boat:blessing", null);
+                Cheats.DrawCard(ss, human);
             }
-            s_HullSeen = human.m_ChampionCard.CurrentHealthValue;
+            Server.MarkDirty();
         }
 
-        /// <summary>End of a sea battle: the hull left (0 when lost), "Repair Crew" +5 after a win.</summary>
+        /// <summary>End of a sea battle: a defeat sinks the ship (after the outcome conversation).</summary>
         private static void ShipBattleEnded(ulong champ, bool won)
         {
-            if (!OnVoyage(champ)) return;
-            int hull = won ? (s_HullSeen > 0 ? s_HullSeen : Hull(champ)) : 0;
-            if (won && HasTalent(Ship(champ), RepairCrew)) hull += 5;
-            SetHull(champ, hull);
-            Debug.Log("[HexRevival] [Campaign] sea battle " + (won ? "won" : "lost") + ", hull " + Hull(champ));
+            if (OnVoyage(champ) && !won) Quests.SetFlag(champ, "boat:sunk", "1");
         }
 
-        private static void ResetShipBattle() { s_HullApplied = false; s_HullSeen = -1; }
+        private static void ResetShipBattle() { s_HullApplied = false; }
     }
 }

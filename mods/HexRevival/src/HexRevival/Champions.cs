@@ -237,6 +237,15 @@ namespace HexRevival
 
         public static champion_bits Get(ulong id) { return Find(id); }
 
+        /// <summary>Sets a champion's level (the AZ2 ship's level carries its talent points).</summary>
+        public static void SetLevel(ulong id, int level)
+        {
+            champion_bits c = Find(id);
+            if (c == null || c.Level == level) return;
+            c.Level = level;
+            Save();
+        }
+
         /// <summary>A champion's sub-champion of that class (the AZ2 boat), null if not created yet.</summary>
         public static champion_bits SubChampion(ulong owner, EChampionClass cls)
         {

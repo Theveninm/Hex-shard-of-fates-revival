@@ -1531,9 +1531,8 @@ namespace HexRevival
             s_Battle = null;
             MapNode node = s_BattleNode != null ? FindNode(st.Z, s_BattleNode) : st.ALoc != null ? FindNode(st.Z, st.ALoc) : null;
             s_BattleNode = null;
-            // A sea battle was the ship's: the champion is the current one again, the hull is what is left.
+            // A sea battle was the ship's: the champion is the current one again.
             SetCurrentChampion(st.ChampId);
-            ulong fighter = node != null ? Fighter(st, node) : st.ChampId;
             if (node != null && IsSea(node)) ShipBattleEnded(st.ChampId, won);
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
@@ -1562,7 +1561,7 @@ namespace HexRevival
                     Save();
                 }
             }
-            if (won && node != null) Progression.OnCampaignBattleWon(fighter, node.Z == AZ1 && node.Id == "Node019" && Quests.Flag(st.ChampId, "won:Node019B") != null && enc != null && enc != node.FightEncounter ? "Node019B" : node.Key);
+            if (won && node != null) Progression.OnCampaignBattleWon(st.ChampId, node.Z == AZ1 && node.Id == "Node019" && Quests.Flag(st.ChampId, "won:Node019B") != null && enc != null && enc != node.FightEncounter ? "Node019B" : node.Key);
             BattleDifficulty = 0;
             return true;
         }

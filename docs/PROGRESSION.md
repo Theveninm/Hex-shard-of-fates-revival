@@ -235,22 +235,24 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   Reckoning", "The Windy Way"), then the game's Ship Port window opens there: boat talents, the ship's
   deck (the "Edit Deck" button), "Set Sail".
 - The ship is a sub-champion of class Boat (template "Boat", 40 health, Tattered Banner and cannon
-  abilities); it levels with the XP of sea battles (talent points: the game's rule, level - 1). Its
-  deck starts as a copy of the champion's deck. Gold goes to the account as usual. That sea battles
-  give XP to the ship rather than to the champion is a reading of the harbor master's dialogue
-  ("you may even learn a thing or two about sailing").
-- Hull = the ship's health, kept from one sea battle to the next: 40 ("Basic Hull"), 60 ("Heavy
-  Hull"), +5 after a win ("Repair Crew"); Water Town (NodeB11) repairs it fully; a new voyage starts
-  repaired. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
-  harbor.
-- Coralcove Rock's blessing (once per champion, Video: "a blessing for your next battle: Mermaid's
-  Blessing"): the game's "Mermaid's Blessing" card applied to the ship's next battle, like a gaal
-  fortune. The Lighthouse's "something useful" is not given (unknown).
+  abilities), with its own deck (first a copy of the champion's deck) and talents. Ship talent points
+  (Video): 3 when the ship is named, 1 for the first win over the Cloud Queen, the Cloud King, the Storm
+  of the Century and Bloodhorn (7 in all, as on the videos' Ship Port); shown as a talent point line of
+  the reward window (the original said "Ship Talent Point"). Sea battles' XP goes to the champion (Video).
+- Hull (the ship's health): the talents speak of a hull kept across encounters, but every sea battle of
+  the videos starts at full hull, even within one voyage (Video: battles ended at 35, 14, 22, 33 and the
+  next began at 40): 40, or 60 with "Heavy Hull". Repair Crew and Water Town therefore change nothing
+  here (Water Town's repair was never seen). A sea battle lost sinks the ship: the game's "Your boat has
+  sunk!" message, back to the harbor (Video, same text).
+- Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
+  increased by 1" for the next battle (8 cards; here the 8th card is drawn after the mulligan). The
+  Lighthouse gives the card Sea Spirit (Video).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
-  (PLACEHOLDER: their giver is unknown); their progress is reset when a voyage begins or ends; the
-  harbor master (Node00B) takes the turn-ins ("Return to port" also ends the voyage). Rewards:
-  PLACEHOLDER (300 gold).
+  (PLACEHOLDER: their giver is not on the videos, they are already in the tracker); their progress is
+  reset when a voyage begins or ends; the harbor master (Node00B) takes the turn-ins ("Return to port"
+  also ends the voyage). Rewards: Pirates of the Alachian 500 gold, 1000 XP, Hired Horn Captain (Video);
+  the other two PLACEHOLDER (300 gold).
 - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
   Land".
 
@@ -285,8 +287,14 @@ Kraken's curses and boons and Kukatan's coins (not reproduced in battle).
 | Puke Troll (Node028) | 400 | 450 | AZ2 pack |
 | Augustine (Node030) | 0 | 450 | his mercenary with his deck (not implemented) |
 | Bog Walker (Node032) | 0 | 425 | Uncommon Stardust |
+| Sea (Ardent run): Hired Horn Scum / Chumspike / Bloodhorn | 350 / 500 / 600 | 675 | Bloodhorn: 1 ship talent point |
+| Sea: Cloud Queen / Cloud King / Storm of the Century | 0 | 625 / 650 / 650 | AZ2 pack, 1 ship talent point each |
+| Sea: Hardshell Deepwalker / Saltmage / Overseer | 0 / 0 / 400 | 650 / 625 / 650 | Hardshell Infantry / Hardshell Wizard / — |
+| Sea: Lightning Armada / Kraken Guard Captain | 350 / 300 | 600 / 650 | — |
+| Sea: Scylla / Charybdis | 0 | 675 / 650 | AZ2 pack |
+| Sea: Old Man of the Sea (Hexlantis) | 0 | 700 | Old Man of the Sea |
 | Brutecrown Bluff: Zagg / Vargar / Nogg Nogg's Handler / King Kazraga | 250 / 300 / 400 / 500 | 250 / 300 / 400 / 500 | Brutecrown Bluff pack (Kazraga) |
-| Other AZ2 battles, sea battles, other dungeon rooms | PLACEHOLDER (100 / 100; dungeon rooms 200-500 rising to the boss, final pack) | | |
+| Other AZ2 battles, other dungeon rooms | PLACEHOLDER (100 / 100; dungeon rooms 200-500 rising to the boss, final pack) | | |
 
 | Quest (giver) | Gold | XP | Items |
 |---|---|---|---|

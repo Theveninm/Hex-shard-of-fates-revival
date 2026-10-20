@@ -74,10 +74,11 @@ namespace HexRevival
             public string RaceQuest;                    // key of RaceRewards: the item of the champion's race
             public bool ShroomHaus;                     // one of the Haus's 3 cards (see ShroomHauses)
             public string NeedsEvent;                   // the items need this end-of-battle event (Src.Game: HandleGameplayChallenges)
+            public int ShipTalentPoints;                // AZ2 ship talent points (first win only, Src.Video "N Ship Talent Point")
             public Src Source;
             public string Note;
 
-            public bool HasItems { get { return Cards.Length > 0 || Packs > 0 || RandomEquipment > 0 || RaceQuest != null || ShroomHaus; } }
+            public bool HasItems { get { return Cards.Length > 0 || Packs > 0 || RandomEquipment > 0 || RaceQuest != null || ShroomHaus || ShipTalentPoints > 0; } }
             public Reward GoldXpOnly() { return new Reward { Gold = Gold, Xp = Xp, Source = Source, PackName = PackName }; }
         }
 
@@ -206,6 +207,23 @@ namespace HexRevival
             { "AZ2/Node028", new Reward { Gold = 400, Xp = 450, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Puke Troll
             { "AZ2/Node030", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Augustine with his deck (not implemented)" } },
             { "AZ2/Node032", R(0, 425, "Uncommon Stardust") },                // Bog Walker
+            // ---- AZ2 sea battles (Src.Video, Ardent run "The Reckoning"; the Underworld run adds its racial bonus line).
+            // XP to the champion; 1 ship talent point for the first win over the three storms and Bloodhorn.
+            { "AZ2/NodeB01", new Reward { Xp = 625, Packs = 1, PackName = Loot.AZ2Pack, ShipTalentPoints = 1, Source = Src.Video } },   // Cloud Queen
+            { "AZ2/NodeB03", R(0, 650, "Hardshell Infantry") },               // Hardshell Deepwalker
+            { "AZ2/NodeB04", new Reward { Xp = 675, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Scylla
+            { "AZ2/NodeB05", R(350, 675) },                                   // Hired Horn Scum
+            { "AZ2/NodeB06", new Reward { Xp = 650, Packs = 1, PackName = Loot.AZ2Pack, ShipTalentPoints = 1, Source = Src.Video } },   // Cloud King
+            { "AZ2/NodeB08", R(0, 625, "Hardshell Wizard") },                 // Hardshell Saltmage
+            { "AZ2/NodeB09", R(350, 600) },                                   // Lightning Armada
+            { "AZ2/NodeB10", new Reward { Xp = 650, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Charybdis
+            { "AZ2/NodeB13", new Reward { Xp = 650, Packs = 1, PackName = Loot.AZ2Pack, ShipTalentPoints = 1, Source = Src.Video } },   // Storm of the Century
+            { "AZ2/NodeB14", R(300, 650) },                                   // Kraken Guard Captain
+            { "AZ2/NodeB15", R(500, 675) },                                   // Admiral Chumspike
+            { "AZ2/NodeB16", R(400, 650) },                                   // Hardshell Overseer
+            { "AZ2/NodeB17", new Reward { Gold = 600, Xp = 675, ShipTalentPoints = 1, Source = Src.Video } },   // Bloodhorn
+            { "AZ2/NodeB18", R(0, 700, "Old Man of the Sea") },               // Old Man of the Sea (Hexlantis)
+            { "AZ2/NodeB07", R(0, 0, "Sea Spirit") },                         // the Lighthouse: "something useful inside"
             // ---- AZ2 dungeons. The final pack: named after the dungeon as in AZ1, but no AZ2 pack table yet (Loot
             // skips it): PLACEHOLDER. Rooms not seen on video: PLACEHOLDER, rising towards the boss as in AZ1.
             // Brutecrown Bluff (Burgg not seen)
@@ -473,6 +491,7 @@ namespace HexRevival
             { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
             // AZ2 (Src.Video, Underworld run): the Alachian Sea (Takumi; its card not identified), Petulant Picaroons
             // (Bonewalker), Brutecrown Bluff, the Kraken (Renner)
+            { "q_boat_pirates", new Reward { Gold = 500, Xp = 1000, Cards = new[] { "Hired Horn Captain" }, Source = Src.Video } },
             { "q_alachian_sea", new Reward { Gold = 700, Xp = 1100, Source = Src.Video, Note = "+ a card not identified" } },
             { "q_petulent_picaroons", new Reward { Gold = 500, Xp = 800, Cards = new[] { "Hired Horn Cutthroat" }, Source = Src.Video } },
             { "q_brutecrown_bluff", new Reward { Gold = 1100, Xp = 1500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video } },
@@ -482,6 +501,15 @@ namespace HexRevival
 
         /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>
         private const int QuestGold = 300;
+
+        /// <summary>The ship named at Portsmeare Harbor (Src.Video: a reward window with 3 ship talent points).</summary>
+        public static void OnShipNamed(ulong champId)
+        {
+            string key = champId + ":shipnamed";
+            if (Saves.Current.Claims.Contains(key)) return;
+            Saves.Current.Claims.Add(key);
+            Grant(champId, new Reward { ShipTalentPoints = 3, Source = Src.Video }, null, "ship named");
+        }
 
         public static void OnQuestFinished(ulong champId, string script)
         {
@@ -572,6 +600,12 @@ namespace HexRevival
             if (r.Xp > 0) shown.Add(Action("XP", r.Xp, null));
             if (bonusXp > 0) shown.Add(Action("XP", bonusXp, null));
             if (levels > 0) shown.Add(Action("LEVEL", levels * TalentPointsPerLevel, null));
+            if (r.ShipTalentPoints > 0)
+            {
+                // Shown as the game's talent point line (the original said "Ship Talent Point").
+                Campaign.AddShipTalentPoints(champId, r.ShipTalentPoints);
+                shown.Add(Action("LEVEL", r.ShipTalentPoints, null));
+            }
             Saves.SaveCurrent();
 
             AppliedUpdates up = new AppliedUpdates();
