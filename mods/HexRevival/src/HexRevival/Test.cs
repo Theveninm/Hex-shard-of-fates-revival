@@ -265,6 +265,7 @@ namespace HexRevival
             {
                 LocalServer.Pump();
                 Campaign.Pump();
+                Siege.Tick();
                 Tutorial.Tick();
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
@@ -931,6 +932,7 @@ namespace HexRevival
                 case "dun": return Dungeons.Command(parts);
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
+                case "siege": return Siege.Command(parts);
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "modal":   // dev: "modal 1|2|3" = presses that button of the visible modal popups

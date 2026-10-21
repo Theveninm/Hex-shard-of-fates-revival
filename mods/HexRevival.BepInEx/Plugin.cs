@@ -136,6 +136,13 @@ namespace HexRevival
             apply("UIBattle.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIBattle), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
             apply("UIPopupList.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIPopupList), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
             apply("UICoinToss.TurnOffCoinTossEffects", () => harmony.Patch(AccessTools.Method(typeof(UICoinToss), "TurnOffCoinTossEffects"), postfix: new HarmonyMethod(typeof(Hooks), "CoinToss_TurnOff")));
+            apply("Siege Execution.IssueRequest", () =>
+            {
+                MethodInfo m = null;
+                foreach (MethodInfo x in typeof(Game.Shared.Campaign.Siege.Execution).GetMethods(BindingFlags.Static | BindingFlags.NonPublic))
+                    if (x.Name == "IssueRequest" && x.GetParameters().Length == 8) m = x;
+                harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "Siege_IssueRequest"));
+            });
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
             {
@@ -333,6 +340,8 @@ namespace HexRevival
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
         { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
+        public static bool Siege_IssueRequest(byte[] __3, Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Campaign.Siege.Messaging.Response>> __5, ref IAsyncResult __result)
+        { __result = null; Siege.OnRequest(__3, __5); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }

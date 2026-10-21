@@ -38,6 +38,8 @@ namespace HexRevival
             List<inventory_bits> res = new List<inventory_bits>();
             foreach (KeyValuePair<ResourceId, int> kv in s_Counts)
                 for (int i = 0; i < kv.Value; i++) res.Add(NewInstance(kv.Key));
+            inventory_bits sacks = Siege.SackItem(owner);   // Siege Sacks, an inventory currency
+            if (sacks != null) res.Add(sacks);
             Debug.Log("[HexRevival] [Inventory] " + res.Count + " item(s)");
             return res;
         }

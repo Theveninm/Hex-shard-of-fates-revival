@@ -179,7 +179,9 @@ namespace HexRevival
                         FieldInfo f = typeof(AuthoritativeSessionBase).GetField("m_OverrideDecks", BindingFlags.Instance | BindingFlags.NonPublic);
                         Dictionary<UID, DeckTemplate> over = f.GetValue(self) as Dictionary<UID, DeckTemplate>;
                         over[player.m_PlayerId] = s_PendingAIDeck;
-                        Debug.Log("[HexRevival] AI " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
+                        // A deck template carries no AI personality (a player deck does): the Siege defender's is set here.
+                        player.Personality = s_PendingAIPersonality;
+                        Debug.Log("[HexRevival] AI " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName + (s_PendingAIPersonality != EDeckPersonality.Default ? ", personality " + s_PendingAIPersonality : ""));
                     }
                     return;
                 }
@@ -205,6 +207,13 @@ namespace HexRevival
                 FillNullLists(encounterData);
                 // Campaign effects of this battle (dungeon boons, the robot, blessings): run like the scene's own.
                 encounterData.AbilitiesToRun.AddRange(Campaign.TakeBattleEffects());
+                // A Siege battle: the game's own rules for it (20-minute timers, the defender's message, back to the Siege screen).
+                if (PendingSiege != SessionStateEncounterData.SeriesType.UNKNOWN)
+                {
+                    encounterData.SessionFlags |= ESessionFlags.IsSiege;
+                    encounterData.SeriesFormat = PendingSiege;
+                    PendingSiege = SessionStateEncounterData.SeriesType.UNKNOWN;
+                }
 
                 StandaloneSession sessionServer = new StandaloneSession(self);
                 sessionServer.m_SessionId = new UID(UID.Type.AuthoritativeSession, 501UL);
@@ -301,18 +310,25 @@ namespace HexRevival
 
         /// <summary>Deck forced on the AI for the next match (null: the encounter's deck).</summary>
         private static DeckTemplate s_PendingAIDeck;
+        private static EDeckPersonality s_PendingAIPersonality;
 
-        public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label)
+        /// <summary>Series of the next match when it is a Siege battle (UNKNOWN otherwise), see Siege.</summary>
+        public static SessionStateEncounterData.SeriesType PendingSiege = SessionStateEncounterData.SeriesType.UNKNOWN;
+
+        public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label,
+            EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null)
         {
             try
             {
                 s_PendingAIDeck = aiDeck;
+                s_PendingAIPersonality = aiPersonality;
                 Decks.LastDeck = playerDeck;
                 BattleStateContext context = new BattleStateContext();
                 context.m_SceneTemplateId = scene;
                 context.m_PlayerDeckId = playerDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
+                context.SiegeFightMessage = siegeMessage;
                 Debug.Log("[HexRevival] [Menu] match: deck " + playerDeck + " vs " + label + " (encounter " + scene + (aiDeck != null ? ", AI deck " + aiDeck.m_DeckName : "") + ")");
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Battle, context);
             }

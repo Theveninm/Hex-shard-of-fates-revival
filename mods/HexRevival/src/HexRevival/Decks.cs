@@ -105,6 +105,23 @@ namespace HexRevival
             return d.Id;
         }
 
+        /// <summary>
+        /// The player's own deck a profile deck template was made from (the client sends templates, not deck ids:
+        /// Siege), matched by name and champion; UID.Invalid if none.
+        /// </summary>
+        public static UID FindDeck(Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            if (t == null) return UID.Invalid;
+            StoredDeck byChamp = null;
+            foreach (StoredDeck d in s_Decks.Values)
+            {
+                if (d.PveChampion != 0 || d.PvpChampion != t.Champ) continue;
+                if (d.Name == (t.Name ?? "")) return new UID(UID.Type.Deck, d.Id);
+                if (byChamp == null) byChamp = d;
+            }
+            return byChamp != null ? new UID(UID.Type.Deck, byChamp.Id) : UID.Invalid;
+        }
+
         /// <summary>A player deck as a profile deck template (null if unknown).</summary>
         public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
         {
