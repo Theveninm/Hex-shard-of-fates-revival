@@ -245,7 +245,7 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   here (Water Town's repair was never seen). A sea battle lost sinks the ship: the game's "Your boat has
   sunk!" message, back to the harbor (Video, same text).
 - Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
-  increased by 1" for the next battle (8 cards; here the 8th card is drawn after the mulligan). The
+  increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game). The
   Lighthouse gives the card Sea Spirit (Video).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
@@ -277,10 +277,15 @@ first attempt"; Video, KVC 5 runs): a second gold line of 25% on every dungeon w
 on, until the run's first defeat. Not done: the optional "Challenge Completed" line (+100% gold, its
 in-battle objectives are not known), Pappy Jasper's Whip (an extra drop twice after a boss, trigger
 unknown).
+Dungeon boons, "for the remainder of the dungeon" (Game: the conversations' texts), are the game's own
+effect cards that no scene uses (set PvE_AZ2_Created_Effects), added to every later battle of the run:
+Kraken Town Square library "Scrolls of Portsmeare" or armory "Portsmeare Armaments", Algae Cave
+"Discovered Lost Riches"; Kukatan Dead End "Pocket of Lucky Coins" (Coins of Kismet), Buzzing Tangle "Fist
+Full of Berries" (Polyberry Pouch); the Graveyard's repaired robot "Robot Helper (Basic / Cannon / Shield /
+Bopper / ... / Maxed)" by the weapons installed (Mega-Bot 1000-8000; that it joins every battle once
+assembled is PLACEHOLDER). Not reproduced: the Kraken's Dark Chamber (+1 charge: no matching card).
 PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not played (Vargar),
-"Mayor Died" in the Kraken (never chosen), the Kraken's curses and boons (library: two actions draw a
-card; Algae Cave: two cards cost 1 less; Video texts) and Kukatan's coins (not reproduced in battle),
-the mercenaries Mayor Galway and Sister of the Herd.
+"Mayor Died" in the Kraken (never chosen), the mercenaries Mayor Galway and Sister of the Herd.
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
 

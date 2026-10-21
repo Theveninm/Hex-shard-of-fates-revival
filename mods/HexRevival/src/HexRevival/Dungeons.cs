@@ -254,10 +254,10 @@ namespace HexRevival
 
             // The Kraken (Node 19; Blue Sparrow / Renner): Portsmeare's mind-controlled villagers, the sail through the
             // storm to the sea hags' island, Queen Magaidh, Captain Bellamy's ghost ship, then the Kraken ("Kraken's Gold"
-            // battles). Not reproduced (no hook in the battles yet): the dungeon-long effects the conversations announce:
-            // the sea hags' curses and the tentacles' stolen cards (explained by "Curse Dungeon Explanation" and "Kraken's
-            // Tentacle First Appearance", in-battle conversations), the Town Square's library / armory bonus
-            // (choice_library / choice_armory), the Algae Cave's cost -1 and the Dark Chamber's +1 charge.
+            // battles). The Town Square's library / armory bonus and the Algae Cave's cost -1 last for the dungeon (see
+            // Effects). Not reproduced: the Dark Chamber's +1 charge; the sea hags' curses and the tentacles' stolen cards
+            // belong to the battles themselves ("Curse Dungeon Explanation", "Kraken's Tentacle First Appearance" are
+            // in-battle conversations).
             const string kr = "Kraken - ";
             s_Defs.Add(new Def { Key = "kraken", Id = "6b73c598-3b92-46ea-bd57-62ca564b2e57", Name = "The Kraken", Folder = "kraken", Zone = "AZ2", AZ1Node = "Node019", Start = "Node000" }
                 .Add("Node000", Talk(kr + "Start"))
@@ -282,9 +282,8 @@ namespace HexRevival
             // The Ruins of Kukatan (Node 40; Cressida / Sahas, ended with Myaa): the jungle, then the ruins. The dead
             // explorer's journal (Bone Thicket) reads the glyphs: with it the Mausoleum's trap is disabled, and the
             // Perilous Hallway and the Etchings are the glyphs' memory game ("(Memory)" battles, "Mini-game" outcomes);
-            // without it, their traps. Then the goblin Lukaz on his behemoth, and laid low, at Echo Ridge. Not reproduced
-            // (no hook in the battles yet): the Dead End's Coins of Kismet and the Buzzing Tangle's Polyberry Pouch,
-            // given at the start of every game of the dungeon.
+            // without it, their traps. Then the goblin Lukaz on his behemoth, and laid low, at Echo Ridge. The Dead End's
+            // Coins of Kismet and the Buzzing Tangle's Polyberry Pouch start every later game of the dungeon (see Effects).
             const string rk = "Ruins of Kukatan - ";
             const string journal = "{?NodeT:Has:Does Not Have}";
             s_Defs.Add(new Def { Key = "kukatan", Id = "d7dc66e5-a3e4-4713-92c9-68717ae87442", Name = "Ruins of Kukatan", Folder = "ruinsofkukatan", Zone = "AZ2", AZ1Node = "Node040", Start = "Node001" }
@@ -1002,6 +1001,8 @@ namespace HexRevival
                         if (had && cur.On.ContainsKey(prev + "+" + evt)) r.Vars["choice:" + room] = prev + "+" + evt;
                         else if (cur.On.ContainsKey(evt) && !(had && Array.IndexOf(prev.Split('+'), evt) >= 0)) r.Vars["choice:" + room] = evt;
                     }
+                    string fx;
+                    if (EventEffects.TryGetValue(evt, out fx)) r.Vars["fx:" + fx] = "1";
                     int pts = evt == "one_point_answer" ? 1 : evt == "two_point_answer" ? 2 : evt == "three_point_answer" ? 3 : 0;
                     if (pts > 0 && room != null) r.Vars["pts:" + room] = pts.ToString();
                     break;
@@ -1020,6 +1021,8 @@ namespace HexRevival
             if (i > 0) r.Vars[kv.Substring(0, i)] = kv.Substring(i + 1);
             // A conversation step's own reward (the Kraken's Algae Cave coins), once per champion.
             if (s != null && s.Enc == null && s.Reward != null) Progression.OnCampaignConversationDone(r.Champ, Resolve(r, room, s.Reward));
+            string fx;
+            if (s != null && s.Enc == null && RoomEffects.TryGetValue(r.Def.Key + "/" + room, out fx)) r.Vars["fx:" + fx] = "1";
             r.Steps[room] = Done(r, room) + 1;
         }
 
@@ -1047,7 +1050,53 @@ namespace HexRevival
             Choice(r, room, s, out evt);
             s_Battle = new Battle { Run = r, Room = room, Step = s, Reward = Resolve(r, room, ByChoice(s.OnReward, evt, s.Reward)), Success = ByChoice(s.OnSuccess, evt, s.Success), Enc = enc };
             Debug.Log("[HexRevival] [Dungeons] battle " + r.Def.Name + " " + room + " (" + Resolve(r, room, s.Enc) + ")");
-            Campaign.LaunchBattle(r.Champ, enc, r.Def.Name + " " + room);
+            Campaign.LaunchBattle(r.Champ, enc, r.Def.Name + " " + room, Effects(r));
+        }
+
+        // ------------------------------------------------------------------
+        // Dungeon-long effects
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Boons found in a dungeon, kept "for the remainder of the dungeon" (Src.Game: the conversations' texts). They
+        /// are the game's effect cards that no scene uses (set PvE_AZ2_Created_Effects), run by the battles' AI side
+        /// like scene effects ("each opposing champion...").
+        /// </summary>
+        private static readonly Dictionary<string, string> EventEffects = new Dictionary<string, string>
+        {
+            { "choice_library", "Scrolls of Portsmeare" },     // "two random actions in your deck get 'Draw a card'"
+            { "choice_armory", "Portsmeare Armaments" },       // "four random troops in your deck get +1/+1"
+        };
+
+        /// <summary>Rooms whose conversation grants a boon (dungeon key/room -> effect card).</summary>
+        private static readonly Dictionary<string, string> RoomEffects = new Dictionary<string, string>
+        {
+            { "kraken/NodeH", "Discovered Lost Riches" },      // Algae Cave: "two random cards ... cost -1 each game"
+            { "kukatan/NodeG", "Pocket of Lucky Coins" },      // Dead End: "begin each game with a Coins of Kismet"
+            { "kukatan/NodeS", "Fist Full of Berries" },       // Buzzing Tangle: "begin each game with a Polyberry Pouch"
+            // Dark Chamber ("+1 charge each game"): no effect card gives one charge ("Energized to Defeat the Kraken"
+            // gives two): not reproduced.
+        };
+
+        /// <summary>
+        /// Effect cards for the run's next battle: its boons, and in the Great Machine Graveyard the repaired robot
+        /// ("assistance subroutines", Src.Game) with the weapons installed: Robot Helper (Basic / Shield / Bopper /
+        /// Cannon ... / Maxed), Mega-Bot 1000 to 8000. Which battles the robot joined: PLACEHOLDER, every battle once
+        /// it is assembled (Assembly Yard).
+        /// </summary>
+        private static List<string> Effects(Run r)
+        {
+            List<string> res = new List<string>();
+            foreach (KeyValuePair<string, string> kv in r.Vars) if (kv.Key.StartsWith("fx:")) res.Add(kv.Key.Substring(3));
+            if (r.Def.Key == "machinegraveyard" && Cleared(r, "NodeH"))
+            {
+                List<string> w = new List<string>();
+                if (Cleared(r, "NodeK")) w.Add("Cannon");      // Melting Pot: Slag Cannon
+                if (Cleared(r, "NodeI")) w.Add("Shield");      // Big Magnet Thing: Magnet Shield
+                if (Cleared(r, "NodeJ")) w.Add("Bopper");      // the Crusher: Big Bopper
+                res.Add("Robot Helper (" + (w.Count == 0 ? "Basic" : w.Count == 3 ? "Maxed" : string.Join(" + ", w.ToArray())) + ")");
+            }
+            return res;
         }
 
         /// <summary>The value given for the dialogue choice made (OnReward, OnSuccess), else the step's own.</summary>

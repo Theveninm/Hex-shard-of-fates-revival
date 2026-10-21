@@ -1484,7 +1484,19 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Campaign] battle " + node.Id + " difficulty " + BattleDifficulty);
             s_Battle = st;
             ResetShipBattle();
-            LaunchBattle(Fighter(st, node), encounter, node.Name);
+            LaunchBattle(Fighter(st, node), encounter, node.Name, ShipEffects(st, node));
+        }
+
+        /// <summary>An effect card of the campaign (sets PvE_AZ1/AZ2_Created_Effects) by name.</summary>
+        private static CardTemplate EffectCard(string name)
+        {
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            foreach (CardTemplate t in tm.Cards.Values)
+            {
+                CardSetTemplate set;
+                if (t != null && t.m_Name == name && tm.CardSets.TryGetValue(t.m_SetId, out set) && set != null && set.m_Name.EndsWith("_Created_Effects")) return t;
+            }
+            return null;
         }
 
         /// <summary>The profile's current champion, without the client's side effects (read by the battle HUD and the campaign screens).</summary>
@@ -1495,8 +1507,28 @@ namespace HexRevival
         }
 
         /// <summary>Starts a campaign battle (map node or dungeon room) with the champion's deck.</summary>
-        internal static void LaunchBattle(ulong champId, string encounter, string label)
+        /// <summary>Effect cards added to the next battle's encounter (run by its AI side like the scene's own effects).</summary>
+        private static readonly List<ResourceId> s_BattleEffects = new List<ResourceId>();
+
+        /// <summary>The next battle's extra effects, handed over once (Patches.StandaloneGameClient_SendStartEncounter).</summary>
+        public static List<ResourceId> TakeBattleEffects()
         {
+            List<ResourceId> res = new List<ResourceId>(s_BattleEffects);
+            s_BattleEffects.Clear();
+            return res;
+        }
+
+        internal static void LaunchBattle(ulong champId, string encounter, string label, IEnumerable<string> effects = null)
+        {
+            s_BattleEffects.Clear();
+            if (effects != null)
+                foreach (string name in effects)
+                {
+                    CardTemplate t = EffectCard(name);
+                    if (t != null) s_BattleEffects.Add(t.m_Id);
+                    else Debug.LogWarning("[HexRevival] [Campaign] no effect card " + name);
+                    QuestSim.Note("  effect: " + name + (t == null ? " (not found)" : ""));
+                }
             UID deck = UID.Invalid;
             try
             {

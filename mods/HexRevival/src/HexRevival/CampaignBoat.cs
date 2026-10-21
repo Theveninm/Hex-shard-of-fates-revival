@@ -188,7 +188,7 @@ namespace HexRevival
             }
             if (evt == "mermaidblessing")
             {
-                // The witch's blessing (Src.Video: "Your starting hand size is increased by 1", 8 cards in the next battle).
+                // The witch's blessing (Src.Video: "Your starting hand size is increased by 1", 8 cards in the next battle; see ShipEffects).
                 Quests.SetFlag(champ, "boat:blessed", "1");
                 Quests.SetFlag(champ, "boat:blessing", "1");
                 return false;
@@ -240,7 +240,7 @@ namespace HexRevival
 
         private static bool s_HullApplied;
 
-        /// <summary>Start of a sea battle (after the mulligan): full hull, and the witch's blessing (one more card).</summary>
+        /// <summary>Start of a sea battle (after the mulligan): full hull.</summary>
         private static void TickShip(StandaloneSession ss)
         {
             champion_bits ship = Champions.Get(s_BattleChamp);
@@ -249,13 +249,19 @@ namespace HexRevival
             if (human == null || human.m_ChampionCard == null) return;
             s_HullApplied = true;
             ss.SetChampionHealth(human.m_ChampionCard, MaxHull(ship.OwnerChampionId), false);
-            if (Quests.Flag(ship.OwnerChampionId, "boat:blessing") != null)
-            {
-                // The opening hand is already drawn here: the extra card is drawn now.
-                Quests.SetFlag(ship.OwnerChampionId, "boat:blessing", null);
-                Cheats.DrawCard(ss, human);
-            }
             Server.MarkDirty();
+        }
+
+        /// <summary>The witch's blessing for the ship's next battle: the game's "Mermaid's Blessing" effect card (starting hand + 1).</summary>
+        private static List<string> ShipEffects(CampState st, MapNode node)
+        {
+            List<string> res = new List<string>();
+            if (IsSea(node) && Quests.Flag(st.ChampId, "boat:blessing") != null)
+            {
+                Quests.SetFlag(st.ChampId, "boat:blessing", null);
+                res.Add("Mermaid's Blessing");
+            }
+            return res;
         }
 
         /// <summary>End of a sea battle: a defeat sinks the ship (after the outcome conversation).</summary>

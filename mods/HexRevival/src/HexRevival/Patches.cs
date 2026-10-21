@@ -202,6 +202,8 @@ namespace HexRevival
                 Debug.Log("[HexRevival] starting local encounter: " + encounterData.SceneTemplateId);
                 Server.ResetCache();
                 FillNullLists(encounterData);
+                // Campaign effects of this battle (dungeon boons, the robot, blessings): run like the scene's own.
+                encounterData.AbilitiesToRun.AddRange(Campaign.TakeBattleEffects());
 
                 StandaloneSession sessionServer = new StandaloneSession(self);
                 sessionServer.m_SessionId = new UID(UID.Type.AuthoritativeSession, 501UL);
