@@ -933,6 +933,15 @@ namespace HexRevival
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
                 case "siege": return Siege.Command(parts);
+                case "store":
+                    if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
+                    if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)
+                    {
+                        Saves.Current.CosmicCoins = int.Parse(parts[2]);
+                        Saves.SaveCurrent();
+                        return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
+                    }
+                    return "usage: store pools | store cosmic <n>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "modal":   // dev: "modal 1|2|3" = presses that button of the visible modal popups

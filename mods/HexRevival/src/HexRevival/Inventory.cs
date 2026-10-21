@@ -29,30 +29,44 @@ namespace HexRevival
             s_Owner = owner;
             s_NextId = 1;
             s_Counts.Clear();
+            // Items earned or bought (sleeves, coins, battleboards; equipment on progression saves).
+            LoadFile();
             if (Saves.Current.UnlockAll)
             {
                 foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
                     if (item is InventoryEquipmentData) s_Counts[item.m_Id] = 1;
             }
-            else LoadFile();
             List<inventory_bits> res = new List<inventory_bits>();
             foreach (KeyValuePair<ResourceId, int> kv in s_Counts)
                 for (int i = 0; i < kv.Value; i++) res.Add(NewInstance(kv.Key));
-            inventory_bits sacks = Siege.SackItem(owner);   // Siege Sacks, an inventory currency
+            inventory_bits sacks = Siege.SackItem(owner);   // Siege Sacks and Cosmic Coins, inventory currencies
             if (sacks != null) res.Add(sacks);
+            inventory_bits coins = Store.CosmicCoinItem(owner);
+            if (coins != null) res.Add(coins);
             Debug.Log("[HexRevival] [Inventory] " + res.Count + " item(s)");
             return res;
         }
 
-        /// <summary>Adds an item to the save; returns the instance to hand to the client (null on "unlock everything" saves).</summary>
+        /// <summary>
+        /// Adds an item to the save; returns the instance to hand to the client (null for equipment on "unlock
+        /// everything" saves, which own every equipment already).
+        /// </summary>
         public static inventory_bits GrantSilently(ResourceId template)
         {
-            if (Saves.Current == null || Saves.Current.UnlockAll) return null;
+            if (Saves.Current == null) return null;
+            if (Saves.Current.UnlockAll && Singleton<TemplateManager>.Instance.GetInventoryItem(template) is InventoryEquipmentData) return null;
             int n;
             s_Counts.TryGetValue(template, out n);
             s_Counts[template] = n + 1;
             SaveFile();
             return NewInstance(template);
+        }
+
+        /// <summary>How many of this item the save owns.</summary>
+        public static int Count(ResourceId template)
+        {
+            int n;
+            return s_Counts.TryGetValue(template, out n) ? n : 0;
         }
 
         private static inventory_bits NewInstance(ResourceId template)

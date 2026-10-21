@@ -122,6 +122,19 @@ namespace HexRevival
             return byChamp != null ? new UID(UID.Type.Deck, byChamp.Id) : UID.Invalid;
         }
 
+        /// <summary>A new player deck made of a game deck (a deck bought in the store): cards, champion, equipment, sleeve.</summary>
+        public static deck_bits CreateFromTemplate(string name, Reckoning.Game.DeckTemplate t)
+        {
+            StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
+            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
+                for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
+            foreach (ResourceId e in t.m_EquipmentIDs) if (e.IsValid) d.Equipment.Add(e);
+            s_Decks[d.Id] = d;
+            Save();
+            return ToBits(d);
+        }
+
         /// <summary>The first of the player's own (non-campaign) decks, 0 if none (dev commands).</summary>
         public static ulong FirstPvpDeck()
         {

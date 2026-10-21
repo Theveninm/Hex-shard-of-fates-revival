@@ -327,6 +327,31 @@ namespace HexRevival
 
         private const ulong SackItemId = 900000001UL;
 
+        /// <summary>Siege Sacks owned.</summary>
+        public static int Sacks { get { return Data.Sacks; } }
+
+        /// <summary>Pays Siege Sacks (the store's Prize Exchange); false if not enough.</summary>
+        public static bool SpendSacks(int n)
+        {
+            if (n <= 0 || Data.Sacks < n) return false;
+            Data.Sacks -= n;
+            SaveData();
+            return true;
+        }
+
+        /// <summary>The Siege Sacks stack as the client's currency inventory (also when empty).</summary>
+        public static inventory_bits SackStack(UID owner)
+        {
+            inventory_bits inv = new inventory_bits();
+            inv.Id = SackItemId;
+            inv.TemplateID = BuiltInResources.CurrencySiegeSack;
+            inv.ItemQuantity = Data.Sacks;
+            inv.ClaimDate = DateTime.MinValue;
+            inv.EscrowStatus = "";
+            inv.OwnerReckId = owner.GetInstanceId();
+            return inv;
+        }
+
         /// <summary>Siege Sacks are an inventory currency (BuiltInResources.CurrencySiegeSack): one item holding the count.</summary>
         public static inventory_bits SackItem(UID owner)
         {

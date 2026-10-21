@@ -31,6 +31,7 @@ namespace HexRevival
             public DateTime PeriodStart;   // first win of the current daily period
             /// <summary>The game's tutorial is to be played at the next login (chosen when the account was created).</summary>
             public bool TutorialPending;
+            public int CosmicCoins;        // Cosmic Coins (earned at the Cosmic tier of the ladders)
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -136,6 +137,7 @@ namespace HexRevival
                     else if (k == "xpperiod") int.TryParse(v, out i.XpInPeriod);
                     else if (k == "periodstart") { long t; if (long.TryParse(v, out t)) i.PeriodStart = new DateTime(t); }
                     else if (k == "tutorial") i.TutorialPending = v == "1";
+                    else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -159,6 +161,7 @@ namespace HexRevival
                     "xpperiod=" + i.XpInPeriod,
                     "periodstart=" + i.PeriodStart.Ticks,
                     "tutorial=" + (i.TutorialPending ? "1" : "0"),
+                    "cosmic=" + i.CosmicCoins,
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }
