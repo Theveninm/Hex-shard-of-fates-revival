@@ -85,13 +85,14 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Playable copy of a sub-champion's deck template (the boat's deck lives in the profile's deck
-        /// templates, the match engine loads player decks): the champion's own stored deck, refilled. Returns its id.
+        /// Playable copy of a profile deck template (the boat's or a mercenary's deck lives in the profile's deck
+        /// templates, the match engine loads player decks): one stored deck per champion and template champion,
+        /// refilled. Returns its id.
         /// </summary>
         public static ulong FromTemplate(ulong championId, Game.Shared.Profile.ProfileDeckTemplate t)
         {
             StoredDeck d = null;
-            foreach (StoredDeck x in s_Decks.Values) if (x.PveChampion == championId) { d = x; break; }
+            foreach (StoredDeck x in s_Decks.Values) if (x.PveChampion == championId && x.PvpChampion == t.Champ) { d = x; break; }
             if (d == null) { d = new StoredDeck { Id = s_NextId++, PveChampion = championId }; s_Decks[d.Id] = d; }
             d.Name = t.Name ?? "";
             d.PvpChampion = t.Champ;
@@ -109,6 +110,17 @@ namespace HexRevival
         {
             StoredDeck d;
             return s_Decks.TryGetValue(deckId, out d) ? Game.Shared.Profile.ProfileDeckTemplate.FromDeckBits(ToBits(d)) : null;
+        }
+
+        /// <summary>The champion's bits with a mercenary in its place (MercID), for the match engine.</summary>
+        private static champion_bits MercenaryBits(champion_bits c, ResourceId merc)
+        {
+            champion_bits m = new champion_bits();
+            m.Id = c.Id; m.Name = c.Name; m.Level = c.Level; m.ReckID = c.ReckID;
+            m.Race = c.Race; m.ChampionClass = c.ChampionClass; m.Gender = c.Gender;
+            m.ChampionStats = c.ChampionStats; m.ChampionTalents = new List<ResourceId>();
+            m.MercID = merc;
+            return m;
         }
 
         public class DeckInfo
@@ -209,6 +221,8 @@ namespace HexRevival
                 champion_bits pveChamp = Campaign.BattleChampion != 0 && d.PveChampion == Campaign.BattleChampion ? Champions.Get(d.PveChampion) : null;
                 if (pveChamp != null && !EncounterForcesPlayerDeck())
                 {
+                    // A mercenary's deck: the mercenary plays (its card as champion, Src.Game InstantiateMercenaryCard).
+                    if (Mercenaries.IsMercenary(d.PvpChampion)) pveChamp = MercenaryBits(pveChamp, d.PvpChampion);
                     b.PVPChampionId = ResourceId.Invalid;
                     r.ChampionBits = pveChamp;
                 }

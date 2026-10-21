@@ -196,11 +196,11 @@ namespace HexRevival
             // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the Lurking Crocodile's card (not identified)
             // and the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
             { "AZ2/Node001", R(0, 350, "Phoenix Guard Tactician") },        // Lurking Crocodile (KVC)
-            { "AZ2/Node038", new Reward { Xp = 625, Cards = new[] { "Aryndel Warden" }, Source = Src.Video, Note = "+ mercenary Sister of the Herd (not implemented)" } },
+            { "AZ2/Node038", R(0, 625, "Aryndel Warden", "Sister of the Herd (mercenary)") },   // and her mercenary (KVC)
             { "AZ2/Node043", R(0, 650, "Legendary Stardust") },               // Monk of the Six Strikes (KVC)
             { "AZ2/Node006", new Reward { Gold = 600, Xp = 425, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Winter Moon
             { "AZ2/Node008", R(0, 400, "Common Stardust") },                  // Flock of Seagulls
-            { "AZ2/Node009", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Katsuhiro (not implemented)" } },
+            { "AZ2/Node009", R(0, 450, "Katsuhiro (mercenary)") },                       // Katsuhiro, and his mercenary
             { "AZ2/Node011", new Reward { Gold = 400, Xp = 450, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Hired Horn Picaroon
             { "AZ2/Node013", new Reward { Xp = 500, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Orchin
             { "AZ2/Node015", R(0, 500, "Rare Stardust") },                    // Giant Jellyfish
@@ -209,7 +209,7 @@ namespace HexRevival
             { "AZ2/Node022", R(0, 575) },                                     // Darkspire Scout
             { "AZ2/Node025", R(0, 550, "Rare Stardust") },                    // Dire Toad
             { "AZ2/Node028", new Reward { Gold = 400, Xp = 450, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Puke Troll
-            { "AZ2/Node030", new Reward { Xp = 450, Source = Src.Video, Note = "+ mercenary Augustine with his deck (not implemented)" } },
+            { "AZ2/Node030", R(0, 450, "Augustine (mercenary)") },                       // Augustine, and his mercenary with his deck
             { "AZ2/Node032", R(0, 425, "Uncommon Stardust") },                // Bog Walker
             // ---- AZ2 sea battles (Src.Video, Ardent run "The Reckoning"; the Underworld run adds its racial bonus line).
             // XP to the champion; 1 ship talent point for the first win over the three storms and Bloodhorn.
@@ -249,7 +249,7 @@ namespace HexRevival
             { "machinegraveyard/NodeM", R(575, 550) },                        // each Scrapborn sister
             { "machinegraveyard/NodeN", new Reward { Gold = 750, Xp = 1000, Packs = 1, PackName = "Great Machine Graveyard", Source = Src.Video } },   // Scutt
             // The Kraken
-            { "kraken/NodeA", R(200, 225) },                                  // Mayor Galway (his mercenary: not implemented)
+            { "kraken/NodeA", R(200, 225, "Mayor Galway (mercenary)") },                  // Mayor Galway lives: his mercenary (KVC)
             { "kraken/NodeE", R(250, 250) },                                  // Eye of the Storm
             { "kraken/NodeF", R(300, 300) },                                  // Hardshell Ambush
             { "kraken/NodeG", R(400, 350) },                                  // Nairne, Sea Sorceress
@@ -695,7 +695,12 @@ namespace HexRevival
             if (d.Card != null) { AddCard(d.Card, cards, shown); return; }
             inventory_bits it = Inventory.GrantSilently(d.Item);
             if (it != null) items.Add(it);
-            shown.Add(Action("ITEM", 1, d.Item.ToString()));
+            // A mercenary: "MERCPAC" makes the client put it in the champion's party with its deck (Src.Game).
+            InventoryMercenaryData mercData = Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item) as InventoryMercenaryData;
+            bool merc = mercData != null;
+            // Its starter deck comes with it (Src.Video, KVC: Augustine "and his deck"), so that the deck is valid.
+            if (merc) { Collection.GrantDeck(mercData.DeckTemplate); Mercenaries.OnEarned(d.Item); }
+            shown.Add(Action(merc ? "MERCPAC" : "ITEM", 1, d.Item.ToString()));
         }
 
         /// <summary>Same, given to the client right away (account level rewards, outside the campaign map).</summary>

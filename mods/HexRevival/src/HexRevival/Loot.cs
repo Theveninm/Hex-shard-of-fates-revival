@@ -187,6 +187,16 @@ namespace HexRevival
         public static Drop Resolve(string name, bool cardFirst)
         {
             Index();
+            // "<name> (mercenary)": the mercenary item, not the card of the same name.
+            const string MercSuffix = " (mercenary)";
+            if (name.EndsWith(MercSuffix))
+            {
+                string merc = name.Substring(0, name.Length - MercSuffix.Length);
+                foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                    if (item is InventoryMercenaryData && item.m_Name == merc) return new Drop { Item = item.m_Id };
+                Debug.LogWarning("[HexRevival] [Loot] no mercenary " + merc);
+                return null;
+            }
             Drop d = new Drop();
             CardTemplate c;
             ResourceId it;

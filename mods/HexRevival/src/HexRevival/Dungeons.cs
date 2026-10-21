@@ -928,6 +928,7 @@ namespace HexRevival
             string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
             if (evt != "visit_path") Debug.Log("[HexRevival] [Dungeons] event " + evt + (arg0 != null ? " " + arg0 : "") + " in " + r.ALoc);
             string room = r.ALoc;
+            if (evt == "start") Campaign.NoteStartArgs(args);
             switch (evt)
             {
                 case "visit_node":

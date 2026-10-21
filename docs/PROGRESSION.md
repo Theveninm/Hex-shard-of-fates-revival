@@ -287,6 +287,16 @@ assembled is PLACEHOLDER). Not reproduced: the Kraken's Dark Chamber (+1 charge:
 PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not played (Vargar),
 "Mayor Died" in the Kraken (never chosen), the mercenaries Mayor Galway and Sister of the Herd.
 
+### Mercenaries
+
+A mercenary reward (Video: the reward window "MERCPAC" line and the game's hint "You have just earned a
+mercenary and a party slot!") gives the mercenary, his starter deck's cards, his deck as a profile deck
+template, and one party slot (account flag CAMP_PARTYCAP, capped by race by the client). The party, edited
+with the game's own party screen, is saved per champion. Choosing a mercenary on the "Prepare for Battle"
+panel makes him play the battle with his deck and his card as champion (the game's InstantiateMercenaryCard);
+the battle's rewards go to the champion (Game: the client shows them to the champion). Mercenary leveling
+(MercLeveling) is not reproduced: no source for its values.
+
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
 
 | Battle | Gold | XP | Items |
@@ -294,7 +304,7 @@ PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not p
 | Lurking Crocodile (Node001) | 0 | 350 | Phoenix Guard Tactician (KVC) |
 | Winter Moon (Node006) | 600 | 425 | AZ2 pack |
 | Flock of Seagulls (Node008) | 0 | 400 | Common Stardust |
-| Katsuhiro (Node009) | 0 | 450 | his mercenary (mercenaries not implemented) |
+| Katsuhiro (Node009) | 0 | 450 | his mercenary |
 | Hired Horn Picaroon (Node011) | 400 | 450 | AZ2 pack |
 | Orchin (Node013) | 0 | 500 | AZ2 pack |
 | Giant Jellyfish (Node015) | 0 | 500 | Rare Stardust |
@@ -303,9 +313,9 @@ PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not p
 | Darkspire Scout (Node022) | 0 | 575 | — |
 | Dire Toad (Node025) | 0 | 550 | Rare Stardust |
 | Puke Troll (Node028) | 400 | 450 | AZ2 pack |
-| Augustine (Node030) | 0 | 450 | his mercenary with his deck (not implemented) |
+| Augustine (Node030) | 0 | 450 | his mercenary with his deck |
 | Bog Walker (Node032) | 0 | 425 | Uncommon Stardust |
-| Sister of the Herd (Node038, KVC) | 0 | 625 | Aryndel Warden (+ her mercenary, not implemented) |
+| Sister of the Herd (Node038, KVC) | 0 | 625 | Aryndel Warden + her mercenary |
 | Monk of the Six Strikes (Node043, KVC) | 0 | 650 | Legendary Stardust |
 | Sea (Ardent run): Hired Horn Scum / Chumspike / Bloodhorn | 350 / 500 / 600 | 675 | Bloodhorn: 1 ship talent point |
 | Sea: Cloud Queen / Cloud King / Storm of the Century | 0 | 625 / 650 / 650 | AZ2 pack, 1 ship talent point each |

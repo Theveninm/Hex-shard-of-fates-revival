@@ -103,6 +103,8 @@ namespace HexRevival
                 string name = m;
                 apply("ClientCampaignManager." + name, () => Prefix(harmony, ccm, name, null, "Campaign_" + name));
             }
+            // Campaign mercenary parties (see Mercenaries.cs).
+            apply("ClientCampaignManager.SaveChampionParty", () => Prefix(harmony, typeof(ClientCampaignManager), "SaveChampionParty", null, "Campaign_SaveChampionParty"));
             // Profile deck templates (the AZ2 boat's deck, see DeckTemplates.cs).
             apply("Profile.Network.DeckTemplateSave", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "DeckTemplateSave", null, "Profile_DeckTemplateSave"));
             // Local store (see Store.cs).
@@ -304,6 +306,8 @@ namespace HexRevival
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Session_PublishEvent(string __0) { Campaign.OnPublishEvent(__0); }
+        public static bool Campaign_SaveChampionParty(Game.Shared.Campaign.Messages.CampSysGeneral.Party.ChampionParty __0, ClientCampaignManager.PartyMembersCallback __1)
+        { Mercenaries.OnSaveParty(__0, __1); return false; }
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
         { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }

@@ -772,6 +772,7 @@ namespace HexRevival
         private static GameplayState BuildState(CampState st)
         {
             BuildMap(st.Z);
+            Mercenaries.ApplyPending();
             GameplayState gs = new GameplayState();
             gs.CampID = st.CampId;
             gs.ChampID = st.ChampId;
@@ -1308,6 +1309,7 @@ namespace HexRevival
             if (evt != "visit_node" && evt != "visit_path" && evt != "pass_node") LastEvent = evt;
             MapNode active = st.ALoc != null ? FindNode(st.Z, st.ALoc) : null;
             if (ShipEvent(st, evt, arg0, active)) { Save(); Answer(st, callback); return; }
+            if (evt == "start") NoteStartArgs(args);
             switch (evt)
             {
                 case "visit_node":
@@ -1518,6 +1520,16 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>Mercenary picked on the battle panel ("merc=" argument of the client's "start" event), for the next battle.</summary>
+        private static string s_MercChoice;
+
+        /// <summary>Reads the mercenary choice of a "start" event (campaign map or dungeon).</summary>
+        internal static void NoteStartArgs(object[] args)
+        {
+            s_MercChoice = null;
+            foreach (string a in EventStrings(args)) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);
+        }
+
         internal static void LaunchBattle(ulong champId, string encounter, string label, IEnumerable<string> effects = null)
         {
             s_BattleEffects.Clear();
@@ -1533,7 +1545,10 @@ namespace HexRevival
             try
             {
                 PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(champId);
-                ulong sub = SubChampionDeck(champId);
+                ResourceId merc;
+                ulong mercDeck = Mercenaries.BattleDeck(champId, s_MercChoice, out merc);
+                s_MercChoice = null;
+                ulong sub = mercDeck != 0 ? mercDeck : SubChampionDeck(champId);
                 if (sub != 0) deck = new UID(UID.Type.Deck, sub);
                 else if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
                 else
@@ -1707,6 +1722,19 @@ namespace HexRevival
                 foreach (SceneData s in Singleton<TemplateManager>.Instance.CampaignScenes.Values)
                     if (s != null && string.Equals(s.m_Name, name, StringComparison.OrdinalIgnoreCase)) return Describe(s);
                 // not an exact name: the dump below (names containing it)
+            }
+            if (sub == "deckcheck")
+            {
+                // dev: why the current champion's campaign deck is invalid (the client's own validator)
+                PlayerProfile pp = GameClient.Instance.PlayerProfile;
+                PlayerChampion ch = pp.GetCurrentChampion();
+                DeckCache dc = ch.DeckTemplateId != 0 ? pp.GetDeckCacheFromProfileDeckTemplate(ch.DeckTemplateId) : null;
+                if (dc == null) dc = pp.GetDeck(ch.LastDeckID);
+                if (dc == null) return "champion " + ch.Id + ": no deck (template " + ch.DeckTemplateId + ", last " + ch.LastDeckID + ")";
+                var dv = new DeckValidator(dc.m_DeckBits, new Format(ESetFormat.PvE, EPlayFormat.PvEConstructed), ch.SourceBits, pp.CheckOwnership);
+                StringBuilder sb = new StringBuilder("champion " + ch.Id + " deck " + dc.m_DeckName + " valid=" + dv.Valid + "\n");
+                foreach (KeyValuePair<string, List<object[]>> e in dv.Errors) sb.Append("  " + e.Key + " x" + e.Value.Count + "\n");
+                return sb.ToString();
             }
             if (sub == "boatdump")
             {

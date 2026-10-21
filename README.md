@@ -24,7 +24,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): campaign mercenaries, Frost Ring Arena, Siege, Battlegrounds, multiplayer.
+Not available (yet): Frost Ring Arena, Siege, Battlegrounds, multiplayer.
 
 ## Install and play
 

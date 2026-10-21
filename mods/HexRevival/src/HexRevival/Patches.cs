@@ -90,6 +90,7 @@ namespace HexRevival
             }
             SetField(self, "m_CurrentChampionId", first);
             DeckTemplates.LoadInto(self);
+            Mercenaries.LoadInto(self);
         }
 
         private static PlayerChampion BuildChampion(UID reckoningId, string name)
