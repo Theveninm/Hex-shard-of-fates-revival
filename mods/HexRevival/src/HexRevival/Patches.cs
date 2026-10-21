@@ -207,12 +207,11 @@ namespace HexRevival
                 FillNullLists(encounterData);
                 // Campaign effects of this battle (dungeon boons, the robot, blessings): run like the scene's own.
                 encounterData.AbilitiesToRun.AddRange(Campaign.TakeBattleEffects());
-                // A Siege battle: the game's own rules for it (20-minute timers, the defender's message, back to the Siege screen).
-                if (PendingSiege != SessionStateEncounterData.SeriesType.UNKNOWN)
+                // A Siege or Battlegrounds battle: its own session flags (the game's rules for it, where Quit leads).
+                if (PendingEncounterSetup != null)
                 {
-                    encounterData.SessionFlags |= ESessionFlags.IsSiege;
-                    encounterData.SeriesFormat = PendingSiege;
-                    PendingSiege = SessionStateEncounterData.SeriesType.UNKNOWN;
+                    PendingEncounterSetup(encounterData);
+                    PendingEncounterSetup = null;
                 }
 
                 StandaloneSession sessionServer = new StandaloneSession(self);
@@ -312,8 +311,8 @@ namespace HexRevival
         private static DeckTemplate s_PendingAIDeck;
         private static EDeckPersonality s_PendingAIPersonality;
 
-        /// <summary>Series of the next match when it is a Siege battle (UNKNOWN otherwise), see Siege.</summary>
-        public static SessionStateEncounterData.SeriesType PendingSiege = SessionStateEncounterData.SeriesType.UNKNOWN;
+        /// <summary>Settings of the next match's encounter data (Siege and Battlegrounds flags), applied once.</summary>
+        public static Action<SessionStateEncounterData> PendingEncounterSetup;
 
         public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label,
             EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null)

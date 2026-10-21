@@ -138,7 +138,7 @@ namespace HexRevival
             r.StoreItems = new List<StoreItem>();
             // Not StoreItem.Clone(): it only copies rawData (the server bytes), which local items do not have.
             r.StoreItems.AddRange(Items());
-            Deliver(typeof(EscrowService.GetStoreItems), r, handler);
+            LocalServer.Answer(typeof(EscrowService.GetStoreItems), r, handler);
         }
 
         /// <summary>EscrowService.PurchaseItem.Request: pays, delivers (packs are opened right away).</summary>
@@ -184,7 +184,7 @@ namespace HexRevival
             r.RemainingCurrency = Saves.Current == null ? 0 : (int)(currency == "Gold" ? Saves.Current.Gold : Saves.Current.Platinum);
             if (currency == "SiegeSack") r.CurrencyInventory.Add(Siege.SackStack(Owner));
             if (currency == "CosmicCoin") r.CurrencyInventory.Add(CosmicStack(Owner));
-            Deliver(typeof(EscrowService.PurchaseItem), r, handler);
+            LocalServer.Answer(typeof(EscrowService.PurchaseItem), r, handler);
         }
 
         private static UID Owner { get { return GameClient.Instance.PlayerProfile.ReckoningID; } }
@@ -285,20 +285,5 @@ namespace HexRevival
             catch { r.Error = (EPurchaseItemError)1; }
         }
 
-        /// <summary>Like the generated Dispatch: OnResponse event, then the request's handler (next frame).</summary>
-        private static void Deliver(Type tx, object response, Delegate handler)
-        {
-            LocalServer.Later(() =>
-            {
-                FieldInfo ev = tx.GetField("OnResponse", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-                if (ev == null)
-                    foreach (FieldInfo f in tx.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
-                        if (typeof(Delegate).IsAssignableFrom(f.FieldType)) { ev = f; break; }
-                Delegate d = ev != null ? ev.GetValue(null) as Delegate : null;
-                Debug.Log("[HexRevival] [Store] " + tx.Name + " answer: field " + (ev != null ? ev.Name : "none") + ", listeners " + (d != null ? d.GetInvocationList().Length : 0) + ", handler " + (handler != null));
-                if (d != null) foreach (Delegate one in d.GetInvocationList()) one.DynamicInvoke(response);
-                if (handler != null) handler.DynamicInvoke(response);
-            });
-        }
     }
 }

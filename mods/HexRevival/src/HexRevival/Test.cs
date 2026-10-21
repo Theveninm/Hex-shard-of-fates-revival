@@ -266,6 +266,7 @@ namespace HexRevival
                 LocalServer.Pump();
                 Campaign.Pump();
                 Siege.Tick();
+                Battlegrounds.Tick();
                 Tutorial.Tick();
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
@@ -933,6 +934,7 @@ namespace HexRevival
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
                 case "siege": return Siege.Command(parts);
+                case "bg": return Battlegrounds.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)
@@ -944,6 +946,16 @@ namespace HexRevival
                     return "usage: store pools | store cosmic <n>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
+                case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
+                    {
+                        if (parts.Length < 3) return "usage: invoke <type> <method>";
+                        Type t = typeof(UIBattle).Assembly.GetType(parts[1]);
+                        UnityEngine.Object o = t != null ? UnityEngine.Object.FindObjectOfType(t) : null;
+                        System.Reflection.MethodInfo m = t != null ? t.GetMethod(parts[2], System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null) : null;
+                        if (o == null || m == null) return "not found: " + (t == null ? "type" : o == null ? "object" : "method");
+                        object res = m.Invoke(o, null);
+                        return "invoked " + parts[1] + "." + parts[2] + (res != null ? " -> " + res : "");
+                    }
                 case "modal":   // dev: "modal 1|2|3" = presses that button of the visible modal popups
                     {
                         int n = 0;

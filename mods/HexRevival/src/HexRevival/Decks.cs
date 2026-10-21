@@ -142,6 +142,36 @@ namespace HexRevival
             return 0;
         }
 
+        /// <summary>A player deck as sent to the client (null if unknown).</summary>
+        public static deck_bits Bits(ulong deckId)
+        {
+            StoredDeck d;
+            return s_Decks.TryGetValue(deckId, out d) ? ToBits(d) : null;
+        }
+
+        private static List<Reckoning.Game.DeckTemplate> s_PrebuiltPvp;
+
+        /// <summary>The game's prebuilt decks with a PvP champion (what a player could field): placeholder opponents.</summary>
+        public static List<Reckoning.Game.DeckTemplate> PrebuiltPvp()
+        {
+            if (s_PrebuiltPvp != null) return s_PrebuiltPvp;
+            s_PrebuiltPvp = new List<Reckoning.Game.DeckTemplate>();
+            Reckoning.Game.TemplateManager tm = Singleton<Reckoning.Game.TemplateManager>.Instance;
+            HashSet<string> seen = new HashSet<string>();
+            foreach (Reckoning.Game.DeckTemplate t in tm.Decks.Values)
+            {
+                if (t == null || !t.m_ChampionId.IsValid || string.IsNullOrEmpty(t.m_DeckName)) continue;
+                Reckoning.Game.ChampionTemplate ch = tm.GetChampionTemplate(t.m_ChampionId);
+                if (ch == null || ch.m_ChampionType != EChampionType.PvPChampion || !ch.m_IsPlayerSelectable) continue;
+                int n = 0;
+                foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources) n += st.m_Count;
+                if (n < 40 || !seen.Add(t.m_DeckName + "|" + t.m_ChampionId)) continue;
+                s_PrebuiltPvp.Add(t);
+            }
+            Debug.Log("[HexRevival] " + s_PrebuiltPvp.Count + " prebuilt PvP decks");
+            return s_PrebuiltPvp;
+        }
+
         /// <summary>A player deck as a profile deck template (null if unknown).</summary>
         public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
         {
@@ -245,6 +275,14 @@ namespace HexRevival
                 // Null ChampionBits: LoadPlayerDeck then takes the player's deck and PvP
                 // champion (with ChampionBits, an encounter would force its own deck).
                 StoredDeck d;
+                deck_bits tournamentDeck = Battlegrounds.DeckFor(det.DeckID);
+                if (tournamentDeck != null)
+                {
+                    GetDeckDetailsResponse tr = LocalServer.Ok<GetDeckDetailsResponse>();
+                    tr.Deckbits = tournamentDeck;
+                    tr.PlayerName = "";
+                    return tr;
+                }
                 if (!s_Decks.TryGetValue(det.DeckID.GetInstanceId(), out d)) return null;
                 deck_bits b = ToBits(d);
                 if (!b.PVPChampionId.IsValid)

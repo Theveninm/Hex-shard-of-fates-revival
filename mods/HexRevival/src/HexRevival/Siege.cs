@@ -444,7 +444,7 @@ namespace HexRevival
             a.InBattle = true;
             Messaging.Create.FightConfig f = a.Seq < a.Fights.Length ? a.Fights[a.Seq] : null;
             if (f == null || f.Deck == null) { Debug.LogError("[HexRevival] [Siege] no deck for fight " + a.Seq); s_Assault = null; return; }
-            Patches.PendingSiege = SessionStateEncounterData.SeriesType.SIEGE;
+            Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE);
             Patches.StartMatch(a.PlayerDeck, Patches.NeutralEncounterId, ToAIDeck(f.Deck), "siege " + a.Keep.Name + " " + (a.Seq + 1) + "/3",
                 f.Deck.GetPersonality(), f.Message);
         }
@@ -515,10 +515,16 @@ namespace HexRevival
             s_Assault = new Assault { Practice = true, Started = true, InBattle = true };
             Campaign.Enqueue(() =>
             {
-                Patches.PendingSiege = SessionStateEncounterData.SeriesType.SIEGE_PRACTICE;
+                Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE_PRACTICE);
                 Patches.StartMatch(mine, Patches.NeutralEncounterId, ToAIDeck(p.AiDeck), "siege practice", p.AiDeck.GetPersonality());
             });
             return new Messaging.PracticeMatch.Response { Status = "OK" };
+        }
+
+        /// <summary>A Siege battle: the game's own rules for it (20-minute timers, the defender's message, back to the Siege screen).</summary>
+        private static Action<SessionStateEncounterData> SiegeFlags(SessionStateEncounterData.SeriesType series)
+        {
+            return e => { e.SessionFlags |= ESessionFlags.IsSiege; e.SeriesFormat = series; };
         }
 
         /// <summary>A defense deck as the AI's deck (cards, champion, equipment).</summary>
@@ -830,28 +836,8 @@ namespace HexRevival
         // Generation
         // ------------------------------------------------------------------
 
-        private static List<DeckTemplate> s_Decks;
 
-        /// <summary>The game's prebuilt decks with a PvP champion (what a player could field).</summary>
-        private static List<DeckTemplate> Decks()
-        {
-            if (s_Decks != null) return s_Decks;
-            s_Decks = new List<DeckTemplate>();
-            TemplateManager tm = Singleton<TemplateManager>.Instance;
-            HashSet<string> seen = new HashSet<string>();
-            foreach (DeckTemplate t in tm.Decks.Values)
-            {
-                if (t == null || !t.m_ChampionId.IsValid || string.IsNullOrEmpty(t.m_DeckName)) continue;
-                ChampionTemplate ch = tm.GetChampionTemplate(t.m_ChampionId);
-                if (ch == null || ch.m_ChampionType != EChampionType.PvPChampion || !ch.m_IsPlayerSelectable) continue;
-                int n = 0;
-                foreach (TemplateCardStack s in t.m_DeckResources) n += s.m_Count;
-                if (n < 40 || !seen.Add(t.m_DeckName + "|" + t.m_ChampionId)) continue;
-                s_Decks.Add(t);
-            }
-            Debug.Log("[HexRevival] [Siege] " + s_Decks.Count + " prebuilt decks for placeholder defenses");
-            return s_Decks;
-        }
+        private static List<DeckTemplate> Decks() { return HexRevival.Decks.PrebuiltPvp(); }
 
         private void Fill(World w, System.Random rng)
         {

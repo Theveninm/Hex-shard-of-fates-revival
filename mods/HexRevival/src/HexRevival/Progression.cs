@@ -1019,6 +1019,7 @@ namespace HexRevival
                 foreach (UID u in winners)
                     if (!Server.IsAIId(u)) won = true;
             if (Siege.OnGameEnded(won)) return;   // no account XP for Siege battles: PLACEHOLDER, not known
+            if (Battlegrounds.OnGameEnded(won) || Battlegrounds.OnLadderGameEnded(won)) return;   // same for the Battlegrounds: PLACEHOLDER
             if (!Campaign.OnGameEnded(won) && won) OnOtherBattleWon();
         }
     }

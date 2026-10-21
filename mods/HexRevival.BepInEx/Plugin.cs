@@ -143,6 +143,31 @@ namespace HexRevival
                     if (x.Name == "IssueRequest" && x.GetParameters().Length == 8) m = x;
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "Siege_IssueRequest"));
             });
+            // Battlegrounds: the gauntlets and the ladder against the AI (see Battlegrounds.cs).
+            apply("GameStateTournament.OnEntry", () => harmony.Patch(AccessTools.Method(typeof(GameStateTournament), "OnEntry"), postfix: new HarmonyMethod(typeof(Hooks), "Tournament_OnEntry")));
+            {
+                Type svc = typeof(Game.Shared.Network.SFS.IService);
+                Type ts = typeof(Game.Client.Network.Tournaments.TournamentsService);
+                Func<string, Type> handler = n => ts.GetNestedType(n).GetNestedType("ResponseHandler");
+                Action<string, Type[], string> request = (n, args, hook) =>
+                    apply("TournamentsService." + n + ".Request", () => Prefix(harmony, ts.GetNestedType(n), "Request", args, hook));
+                request("TestTournamentEntry", new[] { typeof(ulong), typeof(bool), handler("TestTournamentEntry"), typeof(string), typeof(int), svc }, "Tournament_TestEntry");
+                request("EnterTournament", new[] { typeof(ulong), typeof(UID), typeof(UID), typeof(int), typeof(string), typeof(bool), handler("EnterTournament"), typeof(string), typeof(int), svc }, "Tournament_Enter");
+                request("SaveTournamentDeck", new[] { typeof(Game.Shared.Domain.deck_bits), typeof(ResourceId), typeof(ulong), handler("SaveTournamentDeck"), typeof(string), typeof(int), svc }, "Tournament_SaveDeck");
+                request("GameEntrance", new[] { typeof(ulong), typeof(Game.Shared.Domain.deck_bits), typeof(bool), handler("GameEntrance"), typeof(string), typeof(int), svc }, "Tournament_GameEntrance");
+                request("LeaveTournament", new[] { typeof(ulong), handler("LeaveTournament"), typeof(string), typeof(int), svc }, "Tournament_Leave");
+            }
+            apply("TournamentManager.SendTryReconnectionToDisconnectedTournament", () => Prefix(harmony, typeof(Game.Client.Tournament.TournamentManager), "SendTryReconnectionToDisconnectedTournament", new[] { typeof(ulong) }, "Tournament_Reconnect"));
+            apply("TournamentManager.RequestSelectDraftCard", () => Prefix(harmony, typeof(Game.Client.Tournament.TournamentManager), "RequestSelectDraftCard", new[] { typeof(ulong), typeof(ulong), typeof(ulong) }, "Tournament_SelectDraftCard"));
+            apply("TournamentManager.RequestHilightDraftCard", () => Prefix(harmony, typeof(Game.Client.Tournament.TournamentManager), "RequestHilightDraftCard", new[] { typeof(ulong), typeof(ulong) }, "Skip"));
+            {
+                Type tsm = typeof(Game.Shared.Tournaments.TournamentSharedMessaging);
+                apply("TournamentSharedMessaging.Send_LadderRecord_Request", () => Prefix(harmony, tsm, "Send_LadderRecord_Request", null, "Ladder_Record"));
+                apply("TournamentSharedMessaging.Send_Ladder_Tier_Rewards_List_Request", () => Prefix(harmony, tsm, "Send_Ladder_Tier_Rewards_List_Request", null, "Ladder_TierRewards"));
+                apply("TournamentSharedMessaging.Send_Ladder_Top_100_Request", () => Prefix(harmony, tsm, "Send_Ladder_Top_100_Request", null, "Ladder_Top100"));
+                apply("TournamentSharedMessaging.Send_LadderFindMatch_Request", () => Prefix(harmony, tsm, "Send_LadderFindMatch_Request",
+                    new[] { typeof(ulong), typeof(Game.Shared.Domain.deck_bits), typeof(bool), typeof(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderFindMatch.Response>>) }, "Ladder_FindMatch"));
+            }
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
             {
@@ -322,6 +347,33 @@ namespace HexRevival
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
+        public static void Tournament_OnEntry() { Battlegrounds.OnHubEntered(); }
+        public static bool Tournament_TestEntry(ulong __0, Game.Client.Network.Tournaments.TournamentsService.TestTournamentEntry.ResponseHandler __2) { Battlegrounds.TestEntry(__0, __2); return false; }
+        public static bool Tournament_Enter(ulong __0, UID __1, Game.Client.Network.Tournaments.TournamentsService.EnterTournament.ResponseHandler __6) { Battlegrounds.Enter(__0, __1, __6); return false; }
+        public static bool Tournament_SaveDeck(Game.Shared.Domain.deck_bits __0, ulong __2, Game.Client.Network.Tournaments.TournamentsService.SaveTournamentDeck.ResponseHandler __3) { Battlegrounds.SaveDeck(__0, __2, __3); return false; }
+        public static bool Tournament_GameEntrance(ulong __0, Game.Shared.Domain.deck_bits __1, bool __2, Game.Client.Network.Tournaments.TournamentsService.GameEntrance.ResponseHandler __3) { Battlegrounds.GameEntrance(__0, __1, __2, __3); return false; }
+        public static bool Tournament_Leave(ulong __0, Game.Client.Network.Tournaments.TournamentsService.LeaveTournament.ResponseHandler __1) { Battlegrounds.Leave(__0, __1); return false; }
+        public static bool Tournament_Reconnect(ulong __0) { Battlegrounds.Resume(__0); return false; }
+        public static bool Tournament_SelectDraftCard(ulong __0, ulong __1, ulong __2) { Battlegrounds.SelectDraftCard(__0, __1, __2); return false; }
+        public static bool Skip() { return false; }
+        public static bool Ladder_Record(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response>> __0)
+        {
+            Campaign.Enqueue(() => __0(new Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response> { Message = Battlegrounds.LadderRecordResponse() }));
+            return false;
+        }
+        public static bool Ladder_TierRewards(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderTierRewardsList.Response>> __0)
+        {
+            Campaign.Enqueue(() => __0(new Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderTierRewardsList.Response>
+                { Message = new Game.Shared.Tournaments.Messages.Tournament.LadderTierRewardsList.Response { tier_rewards = new Dictionary<uint, Game.Shared.Tournaments.TournamentRewardInfo>() } }));
+            return false;
+        }
+        public static bool Ladder_Top100(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRankingList.Response>> __0)
+        {
+            Campaign.Enqueue(() => __0(new Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRankingList.Response>
+                { Message = new Game.Shared.Tournaments.Messages.Tournament.LadderRankingList.Response { ConstructedLadderRanking = new List<string>(), LimitedLadderRanking = new List<string>() } }));
+            return false;
+        }
+        public static bool Ladder_FindMatch(ulong __0, Game.Shared.Domain.deck_bits __1, bool __2) { Battlegrounds.LadderFindMatch(__0, __1, __2); return false; }
         /// <summary>Input.GetAxis, 0 while the game window does not have the focus.</summary>
         public static float FocusedAxis(string axis) { float v = UnityEngine.Input.GetAxis(axis); return v == 0f || HexRevival.WindowFocus.IsActive() ? v : 0f; }
         public static IEnumerable<CodeInstruction> FocusedAxisTranspiler(IEnumerable<CodeInstruction> code)

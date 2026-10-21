@@ -70,6 +70,25 @@ namespace HexRevival
             lock (s_Later) s_Later.Enqueue(a);
         }
 
+        /// <summary>
+        /// Answers a generated service request (EscrowService, TournamentsService...) like their Dispatch: the
+        /// static OnResponse event, then the request's own handler, on the next frame.
+        /// </summary>
+        public static void Answer(Type tx, object response, Delegate handler)
+        {
+            Later(() =>
+            {
+                FieldInfo ev = tx.GetField("OnResponse", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                if (ev == null)
+                    foreach (FieldInfo f in tx.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+                        if (typeof(Delegate).IsAssignableFrom(f.FieldType)) { ev = f; break; }
+                Delegate d = ev != null ? ev.GetValue(null) as Delegate : null;
+                Debug.Log("[HexRevival] " + tx.Name + " answered: listeners " + (d != null ? d.GetInvocationList().Length : 0) + ", handler " + (handler != null));
+                if (d != null) foreach (Delegate one in d.GetInvocationList()) one.DynamicInvoke(response);
+                if (handler != null) handler.DynamicInvoke(response);
+            });
+        }
+
         /// <summary>Delivers pending responses (main thread, one frame after the request).</summary>
         public static void Pump()
         {
