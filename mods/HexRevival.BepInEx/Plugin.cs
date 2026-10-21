@@ -64,6 +64,8 @@ namespace HexRevival
 
             // Equivalent of the Cecil injection at the start of Main.FinializeInit:
             // config.ini has already been read at this point, so standalone mode can be forced.
+            apply("FocusInput", () => HexRevival.FocusInput.Install());
+            apply("UIPopupList.LateUpdate (focus)", () => Prefix(harmony, typeof(UIPopupList), "LateUpdate", Type.EmptyTypes, "PopupList_LateUpdate"));
             apply("Main.FinializeInit", () => Prefix(harmony, typeof(Main), "FinializeInit", Type.EmptyTypes, "Main_FinializeInit"));
 
             apply("Steamy.IsRunningSteam", () => Prefix(harmony, typeof(Steamy), "IsRunningSteam", Type.EmptyTypes, "Steamy_IsRunningSteam"));
@@ -333,6 +335,8 @@ namespace HexRevival
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
         { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
+        // Open drop-down lists read the wheel themselves: not while the window has no focus (see FocusInput).
+        public static bool PopupList_LateUpdate() { return UnityEngine.Application.isFocused; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }
