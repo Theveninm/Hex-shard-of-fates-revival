@@ -20,6 +20,10 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Siege**: attack other defenses for their bounty, or commit your own defense of 3 decks played by the AI.
   Until other players' defenses can be shared, the defenses to attack and the players attacking yours are
   simulated (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
+- **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
+  against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
+- **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
+  primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
   progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
@@ -28,7 +32,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): Frost Ring Arena, Battlegrounds, multiplayer.
+Not available (yet): Frost Ring Arena, Swiss and single-elimination tournaments, multiplayer.
 
 ## Install and play
 

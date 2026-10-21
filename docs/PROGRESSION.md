@@ -391,6 +391,29 @@ Without other players:
 - Siege Sacks are spent in the Store's Prize Exchange tab (see Store). Not done: replays of the
   defense's battles (the log's replay buttons) are not recorded.
 
+## Battlegrounds
+
+The tournament hub. The server sent the list, ran the drafts and matched the players; offline the list
+holds the "On Demand" gauntlets and the opponents are AIs.
+
+| What | Value | Source |
+|---|---|---|
+| Constructed Gauntlet | your own deck (60+ cards, a champion, up to 15 reserves); matches best of 3; until 5 wins or 3 losses | Game ("gauntlet-constructed-description") |
+| Sealed Gauntlet | 6 boosters opened (kept), a 40-card deck; single-game matches; until 5 wins or 3 losses | Game ("gauntlet-sealed-description") |
+| Draft Gauntlet | 3 boosters drafted at a table of 8 (cards kept); matches best of 3; 3 matches | Game ("gauntlet-draft-description") |
+| Entry fees | constructed 2,000 gold, sealed 12,000 (6 boosters), draft 6,000 (3 boosters) | PLACEHOLDER |
+| Prizes | one booster (opened) per match won | PLACEHOLDER |
+| Boosters of sealed and draft | Doombringer (the last set) | PLACEHOLDER: the server chose the product |
+| Basic shards in a limited pool | 20 of each | PLACEHOLDER |
+| Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (best rarity, then their colors) | PLACEHOLDER (timer); the passing order is the usual one |
+| Opponents | constructed: one of the game's prebuilt decks with a PvP champion; draft: another drafter's picks; sealed: a pool of 6 boosters; limited decks are 23 cards of the pool's two main colors + 17 shards | PLACEHOLDER |
+| Ladder (ranked) | a star won or lost per match, never below 0; unranked and Immortal matches change nothing; no tier rewards | PLACEHOLDER (the server's rules are not known); the tiers (Bronze to Cosmic, stars per tier) are the client's own (Game LadderTiers) |
+| Account XP | none for Battlegrounds games | PLACEHOLDER |
+
+A best-of-3 match is played one game at a time: after each game the player is back in the deck builder
+(reserve changes allowed) and "Play a Game" plays the next one. Runs are saved (battlegrounds.json) and
+resumed from the list. Swiss and single-elimination tournaments ("Special" tab) are not available.
+
 ## Tutorial
 
 The game's own tutorial (5 scripted battles, Game). It starts after creating an account when "Play
