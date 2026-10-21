@@ -184,6 +184,9 @@ namespace HexRevival
                 request("RefreshArenaInfo", new[] { ad, af, ac, handler("RefreshArenaInfo"), typeof(string), typeof(int), svc }, "Arena_Refresh");
                 apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
                 apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
+                // The buffs' conversations were the server's: clicking a buff shows nothing (its text is in its tooltip).
+                apply("UIArenaCampaignViewModel.OnBuff1Click", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "OnBuff1Click", Type.EmptyTypes, "Skip"));
+                apply("UIArenaCampaignViewModel.OnBuff2Click", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "OnBuff2Click", Type.EmptyTypes, "Skip"));
             }
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>

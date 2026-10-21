@@ -89,6 +89,7 @@ namespace HexRevival
             { "opp_health", new[] { "Health", "Vie" } },
             { "opp_resources", new[] { "Resources in play", "Ressources en jeu" } },
             { "opp_charges", new[] { "Charges", "Charges" } },
+            { "opp_in_play", new[] { "In play", "En jeu" } },
             { "opp_cards", new[] { "Extra cards", "Cartes en plus" } },
             { "ai_opponents", new[] { "AI opponents", "Adversaires IA" } },
             { "opt_unlock_desc", new[] { "Every card and every equipment from the start. Otherwise, cards are earned by playing.", "Toutes les cartes et tous les équipements dès le départ. Sinon, les cartes se gagnent en jouant.", "Alle Karten und Ausrüstungen von Anfang an. Andernfalls verdient man Karten durch Spielen.", "Todas las cartas y equipos desde el principio. Si no, las cartas se ganan jugando.", "Tutte le carte e gli equipaggiamenti fin dall'inizio. Altrimenti le carte si guadagnano giocando.", "Todas as cartas e equipamentos desde o início. Caso contrário, as cartas ganham-se a jogar.", "Wszystkie karty i ekwipunek od początku. W przeciwnym razie karty zdobywa się, grając.", "Все карты и снаряжение с самого начала. Иначе карты зарабатываются в игре.", "Tüm kartlar ve ekipmanlar baştan açık. Aksi hâlde kartlar oynayarak kazanılır.", "最初からすべてのカードと装備を所持。オフにするとカードはプレイで獲得します。", "从一开始就拥有所有卡牌和装备。否则需通过游戏获得卡牌。" } },

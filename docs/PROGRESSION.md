@@ -422,24 +422,26 @@ resumed from the list. Swiss and single-elimination tournaments ("Special" tab) 
 
 The game's own arena screens (welcome, deck choice, the 20-fight grid, reward windows, results), answered
 locally. Opponents: the opponent pack's arena tiers; by default the game's own "Arena_" decks (Game), sorted by
-their champion's health.
+their champion's health. Video = 15 MyHotStream Frost Ring Arena videos (2017-2018, two runs seen from tier 2 to
+the end, and single fights).
 
 | What | Value | Source |
 |---|---|---|
-| Run | 20 fights in 4 tiers of 5, a boss closing each tier; tier 1: 4 standard fights; tier 2: 3 standard, 1 elite; tiers 3 and 4: 2 standard, 2 elite; tier 4's boss is an elite | HexCompendium ("Frost Ring Arena") |
-| Tier 1 | its own opponents, 7 less health (the game's 15-health arena decks), the Eternal Guardian as boss | HexCompendium, Game |
-| Losses | 3 loss marks end the run; a lost boss is fought again, another lost fight is passed | HexCompendium |
-| Uruunaz, Zakiir | rare encounters on the 4th fight of tier 2 and on the fights of tiers 3 and 4 but the bosses; chance 2% | HexCompendium (slots); chance PLACEHOLDER |
-| Which boss in which tier | tiers 2-3 share the 30-health bosses, tier 4 takes their elite versions and Hogarth, Master of the Arena | PLACEHOLDER |
-| Gold per win | 150 (standard), 250 (elite), 400 (boss), as a gold pouch | PLACEHOLDER |
-| Chests | a boss win: a card or equipment chest; a tier without a loss: a "Perfect" chest; other wins: 40% chance | PLACEHOLDER |
-| Chest contents | half the time a card of the arena's set (Set01_PvE_Arena), otherwise an equipment noted "Arena" by the designers | Game (pools); odds PLACEHOLDER |
+| Run | 20 fights in 4 tiers of 5, a boss closing each tier; tier 1: 4 standard fights; tier 2: 3 standard, 1 elite (slot 9); tiers 3 and 4: 2 standard, 2 elite (slots 12, 14 / 17, 19); tier 4's boss is an elite | HexCompendium, Video |
+| Tier 1 | its own opponents, 7 less health (the game's 15-health arena decks), the Eternal Guardian as boss | HexCompendium, Game, Video |
+| Opponents | drawn at random for each run; an elite is a stronger version of a standard opponent | Video |
+| Loss marks | a lost fight is passed (red X) and its mark counts until the tier's boss is beaten; a lost boss is fought again and its mark stays; 3 marks end the run | Video (the defeats counter of several runs); HexCompendium (3 marks) |
+| Challenges | one fight of each tier: Reflection (both players start with Locket of Reflection in play), Primordial (the opponent starts with Primordial Caves in play), Gooplasm (with a Gooplasm), Fulmination (with Cerebral Fulmination); goal: win the game | Video (texts); one per tier always: PLACEHOLDER |
+| Challenge won | removes a loss mark, otherwise a buff for the next boss: Brawler (an Arena Brawler in play), Charge (+2 charges), Health (+5 health), Resource (a resource in play) | HexCompendium, Video (Brawler) |
+| Uruunaz, Zakiir | rare encounters on the 4th fight of tier 2 and on the fights of tiers 3 and 4 but the bosses (Uruunaz seen at slot 13); chance 2% | HexCompendium, Video; chance PLACEHOLDER |
+| Which boss in which tier | tiers 2-3 share the 30-health bosses, tier 4 takes their elite versions and Hogarth (seen: Lanupaw tier 2, Uzume tier 3, Princess Cory Elite and Doombringer Kha Elite tier 4) | PLACEHOLDER, Video |
+| Gold | one gold pouch per win, paid when the rewards are claimed: 400 (standard), 500 (elite), 600 (boss) | Video (a run of 18 wins paid 8,400 gold, pouches of unequal value); split PLACEHOLDER |
+| Chests | only with a boss win: "Boss Win" 1 (tier 1) or 2, "Perfect Tier Bonus" for a tier without a loss, "Bonus" for a tier whose challenge was won | Video (the counts); the Bonus cause PLACEHOLDER |
+| Chest contents | a card (half of the arena's set Set01_PvE_Arena, half of the booster sets), Common Stardust or Rare Stardust (20%), an arena equipment (5%) | Video (cards and stardust seen, no equipment in 10 chests); odds PLACEHOLDER |
 | Uruunaz | 100,000 gold | Steam2016-b (forum, April 2016) |
-| Sleeves | Frost Ring Arena Sleeve (run completed), Perfect Sleeve (no loss), Hogarth, Uruunaz, Matriarch of Flames (Zakiir): each once | Game (their "Earned by ..." texts) |
-| Rewards granted | when the player withdraws or the run ends (Withdraw / Claim Rewards) | Game (the client's flow) |
+| Sleeves | Frost Ring Arena Sleeve (run completed: seen), Perfect Sleeve (no loss), Hogarth, Uruunaz, Matriarch of Flames (Zakiir): each once | Game (their "Earned by ..." texts), Video |
 
-Not done: the round challenges and their buffs (+5 health, +2 charges, a resource, an Arena Brawler), the
-buyout, the arena's frozen game board.
+Not done: the buyout, Hogarth's dialogues, the arena's frozen game board.
 
 ## AI opponents
 
@@ -454,7 +456,7 @@ gauntlets, arena tier) and, in each tier, opponents drawn at random (by their fr
 | AI skill | the game AI's own levels (EDifficulty, Easy to Hard: each level adds a skill such as combat tricks, bluffs, pre-emptive removal) |
 | Imprecision | the noise the AI adds to its card values (the game's default 50) |
 | Style | the deck personality (Aggressive, Burn...) that weighs the AI's choices |
-| Handicaps (AI and player) | health (+/-), resources in play, charges, extra cards: applied after the mulligan |
+| Handicaps (AI and player) | health (+/-), resources in play, charges, extra cards, cards in play: applied after the mulligan |
 
 The default pack (`Default.json`, read-only, rewritten if deleted) uses the game's prebuilt decks with a PvP
 champion, with the AI from Medium (Bronze) to Hard (Platinum and Cosmic) and no handicap (PLACEHOLDER: the

@@ -34,7 +34,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): Swiss and single-elimination tournaments, the arena's challenges, multiplayer.
+Not available (yet): Swiss and single-elimination tournaments, multiplayer.
 
 ## Install and play
 

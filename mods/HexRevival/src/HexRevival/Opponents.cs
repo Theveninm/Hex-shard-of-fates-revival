@@ -76,7 +76,20 @@ namespace HexRevival
             public int Resources;   // resources in play (no shard threshold)
             public int Charges;
             public int Cards;       // cards drawn
-            public bool IsEmpty { get { return Health == 0 && Resources == 0 && Charges == 0 && Cards == 0; } }
+            /// <summary>Cards in play from the start (names).</summary>
+            public List<string> InPlay = new List<string>();
+            public bool IsEmpty { get { return Health == 0 && Resources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0); } }
+
+            /// <summary>The sum of two handicaps (a mode's own bonus added to a pack's).</summary>
+            public static Handicap Add(Handicap a, Handicap b)
+            {
+                if (b == null) return a;
+                if (a == null) return b;
+                Handicap r = new Handicap { Health = a.Health + b.Health, Resources = a.Resources + b.Resources, Charges = a.Charges + b.Charges, Cards = a.Cards + b.Cards };
+                if (a.InPlay != null) r.InPlay.AddRange(a.InPlay);
+                if (b.InPlay != null) r.InPlay.AddRange(b.InPlay);
+                return r;
+            }
         }
 
         // ------------------------------------------------------------------
@@ -359,14 +372,24 @@ namespace HexRevival
         private static Opponent s_InBattle;
         private static bool s_Applied;
 
-        /// <summary>The opponent of the next match started (its skill and handicaps).</summary>
-        public static void SetNext(Opponent o) { s_Pending = o; }
+        private static Handicap s_ExtraAI, s_ExtraPlayer, s_BattleExtraAI, s_BattleExtraPlayer;
+
+        /// <summary>The opponent of the next match started (its skill and handicaps), and a mode's own extras (arena challenges, buffs).</summary>
+        public static void SetNext(Opponent o, Handicap extraAI = null, Handicap extraPlayer = null)
+        {
+            s_Pending = o;
+            s_ExtraAI = extraAI;
+            s_ExtraPlayer = extraPlayer;
+        }
 
         /// <summary>The AI's personality for the match that starts (Patches.SendStartEncounter).</summary>
         public static AIPersonality TakePersonality()
         {
             s_InBattle = s_Pending;
+            s_BattleExtraAI = s_ExtraAI;
+            s_BattleExtraPlayer = s_ExtraPlayer;
             s_Pending = null;
+            s_ExtraAI = s_ExtraPlayer = null;
             s_Applied = false;
             AIPersonality p = new AIPersonality();
             if (s_InBattle == null) return p;
@@ -386,10 +409,10 @@ namespace HexRevival
         /// <summary>Every server update: the handicaps, once the mulligan is over.</summary>
         public static void OnSessionTick(StandaloneSession ss)
         {
-            if (s_Applied || s_InBattle == null || ss == null || (int)ss.CurrentTurnPhase <= (int)ETurnPhases.Mulligan) return;
+            if (s_Applied || (s_InBattle == null && s_BattleExtraAI == null && s_BattleExtraPlayer == null) || ss == null || (int)ss.CurrentTurnPhase <= (int)ETurnPhases.Mulligan) return;
             s_Applied = true;
-            Apply(ss, Cheats.FindPlayer(ss, "ai"), s_InBattle.AI);
-            Apply(ss, Cheats.FindPlayer(ss, "j"), s_InBattle.Player);
+            Apply(ss, Cheats.FindPlayer(ss, "ai"), Handicap.Add(s_InBattle != null ? s_InBattle.AI : null, s_BattleExtraAI));
+            Apply(ss, Cheats.FindPlayer(ss, "j"), Handicap.Add(s_InBattle != null ? s_InBattle.Player : null, s_BattleExtraPlayer));
         }
 
         private static void Apply(StandaloneSession ss, Player p, Handicap h)
@@ -405,8 +428,16 @@ namespace HexRevival
                 if (h.Resources > 0) Cheats.AddResourcesOnly(ss, p, h.Resources);
                 if (h.Charges > 0) ss.AddChargePoints(p.m_ChampionCard, h.Charges, false);
                 for (int i = 0; i < h.Cards; i++) Cheats.DrawCard(ss, p);
+                if (h.InPlay != null)
+                    foreach (string name in h.InPlay)
+                    {
+                        if (string.IsNullOrEmpty((name ?? "").Trim())) continue;
+                        CardTemplate c = CardByName((name ?? "").Trim());
+                        if (c == null) { Debug.LogWarning("[HexRevival] [Opponents] unknown card in play: " + name); continue; }
+                        ss.CreateEncounterCardsInZone(p, c.m_Id, 1, ECardCollections.Warzone, ECardLocations.Unknown);
+                    }
                 Server.MarkDirty();
-                Debug.Log("[HexRevival] [Opponents] handicap " + p.m_PlayerId + ": health " + h.Health + ", resources " + h.Resources + ", charges " + h.Charges + ", cards " + h.Cards);
+                Debug.Log("[HexRevival] [Opponents] handicap " + p.m_PlayerId + ": health " + h.Health + ", resources " + h.Resources + ", charges " + h.Charges + ", cards " + h.Cards + ", in play " + (h.InPlay != null ? string.Join(", ", h.InPlay.ToArray()) : ""));
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] handicap: " + e); }
         }

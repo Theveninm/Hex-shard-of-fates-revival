@@ -315,6 +315,15 @@ namespace HexRevival
             h.Resources = Stepper(new Rect(r.x, r.y + step, r.width, lh), Loc.Get("opp_resources"), h.Resources, 1, 0, 10);
             h.Charges = Stepper(new Rect(r.x, r.y + 2 * step, r.width, lh), Loc.Get("opp_charges"), h.Charges, 1, 0, 10);
             h.Cards = Stepper(new Rect(r.x, r.y + 3 * step, r.width, lh), Loc.Get("opp_cards"), h.Cards, 1, 0, 10);
+            // Cards in play from the start: names separated by commas.
+            GUI.Label(new Rect(r.x, r.y + 4 * step, 90 * S, lh), Loc.Get("opp_in_play"), GameSkin.Style("body", 14, GameSkin.Text));
+            string before = string.Join(", ", (h.InPlay ?? new List<string>()).ToArray());
+            string after = TextField(new Rect(r.x + 90 * S, r.y + 4 * step, r.width - 90 * S, lh), before);
+            if (after != before)
+            {
+                h.InPlay = new List<string>();
+                if (after.Trim().Length > 0) foreach (string n in after.Split(',')) h.InPlay.Add(n.TrimStart());
+            }
         }
 
         // ------------------------------------------------------------------

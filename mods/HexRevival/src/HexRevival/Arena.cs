@@ -21,10 +21,9 @@ namespace HexRevival
     ///
     /// A run (Src.HexCompendium, "Frost Ring Arena"; the client's screens): 20 fights in 4 tiers of 5, a boss closing
     /// each tier; tier 1: 4 standard fights; tier 2: 3 standard, 1 elite; tiers 3 and 4: 2 standard, 2 elite, tier 4's
-    /// boss an elite. A lost fight is a loss mark; a lost boss is fought again, another lost fight is passed; 3 marks
-    /// end the run. The opponents come from the account's opponent pack (arena tiers, see Opponents): by default the
-    /// game's own "Arena_" decks. Rewards: see Rewards (amounts PLACEHOLDER). Not done: the round challenges and
-    /// their buffs, the buyout.
+    /// boss an elite. Loss marks and challenges: see OnGameEnded. The opponents come from the account's opponent pack
+    /// (arena tiers, see Opponents): by default the game's own "Arena_" decks. Rewards: see Rewards. Not done: the
+    /// buyout, Hogarth's dialogues.
     /// </summary>
     public static class Arena
     {
@@ -43,6 +42,10 @@ namespace HexRevival
             public List<ArenaReward> Loot = new List<ArenaReward>();
             public bool CashedOut;                                  // the client asks twice (summary, then the loot window)
             public int Gold;
+            public int TierLosses, BossLosses;                      // the loss marks (see OnGameEnded)
+            public List<string> Challenges = new List<string>();    // by fight: a challenge's key, or ""
+            public List<string> Buffs = new List<string>();         // buffs for the next boss
+            public bool BonusChest;                                 // see Rewards.ForWin
         }
 
         private class Store
@@ -126,7 +129,9 @@ namespace HexRevival
         private static void Prepare(Run r)
         {
             foreach (Opponents.Opponent o in r.Opponents) Challenger(o);
-            if (r.Info.Buffs == null) r.Info.Buffs = new List<ArenaBuff>();
+            if (r.Challenges == null || r.Challenges.Count != r.Fights.Count) { r.Challenges = new List<string>(); foreach (ArenaFight f in r.Fights) r.Challenges.Add(""); }
+            if (r.Buffs == null) r.Buffs = new List<string>();
+            r.Info.Buffs = r.Buffs.ConvertAll(b => Buff(b).Shown);
         }
 
         // ------------------------------------------------------------------
@@ -255,6 +260,10 @@ namespace HexRevival
                     ChallengeResponse = "NONE",
                 });
             }
+            // One fight of each tier but the boss may carry a challenge (Src.HexCompendium; PLACEHOLDER: always one).
+            for (int i = 0; i < Fights; i++) r.Challenges.Add("");
+            for (int t = 0; t < Fights / PerTier; t++)
+                r.Challenges[t * PerTier + UnityEngine.Random.Range(0, PerTier - 1)] = ChallengeKeys[UnityEngine.Random.Range(0, ChallengeKeys.Length)];
             r.Info.FightId = r.Fights[0].FightID;
             st.Run = r;
             Save();
@@ -269,7 +278,18 @@ namespace HexRevival
             if (r == null) return;
             Opponents.Opponent o = r.Opponents[r.Current];
             DeckTemplate deck = Opponents.DeckOf(o);
-            Opponents.SetNext(o);
+            bool boss = (r.Current + 1) % PerTier == 0;
+            Opponents.Handicap ai = null, me = null;
+            string ch = r.Challenges[r.Current];
+            if (ch != "")
+            {
+                Challenge c = Challenges[ch];
+                ai = c.AI; me = c.Player;
+                Notices.Show(c.Name + ": " + c.Text + " Goal: win the game.");
+            }
+            if (boss)
+                foreach (string b in r.Buffs) me = Opponents.Handicap.Add(me, Buff(b).Effect);
+            Opponents.SetNext(o, ai, me);
             ulong arenaId = r.Info.ArenaID, owner = r.Info.PlayerID;
             Patches.PendingEncounterSetup = e =>
             {
@@ -295,22 +315,37 @@ namespace HexRevival
             ArenaFight f = r.Fights[r.Current];
             Opponents.Opponent o = r.Opponents[r.Current];
             bool boss = (r.Current + 1) % PerTier == 0;
+            string challenge = r.Challenges[r.Current];
             List<ArenaReward> news = new List<ArenaReward>();
             if (won)
             {
                 f.FightResults = "WIN";
                 r.Info.Wins++;
+                // A challenge won removes a loss mark, otherwise gives a buff for the next boss (Src.HexCompendium;
+                // Src.Video: Hogarth's "As a reward, for your next boss fight, you will start the game with an Arena Brawler in play").
+                if (challenge != "")
+                {
+                    if (r.TierLosses > 0) r.TierLosses--;
+                    else if (r.BossLosses > 0) r.BossLosses--;
+                    else if (r.Buffs.Count < 2) { string b = BuffKeys[UnityEngine.Random.Range(0, BuffKeys.Length)]; r.Buffs.Add(b); Notices.Show(Buff(b).Shown.Name + ": " + Buff(b).Shown.Description); }
+                    r.BonusChest = true;
+                }
                 news.AddRange(Rewards.ForWin(r, f, o, boss));
+                if (boss) { r.TierLosses = 0; r.Buffs.Clear(); r.BonusChest = false; }
                 if (r.Current < Fights - 1) r.Current++;
             }
             else
             {
-                r.Info.Loses++;
-                r.Info.LastTierLoss |= 1 << f.FightTier;   // TierLoss: tier 1 = 2, tier 2 = 4...
-                // A lost boss is fought again; another lost fight is passed (Src.HexCompendium).
-                if (!boss || r.Info.Loses >= MaxLosses) f.FightResults = "LOSE";
-                if (!boss && r.Current < Fights - 1 && r.Info.Loses < MaxLosses) r.Current++;
+                // Loss marks (Src.Video, 2017-2018 runs): a lost fight is passed (a red X) and counts until the tier's boss
+                // is beaten; a lost boss is fought again and its mark stays. 3 marks end the run.
+                r.Info.LastTierLoss |= 1 << f.FightTier;   // TierLoss: tier 1 = 2, tier 2 = 4... (no "perfect tier")
+                if (boss) r.BossLosses++; else r.TierLosses++;
+                bool over = r.BossLosses + r.TierLosses >= MaxLosses;
+                if (!boss || over) f.FightResults = "LOSE";
+                if (!boss && !over && r.Current < Fights - 1) r.Current++;
             }
+            r.Info.Loses = r.BossLosses + r.TierLosses;
+            r.Info.Buffs = r.Buffs.ConvertAll(b => Buff(b).Shown);
             r.Info.FightId = r.Fights[r.Current].FightID;
             r.Loot.AddRange(news);
             Save();
@@ -366,13 +401,19 @@ namespace HexRevival
 
         private static class Rewards
         {
-            /// <summary>PLACEHOLDER gold per win by fight (standard, elite, boss).</summary>
-            private const int GoldStandard = 150, GoldElite = 250, GoldBoss = 400;
-            /// <summary>Uruunaz "nets you 100,000 gold" (Src.Steam2016, a player in April 2016).</summary>
+            /// <summary>
+            /// Gold per win, one pouch each (Src.Video: one pouch per victory; a run of 18 wins paid 8,400 gold, about 467 a
+            /// pouch, not always the same). The split by fight is PLACEHOLDER (it gives about 8,500 for such a run).
+            /// </summary>
+            private const int GoldStandard = 400, GoldElite = 500, GoldBoss = 600;
+            /// <summary>Uruunaz "nets you 100,000 gold" (Src.Steam2016-b, a player in April 2016).</summary>
             private const int GoldUruunaz = 100000;
-            /// <summary>PLACEHOLDER: chance of a chest (a card or an equipment) for a win that is not a boss.</summary>
-            private const float ChestChance = 0.4f;
 
+            /// <summary>
+            /// A win: a gold pouch. A boss win also opens the tier's chests (Src.Video: chests only come with the boss):
+            /// "Boss Win" chests (1 in tier 1, 2 after, PLACEHOLDER from the counts seen), a "Perfect Tier Bonus" chest for a
+            /// tier without a loss, a "Bonus" chest (seen twice, cause unknown: PLACEHOLDER, a tier whose challenge was won).
+            /// </summary>
             public static List<ArenaReward> ForWin(Run r, ArenaFight f, Opponents.Opponent o, bool boss)
             {
                 List<ArenaReward> res = new List<ArenaReward>();
@@ -381,21 +422,23 @@ namespace HexRevival
                 r.Info.GoldPacks++;
                 if (o.Rare && o.Name.StartsWith("Uruunaz"))
                     res.Add(new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "GOLD", Reason = "URUUNAZ", Gold = GoldUruunaz, Rarity = "", TemplateID = ResourceId.Invalid });
-                if (boss || o.Rare || UnityEngine.Random.value < ChestChance)
+                if (o.Rare) AddChest(res, r, f, o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR");
+                if (boss)
                 {
-                    ArenaReward chest = Chest(r, f, boss || o.Rare ? "WIN" : "BONUS");
-                    if (chest != null) res.Add(chest);
-                }
-                // A tier without a loss (TierLoss bit): a "Perfect" chest.
-                if (boss && (r.Info.LastTierLoss & (1 << f.FightTier)) == 0)
-                {
-                    ArenaReward chest = Chest(r, f, "PERFECT");
-                    if (chest != null) res.Add(chest);
+                    for (int i = 0; i < (f.FightTier == 1 ? 1 : 2); i++) AddChest(res, r, f, "WIN");
+                    if ((r.Info.LastTierLoss & (1 << f.FightTier)) == 0) AddChest(res, r, f, "PERFECT");
+                    if (r.BonusChest) AddChest(res, r, f, "BONUS");
                 }
                 // The sleeves of the bosses (Src.Game, their "Earned by defeating ..." texts).
                 string sleeve = o.Name.StartsWith("Hogarth") ? "Hogarth Sleeve" : o.Name.StartsWith("Uruunaz") ? "Uruunaz Sleeve" : o.Name.StartsWith("Zakiir") ? "Matriarch of Flames Sleeve" : null;
                 if (sleeve != null) AddSleeve(res, r, f, sleeve, o.Rare ? (o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR") : "WIN");
                 return res;
+            }
+
+            private static void AddChest(List<ArenaReward> into, Run r, ArenaFight f, string reason)
+            {
+                ArenaReward c = Chest(r, f, reason);
+                if (c != null) into.Add(c);
             }
 
             /// <summary>End of the run: the completion and perfect run sleeves (Src.Game: "Earned by completing the Frost Ring Arena [without losing a life]").</summary>
@@ -417,24 +460,50 @@ namespace HexRevival
                 into.Add(new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "SLEEVE", Reason = reason, Rarity = "", TemplateID = s.m_Id });
             }
 
-            /// <summary>A chest: half the time a card of the arena's set, otherwise an arena equipment (PLACEHOLDER odds).</summary>
+            /// <summary>
+            /// A chest: a card (Src.Video: most chests; cards of the arena's set and of other sets: half each, PLACEHOLDER),
+            /// sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; 20% PLACEHOLDER), rarely an arena
+            /// equipment (not seen in 10 chests; 5% PLACEHOLDER).
+            /// </summary>
             private static ArenaReward Chest(Run r, ArenaFight f, string reason)
             {
-                if (UnityEngine.Random.value < 0.5f)
+                ArenaReward res = new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Reason = reason, Rarity = "" };
+                float x = UnityEngine.Random.value;
+                if (x < 0.05f)
                 {
-                    List<CardTemplate> cards = ArenaCards();
-                    if (cards.Count > 0)
-                    {
-                        CardTemplate c = cards[UnityEngine.Random.Range(0, cards.Count)];
-                        r.Info.CardPacks++;
-                        return new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "CARD", Reason = reason, Rarity = c.m_CardRarity.ToString(), TemplateID = c.m_Id };
-                    }
+                    List<InventoryItemData> eq = ArenaEquipment();
+                    if (eq.Count > 0) { res.Type = "EQUIPMENT"; res.TemplateID = eq[UnityEngine.Random.Range(0, eq.Count)].m_Id; r.Info.EquipmentPacks++; return res; }
                 }
-                List<InventoryItemData> eq = ArenaEquipment();
-                if (eq.Count == 0) return null;
-                InventoryItemData e = eq[UnityEngine.Random.Range(0, eq.Count)];
-                r.Info.EquipmentPacks++;
-                return new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "EQUIPMENT", Reason = reason, Rarity = "", TemplateID = e.m_Id };
+                if (x < 0.25f)
+                {
+                    InventoryItemData dust = Item(UnityEngine.Random.value < 0.7f ? "Common Stardust" : "Rare Stardust");
+                    if (dust != null) { res.Type = "EQUIPMENT"; res.TemplateID = dust.m_Id; r.Info.EquipmentPacks++; return res; }
+                }
+                CardTemplate c = null;
+                if (UnityEngine.Random.value < 0.5f) { List<CardTemplate> cards = ArenaCards(); if (cards.Count > 0) c = cards[UnityEngine.Random.Range(0, cards.Count)]; }
+                if (c == null) c = AnySetCard();
+                if (c == null) return null;
+                res.Type = "CARD";
+                res.Rarity = c.m_CardRarity.ToString();
+                res.TemplateID = c.m_Id;
+                r.Info.CardPacks++;
+                return res;
+            }
+
+            /// <summary>A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary>
+            private static CardTemplate AnySetCard()
+            {
+                List<CardSetTemplate> sets = new List<CardSetTemplate>();
+                foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                {
+                    InventoryCardPack p = i as InventoryCardPack;
+                    CardSetTemplate set;
+                    if (p != null && p.m_CardPackType == ECardPackType.BoosterPack && Singleton<TemplateManager>.Instance.CardSets.TryGetValue(p.m_SetId, out set) && set != null && !sets.Contains(set)) sets.Add(set);
+                }
+                if (sets.Count == 0) return null;
+                float x = UnityEngine.Random.value * 14;
+                ERarity rarity = x < 10 ? ERarity.Common : x < 13 ? ERarity.Uncommon : ERarity.Rare;
+                return Progression.RandomCard(sets[UnityEngine.Random.Range(0, sets.Count)], rarity, null);
             }
 
             /// <summary>Gives the run's rewards; returns the gold.</summary>
@@ -465,6 +534,50 @@ namespace HexRevival
                 }
                 return gold;
             }
+        }
+
+        // ------------------------------------------------------------------
+        // Challenges and buffs
+        // ------------------------------------------------------------------
+
+        private class Challenge
+        {
+            public string Name, Text;
+            public Opponents.Handicap AI, Player;
+        }
+
+        /// <summary>The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game").</summary>
+        private static readonly Dictionary<string, Challenge> Challenges = new Dictionary<string, Challenge>
+        {
+            { "reflection", new Challenge { Name = "Reflection Challenge", Text = "Both players start this game with Locket of Reflection in play.",
+                AI = new Opponents.Handicap { InPlay = new List<string> { "Locket of Reflection" } }, Player = new Opponents.Handicap { InPlay = new List<string> { "Locket of Reflection" } } } },
+            { "primordial", new Challenge { Name = "Primordial Challenge", Text = "Your opponent starts this game with Primordial Caves in play.",
+                AI = new Opponents.Handicap { InPlay = new List<string> { "Primordial Caves" } } } },
+            { "gooplasm", new Challenge { Name = "Gooplasm Challenge", Text = "Your opponent starts this game with a Gooplasm in play.",
+                AI = new Opponents.Handicap { InPlay = new List<string> { "Gooplasm" } } } },
+            { "fulmination", new Challenge { Name = "Fulmination Challenge", Text = "Your opponent starts this game with Cerebral Fulmination in play.",
+                AI = new Opponents.Handicap { InPlay = new List<string> { "Cerebral Fulmination" } } } },
+        };
+        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination" };
+
+        private class BuffDef { public ArenaBuff Shown; public Opponents.Handicap Effect; }
+
+        /// <summary>The buffs (Src.HexCompendium: Brawler, Charge, Health, Resource; Src.Video: "Brawler Buff - You start the game with an Arena Brawler in play").</summary>
+        private static BuffDef Buff(string key)
+        {
+            switch (key)
+            {
+                case "charge": return new BuffDef { Shown = Shown("Charge Buff", "You start the game with 2 extra charges."), Effect = new Opponents.Handicap { Charges = 2 } };
+                case "health": return new BuffDef { Shown = Shown("Health Buff", "You start the game with 5 extra health."), Effect = new Opponents.Handicap { Health = 5 } };
+                case "resource": return new BuffDef { Shown = Shown("Resource Buff", "You start the game with a resource in play."), Effect = new Opponents.Handicap { Resources = 1 } };
+                default: return new BuffDef { Shown = Shown("Brawler Buff", "You start the game with an Arena Brawler in play."), Effect = new Opponents.Handicap { InPlay = new List<string> { "Arena Brawler" } } };
+            }
+        }
+        private static readonly string[] BuffKeys = { "brawler", "charge", "health", "resource" };
+
+        private static ArenaBuff Shown(string name, string text)
+        {
+            return new ArenaBuff { Name = name, Description = text, TemplateID = ResourceId.Invalid, ConversationID = ResourceId.Invalid };
         }
 
         private static List<CardTemplate> s_Cards;
@@ -507,8 +620,8 @@ namespace HexRevival
             {
                 case "state":
                     if (r == null) return "no run (pool: " + ArenaCards().Count + " cards, " + ArenaEquipment().Count + " equipment)";
-                    string s = r.Info.Wins + "-" + r.Info.Loses + ", fight " + (r.Current + 1) + ", loot " + r.Loot.Count;
-                    for (int i = 0; i < r.Fights.Count; i++) s += "\n" + (i + 1) + " t" + r.Fights[i].FightTier + " " + r.Opponents[i].Name + (r.Opponents[i].Boss ? " (boss)" : r.Opponents[i].Elite ? " (elite)" : "") + " " + r.Fights[i].FightResults;
+                    string s = r.Info.Wins + "-" + r.Info.Loses + ", fight " + (r.Current + 1) + ", loot " + r.Loot.Count + ", buffs " + string.Join(",", r.Buffs.ToArray());
+                    for (int i = 0; i < r.Fights.Count; i++) s += "\n" + (i + 1) + " t" + r.Fights[i].FightTier + " " + r.Opponents[i].Name + (r.Opponents[i].Boss ? " (boss)" : r.Opponents[i].Elite ? " (elite)" : "") + " " + r.Fights[i].FightResults + (r.Challenges[i] != "" ? " [" + r.Challenges[i] + "]" : "");
                     return s;
                 case "win":
                 case "lose":
