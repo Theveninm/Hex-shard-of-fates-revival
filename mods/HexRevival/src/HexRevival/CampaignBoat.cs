@@ -22,9 +22,12 @@ namespace HexRevival
     /// - Ship talent points (Src.Video): 3 when the ship is named, 1 for the first win over the Cloud Queen, the
     ///   Cloud King, the Storm of the Century and Bloodhorn. The game counts talent points from the level
     ///   (level - 1), so the ship's level carries them. Sea battles' XP goes to the champion (Src.Video).
-    /// - Hull: the talents say it persists across encounters, but every sea battle of the videos starts at full
-    ///   hull (40, "Heavy Hull" 60), even within one voyage (Src.Video): so does it here. A battle lost sinks the
-    ///   ship: the game's "Your boat has sunk!" message, back to the harbor.
+    /// - Hull (40, "Heavy Hull" 60) kept across the battles of a voyage (Src.Game: Basic Hull "The Hull of your
+    ///   ship persists across encounters", the Ship Port "When running low on hull, you can return here for
+    ///   repairs", Water Town's shipwrights; the client reports the end health, +5 with Repair Crew; Src.Video: KVC
+    ///   Jan 2017. MyHotStream late 2017 shows full hull at each battle, explained by no talent or ability). Full
+    ///   again on each voyage and at Water Town. A battle lost sinks the ship: the game's "Your boat has sunk!"
+    ///   message, back to the harbor.
     /// - The sea battles are fought again on each voyage, and the three sea quests must be done in one voyage:
     ///   their objectives are reset when a voyage begins or ends. The harbor master (Node00B) takes the turn-ins.
     /// - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the new land.
@@ -161,6 +164,8 @@ namespace HexRevival
             }
             if (evt == "boat_fail_shown") { Quests.SetFlag(champ, "boat:failed", null); return true; }
             if (active == null) return false;
+            // Water Town: "The shipwrights of the town offer to repair the damage to your hull." (Src.Game)
+            if (evt == "conv_done" && active.Id == WaterTown) Quests.SetFlag(champ, HullFlag, null);
             if (evt == "conv_done" && active.Id == Harbor && Quests.Flag(champ, "boat:name") != null && !st.Completed.Contains(Harbor))
             {
                 // Naming conversation done: the talent window opens next (the location stays active).
@@ -213,6 +218,7 @@ namespace HexRevival
         {
             ulong champ = st.ChampId;
             Quests.SetFlag(champ, "boat:voyage", "1");
+            Quests.SetFlag(champ, HullFlag, null);
             foreach (MapNode n in st.Z.Nodes)
                 if (IsSea(n) && n.Id != "NodeB02" && n.Id != "NodeB07" && n.Id != "NodeB12") st.Completed.Remove(n.Id);
             // "Must defeat all 3 in one voyage" (Src.Video): each voyage starts the sea quests over. Start: for a
@@ -244,7 +250,25 @@ namespace HexRevival
 
         private static bool s_HullApplied;
 
-        /// <summary>Start of a sea battle (after the mulligan): full hull.</summary>
+        private const string HullFlag = "boat:hull";
+        private const string WaterTown = "NodeB11";
+        private static int s_EndHealth = -1;
+
+        /// <summary>The ship's hull left (the voyage's last battle won), its maximum if none.</summary>
+        private static int Hull(ulong champ)
+        {
+            int max = MaxHull(champ), h;
+            string f = Quests.Flag(champ, HullFlag);
+            return f != null && int.TryParse(f, out h) && h > 0 ? Math.Min(h, max) : max;
+        }
+
+        /// <summary>"player_end_health" of the battle (the client adds Repair Crew's 5).</summary>
+        internal static void NoteEndHealth(object value)
+        {
+            try { s_EndHealth = Convert.ToInt32(value); } catch { s_EndHealth = -1; }
+        }
+
+        /// <summary>Start of a sea battle (after the mulligan): the hull left.</summary>
         private static void TickShip(StandaloneSession ss)
         {
             champion_bits ship = Champions.Get(s_BattleChamp);
@@ -252,7 +276,7 @@ namespace HexRevival
             Player human = Cheats.FindPlayer(ss, "j");
             if (human == null || human.m_ChampionCard == null) return;
             s_HullApplied = true;
-            ss.SetChampionHealth(human.m_ChampionCard, MaxHull(ship.OwnerChampionId), false);
+            ss.SetChampionHealth(human.m_ChampionCard, Hull(ship.OwnerChampionId), false);
             Server.MarkDirty();
         }
 
@@ -271,9 +295,11 @@ namespace HexRevival
         /// <summary>End of a sea battle: a defeat sinks the ship (after the outcome conversation).</summary>
         private static void ShipBattleEnded(ulong champ, bool won)
         {
-            if (OnVoyage(champ) && !won) Quests.SetFlag(champ, "boat:sunk", "1");
+            if (!OnVoyage(champ)) return;
+            if (!won) { Quests.SetFlag(champ, "boat:sunk", "1"); Quests.SetFlag(champ, HullFlag, null); return; }
+            if (s_EndHealth > 0) Quests.SetFlag(champ, HullFlag, Math.Min(s_EndHealth, MaxHull(champ)).ToString());
         }
 
-        private static void ResetShipBattle() { s_HullApplied = false; }
+        private static void ResetShipBattle() { s_HullApplied = false; s_EndHealth = -1; }
     }
 }

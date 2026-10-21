@@ -239,12 +239,14 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   (Video): 3 when the ship is named, 1 for the first win over the Cloud Queen, the Cloud King, the Storm
   of the Century and Bloodhorn (7 in all, as on the videos' Ship Port); shown as a talent point line of
   the reward window (the original said "Ship Talent Point"). Sea battles' XP goes to the champion (Video).
-- Hull (the ship's health): the talents speak of a hull kept across encounters, but every sea battle of
-  the videos starts at full hull, even within one voyage (Video: battles ended at 35, 14, 22, 33 and the
-  next began at 40): 40, or 60 with "Heavy Hull". Repair Crew (the client adds 5 to the battle's end
-  health, Game) and Water Town ("The shipwrights of the town offer to repair the damage to your hull.",
-  Game; never visited in the videos) therefore change nothing here. A sea battle lost sinks the ship: the game's "Your boat has
-  sunk!" message, back to the harbor (Video, same text).
+- Hull (the ship's health): 40, or 60 with "Heavy Hull", kept from one sea battle to the next of a
+  voyage (Game: Basic Hull "The Hull of your ship persists across encounters", the Ship Port "When
+  running low on hull, you can return here for repairs"; the client reports the battle's end health, +5
+  with Repair Crew, and reads a starting health back; Video: KVC Jan 2017). Full again at each new voyage
+  and at Water Town ("The shipwrights of the town offer to repair the damage to your hull.", Game).
+  MyHotStream (late 2017) shows full hull at every battle, which no talent or ability explains: not
+  followed. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
+  harbor (Video, same text).
 - Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
   increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game). The
   Lighthouse gives the card Sea Spirit (Video).
@@ -257,8 +259,6 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   also ends the voyage). Rewards (Video): Pirates of the Alachian 500 gold, 1000 XP, Hired Horn Captain;
   Stormwatch 500 / 1000 + AZ2 pack; Lobster Tale 500 / 1000 + Hardshell Sealord; the three done: Alachian
   Sea Sleeve. A sea battle won again pays half its gold and a fifth of its XP (KVC: Overseer 200 / 130).
-- Hull: the KVC let's play (Jan 2017) shows it kept between the battles of a voyage (33 left, 33 at the
-  next start), MyHotStream (Oct-Dec 2017) full at each battle: the later client is followed.
 - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
   Land".
 

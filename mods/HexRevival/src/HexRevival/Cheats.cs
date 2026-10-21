@@ -20,6 +20,7 @@ namespace HexRevival
     ///   cheat find &lt;text&gt;               cards whose name contains the text
     ///   cheat give &lt;j|ia&gt; &lt;card name&gt;   puts the card in the hand
     ///   cheat res &lt;j|ia&gt; &lt;n&gt;               +n resources (total, current, thresholds of every color)
+    ///   cheat health &lt;j|ia&gt; &lt;n&gt;            sets the champion's health
     /// </summary>
     public static class Cheats
     {
@@ -61,6 +62,16 @@ namespace HexRevival
                     GiveToHand(ss, p, t);
                     Server.MarkDirty();
                     return "gave " + t.m_Name + " to " + p.m_PlayerId;
+                }
+                case "health":
+                {
+                    // dev: "cheat health j 17" = sets the champion's health
+                    int h;
+                    if (!int.TryParse(parts[3], out h))
+                        return "invalid number";
+                    ss.SetChampionHealth(p.m_ChampionCard, h, false);
+                    Server.MarkDirty();
+                    return "health " + h + " for " + p.m_PlayerId;
                 }
                 case "res":
                 {

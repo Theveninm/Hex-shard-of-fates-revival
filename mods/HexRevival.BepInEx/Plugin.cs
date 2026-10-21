@@ -125,6 +125,16 @@ namespace HexRevival
             apply("AITactical.AIUpdate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "AIUpdate", new[] { typeof(Game.Shared.Mechanics.ETurnPhases) }), prefix: new HarmonyMethod(typeof(Hooks), "AITactical_AIUpdate")));
             apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
             apply("Player.HasStop", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Player), "HasStop"), postfix: new HarmonyMethod(typeof(Hooks), "Player_HasStop")));
+            // Windowed mode: the mouse wheel over the unfocused window is ignored (Windows sends it to the window
+            // under the cursor): NGUI's wheel (map zoom, scroll lists) and the two direct reads (battle: wheel up
+            // examines the hovered card; drop-down lists).
+            apply("UICamera.GetAxis (focus)", () =>
+            {
+                UICamera.GetAxisFunc orig = UICamera.GetAxis;
+                UICamera.GetAxis = axis => UnityEngine.Application.isFocused ? orig(axis) : 0f;
+            });
+            apply("UIBattle.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIBattle), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
+            apply("UIPopupList.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIPopupList), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
             apply("UICoinToss.TurnOffCoinTossEffects", () => harmony.Patch(AccessTools.Method(typeof(UICoinToss), "TurnOffCoinTossEffects"), postfix: new HarmonyMethod(typeof(Hooks), "CoinToss_TurnOff")));
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
@@ -305,7 +315,19 @@ namespace HexRevival
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
-        public static void Session_PublishEvent(string __0) { Campaign.OnPublishEvent(__0); }
+        /// <summary>Input.GetAxis, 0 while the game window does not have the focus.</summary>
+        public static float FocusedAxis(string axis) { return UnityEngine.Application.isFocused ? UnityEngine.Input.GetAxis(axis) : 0f; }
+        public static IEnumerable<CodeInstruction> FocusedAxisTranspiler(IEnumerable<CodeInstruction> code)
+        {
+            MethodInfo getAxis = AccessTools.Method(typeof(UnityEngine.Input), "GetAxis", new[] { typeof(string) });
+            MethodInfo focused = AccessTools.Method(typeof(Hooks), "FocusedAxis");
+            foreach (CodeInstruction ci in code)
+            {
+                if ((ci.opcode == System.Reflection.Emit.OpCodes.Call) && Equals(ci.operand, getAxis)) ci.operand = focused;
+                yield return ci;
+            }
+        }
+        public static void Session_PublishEvent(string __0, object __1) { Campaign.OnPublishEvent(__0, __1); }
         public static bool Campaign_SaveChampionParty(Game.Shared.Campaign.Messages.CampSysGeneral.Party.ChampionParty __0, ClientCampaignManager.PartyMembersCallback __1)
         { Mercenaries.OnSaveParty(__0, __1); return false; }
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,

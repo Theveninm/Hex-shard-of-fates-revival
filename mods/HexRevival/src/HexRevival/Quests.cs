@@ -510,7 +510,8 @@ namespace HexRevival
                 gs.VisLocs.Add(new Location(l));
                 gs.LocNodes.Add(new Node(o.LocId, new Dictionary<string, object> { { "id", o.LocId }, { "type", "DEFAULT" } }));
             }
-            gs.PublicState = new QueryState(new Dictionary<string, object> { { "CampaignGroup", "AZ1" } });
+            // The map's quest tracker only lists the quests of its own zone.
+            gs.PublicState = new QueryState(new Dictionary<string, object> { { "CampaignGroup", Array.IndexOf(AZ2Scripts, d.Script) >= 0 ? "AZ2" : "AZ1" } });
             return gs;
         }
 
@@ -669,6 +670,20 @@ namespace HexRevival
             if (parts.Length > 2 && parts[1] == "reset") { Of(champ).Remove(parts[2]); Save(); return "reset " + parts[2]; }
             // dev: "quest flag boat:points 3" sets a champion flag ("-" clears it)
             if (parts.Length > 3 && parts[1] == "flag") { SetFlag(champ, parts[2], parts[3] == "-" ? null : parts[3]); return parts[2] + " = " + Flag(champ, parts[2]); }
+            if (parts.Length > 1 && parts[1] == "tracker")
+            {
+                // dev: the quests the client's quest manager holds, as the map's tracker sees them
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                IEnumerable<Game.Client.Campaign.ClientQuestManager.Quest> l = GameClient.Instance.QuestMgr.GetCurrentQuestList();
+                if (l == null) return "no quest list";
+                foreach (Game.Client.Campaign.ClientQuestManager.Quest q in l)
+                {
+                    GameplayState gs = q.GetState();
+                    sb.Append(q.QuestCampaignId).Append(' ').Append(q.QuestScriptName).Append(" template=").Append(q.GetTemplate() != null)
+                      .Append(gs == null ? " state=null" : " group=" + gs.GetCampaignGroup() + " finished='" + gs.Finished + "' locs=" + gs.VisLocs.Count).Append('\n');
+                }
+                return sb.ToString();
+            }
             if (parts.Length > 1 && parts[1] == "defs")
             {
                 // dev: every AZ1 quest with its objectives, to HexRevivalQuests.txt

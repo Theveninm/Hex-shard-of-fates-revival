@@ -314,10 +314,11 @@ namespace HexRevival
         private static bool s_FortuneApplied;
 
         /// <summary>StandaloneSession.PublishEvent (Harmony prefix): records the event of the battle in progress.</summary>
-        public static void OnPublishEvent(string key)
+        public static void OnPublishEvent(string key, object value)
         {
             if (key == null) return;
             BattleEvents.Add(key);
+            if (key == "player_end_health") NoteEndHealth(value);
             Debug.Log("[HexRevival] [Campaign] battle event " + key);
         }
 
@@ -942,7 +943,10 @@ namespace HexRevival
             {
                 MethodInfo cache = typeof(ClientCampaignManager).GetMethod("CacheCampaignState", BindingFlags.Static | BindingFlags.NonPublic);
                 cache.Invoke(null, new object[] { st.CampId, gs });
-                if (callback != null) callback(gs);
+                // A sea battle just launched plays the ship as the current champion: the map, about to close,
+                // would look for the ship's own sub-champion and fail.
+                PlayerChampion cur = GameClient.Instance.PlayerProfile.GetCurrentChampion();
+                if (callback != null && (cur == null || cur.Id == st.ChampId)) callback(gs);
             });
         }
 
