@@ -37,6 +37,8 @@ namespace HexRevival
             /// creation). Chosen when the account is created; always on for "unlock everything" accounts.
             /// </summary>
             public bool GoldPrices = true;
+            /// <summary>The AI opponent pack of the account (HexRevivalOpponents/&lt;name&gt;.json), empty: the default one.</summary>
+            public string OpponentPack = "";
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -150,6 +152,7 @@ namespace HexRevival
                     else if (k == "tutorial") i.TutorialPending = v == "1";
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "goldprices") i.GoldPrices = v != "0";
+                    else if (k == "opponents") i.OpponentPack = v;
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -175,6 +178,7 @@ namespace HexRevival
                     "tutorial=" + (i.TutorialPending ? "1" : "0"),
                     "cosmic=" + i.CosmicCoins,
                     "goldprices=" + (i.GoldPrices ? "1" : "0"),
+                    "opponents=" + i.OpponentPack,
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

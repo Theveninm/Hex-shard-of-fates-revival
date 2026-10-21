@@ -571,15 +571,24 @@ namespace HexRevival
                     : g.Kind == Kind.Draft ? SessionStateEncounterData.SeriesType.ASYNC_DRAFT : SessionStateEncounterData.SeriesType.CONSTRUCTED;
                 e.SeriesMaxGames = 1;   // the mod plays the best of 3 itself, one game at a time (back to the deck builder in between)
             };
+            EDeckPersonality personality = Opponents.PersonalityOf(s_LastOpponent);
             LocalServer.Later(() => Patches.StartMatch(new UID(UID.Type.Deck, r.Deck.Id), Patches.NeutralEncounterId, ai,
-                g.Name + " match " + match + " game " + game));
+                g.Name + " match " + match + " game " + game, personality));
         }
 
         /// <summary>The AI's deck: a prebuilt deck (constructed), a sealed pool or another drafter's picks, built into 40 cards.</summary>
+        private static Opponents.Opponent s_LastOpponent;
+
         private static DeckTemplate Opponent(Gauntlet g, Run r)
         {
+            // The opponent pack (see Opponents): its deck for a constructed gauntlet, its skill and handicaps in all.
+            Opponents.Opponent o = Opponents.Pick(g.Kind == Kind.Constructed ? Opponents.Gauntlet : Opponents.Limited, r.Wins);
+            Opponents.SetNext(o);
+            s_LastOpponent = o;
             if (g.Kind == Kind.Constructed)
             {
+                DeckTemplate own = Opponents.DeckOf(o);
+                if (own != null) return own;
                 List<DeckTemplate> decks = Decks.PrebuiltPvp();
                 return decks.Count > 0 ? decks[UnityEngine.Random.Range(0, decks.Count)] : null;
             }
@@ -812,15 +821,20 @@ namespace HexRevival
         public static void LadderFindMatch(ulong ladderId, deck_bits deck, bool searching)
         {
             if (!searching || deck == null) return;
+            // The opponent pack's opponent for the player's stars (see Opponents), else a prebuilt deck.
+            Opponents.Opponent o = Opponents.Pick(Opponents.Ladder, Data.Ladder.ConstructedStars);
+            Opponents.SetNext(o);
+            DeckTemplate ai = Opponents.DeckOf(o);
             List<DeckTemplate> decks = Decks.PrebuiltPvp();
-            DeckTemplate ai = decks.Count > 0 ? decks[UnityEngine.Random.Range(0, decks.Count)] : null;
+            if (ai == null && decks.Count > 0) ai = decks[UnityEngine.Random.Range(0, decks.Count)];
+            EDeckPersonality personality = Opponents.PersonalityOf(o);
             s_LadderBattle = ladderId == 0;
             Patches.PendingEncounterSetup = e => e.SeriesFormat = ladderId == 0 ? SessionStateEncounterData.SeriesType.LADDER_CONSTRUCTED
                 : ladderId == 3 ? SessionStateEncounterData.SeriesType.LADDER_IMMORTAL : SessionStateEncounterData.SeriesType.LADDER_UNRANKED;
             LocalServer.Later(() =>
             {
                 Manager.InUnrankedMatch = false;
-                Patches.StartMatch(new UID(UID.Type.Deck, deck.Id), Patches.NeutralEncounterId, ai, "ladder " + ladderId);
+                Patches.StartMatch(new UID(UID.Type.Deck, deck.Id), Patches.NeutralEncounterId, ai, "ladder " + ladderId + (o != null ? " vs " + o.Name : ""), personality);
             });
         }
 

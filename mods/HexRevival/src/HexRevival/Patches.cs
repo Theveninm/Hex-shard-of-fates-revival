@@ -239,7 +239,7 @@ namespace HexRevival
                     sessionClient.AddPlayer(aiPlayer);
 
                     // Attaches the AI tactical component (never initialized anywhere else in the client).
-                    aiPlayer.InitializeAITactical(new Game.Shared.AI.AIPersonality());
+                    aiPlayer.InitializeAITactical(Opponents.TakePersonality());   // the AI skill of the opponent (see Opponents)
 
                     self.m_LocalPlayerMap[aiPlayer.m_PlayerId] = aiPlayer;
                     aiSessions.Add(sessionClient);
