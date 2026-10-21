@@ -20,7 +20,7 @@ namespace HexRevival
         private static readonly List<champion_bits> s_Champions = new List<champion_bits>();
         private static UID s_ReckId;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.champions.txt"); } }
+        private static string FilePath { get { return Saves.File("champions.txt"); } }
 
         public static List<champion_bits> Load(UID reckId, string defaultName)
         {
@@ -45,10 +45,12 @@ namespace HexRevival
                         if (p.Length > 10)
                             foreach (string t in p[10].Split(';'))
                                 if (t.Length > 0) { try { c.ChampionTalents.Add(new ResourceId(t)); } catch { } }
+                        if (p.Length > 11) { int xp; if (int.TryParse(p[11], out xp)) c.CurrentXP = xp; }
+                        c.LastCampaignID = Campaign.HasSave(c.Id) ? c.Id : 0UL;
                         s_Champions.Add(c);
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] read: " + e); }
             if (s_Champions.Count == 0)
             {
                 champion_bits c = New(1UL, defaultName);
@@ -58,7 +60,7 @@ namespace HexRevival
             // Champion without a saved deck: attach the last PvE deck it owns.
             try
             {
-                string decks = Path.Combine(LocalServer.Root, "HexRevival.decks.txt");
+                string decks = Saves.File("decks.txt");
                 if (File.Exists(decks))
                     foreach (string line in File.ReadAllLines(decks))
                     {
@@ -70,10 +72,13 @@ namespace HexRevival
                         if (c != null && c.LastDeckID == 0) c.LastDeckID = id;
                     }
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks: " + e); }
             Debug.Log("[HexRevival] [Champions] " + s_Champions.Count + " champion(s)");
             return new List<champion_bits>(s_Champions);
         }
+
+        /// <summary>Reloads the champions of the save in use.</summary>
+        public static void Reload() { Load(s_ReckId, null); }
 
         private static champion_bits New(ulong id, string name)
         {
@@ -99,8 +104,31 @@ namespace HexRevival
                 c.Race = add.Race; c.ChampionClass = add.ChampionClass; c.Gender = add.Gender;
                 c.OwnerChampionId = add.OwnerChampionId;
                 c.PetName = add.PetName ?? "";
-                deck_bits deck = Decks.CreateForChampion(c.Name, c.Id);
-                c.LastDeckID = deck.Id;
+                deck_bits deck;
+                if (c.OwnerChampionId != 0)
+                {
+                    // Sub-champion (the AZ2 boat, created by the client when its campaign needs it): its deck is a
+                    // profile deck template, first a copy of its owner's deck (the client's deck editor does the same).
+                    deck = Decks.CreateForChampion(c.Name, c.Id, null);
+                    champion_bits owner = Find(c.OwnerChampionId);
+                    Game.Shared.Profile.ProfileDeckTemplate t = owner != null ? Decks.ToProfileTemplate(owner.LastDeckID) : null;
+                    if (t != null)
+                    {
+                        Reckoning.Game.ChampionTemplate ct = champion_bits.GetChampionTemplate(c.Level, c.Race, c.ChampionClass, c.Gender);
+                        if (ct != null) t.Champ = ct.m_Id;
+                        t.Name = c.Name;
+                        c.DeckTemplateId = DeckTemplates.Put(t, 0);
+                    }
+                }
+                else
+                {
+                    // Like a new champion of the original game: it receives its race's starter deck.
+                    Reckoning.Game.DeckTemplate starter = null;
+                    try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
+                    Collection.GrantDeck(starter);
+                    deck = Decks.CreateForChampion(c.Name, c.Id, starter);
+                    c.LastDeckID = deck.Id;
+                }
                 s_Champions.Add(c);
                 Save();
                 AddChampionResponse r = LocalServer.Ok<AddChampionResponse>();
@@ -145,6 +173,43 @@ namespace HexRevival
             return null;
         }
 
+        /// <summary>Deck of a champion, created from its race's starter deck if it has none.</summary>
+        public static ulong EnsureDeck(ulong championId)
+        {
+            deck_bits created;
+            return EnsureDeck(championId, out created);
+        }
+
+        /// <summary>Gives a starter deck to every champion without one; returns the decks created.</summary>
+        public static List<deck_bits> EnsureDecks()
+        {
+            List<deck_bits> res = new List<deck_bits>();
+            foreach (champion_bits c in new List<champion_bits>(s_Champions))
+            {
+                deck_bits created;
+                EnsureDeck(c.Id, out created);
+                if (created != null) res.Add(created);
+            }
+            return res;
+        }
+
+        private static ulong EnsureDeck(ulong championId, out deck_bits created)
+        {
+            created = null;
+            champion_bits c = Find(championId);
+            if (c == null) return 0UL;
+            if (c.LastDeckID != 0) return c.LastDeckID;
+            if (c.OwnerChampionId != 0) return 0UL;   // a sub-champion plays its deck template (see Boat)
+            Reckoning.Game.DeckTemplate starter = null;
+            try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
+            Collection.GrantDeck(starter);
+            created = Decks.CreateForChampion(c.Name, c.Id, starter);
+            c.LastDeckID = created.Id;
+            Save();
+            Debug.Log("[HexRevival] [Champions] champion " + c.Id + " had no deck: starter deck " + c.LastDeckID + " created");
+            return c.LastDeckID;
+        }
+
         /// <summary>New deck created for a champion (first save): it becomes its deck.</summary>
         public static void SetDeck(ulong championId, ulong deckId)
         {
@@ -152,6 +217,40 @@ namespace HexRevival
             if (c == null || c.LastDeckID == deckId) return;
             c.LastDeckID = deckId;
             Save();
+        }
+
+        /// <summary>
+        /// Adds champion XP and recomputes the level from the game's own XP table. Returns the
+        /// updated champion (null if unknown); levelsGained is the number of new levels.
+        /// </summary>
+        public static champion_bits AddXp(ulong championId, int xp, out int levelsGained)
+        {
+            levelsGained = 0;
+            champion_bits c = Find(championId);
+            if (c == null || xp <= 0) return c;
+            c.CurrentXP += xp;
+            int level = Progression.ChampionLevelForXp(c.CurrentXP);
+            if (level > c.Level) { levelsGained = level - c.Level; c.Level = level; }
+            Save();
+            return c;
+        }
+
+        public static champion_bits Get(ulong id) { return Find(id); }
+
+        /// <summary>Sets a champion's level (the AZ2 ship's level carries its talent points).</summary>
+        public static void SetLevel(ulong id, int level)
+        {
+            champion_bits c = Find(id);
+            if (c == null || c.Level == level) return;
+            c.Level = level;
+            Save();
+        }
+
+        /// <summary>A champion's sub-champion of that class (the AZ2 boat), null if not created yet.</summary>
+        public static champion_bits SubChampion(ulong owner, EChampionClass cls)
+        {
+            foreach (champion_bits c in s_Champions) if (c.OwnerChampionId == owner && c.ChampionClass == cls) return c;
+            return null;
         }
 
         private static champion_bits Find(ulong id)
@@ -172,11 +271,12 @@ namespace HexRevival
                       .Append(c.OwnerChampionId).Append('|').Append(c.LastDeckID).Append('|').Append(c.DeckTemplateId).Append('|')
                       .Append((c.PetName ?? "").Replace("|", "/")).Append('|');
                     if (c.ChampionTalents != null) foreach (ResourceId t in c.ChampionTalents) sb.Append(t).Append(';');
+                    sb.Append('|').Append(c.CurrentXP);
                     sb.Append('\n');
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] save: " + e); }
         }
     }
 }

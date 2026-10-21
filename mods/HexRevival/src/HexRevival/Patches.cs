@@ -49,6 +49,9 @@ namespace HexRevival
             attrs = new Dictionary<string, object>();
             try
             {
+                // The account is the save chosen in the account menu (see AccountMenu).
+                if (Saves.Current == null) Saves.Select(Saves.FindOrCreate(string.IsNullOrEmpty(username) ? "Offline" : username));
+                username = Saves.Current.Name;
                 SeedLocalProfile(self, username);
                 try { LocalProfile.Load(self, new UID(UID.Type.ServicePlayer, 0x1001UL), string.IsNullOrEmpty(username) ? "Offline" : username); }
                 catch (Exception e) { Debug.LogError("[HexRevival] LocalProfile.Load failed: " + e); }
@@ -86,6 +89,8 @@ namespace HexRevival
                 if (first == 0) first = c.Id;
             }
             SetField(self, "m_CurrentChampionId", first);
+            DeckTemplates.LoadInto(self);
+            Mercenaries.LoadInto(self);
         }
 
         private static PlayerChampion BuildChampion(UID reckoningId, string name)
@@ -167,7 +172,7 @@ namespace HexRevival
             try
             {
                 if (!(self is StandaloneSession) || player == null) return;
-                if (player.IsAI() || player.m_PlayerId.GetUIDType() == UID.Type.AIPlayer)
+                if (player.IsAI() || Server.IsAIId(player.m_PlayerId))
                 {
                     if (s_PendingAIDeck != null)
                     {
@@ -198,6 +203,8 @@ namespace HexRevival
                 Debug.Log("[HexRevival] starting local encounter: " + encounterData.SceneTemplateId);
                 Server.ResetCache();
                 FillNullLists(encounterData);
+                // Campaign effects of this battle (dungeon boons, the robot, blessings): run like the scene's own.
+                encounterData.AbilitiesToRun.AddRange(Campaign.TakeBattleEffects());
 
                 StandaloneSession sessionServer = new StandaloneSession(self);
                 sessionServer.m_SessionId = new UID(UID.Type.AuthoritativeSession, 501UL);
@@ -212,7 +219,8 @@ namespace HexRevival
                 for (int i = 0; i < aiCount; i++)
                 {
                     PlayerState playerState = new PlayerState();
-                    playerState.PlayerId = new UID(UID.Type.AIPlayer, (ulong)(1000 + i));
+                    bool tutorial = encounterData.SessionFlags.HasAnyFlags(ESessionFlags.IsTutorial);
+                    playerState.PlayerId = new UID(tutorial ? UID.Type.ServiceAI : UID.Type.AIPlayer, (ulong)(1000 + i));
                     AIPlayer aiPlayer = new AIPlayer(playerState);
 
                     SessionClient sessionClient = new SessionClient(BuildSessionState(sessionServer, encounterData), self);
@@ -312,12 +320,6 @@ namespace HexRevival
             {
                 Debug.LogError("[HexRevival] [Menu] StartMatch : " + e);
             }
-        }
-
-        /// <summary>Replaces UILandingPageContext.OnClickContinue (Campaign button) with a local encounter.</summary>
-        public static void UILandingPage_OnClickContinue(UILandingPageContext self)
-        {
-            StartOfflineEncounter("Campaign");
         }
 
         private static void StartOfflineEncounter(string source)

@@ -4,6 +4,8 @@ using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using Game.Client;
+using Game.Client.Campaign;
+using Game.Shared.Campaign.Messages;
 using Game.Shared;
 using HarmonyLib;
 using Game.Shared.Mechanics;
@@ -91,8 +93,55 @@ namespace HexRevival
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
             apply("UILandingPageContext.OnClickChallengeAI", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickChallengeAI", Type.EmptyTypes, "UILandingPage_OnClickChallengeAI"));
-            apply("UILandingPageContext.OnClickContinue", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickContinue", Type.EmptyTypes, "UILandingPage_OnClickContinue"));
             apply("UILandingPageViewModel.OnFrostRingButtonClicked", () => Prefix(harmony, typeof(UILandingPageViewModel), "OnFrostRingButtonClicked", Type.EmptyTypes, "UILandingPageViewModel_OnFrostRingButtonClicked"));
+
+            // Local campaign service: the client's campaign requests are answered by Campaign.
+            Type ccm = typeof(ClientCampaignManager);
+            foreach (string m in new[] { "QueryCurrentCampaign", "GetSummary", "GetActiveStatus", "QueryState", "Start", "Create",
+                                         "Forfeit", "SendEvent", "StartLocation", "FinishLocation", "GetTemplateTypeInfo" })
+            {
+                string name = m;
+                apply("ClientCampaignManager." + name, () => Prefix(harmony, ccm, name, null, "Campaign_" + name));
+            }
+            // Campaign mercenary parties (see Mercenaries.cs).
+            apply("ClientCampaignManager.SaveChampionParty", () => Prefix(harmony, typeof(ClientCampaignManager), "SaveChampionParty", null, "Campaign_SaveChampionParty"));
+            // Profile deck templates (the AZ2 boat's deck, see DeckTemplates.cs).
+            apply("Profile.Network.DeckTemplateSave", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "DeckTemplateSave", null, "Profile_DeckTemplateSave"));
+            // Local store (see Store.cs).
+            apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
+                new[] { typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItems"));
+            // Overloads without a handler (the store screen uses these: the answer goes through OnResponse).
+            apply("EscrowService.GetStoreItems.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
+                new[] { typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItemsEvent"));
+            apply("EscrowService.PurchaseItem.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
+                new[] { typeof(int), typeof(ulong), typeof(bool), typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItemEvent"));
+            apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
+                new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
+            // End-of-battle campaign events of the game's rules (princess saved, creatures tamed...).
+            apply("AuthoritativeSessionBase.PerformTutorialBoardSetup", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AuthoritativeSessionBase), "PerformTutorialBoardSetup"), postfix: new HarmonyMethod(typeof(Hooks), "Tutorial_BoardSetup")));
+            apply("TutorialManager..ctor", () => harmony.Patch(AccessTools.Constructor(typeof(Game.Shared.Tutorial.TutorialManager), new[] { typeof(Game.Shared.ClientSessionBase), typeof(Game.Shared.Tutorial.EPlayerType) }),
+                prefix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPre"), postfix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPost")));
+            apply("UITutorialRewards.Launch", () => harmony.Patch(AccessTools.Method(typeof(UITutorialRewards), "Launch"), prefix: new HarmonyMethod(typeof(Hooks), "TutorialRewards_Launch")));
+            apply("AITactical.AIUpdate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "AIUpdate", new[] { typeof(Game.Shared.Mechanics.ETurnPhases) }), prefix: new HarmonyMethod(typeof(Hooks), "AITactical_AIUpdate")));
+            apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
+            apply("Player.HasStop", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Player), "HasStop"), postfix: new HarmonyMethod(typeof(Hooks), "Player_HasStop")));
+            // Windowed mode: the mouse wheel over the unfocused window is ignored (Windows sends it to the window
+            // under the cursor): NGUI's wheel (map zoom, scroll lists) and the two direct reads (battle: wheel up
+            // examines the hovered card; drop-down lists).
+            apply("UICamera.GetAxis (focus)", () =>
+            {
+                UICamera.GetAxisFunc orig = UICamera.GetAxis;
+                UICamera.GetAxis = axis => { float v = orig(axis); return v == 0f || HexRevival.WindowFocus.IsActive() ? v : 0f; };
+            });
+            apply("UIBattle.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIBattle), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
+            apply("UIPopupList.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIPopupList), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
+            apply("UICoinToss.TurnOffCoinTossEffects", () => harmony.Patch(AccessTools.Method(typeof(UICoinToss), "TurnOffCoinTossEffects"), postfix: new HarmonyMethod(typeof(Hooks), "CoinToss_TurnOff")));
+            apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
+            apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
+            {
+                MethodInfo m = AccessTools.Method(typeof(AuthoritativeSessionBase), "EndGame", new[] { typeof(List<UID>), typeof(List<UID>), typeof(bool) });
+                harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Session_EndGame"));
+            });
 
             // Login screen: offline, no credentials are needed (button always enabled,
             // empty name => "Offline" profile).
@@ -223,7 +272,7 @@ namespace HexRevival
                     __instance.m_mediaPlayer.Control.Stop();
                 MethodInfo m = typeof(LevelLoader).GetMethod("StartLoading", BindingFlags.Instance | BindingFlags.NonPublic);
                 __instance.StartCoroutine((System.Collections.IEnumerator)m.Invoke(__instance, null));
-                Plugin.Log.LogInfo("Intro passee");
+                Plugin.Log.LogInfo("Intro skipped");
             }
             catch (Exception e) { Plugin.Log.LogWarning("Intro : " + e.Message); }
             return false;
@@ -250,15 +299,53 @@ namespace HexRevival
             return false;
         }
 
+        // --- Local campaign service (see Campaign.cs) ---
+        public static bool Campaign_QueryCurrentCampaign(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryCurrentCampaign(__0, __1); return false; }
+        public static bool Campaign_GetSummary(IEnumerable<ulong> __0, ClientCampaignManager.GetSummaryCallback __1) { Campaign.GetSummary(__0, __1); return false; }
+        public static bool Campaign_GetActiveStatus(ulong __0, CampaignType __1, string __2, ClientCampaignManager.GetActiveStatusCallback __3) { Campaign.GetActiveStatus(__0, __1, __2, __3); return false; }
+        public static bool Campaign_QueryState(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryState(__0, __1); return false; }
+        public static bool Campaign_Start(ulong __0, ClientCampaignManager.StateCallback __3) { Campaign.Start(__0, __3); return false; }
+        public static bool Campaign_Create(ulong __0, string __1, ClientCampaignManager.StateCallback __2) { Campaign.Create(__0, __1, __2); return false; }
+        public static bool Campaign_Forfeit(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.Forfeit(__0, __1); return false; }
+        public static bool Campaign_SendEvent(ulong __0, string __1, object[] __2, ClientCampaignManager.StateCallback __3) { Campaign.SendEvent(__0, __1, __2, __3); return false; }
+        public static bool Campaign_StartLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.StartLocation(__0, __1, __3); return false; }
+        public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.FinishLocation(__0, __1, __3); return false; }
+        public static bool Campaign_GetTemplateTypeInfo(ClientCampaignManager.GetTemplateTypeInfoCallback __0) { if (__0 != null) __0(new TemplateTypeInfo[0]); return false; }
+        public static bool Store_GetStoreItems(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler __0) { Store.GetStoreItems(__0); return false; }
+        public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
+        public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
+        public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
+        /// <summary>Input.GetAxis, 0 while the game window does not have the focus.</summary>
+        public static float FocusedAxis(string axis) { float v = UnityEngine.Input.GetAxis(axis); return v == 0f || HexRevival.WindowFocus.IsActive() ? v : 0f; }
+        public static IEnumerable<CodeInstruction> FocusedAxisTranspiler(IEnumerable<CodeInstruction> code)
+        {
+            MethodInfo getAxis = AccessTools.Method(typeof(UnityEngine.Input), "GetAxis", new[] { typeof(string) });
+            MethodInfo focused = AccessTools.Method(typeof(Hooks), "FocusedAxis");
+            foreach (CodeInstruction ci in code)
+            {
+                if ((ci.opcode == System.Reflection.Emit.OpCodes.Call) && Equals(ci.operand, getAxis)) ci.operand = focused;
+                yield return ci;
+            }
+        }
+        public static void Session_PublishEvent(string __0, object __1) { Campaign.OnPublishEvent(__0, __1); }
+        public static bool Campaign_SaveChampionParty(Game.Shared.Campaign.Messages.CampSysGeneral.Party.ChampionParty __0, ClientCampaignManager.PartyMembersCallback __1)
+        { Mercenaries.OnSaveParty(__0, __1); return false; }
+        public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
+            Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
+        { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
+        public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
+        public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
+        public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }
+        public static void TutorialRewards_Launch(System.Collections.Generic.IEnumerable<Game.Shared.ResourceId> __0) { Tutorial.OnRewards(__0); }
+        public static void TutorialManager_CtorPre(Game.Shared.ClientSessionBase __0) { Tutorial.BeforeScriptCopy(__0); }
+        public static void TutorialManager_CtorPost(Game.Shared.Tutorial.TutorialManager __instance) { Tutorial.AfterScriptCopy(__instance); }
+        public static void Player_HasStop(Game.Shared.Player __instance, Game.Shared.Player __0, Game.Shared.Mechanics.ETurnPhases __1, ref bool __result) { if (!__result) __result = Tutorial.ScriptStop(__instance, __0, __1); }
+        public static void Tutorial_BoardSetup(bool __result) { if (__result) Tutorial.OnBoardReset(); }
+        public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
+
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)
         {
             Patches.UILandingPage_OnClickChallengeAI(__instance);
-            return false;
-        }
-
-        public static bool UILandingPage_OnClickContinue(UILandingPageContext __instance)
-        {
-            Patches.UILandingPage_OnClickContinue(__instance);
             return false;
         }
 

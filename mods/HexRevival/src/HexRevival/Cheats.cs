@@ -20,6 +20,7 @@ namespace HexRevival
     ///   cheat find &lt;text&gt;               cards whose name contains the text
     ///   cheat give &lt;j|ia&gt; &lt;card name&gt;   puts the card in the hand
     ///   cheat res &lt;j|ia&gt; &lt;n&gt;               +n resources (total, current, thresholds of every color)
+    ///   cheat health &lt;j|ia&gt; &lt;n&gt;            sets the champion's health
     /// </summary>
     public static class Cheats
     {
@@ -60,18 +61,24 @@ namespace HexRevival
                         return "card not found";
                     GiveToHand(ss, p, t);
                     Server.MarkDirty();
-                    return "donne " + t.m_Name + " a " + p.m_PlayerId;
+                    return "gave " + t.m_Name + " to " + p.m_PlayerId;
+                }
+                case "health":
+                {
+                    // dev: "cheat health j 17" = sets the champion's health
+                    int h;
+                    if (!int.TryParse(parts[3], out h))
+                        return "invalid number";
+                    ss.SetChampionHealth(p.m_ChampionCard, h, false);
+                    Server.MarkDirty();
+                    return "health " + h + " for " + p.m_PlayerId;
                 }
                 case "res":
                 {
                     int n;
                     if (!int.TryParse(parts[3], out n))
                         return "invalid number";
-                    ss.IncrementPlayerTotalResourcePool(p, n, false);
-                    ss.IncrementPlayerCurrentResourcePool(p, n, false);
-                    foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
-                        ss.IncrementPlayerResourceThreshold(p, c, n, false);
-                    Server.MarkDirty();
+                    AddResources(ss, p, n);
                     return "resources +" + n + " for " + p.m_PlayerId;
                 }
             }
@@ -98,19 +105,53 @@ namespace HexRevival
             return card;
         }
 
-        private static StandaloneSession GetServer(StandaloneGameClient gc)
+        /// <summary>+n resources: total, current, and thresholds of every color.</summary>
+        internal static void AddResources(StandaloneSession ss, Player p, int n)
+        {
+            ss.IncrementPlayerTotalResourcePool(p, n, false);
+            ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            AddThresholds(ss, p, n);
+        }
+
+        /// <summary>
+        /// In-game cheat: +n maximum resources (the resources received each turn), also available
+        /// right away for the current turn. Shard thresholds are unchanged.
+        /// </summary>
+        internal static void AddResourcesOnly(StandaloneSession ss, Player p, int n)
+        {
+            ss.IncrementPlayerTotalResourcePool(p, n, false);
+            ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            Server.MarkDirty();
+        }
+
+        /// <summary>+n to the threshold of every shard color.</summary>
+        internal static void AddThresholds(StandaloneSession ss, Player p, int n)
+        {
+            foreach (ECardShards c in new[] { ECardShards.Blood, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild, ECardShards.Diamond })
+                ss.IncrementPlayerResourceThreshold(p, c, n, false);
+            Server.MarkDirty();
+        }
+
+        /// <summary>The player draws a card, as with a normal draw.</summary>
+        internal static void DrawCard(StandaloneSession ss, Player p)
+        {
+            ss.DrawCard(p, SessionCardId.Invalid, new TAC());
+            Server.MarkDirty();
+        }
+
+        internal static StandaloneSession GetServer(StandaloneGameClient gc)
         {
             FieldInfo f = typeof(StandaloneGameClient).GetField("m_SessionServer", BindingFlags.Instance | BindingFlags.NonPublic);
             return f == null ? null : f.GetValue(gc) as StandaloneSession;
         }
 
-        private static Player FindPlayer(StandaloneSession ss, string who)
+        internal static Player FindPlayer(StandaloneSession ss, string who)
         {
             bool wantAI = who.ToLower().StartsWith("ia") || who.ToLower().StartsWith("ai");
             foreach (Player p in ss.GetAllPlayers())
             {
                 if (p == null) continue;
-                bool isAI = p.m_PlayerId.GetUIDType() == UID.Type.AIPlayer;
+                bool isAI = Server.IsAIId(p.m_PlayerId);
                 if (isAI == wantAI) return p;
             }
             return null;

@@ -39,7 +39,7 @@ namespace HexRevival
         /// <summary>Deck to use for matches started by the mod: the last one saved.</summary>
         public static UID LastDeck = UID.Invalid;
 
-        private static string FilePath { get { return Path.Combine(LocalServer.Root, "HexRevival.decks.txt"); } }
+        private static string FilePath { get { return Saves.File("decks.txt"); } }
 
         // ------------------------------------------------------------------
         // Loading (at login, after the collection is generated)
@@ -55,7 +55,7 @@ namespace HexRevival
             {
                 if (File.Exists(FilePath)) Parse(File.ReadAllLines(FilePath));
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] lecture : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] read: " + e); }
             List<deck_bits> res = new List<deck_bits>();
             foreach (StoredDeck d in s_Decks.Values) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
             Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) loaded");
@@ -66,13 +66,61 @@ namespace HexRevival
         // Transactions
         // ------------------------------------------------------------------
 
-        /// <summary>Empty deck attached to a campaign champion (champion creation).</summary>
-        public static deck_bits CreateForChampion(string name, ulong championId)
+        /// <summary>A card given during the game (reward, starter deck) becomes usable in decks.</summary>
+        public static void AddToCollection(card_instance_bits c)
+        {
+            s_Collection[c.Id] = c;
+        }
+
+        /// <summary>Deck of a new campaign champion, filled with a starter deck (or empty).</summary>
+        public static deck_bits CreateForChampion(string name, ulong championId, Reckoning.Game.DeckTemplate starter)
         {
             StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? "", PveChampion = championId };
+            if (starter != null)
+                foreach (Reckoning.Game.TemplateCardStack st in starter.m_DeckResources)
+                    for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
             s_Decks[d.Id] = d;
             Save();
             return ToBits(d);
+        }
+
+        /// <summary>
+        /// Playable copy of a profile deck template (the boat's or a mercenary's deck lives in the profile's deck
+        /// templates, the match engine loads player decks): one stored deck per champion and template champion,
+        /// refilled. Returns its id.
+        /// </summary>
+        public static ulong FromTemplate(ulong championId, Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            StoredDeck d = null;
+            foreach (StoredDeck x in s_Decks.Values) if (x.PveChampion == championId && x.PvpChampion == t.Champ) { d = x; break; }
+            if (d == null) { d = new StoredDeck { Id = s_NextId++, PveChampion = championId }; s_Decks[d.Id] = d; }
+            d.Name = t.Name ?? "";
+            d.PvpChampion = t.Champ;
+            d.Sleeve = t.Sleeve;
+            d.Cards.Clear();
+            d.Side.Clear();
+            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
+                for (int i = 0; i < c.Count; i++) (c.Res ? d.Side : d.Cards).Add(c.Temp);
+            Save();
+            return d.Id;
+        }
+
+        /// <summary>A player deck as a profile deck template (null if unknown).</summary>
+        public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
+        {
+            StoredDeck d;
+            return s_Decks.TryGetValue(deckId, out d) ? Game.Shared.Profile.ProfileDeckTemplate.FromDeckBits(ToBits(d)) : null;
+        }
+
+        /// <summary>The champion's bits with a mercenary in its place (MercID), for the match engine.</summary>
+        private static champion_bits MercenaryBits(champion_bits c, ResourceId merc)
+        {
+            champion_bits m = new champion_bits();
+            m.Id = c.Id; m.Name = c.Name; m.Level = c.Level; m.ReckID = c.ReckID;
+            m.Race = c.Race; m.ChampionClass = c.ChampionClass; m.Gender = c.Gender;
+            m.ChampionStats = c.ChampionStats; m.ChampionTalents = new List<ResourceId>();
+            m.MercID = merc;
+            return m;
         }
 
         public class DeckInfo
@@ -167,6 +215,17 @@ namespace HexRevival
                 GetDeckDetailsResponse r = LocalServer.Ok<GetDeckDetailsResponse>();
                 r.Deckbits = b;
                 r.ChampionBits = null;
+                // Campaign battle: the champion card is built from the PvE champion (race, class,
+                // level, talents: portrait and health as in the original game), unless the
+                // encounter forces its own player deck.
+                champion_bits pveChamp = Campaign.BattleChampion != 0 && d.PveChampion == Campaign.BattleChampion ? Champions.Get(d.PveChampion) : null;
+                if (pveChamp != null && !EncounterForcesPlayerDeck())
+                {
+                    // A mercenary's deck: the mercenary plays (its card as champion, Src.Game InstantiateMercenaryCard).
+                    if (Mercenaries.IsMercenary(d.PvpChampion)) pveChamp = MercenaryBits(pveChamp, d.PvpChampion);
+                    b.PVPChampionId = ResourceId.Invalid;
+                    r.ChampionBits = pveChamp;
+                }
                 r.PlayerName = "";
                 return r;
             }
@@ -238,6 +297,28 @@ namespace HexRevival
         }
 
         /// <summary>deck_bits with copies from the collection (distinct copies per template).</summary>
+        /// <summary>True when the current encounter gives the human player a deck of its own.</summary>
+        private static bool EncounterForcesPlayerDeck()
+        {
+            try
+            {
+                object session = Server.CurrentSession;
+                if (session == null) return false;
+                System.Reflection.FieldInfo f = null;
+                for (Type t = session.GetType(); t != null && f == null; t = t.BaseType)
+                    f = t.GetField("m_Players", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly);
+                System.Collections.IEnumerable players = f != null ? f.GetValue(session) as System.Collections.IEnumerable : null;
+                if (players == null) return false;
+                foreach (object o in players)
+                {
+                    Game.Shared.Player p = o as Game.Shared.Player;
+                    if (p != null && !p.IsAI() && p.m_DeckTemplateID.IsValid) return true;
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] encounter deck: " + e.Message); }
+            return false;
+        }
+
         private static deck_bits ToBits(StoredDeck d)
         {
             deck_bits b = new deck_bits();
@@ -301,7 +382,7 @@ namespace HexRevival
                 }
                 File.WriteAllText(FilePath, sb.ToString());
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] sauvegarde : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] save: " + e); }
         }
 
         private static string Join(List<ResourceId> l)

@@ -12,12 +12,20 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   - one of the game's ~270 campaign and dungeon encounters (with their special rules),
   - one of the game's prebuilt decks,
   - or one of your own decks played by the AI.
-- **Full collection**: every card (4 copies, unlimited basic shards) and every equipment.
+- **Campaign**: your campaign champions on the game's own world maps, the Howling Plains (AZ1) and
+  the Alachian Sea (AZ2, reached by boat), with their quests, hubs and dialogues, the ten dungeons
+  (Castle Crayburn to the Ruins of Kukatan), mercenaries, and the sea voyages of your own ship.
+  Rewards follow what gameplay videos of the original game show (see [docs/PROGRESSION.md](docs/PROGRESSION.md));
+  see [How faithful is the campaign?](#how-faithful-is-the-campaign) for what may differ from the original.
+- **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
+  progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
+- The game's **tutorial** (5 short guided battles), offered when you create an account (a box to
+  untick if you don't want it), left at any time from the menu (Esc), replayable from Help.
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): the campaign world map, Frost Ring Arena, Siege, Battlegrounds, multiplayer.
+Not available (yet): Frost Ring Arena, Siege, Battlegrounds, multiplayer.
 
 ## Install and play
 
@@ -70,10 +78,43 @@ copy the content of the `mod` folder into the game folder yourself, then start t
 
 Use `HexRevival.exe` every time you want to play (it only reinstalls when a new version is needed).
 
-Your decks and champions are stored in the game folder (`HexRevival.decks.txt`, `HexRevival.champions.txt`).
+Your accounts (decks, champions, collection, campaign progress) are stored in the game folder, one
+folder per account in `HexRevivalSaves`.
 
 **Uninstall**: run `HexRevival.exe --uninstall` (your decks are kept).
 A Steam "Verify integrity of game files" does not remove the mod files, they are additions.
+
+## How faithful is the campaign?
+
+The original campaign ran on the game's servers, which are gone: the client files hold the maps,
+dialogues, encounters and quest templates, but not what the server decided (rewards, dungeon rules,
+some story branches). HEX Revival rebuilds these from the game's own data first, then from gameplay
+videos of 2016-2018 and community guides of the time. Every value and its source is listed in
+[docs/PROGRESSION.md](docs/PROGRESSION.md), where values chosen without a source are marked
+**PLACEHOLDER** and information that could not be found is marked as such. In short, what may differ
+from the original:
+
+- **Rewards**: most gold, XP and item rewards were read on reward windows of videos; the rest are
+  estimates (PLACEHOLDER). The contents of campaign packs are drawn at random from the right card set,
+  with estimated rarity weights (AZ1 packs follow a community loot table of 2016). The starting gold and
+  the starter collection of a new account are estimates.
+- **The original changed over time** (2016-2018 patches): where videos disagree, the mod follows the
+  most recent client, except for the ship's hull (below).
+- **Not reproduced, information not found**: the optional "Challenge Completed" bonus of dungeon
+  battles (+100% gold; its condition was never shown on screen), the rare extra item "Pappy Jasper's
+  Whip" after some dungeons, the Kraken's Dark Chamber (+1 charge), mercenary leveling, and sea weather
+  effects (never seen in any video).
+- **Choices made without a source**: the ship's hull is kept from battle to battle during a voyage (the
+  game's own texts and client code say so, but late-2017 videos show a full hull at every sea battle);
+  dungeon bonus gold (25% from a run's second win until its first defeat) was deduced from videos;
+  some story branches never seen on video (the Great Machine Graveyard when Brutecrown Bluff was not
+  played, the Kraken's "Mayor Died" branch, Kukatan's Tomb of Omens) and the Sister Midnight form
+  thresholds for Cunning and Instinct are estimates.
+- **Dungeon boons** (Kraken library and armory, Kukatan coins and berries, the Graveyard's Mega-Bot)
+  use the game's own effect cards, but how and when the server added them is reconstructed.
+
+Corrections backed by a source (a video, a screenshot, a guide of the time) are welcome: please open
+an issue.
 
 ## Known limitations
 

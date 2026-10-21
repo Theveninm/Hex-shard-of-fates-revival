@@ -95,7 +95,7 @@ namespace HexRevival
                 if (idx < 0 || idx >= found.Count) return "index out of range (" + found.Count + ")";
                 m.m_SelOpp = found[idx];
                 m.Fight();
-                return "combat : " + (m.m_SelMine != null ? m.m_SelMine.Label : "-") + " contre " + found[idx].Label + " " + m.m_Message;
+                return "fight: " + (m.m_SelMine != null ? m.m_SelMine.Label : "-") + " vs " + found[idx].Label + " " + m.m_Message;
             }
             return "unknown subcommand";
         }
@@ -117,7 +117,8 @@ namespace HexRevival
             if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
-            if (OnLandingPage()) EnsureLandingButton(); else m_LandingButton = null;
+            if (OnLandingPage()) { EnsureLandingButton(); EnsureLogoutButton(); Tutorial.OnLandingPage(); }
+            else { m_LandingButton = null; m_LogoutButton = null; }
         }
 
         private void SetOpen(bool open)
@@ -156,7 +157,7 @@ namespace HexRevival
             if (m_GameDecks == null) BuildTemplateLists();
         }
 
-        private static bool IsBattle(EncounterScene es, TemplateManager tm)
+        internal static bool IsBattle(EncounterScene es, TemplateManager tm)
         {
             if (es.m_EncounterPlayers == null) return false;
             foreach (EncounterPlayer p in es.m_EncounterPlayers)
@@ -229,7 +230,7 @@ namespace HexRevival
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] editeur : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] editor: " + e); }
         }
 
         private void Fight()
@@ -266,7 +267,7 @@ namespace HexRevival
                     foreach (UILabel l in m_LandingButton.GetComponentsInChildren<UILabel>())
                     {
                         if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
-                        string t = Loc.Get("quick_match");
+                        string t = Loc.Get("quick_match").ToLower();
                         if (l.text != t) l.text = t;
                     }
                 // The game may re-enable Frost Ring Arena afterwards (profile flags): hide it again.
@@ -288,48 +289,22 @@ namespace HexRevival
             if (existing != null) { m_LandingButton = existing.gameObject; return; }
             try
             {
-                GameObject b = (GameObject)UnityEngine.Object.Instantiate(src);
-                b.name = "HexRevival_QuickMatch";
-                b.transform.parent = parent;
-                b.transform.localPosition = src.transform.localPosition;
-                b.transform.localRotation = src.transform.localRotation;
-                b.transform.localScale = src.transform.localScale;
+                GameObject b = UiClone.Copy(src, "HexRevival_QuickMatch");
                 // At the very top of the column (above Campaign), on a darker background to
                 // show that this mode was added by the mod.
                 Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
                 b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
-                // Removes the game's bindings (localized text, commands to Frost Ring).
-                foreach (MonoBehaviour mb in b.GetComponentsInChildren<MonoBehaviour>(true))
-                {
-                    if (mb == null) continue;
-                    string n = mb.GetType().Name;
-                    if (n == "UILocalize" || n.IndexOf("Binding", StringComparison.Ordinal) >= 0 || n.StartsWith("Ngui", StringComparison.Ordinal)
-                        || n == "UIButtonMessage" || n == "UIEventTrigger")
-                        UnityEngine.Object.DestroyImmediate(mb);
-                }
-                foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true))
-                {
-                    l.text = Loc.Get("quick_match");
-                    l.color = new Color(1f, 0.84f, 0.42f);
-                }
-                // No padlock (the clone keeps one, hidden or not depending on the profile flags).
-                foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
-                    if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
-                // Green background lighter than the game's grey-blue buttons, gold letters and border.
-                Color dark = new Color(0.78f, 1f, 0.78f), darkHover = Color.white;
-                UISprite baseSprite = null;
-                foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
-                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) { sp.color = dark; if (baseSprite == null) baseSprite = sp; }
-                if (baseSprite != null) DecorateLandingButton(baseSprite, b);
+                StripClone(b, Loc.Get("quick_match"), Loc.Get("quick_match_tip"));
+                foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.color = new Color(1f, 0.84f, 0.42f);
+                // Green background lighter than the game's grey-blue buttons, gold letters and border
+                // (green / red like the confirm / cancel buttons of the game's dialogs).
+                StyleModButton(b, new Color(0.78f, 1f, 0.78f), new Color(0.6f, 0.85f, 0.6f), new Color(0.55f, 0.95f, 0.55f, 0.28f));
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
-                    ub.defaultColor = dark;
-                    ub.hover = darkHover;
-                    ub.pressed = new Color(0.6f, 0.85f, 0.6f);
-                    ub.disabledColor = dark;
                     ub.onClick.Clear();
                     ub.onClick.Add(new EventDelegate(() => SetOpen(true)));
                     ub.isEnabled = true;
+                    RightClick.Add(ub.gameObject, () => SetOpen(true));
                 }
                 b.SetActive(true);
                 src.SetActive(false);
@@ -340,9 +315,121 @@ namespace HexRevival
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexRevival] [Menu] bouton : " + e);
+                Debug.LogError("[HexRevival] [Menu] button: " + e);
                 m_LandingButton = src; // no new attempt every frame
             }
+        }
+
+        /// <summary>
+        /// Prepares a clone of a main menu button: keeps only its look (see UiClone), sets its text,
+        /// in lower case like the game's own buttons, and tooltip, hides its padlock.
+        /// </summary>
+        private static void StripClone(GameObject b, string label, string tooltip)
+        {
+            UiClone.Strip(b);
+            foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.text = label.ToLower();
+            foreach (UITooltipSetText t in b.GetComponentsInChildren<UITooltipSetText>(true))
+            {
+                t.TooltipLocalizationScript = null;
+                t.TooltipText = tooltip; // Localization.Get returns an unknown key as is
+            }
+            foreach (Transform t in b.GetComponentsInChildren<Transform>(true))
+                if (t != b.transform && t.name.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) t.gameObject.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------
+        // "Change account" button at the bottom of the main menu
+        // ------------------------------------------------------------------
+
+        private GameObject m_LogoutButton;
+
+        private void EnsureLogoutButton()
+        {
+            UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+            // The column has no room for one more button: the Collection button goes (the
+            // collection stays reachable from the deck editor of Quick Match and the game's menus).
+            if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
+            {
+                vm.MenuUI.Collection.gameObject.SetActive(false);
+                UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
+                if (g != null) g.Reposition();
+            }
+            if (m_LogoutButton != null)
+            {
+                foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
+                {
+                    string t = Loc.Get("switch_account").ToLower();
+                    if (l.text != t) l.text = t;
+                }
+                return;
+            }
+            if (vm == null || vm.MenuUI.Campaign == null) return;
+            GameObject src = vm.MenuUI.Campaign.gameObject;
+            Transform parent = src.transform.parent;
+            if (parent == null) return;
+            Transform existing = parent.Find("HexRevival_ChangeAccount");
+            if (existing != null) { m_LogoutButton = existing.gameObject; return; }
+            try
+            {
+                GameObject b = UiClone.Copy(src, "HexRevival_ChangeAccount");
+                b.transform.SetAsLastSibling();
+                StripClone(b, Loc.Get("switch_account"), Loc.Get("switch_account_tip"));
+                // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
+                Color red = new Color(1f, 0.55f, 0.5f);
+                foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
+                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = red;
+                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+                {
+                    if (ub.tweenTarget != null && ub.tweenTarget.GetComponent<UILabel>() != null) continue;
+                    ub.defaultColor = red;
+                    ub.hover = new Color(1f, 0.72f, 0.68f);
+                    ub.pressed = new Color(0.8f, 0.42f, 0.38f);
+                    ub.disabledColor = red;
+                }
+                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+                {
+                    ub.onClick.Clear();
+                    ub.onClick.Add(new EventDelegate(ChangeAccount));
+                    ub.isEnabled = true;
+                    RightClick.Add(ub.gameObject, ChangeAccount);
+                }
+                b.SetActive(true);
+                UIGrid grid = parent.GetComponent<UIGrid>();
+                if (grid != null) grid.Reposition();
+                m_LogoutButton = b;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[HexRevival] [Menu] change account button: " + e);
+                m_LogoutButton = src; // no new attempt every frame
+            }
+        }
+
+        /// <summary>
+        /// NGUI buttons ignore the right mouse button; the game's menu buttons react to it like a
+        /// left click (through components removed from our clones), so ours do the same.
+        /// </summary>
+        private class RightClick : MonoBehaviour
+        {
+            private Action m_Action;
+
+            public static void Add(GameObject go, Action action)
+            {
+                RightClick rc = go.GetComponent<RightClick>() ?? go.AddComponent<RightClick>();
+                rc.m_Action = action;
+            }
+
+            private void OnClick()
+            {
+                if (UICamera.currentTouchID == -2 && m_Action != null) m_Action();
+            }
+        }
+
+        /// <summary>Logs out (the game's own logout) and goes back to the account menu.</summary>
+        private static void ChangeAccount()
+        {
+            try { Singleton<Main>.Instance.RequestLogOut(); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Menu] logout: " + e); }
         }
 
         private static UIAtlas FindAtlas(string name)
@@ -352,8 +439,24 @@ namespace HexRevival
             return null;
         }
 
-        /// <summary>Light green veil and gold border over the button background, text on top.</summary>
-        private static void DecorateLandingButton(UISprite baseSprite, GameObject button)
+        /// <summary>Colored veil and gold border over the button background, text on top.</summary>
+        /// <summary>Tinted background, colored veil, gold border and gold letters for a mod button.</summary>
+        private static void StyleModButton(GameObject b, Color tint, Color pressed, Color veil)
+        {
+            UISprite baseSprite = null;
+            foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
+                if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) { sp.color = tint; if (baseSprite == null) baseSprite = sp; }
+            if (baseSprite != null) DecorateLandingButton(baseSprite, b, veil);
+            foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+            {
+                ub.defaultColor = tint;
+                ub.hover = Color.white;
+                ub.pressed = pressed;
+                ub.disabledColor = tint;
+            }
+        }
+
+        private static void DecorateLandingButton(UISprite baseSprite, GameObject button, Color veilColor)
         {
             UIAtlas frames = FindAtlas("A_Frames");
             if (frames == null) return;
@@ -363,7 +466,7 @@ namespace HexRevival
             veil.pivot = UIWidget.Pivot.Center;
             veil.width = baseSprite.width - 8;
             veil.height = baseSprite.height - 8;
-            veil.color = new Color(0.55f, 0.95f, 0.55f, 0.28f);
+            veil.color = veilColor;
             veil.depth = baseSprite.depth + 1;
             veil.transform.localPosition = new Vector3((0.5f - baseSprite.pivotOffset.x) * baseSprite.width, (0.5f - baseSprite.pivotOffset.y) * baseSprite.height, 0f);
             // Gold border: four lines (the tinted white sprite gives a clean gold).
@@ -566,7 +669,7 @@ namespace HexRevival
                     Refresh();
                 }));
             }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] suppression : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] delete: " + ex); }
         }
 
         /// <summary>Opens the Collection editor on this deck (or on a new deck if the id is invalid).</summary>
@@ -574,7 +677,7 @@ namespace HexRevival
         {
             SetOpen(false);
             try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.CardCollection, null); }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); return; }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editor: " + ex); return; }
             StartCoroutine(PrepareEditor(deck));
         }
 
@@ -610,7 +713,7 @@ namespace HexRevival
                 }
                 Debug.LogWarning("[HexRevival] [Menu] deck missing from the editor: " + deck);
             }
-            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editeur : " + ex); }
+            catch (Exception ex) { Debug.LogError("[HexRevival] [Menu] editor: " + ex); }
         }
 
         private void SwitchTab(Tab t)

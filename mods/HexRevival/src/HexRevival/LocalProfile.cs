@@ -16,14 +16,10 @@ namespace HexRevival
     /// function: PlayerProfile.GetUserProfileInfoResponse(GetUserProfileInfoResponse{ReckoningBits}),
     /// called at the end of HandleProfileStream. We give it that packet, built locally.
     ///
-    /// Step 1: generated full collection (4 copies of every collectible card, one version
-    /// per name) + gold. Deck saving comes next (UpdateDeck/AddNewDeck requests).
+    /// Cards, gold, decks and champions come from the current save (see Saves, Collection, Decks).
     /// </summary>
     public static class LocalProfile
     {
-        public const int CopiesPerCard = 4;
-        public const int StartingGold = 100000;
-
         private static PlayerProfile s_PendingProfile;
         private static UID s_PendingId;
         private static string s_PendingName;
@@ -50,97 +46,33 @@ namespace HexRevival
             reckoning_bits bits = new reckoning_bits();
             bits.ReckID = reckId.GetInstanceId();
             bits.Name = name;
-            bits.Gold = StartingGold;
-            bits.Platinum = 0;
-            bits.Level = 1;
+            bits.Gold = (int)Saves.Current.Gold;
+            bits.Platinum = (int)Saves.Current.Platinum;
+            bits.Level = Saves.Current.AccountLevel;
+            bits.ExperiencePoints = Saves.Current.AccountXp;
+            bits.XpGain = Saves.Current.XpInPeriod;
             bits.ProfileId = 1UL;
 
-            // One version per name: preferably the one from a "normal" set (sets 1 to 9, Immortal
-            // format); the editor filters by format and would ignore a PvE/promo version.
-            HashSet<ResourceId> mainSets = new HashSet<ResourceId>(Game.Shared.Resources.BuiltInResources.Format_Immortal);
-            Dictionary<string, CardTemplate> byName = new Dictionary<string, CardTemplate>();
-            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
-            {
-                if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
-                bool ownable;
-                try { ownable = t.IsOwnable(); } catch { ownable = false; }
-                if (!ownable) continue;
-                CardTemplate cur;
-                if (!byName.TryGetValue(t.m_Name, out cur)
-                    || (!mainSets.Contains(cur.m_SetId) && mainSets.Contains(t.m_SetId))
-                    || (mainSets.Contains(cur.m_SetId) == mainSets.Contains(t.m_SetId) && string.CompareOrdinal(t.m_Id.ToString(), cur.m_Id.ToString()) < 0))
-                    byName[t.m_Name] = t;
-            }
-            int templates = 0, main = 0;
-            ulong nextId = 1;
-            List<string> names = new List<string>(byName.Keys);
-            names.Sort(string.CompareOrdinal);
-            foreach (string n in names)
-            {
-                CardTemplate t = byName[n];
-                templates++;
-                if (mainSets.Contains(t.m_SetId)) main++;
-                // Basic shards: unlimited in a deck, we give 60.
-                int copies = CopiesPerCard;
-                try { if (t.IsBasicResource()) copies = 60; } catch { }
-                for (int i = 0; i < copies; i++)
-                {
-                    card_instance_bits c = new card_instance_bits();
-                    c.Id = nextId++;
-                    c.TemplateID = t.m_Id;
-                    c.CardStats = new Dictionary<ECardStatType, int>();
-                    c.OwnerReckId = reckId.GetInstanceId();
-                    c.EscrowStatus = "";
-                    bits.Cards.Add(c);
-                }
-            }
-            Debug.Log("[HexRevival] [Profile] versions kept: " + main + " from sets 1-9 out of " + templates);
+            foreach (card_instance_bits c in Collection.Build(reckId)) bits.Cards.Add(c);
 
-            // Basic shards: ALL versions (the game has two per color; some modes,
-            // e.g. the campaign, expect a specific version), 60 copies each.
-            HashSet<ResourceId> given = new HashSet<ResourceId>();
-            foreach (CardTemplate t in byName.Values) given.Add(t.m_Id);
-            int extraShards = 0;
-            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
-            {
-                bool basic;
-                try { basic = t != null && t.IsBasicResource() && t.IsOwnable(); } catch { basic = false; }
-                if (!basic || given.Contains(t.m_Id)) continue;
-                given.Add(t.m_Id);
-                extraShards++;
-                for (int i = 0; i < 60; i++)
-                {
-                    card_instance_bits c = new card_instance_bits();
-                    c.Id = nextId++;
-                    c.TemplateID = t.m_Id;
-                    c.CardStats = new Dictionary<ECardStatType, int>();
-                    c.OwnerReckId = reckId.GetInstanceId();
-                    c.EscrowStatus = "";
-                    bits.Cards.Add(c);
-                }
-            }
-            Debug.Log("[HexRevival] [Profile] extra shard versions: " + extraShards);
-
-            // Equipment (PvE champions): one copy of each, in the inventory.
-            int equip = 0;
-            ulong itemId = 1;
-            foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
-            {
-                if (!(item is InventoryEquipmentData)) continue;
-                inventory_bits inv = new inventory_bits();
-                inv.Id = itemId++;
-                inv.TemplateID = item.m_Id;
-                inv.ItemQuantity = 1;
-                inv.ClaimDate = DateTime.MinValue;
-                inv.EscrowStatus = "";
-                inv.OwnerReckId = reckId.GetInstanceId();
-                bits.InventoryIds.Add(inv);
-                equip++;
-            }
-            Debug.Log("[HexRevival] [Profile] equipements : " + equip);
+            // Equipment (PvE champions): see Inventory.
+            foreach (inventory_bits inv in Inventory.Build(reckId)) bits.InventoryIds.Add(inv);
 
             try { foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d); }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] decks : " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] decks: " + e); }
+
+            // Champions created before starter decks existed get one now (collection and decks reloaded).
+            try
+            {
+                if (Champions.EnsureDecks().Count > 0)
+                {
+                    bits.Cards.Clear();
+                    foreach (card_instance_bits c in Collection.Build(reckId)) bits.Cards.Add(c);
+                    bits.Decks.Clear();
+                    foreach (deck_bits d in Decks.Load(bits.Cards)) bits.Decks.Add(d);
+                }
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] champion decks: " + e); }
 
             Type respType = typeof(PlayerProfile).Assembly.GetType("Game.Client.Network.Profile.GetUserProfileInfoResponse");
             object resp = Activator.CreateInstance(respType);
@@ -157,7 +89,8 @@ namespace HexRevival
                 // cards/decks/gold are already loaded at this point.
                 Debug.Log("[HexRevival] [Profile] end of GetUserProfileInfoResponse ignored: " + (e.InnerException != null ? e.InnerException.Message : e.Message));
             }
-            Debug.Log("[HexRevival] [Profile] local profile loaded: " + templates + " cards x" + CopiesPerCard + ", gold " + StartingGold);
+            Progression.RefreshAccountUi();
+            Debug.Log("[HexRevival] [Profile] local profile loaded: account '" + Saves.Current.Name + "', " + bits.Cards.Count + " cards, gold " + bits.Gold);
         }
 
         private static void SetMember(object target, string name, object value)
