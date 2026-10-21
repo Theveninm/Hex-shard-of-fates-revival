@@ -499,7 +499,7 @@ namespace HexRevival
             });
         }
 
-        /// <summary>A bot's pick: the best rarity, then the colors it already drafts.</summary>
+        /// <summary>A bot's pick: the best card (the game AI's evaluation), favoring the colors it already drafts.</summary>
         private static void BotPick(Run r, int seat)
         {
             List<ResourceId> pack = r.Packs[seat];
@@ -511,9 +511,9 @@ namespace HexRevival
             {
                 CardTemplate t = Template(id);
                 if (t == null) continue;
-                float score = (int)t.m_CardRarity * 10 + UnityEngine.Random.value * 6;
+                float score = Value(id) + UnityEngine.Random.value * 2;
                 ECardShards c = Colors(t);
-                if (colors != ECardShards.Unknown && c != ECardShards.Unknown) score += (c & ~colors) == 0 ? 8 : -8;
+                if (colors != ECardShards.Unknown && c != ECardShards.Unknown) score += (c & ~colors) == 0 ? 2 : -2;
                 if (score > bestScore) { bestScore = score; best = id; }
             }
             pack.Remove(best);
@@ -600,7 +600,7 @@ namespace HexRevival
             return LimitedDeck(pool);
         }
 
-        /// <summary>A 40-card deck from a pool: its two main colors, 23 cards (the rarest), 17 basic shards.</summary>
+        /// <summary>A 40-card deck from a pool: its two main colors, its 23 best cards (the game AI's evaluation), 17 basic shards.</summary>
         private static DeckTemplate LimitedDeck(List<ResourceId> pool)
         {
             ECardShards colors = MainColors(pool);
@@ -612,7 +612,7 @@ namespace HexRevival
                 ECardShards c = Colors(t);
                 if (c == ECardShards.Unknown || (c & ~colors) == 0) cards.Add(t);
             }
-            cards.Sort((a, b) => b.m_CardRarity != a.m_CardRarity ? b.m_CardRarity.CompareTo(a.m_CardRarity) : a.m_ResourceCost.CompareTo(b.m_ResourceCost));
+            cards.Sort((a, b) => Value(b.m_Id).CompareTo(Value(a.m_Id)));
             if (cards.Count > 23) cards.RemoveRange(23, cards.Count - 23);
             DeckTemplate d = new DeckTemplate();
             d.m_Id = new ResourceId(Guid.NewGuid());
@@ -631,6 +631,27 @@ namespace HexRevival
             int total = 40 - cards.Count;
             for (int i = 0; i < shards.Count; i++) add(shards[i].m_Id, total / shards.Count + (i < total % shards.Count ? 1 : 0));
             return d;
+        }
+
+        private static readonly Dictionary<ResourceId, float> s_Values = new Dictionary<ResourceId, float>();
+
+        /// <summary>
+        /// A card's worth for the bots' picks and the AI's limited decks: the game AI's own card evaluation
+        /// (AITactical.GetValueFor, abilities, attack, defense, cost; used by the game only for a debug overlay)
+        /// plus the rarity. Cached.
+        /// </summary>
+        private static float Value(ResourceId id)
+        {
+            float v;
+            if (s_Values.TryGetValue(id, out v)) return v;
+            CardTemplate t = Template(id);
+            // Rarity weighs as much: the evaluator, made for a board in play, underrates the actions (removal...).
+            int rarity = t == null ? 0 : Mathf.Clamp((int)t.m_CardRarity - (int)ERarity.Common, 0, 3);
+            v = rarity * 2.5f;
+            try { v += 0.6f * Mathf.Clamp((float)Game.Shared.AI.AITactical.GetValueFor(new CardRepresentation(id)), 0f, 12f); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Battlegrounds] card value " + id + ": " + e.Message); }
+            s_Values[id] = v;
+            return v;
         }
 
         private static ResourceId RandomChampion()
@@ -776,6 +797,12 @@ namespace HexRevival
                     r.Deck.PVPChampionId = t.m_ChampionId;
                     Save();
                     return "deck: " + r.Deck.CardsInDeck.Count + " cards";
+                case "values":   // dev: the AI's value of the cards of a booster
+                    {
+                        string res2 = "";
+                        foreach (CardTemplate t2 in Progression.OpenPack(BoosterSet())) res2 += t2.m_CardRarity + " " + t2.m_Name + " = " + Value(t2.m_Id).ToString("0.00") + "\n";
+                        return res2;
+                    }
                 case "pick":
                     if (r == null || r.PackShown == null) return "no pack shown";
                     SelectDraftCard(id, r.PackId, r.PackShown[0].Id);
