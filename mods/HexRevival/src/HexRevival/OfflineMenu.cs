@@ -251,13 +251,12 @@ namespace HexRevival
         // "Quick Match" button in the game's main menu
         // ------------------------------------------------------------------
 
-        private GameObject m_LandingButton, m_HiddenFrostRing;
+        private GameObject m_LandingButton;
         private static readonly Color QuickMatchGold = new Color(1f, 0.78f, 0.25f);
 
         /// <summary>
         /// Adds "Quick Match" to the main menu's button column, by cloning the
-        /// Frost Ring Arena button (same look). It takes the place of Frost Ring Arena, a mode that
-        /// needs the official server.
+        /// Frost Ring Arena button (same look); the arena's own button stays (see Arena).
         /// </summary>
         private void EnsureLandingButton()
         {
@@ -270,13 +269,6 @@ namespace HexRevival
                         string t = Loc.Get("quick_match").ToLower();
                         if (l.text != t) l.text = t;
                     }
-                // The game may re-enable Frost Ring Arena afterwards (profile flags): hide it again.
-                if (m_HiddenFrostRing != null && m_HiddenFrostRing.activeSelf && m_LandingButton.name == "HexRevival_QuickMatch")
-                {
-                    m_HiddenFrostRing.SetActive(false);
-                    UIGrid g = m_LandingButton.transform.parent != null ? m_LandingButton.transform.parent.GetComponent<UIGrid>() : null;
-                    if (g != null) g.Reposition();
-                }
                 return;
             }
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
@@ -285,7 +277,6 @@ namespace HexRevival
             Transform parent = src.transform.parent;
             if (parent == null) return;
             Transform existing = parent.Find("HexRevival_QuickMatch");
-            m_HiddenFrostRing = src;
             if (existing != null) { m_LandingButton = existing.gameObject; return; }
             try
             {
@@ -307,7 +298,6 @@ namespace HexRevival
                     RightClick.Add(ub.gameObject, () => SetOpen(true));
                 }
                 b.SetActive(true);
-                src.SetActive(false);
                 UIGrid grid = parent.GetComponent<UIGrid>();
                 if (grid != null) grid.Reposition();
                 m_LandingButton = b;

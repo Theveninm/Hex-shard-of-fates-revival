@@ -93,7 +93,6 @@ namespace HexRevival
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
             apply("UILandingPageContext.OnClickChallengeAI", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickChallengeAI", Type.EmptyTypes, "UILandingPage_OnClickChallengeAI"));
-            apply("UILandingPageViewModel.OnFrostRingButtonClicked", () => Prefix(harmony, typeof(UILandingPageViewModel), "OnFrostRingButtonClicked", Type.EmptyTypes, "UILandingPageViewModel_OnFrostRingButtonClicked"));
 
             // Local campaign service: the client's campaign requests are answered by Campaign.
             Type ccm = typeof(ClientCampaignManager);
@@ -167,6 +166,24 @@ namespace HexRevival
                 apply("TournamentSharedMessaging.Send_Ladder_Top_100_Request", () => Prefix(harmony, tsm, "Send_Ladder_Top_100_Request", null, "Ladder_Top100"));
                 apply("TournamentSharedMessaging.Send_LadderFindMatch_Request", () => Prefix(harmony, tsm, "Send_LadderFindMatch_Request",
                     new[] { typeof(ulong), typeof(Game.Shared.Domain.deck_bits), typeof(bool), typeof(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderFindMatch.Response>>) }, "Ladder_FindMatch"));
+            }
+            // Frost Ring Arena on the game's own screens (see Arena.cs).
+            {
+                Type svc = typeof(Game.Shared.Network.SFS.IService);
+                Type cs = typeof(Game.Client.Network.Campaign.CampaignService);
+                Func<string, Type> handler = n => cs.GetNestedType(n).GetNestedType("ResponseHandler");
+                Type ad = typeof(Reckoning.Campaign.Messages.Arena.ArenaData), af = typeof(Reckoning.Campaign.Messages.Arena.ArenaFight), ac = typeof(Reckoning.Campaign.Messages.Arena.ArenaChallenger);
+                Action<string, Type[], string> request = (n, args, hook) =>
+                    apply("CampaignService." + n + ".Request", () => Prefix(harmony, cs.GetNestedType(n), "Request", args, hook));
+                request("JoinCampaignArena", new[] { typeof(ulong), handler("JoinCampaignArena"), typeof(string), typeof(int), svc }, "Arena_Join");
+                request("GetMasterListOfChallengers", new[] { typeof(ECampaignDifficulty), handler("GetMasterListOfChallengers"), typeof(string), typeof(int), svc }, "Arena_MasterList");
+                request("AssignArenaDeck", new[] { typeof(ulong), typeof(ECampaignDifficulty), handler("AssignArenaDeck"), typeof(string), typeof(int), svc }, "Arena_AssignDeck");
+                request("UpdateMCChallenge", new[] { ad, af, handler("UpdateMCChallenge"), typeof(string), typeof(int), svc }, "Skip");
+                request("DoArenaCashOut", new[] { ad, handler("DoArenaCashOut"), typeof(string), typeof(int), svc }, "Arena_CashOut");
+                request("DestroyArenaData", new[] { typeof(ulong), handler("DestroyArenaData"), typeof(string), typeof(int), svc }, "Arena_Destroy");
+                request("RefreshArenaInfo", new[] { ad, af, ac, handler("RefreshArenaInfo"), typeof(string), typeof(int), svc }, "Arena_Refresh");
+                apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
+                apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
             }
             apply("StandaloneSession.PublishEvent", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.StandaloneSession), "PublishEvent"), prefix: new HarmonyMethod(typeof(Hooks), "Session_PublishEvent")));
             apply("AuthoritativeSessionBase.EndGame (campaign)", () =>
@@ -356,6 +373,15 @@ namespace HexRevival
         public static bool Tournament_Reconnect(ulong __0) { Battlegrounds.Resume(__0); return false; }
         public static bool Tournament_SelectDraftCard(ulong __0, ulong __1, ulong __2) { Battlegrounds.SelectDraftCard(__0, __1, __2); return false; }
         public static bool Skip() { return false; }
+        public static bool Arena_Join(Game.Client.Network.Campaign.CampaignService.JoinCampaignArena.ResponseHandler __1) { Arena.Join(__1); return false; }
+        public static bool Arena_MasterList(Game.Client.Network.Campaign.CampaignService.GetMasterListOfChallengers.ResponseHandler __1) { Arena.MasterList(__1); return false; }
+        public static bool Arena_AssignDeck(ulong __0, Game.Client.Network.Campaign.CampaignService.AssignArenaDeck.ResponseHandler __2) { Arena.AssignDeck(__0, __2); return false; }
+        public static bool Arena_CashOut(Game.Client.Network.Campaign.CampaignService.DoArenaCashOut.ResponseHandler __1) { Arena.CashOut(__1); return false; }
+        public static bool Arena_Destroy(Game.Client.Network.Campaign.CampaignService.DestroyArenaData.ResponseHandler __1) { Arena.Destroy(__1); return false; }
+        public static bool Arena_Refresh(Game.Client.Network.Campaign.CampaignService.RefreshArenaInfo.ResponseHandler __3) { Arena.Refresh(__3); return false; }
+        public static void Arena_Start(UIArenaCampaignViewModel __instance) { Arena.OnScreenStart(__instance); }
+        public static bool Arena_Battle() { Arena.Battle(); return false; }
+
         public static bool Ladder_Record(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response>> __0)
         {
             Campaign.Enqueue(() => __0(new Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response> { Message = Battlegrounds.LadderRecordResponse() }));
@@ -410,11 +436,6 @@ namespace HexRevival
             return false;
         }
 
-        public static bool UILandingPageViewModel_OnFrostRingButtonClicked(UILandingPageViewModel __instance)
-        {
-            Patches.UILandingPageViewModel_OnFrostRingButtonClicked(__instance);
-            return false;
-        }
 
         public static void Login_AlwaysEnabled(UILoginDialogViewModel __instance)
         {

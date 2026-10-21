@@ -26,6 +26,8 @@ namespace HexRevival
 
         public class Pack
         {
+            /// <summary>The default pack's version: rewritten when the mod has a newer one.</summary>
+            public int Version;
             public string Name = "";
             public string Author = "";
             public string Description = "";
@@ -59,8 +61,8 @@ namespace HexRevival
             public int Noise = 50;
             /// <summary>Deck personality (EDeckPersonality): Default, Aggressive, Burn...</summary>
             public string Personality = "Default";
-            /// <summary>Arena: a boss (the last fight of a tier) or an elite.</summary>
-            public bool Boss, Elite;
+            /// <summary>Arena: a boss (the last fight of a tier), an elite, or a rare encounter (Uruunaz, Zakiir: only by chance).</summary>
+            public bool Boss, Elite, Rare;
             /// <summary>Relative chance to be picked in its tier.</summary>
             public int Weight = 1;
             public Handicap AI = new Handicap();
@@ -82,6 +84,7 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         public const string DefaultPackName = "Default";
+        private const int DefaultVersion = 2;   // 2: Frost Ring Arena tiers
 
         public static string Folder { get { return Path.Combine(LocalServer.Root, "HexRevivalOpponents"); } }
 
@@ -129,7 +132,10 @@ namespace HexRevival
             try
             {
                 Directory.CreateDirectory(Folder);
-                if (!File.Exists(PathOf(DefaultPackName))) Save(BuildDefault(), DefaultPackName);
+                Pack d = null;
+                if (File.Exists(PathOf(DefaultPackName)))
+                    JsonUtils.DeserializeJson(File.ReadAllBytes(PathOf(DefaultPackName)), (Pack x) => { d = x; });
+                if (d == null || d.Version < DefaultVersion) Save(BuildDefault(), DefaultPackName);
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] default pack: " + e.Message); }
         }
@@ -156,7 +162,7 @@ namespace HexRevival
         /// </summary>
         private static Pack BuildDefault()
         {
-            Pack p = new Pack { Name = DefaultPackName, Author = "HEX Revival",
+            Pack p = new Pack { Version = DefaultVersion, Name = DefaultPackName, Author = "HEX Revival",
                 Description = "The game's prebuilt decks; the AI plays better as you climb. No handicaps." };
             string[] ladderNames = { "Bronze", "Silver", "Gold", "Platinum", "Cosmic" };
             int[] ladderFrom = { 0, 10, 25, 45, 70 };
@@ -171,9 +177,62 @@ namespace HexRevival
             Tier g = new Tier { Mode = Gauntlet, Name = "Constructed gauntlet", From = 0, To = 99 };
             foreach (DeckTemplate d in decks) g.Opponents.Add(new Opponent { Name = d.m_DeckName, Prebuilt = d.m_DeckName, Skill = "Hard" });
             p.Tiers.Add(g);
+            AddArenaTiers(p);
             p.Tiers.Add(new Tier { Mode = Limited, Name = "Sealed and draft gauntlets", From = 0, To = 99,
                 Opponents = new List<Opponent> { new Opponent { Name = "Limited player", Skill = "Hard" } } });
             return p;
+        }
+
+        /// <summary>
+        /// The Frost Ring Arena's opponents: the game's "Arena_" decks (Src.Game). Their champions' health sorts them
+        /// (Src.HexCompendium, "Frost Ring Arena": tier 1 has its own pool, its opponents with 7 less health; elites have
+        /// more health; the Eternal Guardian is the tier 1 boss; Uruunaz and Zakiir are rare encounters): 15 = tier 1,
+        /// 19 = the Eternal Guardian, 23 = standard, 25 (or an "Elite" name) = elite, 30 = boss, 40 = rare.
+        /// Which boss belongs to which tier is not known (PLACEHOLDER: tiers 2 to 4 share the bosses; tier 4 takes their
+        /// elite versions and Hogarth, Master of the Arena).
+        /// </summary>
+        private static void AddArenaTiers(Pack p)
+        {
+            Tier t1 = new Tier { Mode = Arena, Name = "Arena tier 1", From = 1, To = 1 };
+            Tier t23 = new Tier { Mode = Arena, Name = "Arena tiers 2-3", From = 2, To = 3 };
+            Tier t4 = new Tier { Mode = Arena, Name = "Arena tier 4", From = 4, To = 4 };
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<DeckTemplate> decks = new List<DeckTemplate>();
+            foreach (DeckTemplate d in tm.Decks.Values) if (d != null && d.m_DeckName != null && d.m_DeckName.StartsWith("Arena_") && d.m_ChampionId.IsValid) decks.Add(d);
+            decks.Sort((a, b) => string.CompareOrdinal(a.m_DeckName + ChampionName(a.m_ChampionId), b.m_DeckName + ChampionName(b.m_ChampionId)));
+            foreach (DeckTemplate d in decks)
+            {
+                ChampionTemplate ch = tm.GetChampionTemplate(d.m_ChampionId);
+                if (ch == null) continue;
+                int health = ch.m_StartingHealth;
+                bool elite = ch.m_Name.Contains("Elite");
+                Opponent o = new Opponent { Name = ch.m_Name, Prebuilt = d.m_DeckName, Champion = ch.m_Name, Skill = "Hard" };
+                if (health <= 15) t1.Opponents.Add(o);
+                else if (health < 23) { o.Boss = true; t1.Opponents.Add(o); }
+                else if (health >= 40) { o.Rare = true; t23.Opponents.Add(o); t4.Opponents.Add(Copy(o)); }
+                else if (health >= 30)
+                {
+                    o.Boss = true;
+                    if (ch.m_Name.StartsWith("Hogarth")) { if (elite) t4.Opponents.Add(o); continue; }
+                    if (elite) t4.Opponents.Add(o); else t23.Opponents.Add(o);
+                }
+                else
+                {
+                    o.Elite = elite;
+                    t23.Opponents.Add(o);
+                    t4.Opponents.Add(Copy(o));
+                }
+            }
+            p.Tiers.Add(t1); p.Tiers.Add(t23); p.Tiers.Add(t4);
+        }
+
+        private static Opponent Copy(Opponent o)
+        {
+            Opponent c = null;
+            byte[] b = null;
+            JsonUtils.SerializeJson(o, (byte[] x) => { b = x; });
+            JsonUtils.DeserializeJson(b, (Opponent x) => { c = x; });
+            return c;
         }
 
         // ------------------------------------------------------------------
@@ -203,12 +262,15 @@ namespace HexRevival
             if (o.Cards == null || o.Cards.Count == 0)
             {
                 if (string.IsNullOrEmpty(o.Prebuilt)) return null;
-                foreach (DeckTemplate d in tm.Decks.Values) if (d != null && d.m_DeckName == o.Prebuilt && d.m_ChampionId.IsValid) return d;
+                // A few game decks share a name (an arena opponent and its elite): the champion tells them apart.
+                foreach (DeckTemplate d in tm.Decks.Values)
+                    if (d != null && d.m_DeckName == o.Prebuilt && d.m_ChampionId.IsValid && (string.IsNullOrEmpty(o.Champion) || ChampionName(d.m_ChampionId) == o.Champion)) return d;
                 Debug.LogWarning("[HexRevival] [Opponents] no prebuilt deck " + o.Prebuilt);
                 return null;
             }
+            // A stable id (the arena screens look the deck up in the game's templates, see Register).
             DeckTemplate res = new DeckTemplate();
-            res.m_Id = new ResourceId(Guid.NewGuid());
+            res.m_Id = new ResourceId(StableGuid("opponent|" + o.Name + "|" + o.Champion + "|" + string.Join(",", o.Cards.ToArray())));
             res.m_DeckName = o.Name;
             res.m_ChampionId = ChampionId(o.Champion);
             foreach (string line in o.Cards)
@@ -221,6 +283,34 @@ namespace HexRevival
                 res.m_DeckResources.Add(new TemplateCardStack { m_idTemplate = c.m_Id, m_Count = n });
             }
             return res.m_DeckResources.Count > 0 ? res : null;
+        }
+
+        private static string ChampionName(ResourceId id)
+        {
+            ChampionTemplate ch = Singleton<TemplateManager>.Instance.GetChampionTemplate(id);
+            return ch != null ? ch.m_Name : "";
+        }
+
+        public static Guid StableGuid(string text)
+        {
+            using (System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create())
+                return new Guid(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(text)));
+        }
+
+        /// <summary>
+        /// Adds a deck built from a pack to the game's deck templates (TemplateManager.m_Decks), for the screens
+        /// that show an opponent from its deck id (the arena's).
+        /// </summary>
+        public static void Register(DeckTemplate d)
+        {
+            if (d == null) return;
+            try
+            {
+                System.Reflection.FieldInfo f = typeof(TemplateManager).GetField("m_Decks", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                Dictionary<ResourceId, DeckTemplate> decks = f.GetValue(Singleton<TemplateManager>.Instance) as Dictionary<ResourceId, DeckTemplate>;
+                if (decks != null && !decks.ContainsKey(d.m_Id)) decks[d.m_Id] = d;
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] register " + d.m_DeckName + ": " + e.Message); }
         }
 
         private static Dictionary<string, CardTemplate> s_CardsByName;

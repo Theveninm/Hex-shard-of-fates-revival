@@ -294,12 +294,6 @@ namespace HexRevival
             StartOfflineEncounter("ChallengeAI");
         }
 
-        /// <summary>Replaces UILandingPageViewModel.OnFrostRingButtonClicked (dead screen) with a local encounter.</summary>
-        public static void UILandingPageViewModel_OnFrostRingButtonClicked(UILandingPageViewModel self)
-        {
-            OfflineMenu.Open();
-        }
-
         // ------------------------------------------------------------------
         // Match started from the mod's menu
         // ------------------------------------------------------------------
