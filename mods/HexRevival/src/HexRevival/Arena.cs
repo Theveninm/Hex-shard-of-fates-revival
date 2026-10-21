@@ -41,6 +41,8 @@ namespace HexRevival
             public int Current;                                     // index of the current fight
             public List<Opponents.Opponent> Opponents = new List<Opponents.Opponent>();   // by fight
             public List<ArenaReward> Loot = new List<ArenaReward>();
+            public bool CashedOut;                                  // the client asks twice (summary, then the loot window)
+            public int Gold;
         }
 
         private class Store
@@ -134,6 +136,11 @@ namespace HexRevival
         /// <summary>The arena screen starts: the client's reconnection check, never answered offline, lets it join.</summary>
         public static void OnScreenStart(object viewModel)
         {
+            // A notification flag left on by a window of a previous visit would queue every later window (the
+            // cash out among them) forever; the loot to show is kept in the client's own loot list.
+            ArenaClient client = Singleton<ArenaClient>.Instance;
+            client.m_UINotificationActive = false;
+            client.m_UINotificationQueue.Clear();
             LocalServer.Later(() =>
             {
                 try
@@ -325,11 +332,16 @@ namespace HexRevival
             else if (r.Info.Wins == 0) res.Error = EDoArenaCashOutError.FailedNoWins;
             else
             {
-                r.Loot.AddRange(Rewards.ForEnd(r));
+                if (!r.CashedOut)
+                {
+                    r.Loot.AddRange(Rewards.ForEnd(r));
+                    r.Gold = Rewards.Grant(r.Loot);
+                    r.CashedOut = true;
+                    Save();
+                }
                 res.AllLoot = r.Loot;
-                res.GoldWin = Rewards.Grant(r.Loot);
+                res.GoldWin = r.Gold;
                 res.Success = true;
-                Save();
             }
             Debug.Log("[HexRevival] [Arena] cash out: " + res.Error + ", " + res.AllLoot.Count + " rewards, " + res.GoldWin + " gold");
             LocalServer.Answer(typeof(CampaignService.DoArenaCashOut), res, handler);
