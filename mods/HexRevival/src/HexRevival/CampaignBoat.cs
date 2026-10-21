@@ -166,6 +166,9 @@ namespace HexRevival
                 // Naming conversation done: the talent window opens next (the location stays active).
                 Complete(st, active);
                 Quests.CompleteLoc(champ, "q_the_new_land", "Step1");
+                // The harbor master gives the three sea quests here, all at once (Src.Video: KVC 002 1:28:09,
+                // MyHotStream 2017-06-22 1:58: they appear in the tracker with the talent points window).
+                foreach (string q in SeaQuests) Quests.Start(champ, q);
                 Progression.OnShipNamed(champ);
                 return true;
             }
@@ -212,7 +215,8 @@ namespace HexRevival
             Quests.SetFlag(champ, "boat:voyage", "1");
             foreach (MapNode n in st.Z.Nodes)
                 if (IsSea(n) && n.Id != "NodeB02" && n.Id != "NodeB07" && n.Id != "NodeB12") st.Completed.Remove(n.Id);
-            // PLACEHOLDER: who gives the sea quests is unknown; they are given with the first voyage.
+            // "Must defeat all 3 in one voyage" (Src.Video): each voyage starts the sea quests over. Start: for a
+            // save named before the quests were given at the naming.
             foreach (string q in SeaQuests) { Quests.Start(champ, q); Quests.ResetProgress(champ, q); }
             Reveal(st, Port);
             st.ALoc = null;

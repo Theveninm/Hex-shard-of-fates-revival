@@ -241,15 +241,18 @@ by the dialogue's event. Quest objectives without ids in the templates are match
   the reward window (the original said "Ship Talent Point"). Sea battles' XP goes to the champion (Video).
 - Hull (the ship's health): the talents speak of a hull kept across encounters, but every sea battle of
   the videos starts at full hull, even within one voyage (Video: battles ended at 35, 14, 22, 33 and the
-  next began at 40): 40, or 60 with "Heavy Hull". Repair Crew and Water Town therefore change nothing
-  here (Water Town's repair was never seen). A sea battle lost sinks the ship: the game's "Your boat has
+  next began at 40): 40, or 60 with "Heavy Hull". Repair Crew (the client adds 5 to the battle's end
+  health, Game) and Water Town ("The shipwrights of the town offer to repair the damage to your hull.",
+  Game; never visited in the videos) therefore change nothing here. A sea battle lost sinks the ship: the game's "Your boat has
   sunk!" message, back to the harbor (Video, same text).
 - Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
   increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game). The
   Lighthouse gives the card Sea Spirit (Video).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
-  "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") start with the first voyage
-  (PLACEHOLDER: their giver is not on the videos, they are already in the tracker); their progress is
+  "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") are given by the harbor master at
+  the end of the ship naming, all at once, with the talent points (Video: KVC 002 1:28:09, MyHotStream
+  2017-06-22 1:58; no quest window, only the tracker; the harbor master's name and portrait are never
+  shown); their progress is
   reset when a voyage begins or ends; the harbor master (Node00B) takes the turn-ins ("Return to port"
   also ends the voyage). Rewards (Video): Pirates of the Alachian 500 gold, 1000 XP, Hired Horn Captain;
   Stormwatch 500 / 1000 + AZ2 pack; Lobster Tale 500 / 1000 + Hardshell Sealord; the three done: Alachian
@@ -274,18 +277,29 @@ of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ard
 battles with one reward (Video: one window for Echo Ridge).
 Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your
 first attempt"; Video, KVC 5 runs): a second gold line of 25% on every dungeon win from the run's second
-on, until the run's first defeat. Not done: the optional "Challenge Completed" line (+100% gold, its
-in-battle objectives are not known), Pappy Jasper's Whip (an extra drop twice after a boss, trigger
-unknown).
+on, until the run's first defeat. Not done, information not found:
+- the "Challenge Completed" line (+100% of the battle's gold, AZ1 and AZ2 dungeons, Video): its
+  condition is never shown (not on the map, the room dialog, the battle panel nor in battle; the client
+  has an objective widget the videos never show). 17 won battles compared, YES and NO, in vain: end
+  health, length, first try and dialog choice ruled out; a shard or card type in play fits them all but
+  stays a guess.
+- Pappy Jasper's Whip: a second reward window "You received a piece of equipment" after the closing
+  dialog of a dungeon's last node, twice (KVC, 25 and 27 Dec 2016), absent from 6 other runs: no text
+  explains it (a random drop or a Christmas event).
 Dungeon boons, "for the remainder of the dungeon" (Game: the conversations' texts), are the game's own
 effect cards that no scene uses (set PvE_AZ2_Created_Effects), added to every later battle of the run:
 Kraken Town Square library "Scrolls of Portsmeare" or armory "Portsmeare Armaments", Algae Cave
 "Discovered Lost Riches"; Kukatan Dead End "Pocket of Lucky Coins" (Coins of Kismet), Buzzing Tangle "Fist
 Full of Berries" (Polyberry Pouch); the Graveyard's repaired robot "Robot Helper (Basic / Cannon / Shield /
-Bopper / ... / Maxed)" by the weapons installed (Mega-Bot 1000-8000; that it joins every battle once
-assembled is PLACEHOLDER). Not reproduced: the Kraken's Dark Chamber (+1 charge: no matching card).
-PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown was not played (Vargar),
-"Mayor Died" in the Kraken (never chosen), the mercenaries Mayor Galway and Sister of the Herd.
+Bopper / ... / Maxed)" by the weapons installed (Video, KVC 003: the Mega-Bot 1000, then 3000, 5000,
+8000 card in every battle after the robot's repair and each weapon). Not reproduced: the Kraken's Dark Chamber (+1 charge: no matching card).
+The mercenaries Mayor Galway (reward line of the Portsmeare A battle) and Sister of the Herd (Video,
+KVC 002 0:27:02 and 004 0:04:06). PLACEHOLDER: the Brutecrown ally used by the Graveyard when Brutecrown
+was not played (Vargar), "Mayor Died" in the Kraken (never chosen).
+Not found: the sea weather effect cards (Lightning Strikes!, Turbulent Seas, Capsize, Smooth Sailing)
+and the other unused boons (Arcanofuel Radiation, Wild Brawl, Dross Explosion, Mosquito Gorge, Enraged
+Animals, Grim Conversion): no video shows them (the battles' TERRAIN EFFECTS panel only lists the
+scene's own effects), so they are not used.
 
 ### Mercenaries
 
