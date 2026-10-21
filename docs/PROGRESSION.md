@@ -407,14 +407,37 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Prizes | one booster (opened) per match won | PLACEHOLDER |
 | Boosters of sealed and draft | Doombringer (the last set) | PLACEHOLDER: the server chose the product |
 | Basic shards in a limited pool | 20 of each | PLACEHOLDER |
-| Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (best rarity, then their colors) | PLACEHOLDER (timer); the passing order is the usual one |
-| Opponents | constructed: one of the game's prebuilt decks with a PvP champion; draft: another drafter's picks; sealed: a pool of 6 boosters; limited decks are 23 cards of the pool's two main colors + 17 shards | PLACEHOLDER |
+| Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (see AI opponents) | PLACEHOLDER (timer); the passing order is the usual one |
+| Opponents | constructed: the opponent pack (see AI opponents); draft: another drafter's picks; sealed: a pool of 6 boosters | PLACEHOLDER |
 | Ladder (ranked) | a star lost per loss; a star per win, one more from the second win in a row; never below 0; unranked and Immortal matches change nothing; no tier rewards | Steam2016 (a player, Sep 2016: "lose 1 star per loss", "1 extra for a win streak of 2 or more"; matches were best of 3 then); floor at 0 PLACEHOLDER; the tiers are the client's own (Game LadderTiers) |
 | Account XP | none for Battlegrounds games | PLACEHOLDER |
 
 A best-of-3 match is played one game at a time: after each game the player is back in the deck builder
 (reserve changes allowed) and "Play a Game" plays the next one. Runs are saved (battlegrounds.json) and
 resumed from the list. Swiss and single-elimination tournaments ("Special" tab) are not available.
+
+## AI opponents
+
+The opponents of the modes that had human players (ladder, gauntlets) come from an "opponent pack":
+a JSON file of the `HexRevivalOpponents` folder (next to Hex.exe), chosen per account and edited in game
+(Quick Match menu > AI opponents). A pack lists tiers (ladder stars, constructed gauntlet wins, sealed/draft
+gauntlets, arena tier) and, in each tier, opponents drawn at random (by their frequency):
+
+| Setting | Effect |
+|---|---|
+| Deck | a deck of the game, or card names ("4 Crackling Bolt") with a champion: imported from your decks in the editor |
+| AI skill | the game AI's own levels (EDifficulty, Easy to Hard: each level adds a skill such as combat tricks, bluffs, pre-emptive removal) |
+| Imprecision | the noise the AI adds to its card values (the game's default 50) |
+| Style | the deck personality (Aggressive, Burn...) that weighs the AI's choices |
+| Handicaps (AI and player) | health (+/-), resources in play, charges, extra cards: applied after the mulligan |
+
+The default pack (`Default.json`, read-only, rewritten if deleted) uses the game's prebuilt decks with a PvP
+champion, with the AI from Medium (Bronze) to Hard (Platinum and Cosmic) and no handicap (PLACEHOLDER: the
+original opponents were players). To share a pack, copy its file into another player's folder.
+
+In sealed and draft gauntlets the pack only sets the AI's skill, style and handicaps: the game's AI cannot draft or
+build a deck (the server did), so the mod's bots pick by the game AI's own card evaluation plus rarity and favor
+their colors, and an AI limited deck is the 23 best cards of its two main colors plus 17 shards (PLACEHOLDER).
 
 ## Tutorial
 
