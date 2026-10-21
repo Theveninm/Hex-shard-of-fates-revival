@@ -22,6 +22,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   simulated (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
   against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
+- **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
+- **AI opponents**: shareable opponent packs (decks, AI skill, handicaps), edited in game.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
@@ -32,7 +34,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): Frost Ring Arena, Swiss and single-elimination tournaments, multiplayer.
+Not available (yet): Swiss and single-elimination tournaments, the arena's challenges, multiplayer.
 
 ## Install and play
 
