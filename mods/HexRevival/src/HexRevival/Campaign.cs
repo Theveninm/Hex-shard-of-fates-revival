@@ -1727,6 +1727,15 @@ namespace HexRevival
                     if (s != null && string.Equals(s.m_Name, name, StringComparison.OrdinalIgnoreCase)) return Describe(s);
                 // not an exact name: the dump below (names containing it)
             }
+            if (sub == "zoomdbg")
+            {
+                // dev: why the map does not zoom (the dungeon/world map camera ignores the wheel while its GUI is shown)
+                UIDungeonCameraController cc = UnityEngine.Object.FindObjectOfType<UIDungeonCameraController>();
+                UIDungeonZoneViewModel vm = UnityEngine.Object.FindObjectOfType<UIDungeonZoneViewModel>();
+                UIDungeonZoneContext ctx = vm != null ? vm.Context as UIDungeonZoneContext : null;
+                return "camera=" + (cc != null) + (cc != null ? " allowZoom=" + cc.AllowZoom + " enabled=" + cc.enabled : "") + " displayGUI=" + (ctx != null ? ctx.DisplayGUI.ToString() : "?")
+                    + " unity focused=" + Application.isFocused + " window active=" + WindowFocus.IsActive() + " hover=" + UICamera.hoveredObject + " scrollAxis=" + (UICamera.first != null ? UICamera.first.scrollAxisName : "?");
+            }
             if (sub == "deckcheck")
             {
                 // dev: why the current champion's campaign deck is invalid (the client's own validator)

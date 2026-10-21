@@ -131,7 +131,7 @@ namespace HexRevival
             apply("UICamera.GetAxis (focus)", () =>
             {
                 UICamera.GetAxisFunc orig = UICamera.GetAxis;
-                UICamera.GetAxis = axis => UnityEngine.Application.isFocused ? orig(axis) : 0f;
+                UICamera.GetAxis = axis => { float v = orig(axis); return v == 0f || HexRevival.WindowFocus.IsActive() ? v : 0f; };
             });
             apply("UIBattle.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIBattle), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
             apply("UIPopupList.LateUpdate (focus)", () => harmony.Patch(AccessTools.Method(typeof(UIPopupList), "LateUpdate"), transpiler: new HarmonyMethod(typeof(Hooks), "FocusedAxisTranspiler")));
@@ -316,7 +316,7 @@ namespace HexRevival
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         /// <summary>Input.GetAxis, 0 while the game window does not have the focus.</summary>
-        public static float FocusedAxis(string axis) { return UnityEngine.Application.isFocused ? UnityEngine.Input.GetAxis(axis) : 0f; }
+        public static float FocusedAxis(string axis) { float v = UnityEngine.Input.GetAxis(axis); return v == 0f || HexRevival.WindowFocus.IsActive() ? v : 0f; }
         public static IEnumerable<CodeInstruction> FocusedAxisTranspiler(IEnumerable<CodeInstruction> code)
         {
             MethodInfo getAxis = AccessTools.Method(typeof(UnityEngine.Input), "GetAxis", new[] { typeof(string) });
