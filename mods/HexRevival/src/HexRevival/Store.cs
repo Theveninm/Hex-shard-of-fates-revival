@@ -29,6 +29,7 @@ namespace HexRevival
         private const float PrimalChance = 0.02f;
 
         private static List<StoreItem> s_Items;
+        private static bool s_ItemsInGold;
 
         /// <summary>A product of the store: what it is, its price, its currency, its tab.</summary>
         private class Product
@@ -42,7 +43,7 @@ namespace HexRevival
         private static readonly Dictionary<ulong, Product> s_Products = new Dictionary<ulong, Product>();
 
         /// <summary>Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary>
-        private const int GoldPerPlatinum = 10;
+        public const int GoldPerPlatinum = 10;
 
         // Prize Exchange (Src.HexTCG2018: "Introducing Cosmic Coins and Siege Sacks", May 2018).
         private static readonly Dictionary<string, KeyValuePair<string, int>> Exchange = new Dictionary<string, KeyValuePair<string, int>>
@@ -70,7 +71,9 @@ namespace HexRevival
         /// </summary>
         private static List<StoreItem> Items()
         {
-            if (s_Items != null) return s_Items;
+            bool goldPrices = Saves.Current == null || Saves.Current.GoldPrices;
+            if (s_Items != null && s_ItemsInGold == goldPrices) return s_Items;
+            s_ItemsInGold = goldPrices;
             s_Items = new List<StoreItem>();
             s_Products.Clear();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
@@ -78,6 +81,8 @@ namespace HexRevival
             {
                 Product p = Price(item, tm);
                 if (p == null) continue;
+                // Accounts without "platinum prices in gold": the platinum price (every gold price here is one).
+                if (!goldPrices && p.Currency == "Gold") { p.Currency = "Platinum"; p.Price = Math.Max(1, p.Price / GoldPerPlatinum); }
                 StoreItem s = new StoreItem();
                 s.id = (ulong)(s_Items.Count + 1);
                 s.TemplateId = item.m_Id;
@@ -163,7 +168,7 @@ namespace HexRevival
             r.TransactionCurrencyType = currency;
             long cost = p != null ? (long)p.Price * quantity : 0;
             if (p == null || Saves.Current == null) SetError(r, "TransactionFailed");
-            else if (!Pay(currency, cost)) SetError(r, currency == "Gold" ? "InsufficientGold" : "InsufficientCurrency");
+            else if (!Pay(currency, cost)) SetError(r, currency == "Gold" ? "InsufficientGold" : "InsufficientCurrency");   // not InsufficientPlatinum: the client offers to buy platinum
             else
             {
                 try
@@ -196,6 +201,10 @@ namespace HexRevival
                 case "Gold":
                     if (Saves.Current.Gold < cost) return false;
                     Saves.Current.Gold -= cost;
+                    break;
+                case "Platinum":
+                    if (Saves.Current.Platinum < cost) return false;
+                    Saves.Current.Platinum -= cost;
                     break;
                 case "CosmicCoin":
                     if (Saves.Current.CosmicCoins < cost) return false;

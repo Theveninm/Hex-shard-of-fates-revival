@@ -180,7 +180,7 @@ namespace HexRevival
             d.MaxPlayers = 0;
             d.MaxRounds = g.MaxMatches;
             d.Players = new string[0];
-            d.tournamentFees = new Dictionary<int, TournamentEntryInfo> { { 0, new TournamentEntryInfo { goldCost = g.GoldFee } } };
+            d.tournamentFees = new Dictionary<int, TournamentEntryInfo> { { 0, FeeInPlatinum ? new TournamentEntryInfo { platCost = g.GoldFee / HexRevival.Store.GoldPerPlatinum } : new TournamentEntryInfo { goldCost = g.GoldFee } } };
             d.tournamentRewards = new TournamentRewardCollection();
             InventoryItemData booster = Booster();
             if (booster != null)
@@ -265,10 +265,12 @@ namespace HexRevival
             if (g == null || Saves.Current == null) res.Error = EEnterTournamentError.InvalidTouranmentError;
             else if (r == null)
             {
-                if (Saves.Current.Gold < g.GoldFee) res.Error = EEnterTournamentError.DoesNotMeetPrereqsError;
+                bool plat = FeeInPlatinum;
+                long fee = plat ? g.GoldFee / HexRevival.Store.GoldPerPlatinum : g.GoldFee;
+                if ((plat ? Saves.Current.Platinum : Saves.Current.Gold) < fee) res.Error = EEnterTournamentError.DoesNotMeetPrereqsError;
                 else
                 {
-                    Saves.Current.Gold -= g.GoldFee;
+                    if (plat) Saves.Current.Platinum -= fee; else Saves.Current.Gold -= fee;
                     Saves.SaveCurrent();
                     ShowBalance();
                     r = Start(g, deckId);
@@ -282,6 +284,9 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Battlegrounds] enter " + id + " -> " + res.Error);
             LocalServer.Answer(typeof(TournamentsService.EnterTournament), res, handler);
         }
+
+        /// <summary>Accounts without "platinum prices in gold" pay the entries in platinum (the gold fees are platinum x 10).</summary>
+        private static bool FeeInPlatinum { get { return Saves.Current != null && !Saves.Current.GoldPrices; } }
 
         private static void ShowBalance()
         {
@@ -820,16 +825,18 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// End of a ranked ladder match: PLACEHOLDER rules (not known): a star won or lost, never below 0.
-        /// Returns true if it was a ladder match.
+        /// End of a ranked ladder match (Src.Steam2016, a player in Sep 2016: "you lose 1 star per loss", "1 extra
+        /// for a win streak of 2 or more"; matches were best of 3, a 2-0 gave 2 stars: here every game is a match,
+        /// so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match.
         /// </summary>
         public static bool OnLadderGameEnded(bool won)
         {
             if (!s_LadderBattle) return false;
             s_LadderBattle = false;
             LadderRecord l = Data.Ladder;
-            l.ConstructedStars = Math.Max(0, l.ConstructedStars + (won ? 1 : -1));
-            l.ConstructedStreak = won ? Math.Max(1, l.ConstructedStreak + 1) : 0;
+            l.ConstructedStreak = won ? l.ConstructedStreak + 1 : 0;
+            int stars = won ? 1 + (l.ConstructedStreak >= 2 ? 1 : 0) : -1;
+            l.ConstructedStars = Math.Max(0, l.ConstructedStars + stars);
             l.ConstructedMax = Math.Max(l.ConstructedMax, l.ConstructedStars);
             Save();
             Notices.Show("Ladder: " + l.ConstructedStars + " stars");

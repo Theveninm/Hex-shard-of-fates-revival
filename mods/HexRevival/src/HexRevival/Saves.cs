@@ -32,12 +32,16 @@ namespace HexRevival
             /// <summary>The game's tutorial is to be played at the next login (chosen when the account was created).</summary>
             public bool TutorialPending;
             public int CosmicCoins;        // Cosmic Coins (earned at the Cosmic tier of the ladders)
+            /// <summary>
+            /// What sold for platinum sells for gold (platinum cannot be earned offline, only by cheats or chosen at
+            /// creation). Chosen when the account is created; always on for "unlock everything" accounts.
+            /// </summary>
+            public bool GoldPrices = true;
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
 
         public const long UnlockedGold = 100000;
-        public const long StartingGold = 500;
 
         private static Info s_Current;
 
@@ -85,10 +89,17 @@ namespace HexRevival
             return null;
         }
 
-        public static Info Create(string name, bool unlockAll, bool tutorial = false)
+        /// <summary>
+        /// A new account. On progression accounts, the player chooses the gold and platinum to start with (0 by
+        /// default) and whether platinum prices are converted to gold.
+        /// </summary>
+        public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
-            Info i = new Info { Name = name, UnlockAll = unlockAll, Gold = unlockAll ? UnlockedGold : StartingGold, LastPlayed = DateTime.Now, TutorialPending = tutorial };
+            Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
+            i.Gold = unlockAll ? UnlockedGold : Math.Max(0, gold);
+            i.Platinum = unlockAll ? 0 : Math.Max(0, platinum);
+            i.GoldPrices = unlockAll || goldPrices;
             Write(i);
             return i;
         }
@@ -138,6 +149,7 @@ namespace HexRevival
                     else if (k == "periodstart") { long t; if (long.TryParse(v, out t)) i.PeriodStart = new DateTime(t); }
                     else if (k == "tutorial") i.TutorialPending = v == "1";
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
+                    else if (k == "goldprices") i.GoldPrices = v != "0";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -162,6 +174,7 @@ namespace HexRevival
                     "periodstart=" + i.PeriodStart.Ticks,
                     "tutorial=" + (i.TutorialPending ? "1" : "0"),
                     "cosmic=" + i.CosmicCoins,
+                    "goldprices=" + (i.GoldPrices ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

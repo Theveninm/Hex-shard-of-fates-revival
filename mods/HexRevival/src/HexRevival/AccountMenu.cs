@@ -20,6 +20,8 @@ namespace HexRevival
         private string m_Name = "";
         private bool m_Unlock;
         private bool m_Tutorial = true;
+        private bool m_GoldPrices = true;
+        private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_Error;
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
@@ -118,6 +120,7 @@ namespace HexRevival
             {
                 m_Screen = Screen.Create;
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
+                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0";
             }
 
             for (int i = 0; i < m_Saves.Count; i++)
@@ -149,7 +152,17 @@ namespace HexRevival
             m_Unlock = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
             y += 84 * S;
             m_Tutorial = Checkbox(new Rect(area.x, y, area.width, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
-            y += 104 * S;
+            y += 96 * S;
+            // Progression accounts only (an "unlock everything" account has its gold and gold prices).
+            if (!m_Unlock)
+            {
+                m_GoldPrices = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc"));
+                y += 80 * S;
+                float half = (area.width - 20 * S) / 2f;
+                m_StartGold = NumberField(new Rect(area.x, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
+                m_StartPlatinum = NumberField(new Rect(area.x + half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
+                y += 78 * S;
+            }
 
             if (!string.IsNullOrEmpty(m_Error))
                 GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
@@ -161,8 +174,29 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum)));
             }
+        }
+
+        /// <summary>A labeled field that only takes digits; returns the new text.</summary>
+        private static string NumberField(Rect r, string title, string value, string control)
+        {
+            float S = GameSkin.Scale;
+            GameSkin.Label(new Rect(r.x, r.y, r.width, 28 * S), title, GameSkin.Style("title", 17, GameSkin.Gold));
+            Rect field = new Rect(r.x, r.y + 30 * S, r.width, 38 * S);
+            GameSkin.Sprite(field, "A_Frames", "Frame_Inner");
+            GUI.DrawTexture(new Rect(field.x + 2, field.y + 2, field.width - 4, field.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
+            GUI.SetNextControlName(control);
+            string text = GUI.TextField(field, value ?? "", 9, GameSkin.Field);
+            System.Text.StringBuilder digits = new System.Text.StringBuilder();
+            foreach (char c in text) if (c >= '0' && c <= '9') digits.Append(c);
+            return digits.ToString();
+        }
+
+        private static long Amount(string text)
+        {
+            long v;
+            return long.TryParse(text, out v) ? v : 0;
         }
 
         /// <summary>Check box with a title and a one-line description; returns the new value.</summary>
