@@ -356,6 +356,41 @@ the battle's rewards go to the champion (Game: the client shows them to the cham
 | Ruins of Kukatan (Myaa, KVC) | 1500 | 2100 | Ruins of Kukatan pack, sleeve Chronicles of Entrath: Chapter 2 |
 | Raiders of the Crossed Dark (Two Tomahawks, KVC) | 750 | 1100 | Darkspire Acolyte |
 
+## Siege
+
+The original Siege (2018) was asynchronous PvP: a player stakes gold or platinum (the bounty) on a
+defense of 3 of their decks, played by the AI with a personality chosen per deck; other players pay a
+fee to attack it and must beat the 3 decks in a row, in one session. Everything was decided by the
+server; the mod answers the client's Siege requests itself (`Siege.cs`).
+
+| What | Value | Source |
+|---|---|---|
+| Minimum bounty | 1000 gold or 50 platinum | Video (rules screen, MyHotStream 2018-05-29 and 2018-06-03) |
+| Fee to attack | 40% of the bounty, rounded up | Video (rules screen; every row of the keep list) |
+| Fee split | 50% to the defender at once, 37.5% added to the bounty, the rest lost (all rounded up) | Video (rules screen; the defender's "-570" after two attacks on 1000) |
+| Attack won (3 decks beaten) | the attacker takes the whole bounty and the Siege Sacks; the defender gets the Siege Sacks too | Video (A 31:49 "Earned: 1150 gold, 11 sacks"; A 0:40 defender "Lost: -570, 15 sacks") |
+| Attack lost or withdrawn | the defense keeps its bounty (+1 win), no refund of the fee | Video (A 7:52) |
+| Withdrawing a defense | the bounty comes back, no Siege Sacks | Video (rules screen) |
+| Siege Sacks of a defense | 2 per hour of age + 1 per 1000 gold (or 1 per 5 platinum) of bounty, at most 500 | Game (the client's own formula) |
+| Between two games | 27 s countdown, the game loads at 9 s | Video (A 1:50-2:17) |
+| Rules of the battles | the game's own Siege rules (20-minute clocks, the defender's message, equipment allowed for the defender) | Game |
+
+Without other players:
+- **Defenses to attack**: placeholder defenses (PLACEHOLDER), shared by every account
+  (`HexRevivalSaves/siege_world.json`): 40 in gold, 10 in platinum, each made of 3 of the game's prebuilt
+  decks with a PvP champion and an AI personality, with invented player names. Most hold the minimum
+  bounty, some more, with a record of wins that follows the bounty rule (Video: the keep list shows mostly
+  1000-gold defenses, a few up to 93,056). A beaten defense is replaced by a new one. The source of
+  defenses is an interface (`IKeepSource`): other players' defenses could come from a server later.
+- **Attacks on the player's defense**: placeholder attackers (PLACEHOLDER), AIs simulating players of
+  varied skill: one attack every 2 hours on average while the defense is active (counted from the time
+  spent away too), each attacker with a 30, 45, 60 or 75% chance to beat each defense deck. The other
+  defenses of the list are attacked the same way, so that the list lives.
+- No Siege battle gives account XP (PLACEHOLDER: not known).
+- Not done: spending Siege Sacks in the Store ("Siege Sacks can be spent in the Store to earn various
+  prizes", Game: Siege overview); the store items priced in Siege Sacks are not known yet. Replays of
+  the defense's battles (the log's replay buttons) are not recorded.
+
 ## Tutorial
 
 The game's own tutorial (5 scripted battles, Game). It starts after creating an account when "Play

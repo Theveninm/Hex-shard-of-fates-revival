@@ -610,6 +610,14 @@ namespace HexRevival
         // Dev command: "siege state | attack | sacks <n>"
         // ------------------------------------------------------------------
 
+        private static string DevRequest(object request)
+        {
+            string result = "sent";
+            OnRequest(Write(request), r => { });
+            siege_bits s = ActiveDefense();
+            return result + "; active defense: " + (s != null ? s.Id + " " + s.CurStatus + " " + s.Pot : "none");
+        }
+
         public static string Command(string[] parts)
         {
             string sub = parts.Length > 1 ? parts[1] : "state";
@@ -625,10 +633,21 @@ namespace HexRevival
             if (sub == "defend")
             {
                 // dev: commits a defense of 3 prebuilt decks (as the Defense screen would), bounty 1000 gold
+                // (through the client's own JSON, as the Defense screen sends it)
                 Messaging.Create c = new Messaging.Create(Messaging.Create.Currency.GOLD, 1000, PlaceholderKeeps.RandomFights(new System.Random()));
-                string error;
-                Messaging.Create.Response r = Create(c, out error);
-                return r != null ? "defense " + r.Updated.Id + " committed" : "error " + error;
+                return DevRequest(c);
+            }
+            if (sub == "withdraw")
+            {
+                siege_bits s = ActiveDefense();
+                return s == null ? "no active defense" : DevRequest(new Messaging.Remove(s.Id));
+            }
+            if (sub == "practice")
+            {
+                // dev: the deck builder's practice game: the player's first deck against a prebuilt defense deck
+                ProfileDeckTemplate mine = Decks.ToProfileTemplate(Decks.FirstPvpDeck());
+                if (mine == null) return "no deck";
+                return DevRequest(new Messaging.PracticeMatch(PlaceholderKeeps.RandomFights(new System.Random())[0].Deck, mine));
             }
             if (sub == "sacks" && parts.Length > 2)
             {

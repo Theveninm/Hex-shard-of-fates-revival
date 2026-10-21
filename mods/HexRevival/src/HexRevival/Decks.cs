@@ -122,6 +122,13 @@ namespace HexRevival
             return byChamp != null ? new UID(UID.Type.Deck, byChamp.Id) : UID.Invalid;
         }
 
+        /// <summary>The first of the player's own (non-campaign) decks, 0 if none (dev commands).</summary>
+        public static ulong FirstPvpDeck()
+        {
+            foreach (StoredDeck d in s_Decks.Values) if (d.PveChampion == 0 && d.PvpChampion.IsValid) return d.Id;
+            return 0;
+        }
+
         /// <summary>A player deck as a profile deck template (null if unknown).</summary>
         public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
         {

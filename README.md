@@ -17,6 +17,9 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   (Castle Crayburn to the Ruins of Kukatan), mercenaries, and the sea voyages of your own ship.
   Rewards follow what gameplay videos of the original game show (see [docs/PROGRESSION.md](docs/PROGRESSION.md));
   see [How faithful is the campaign?](#how-faithful-is-the-campaign) for what may differ from the original.
+- **Siege**: attack other defenses for their bounty, or commit your own defense of 3 decks played by the AI.
+  Until other players' defenses can be shared, the defenses to attack and the players attacking yours are
+  simulated (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
   progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
@@ -25,7 +28,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): Frost Ring Arena, Siege, Battlegrounds, multiplayer.
+Not available (yet): Frost Ring Arena, Battlegrounds, multiplayer.
 
 ## Install and play
 
