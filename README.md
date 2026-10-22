@@ -45,7 +45,7 @@ Not available (yet): Swiss and single-elimination tournaments, multiplayer.
    removed from Steam at the end of 2020: Steam only installs it (app 410380) on accounts that already
    have it in their library; other accounts get "No license". If you have the game files from another
    source, the launcher lets you pick the game folder.
-2. Download `HexRevival-1.0.0.zip` from the [Releases](../../releases) page and extract it anywhere.
+2. Download `HexRevival-1.1.0.zip` from the [Releases](../../releases) page and extract it anywhere.
 3. Double-click `HexRevival.exe`. It:
    - finds the game (Steam libraries, Windows registry, or the folder you chose last time),
    - otherwise offers to install it through Steam (if it is in your library) or to pick the game folder,
