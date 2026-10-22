@@ -62,6 +62,15 @@ namespace HexRevival
 
             public static readonly ECardShards[] ShardColors = { ECardShards.Blood, ECardShards.Diamond, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild };
 
+            public Handicap Clone()
+            {
+                Handicap h = (Handicap)MemberwiseClone();
+                h.InPlay = InPlay != null ? new List<string>(InPlay) : new List<string>();
+                h.Shards = new int[5];
+                if (Shards != null) Array.Copy(Shards, h.Shards, Math.Min(5, Shards.Length));
+                return h;
+            }
+
             /// <summary>The sum of two handicaps (a mode's own bonus added to a pack's).</summary>
             public static Handicap Add(Handicap a, Handicap b)
             {
@@ -156,6 +165,15 @@ namespace HexRevival
         }
 
         private static Dictionary<string, CardTemplate> s_CardsByName;
+
+        /// <summary>One printing per card name (see CardByName), sorted by name: the card picker's list.</summary>
+        public static List<CardTemplate> CardsByName()
+        {
+            CardByName("");
+            List<CardTemplate> res = new List<CardTemplate>(s_CardsByName.Values);
+            res.Sort((a, b) => string.Compare(a.m_Name, b.m_Name, StringComparison.OrdinalIgnoreCase));
+            return res;
+        }
 
         public static CardTemplate CardByName(string name)
         {

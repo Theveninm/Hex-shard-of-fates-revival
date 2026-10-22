@@ -214,6 +214,31 @@ namespace HexRevival
             /// <summary>What the AI and the player start with when this deck is the opponent.</summary>
             public Opponents.Handicap AI = new Opponents.Handicap();
             public Opponents.Handicap Player = new Opponents.Handicap();
+
+            public AiSettings Clone()
+            {
+                AiSettings a = (AiSettings)MemberwiseClone();
+                a.AI = (AI ?? new Opponents.Handicap()).Clone();
+                a.Player = (Player ?? new Opponents.Handicap()).Clone();
+                return a;
+            }
+        }
+
+        /// <summary>
+        /// Set by the deck editor (see DeckAiPanel): the AI settings chosen for a deck not saved yet, and the deck being
+        /// edited (its settings go to a copy saved with "save as"). A new shared deck saved from the editor takes them.
+        /// </summary>
+        public static AiSettings PendingAi;
+        public static ulong EditorDeck;
+
+        /// <summary>True when the deck has AI settings of its own (not just the defaults).</summary>
+        public static bool HasAi(ulong deckId) { return AiStore.ContainsKey(deckId); }
+
+        /// <summary>Replaces the AI settings of a deck and saves them.</summary>
+        public static void SetAi(ulong deckId, AiSettings a)
+        {
+            AiStore[deckId] = a;
+            SaveAi();
         }
 
         private static Dictionary<ulong, AiSettings> s_Ai;
@@ -235,7 +260,7 @@ namespace HexRevival
         public static AiSettings Ai(ulong deckId)
         {
             AiSettings a;
-            if (!AiStore.TryGetValue(deckId, out a)) { a = new AiSettings(); AiStore[deckId] = a; }
+            if (!AiStore.TryGetValue(deckId, out a)) return new AiSettings();   // defaults, not stored
             if (a.AI == null) a.AI = new Opponents.Handicap();
             if (a.Player == null) a.Player = new Opponents.Handicap();
             return a;
@@ -411,6 +436,13 @@ namespace HexRevival
                 LastDeck = new UID(UID.Type.Deck, d.Id);
                 Save();
                 if (d.PveChampion != 0) Champions.SetDeck(d.PveChampion, d.Id);
+                else
+                {
+                    // Saved from the deck editor: the AI settings chosen before the first save, or the copied deck's.
+                    AiSettings ai = PendingAi ?? (EditorDeck != 0 && HasAi(EditorDeck) ? Ai(EditorDeck).Clone() : null);
+                    PendingAi = null;
+                    if (ai != null) SetAi(d.Id, ai);
+                }
                 AddNewDeckResponse r = LocalServer.Ok<AddNewDeckResponse>();
                 r.DeckName = d.Name;
                 r.DeckID = new UID(UID.Type.Deck, d.Id);
