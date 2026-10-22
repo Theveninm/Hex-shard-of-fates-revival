@@ -22,7 +22,7 @@ namespace HexRevival
     /// The logic itself is unchanged and shared with the old plugin:
     /// mods/HexRevival/src/HexRevival/{Bootstrap,Patches,Server,Repl,Test}.cs.
     /// </summary>
-    [BepInPlugin("hexrevival", "HexRevival", "1.0.0")]
+    [BepInPlugin("hexrevival", "HexRevival", "1.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
