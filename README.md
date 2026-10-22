@@ -8,10 +8,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 
 ## What you get
 
-- **Quick Match** on the main menu: pick one of your decks, then fight
-  - one of the game's ~270 campaign and dungeon encounters (with their special rules),
-  - one of the game's prebuilt decks,
-  - or one of your own decks played by the AI.
+- **Start screen**: online mode (a profile name and a lobby, empty until online play exists) or an
+  offline account (create one: everything unlocked or earned by playing, tutorial, starting gold).
 - **Campaign**: your campaign champions on the game's own world maps, the Howling Plains (AZ1) and
   the Alachian Sea (AZ2, reached by boat), with their quests, hubs and dialogues, the ten dungeons
   (Castle Crayburn to the Ruins of Kukatan), mercenaries, and the sea voyages of your own ship.
@@ -23,7 +21,12 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
   against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
 - **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
-- **AI opponents**: per-mode AI configuration (decks by tier, AI skill, modifiers), shareable files; decks outside the campaign are shared by all accounts.
+- **AI opponents**: "Configure the AIs" (bottom right of the main menu and of the mode screens) sets, per mode
+  and tier, which decks the AI plays: your decks, decks made for the AI, the game's AI decks or its encounters.
+  In the deck editor, "Set Personality" also sets the deck's AI level, frequency and boss / elite role, and
+  "Modifiers" what each side starts with (health, resources, charges, cards, cards in play, shards).
+  Decks outside the campaign are shared by all accounts; the settings are per account, with shared defaults.
+- **Practice match** (F1 on the main menu): one of your decks against any encounter, game deck or deck of yours.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
@@ -143,7 +146,7 @@ an issue.
 
 | Path | Content |
 |---|---|
-| `mods/HexRevival/src/HexRevival/` | The plugin: local game server, AI driver, local profile and decks, Quick Match menu |
+| `mods/HexRevival/src/HexRevival/` | The plugin: local game server, AI driver, local profile and decks, menus |
 | `mods/HexRevival.BepInEx/` | BepInEx entry point (Harmony patches) |
 | `tools/launcher/` | The launcher / installer `HexRevival.exe` |
 | `.github/workflows/` | Builds the launcher from source on GitHub |
