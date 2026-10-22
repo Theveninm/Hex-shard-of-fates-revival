@@ -13,7 +13,13 @@ namespace HexRevival
         /// <summary>Set by any control that changed its value (reset by the caller).</summary>
         public static bool Changed;
 
-        public static readonly string[] Skills = Enum.GetNames(typeof(Game.Shared.AI.EDifficulty));
+        /// <summary>
+        /// The game AI's levels that change its play (EDifficulty is cumulative, AIPersonality.Will: each level uses the
+        /// skills of the levels below). AttackCorrectly, DoubleBlocking and BluffWithManyResources are never checked by
+        /// the game's AI, so BuildBoardCorrectly = AttackCorrectly = Medium and Kneecap = BluffWithManyResources = Hard:
+        /// only the levels that differ are offered.
+        /// </summary>
+        public static readonly string[] Skills = { "Easy", "PlaySpeedCorrectly", "PlayTricksCorrectly", "Medium", "BluffWithOneResource", "BluffOnAttacking", "Hard" };
 
         /// <summary>Shard colors of Opponents.Handicap.Shards, with their icon in the game's card filter.</summary>
         public static readonly string[] ShardSprites = { "filterbutton_blood_glow_da", "filterbutton_diamond_glow_da", "filterbutton_ruby_glow_da", "filterbutton_sapphire_glow_da", "filterbutton_wild_glow_da" };
@@ -29,9 +35,11 @@ namespace HexRevival
             Rect win = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f + 10f * S, w, h);
             if (!GameSkin.Sprite(win, "A_Frames", "Frame_With_Header_Hard_Corner"))
                 GUI.DrawTexture(win, GameSkin.Solid(new Color(0.06f, 0.07f, 0.1f, 0.97f)));
-            Rect t = new Rect(win.center.x - 260 * S, win.y - 22 * S, 520 * S, 64 * S);
+            GUIStyle ts = GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter);
+            float tw = Mathf.Min(win.width - 40 * S, Mathf.Max(520 * S, ts.CalcSize(new GUIContent(title)).x + 120 * S));
+            Rect t = new Rect(win.center.x - tw / 2f, win.y - 22 * S, tw, 64 * S);
             GameSkin.Sprite(t, "A_Frames", "Frame_Title_Bar");
-            GameSkin.Label(t, title, GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter));
+            GameSkin.Label(t, title, ts);
             return win;
         }
 
@@ -82,8 +90,8 @@ namespace HexRevival
             return v;
         }
 
-        /// <summary>Label, then "&lt; value &gt;" cycling through the options.</summary>
-        public static string Cycle(Rect r, string label, string value, string[] options, Func<string, string> show = null)
+        /// <summary>Label, then "&lt; value &gt;" through the options; with wrap off, the arrows stop at both ends.</summary>
+        public static string Cycle(Rect r, string label, string value, string[] options, Func<string, string> show = null, bool wrap = true)
         {
             float S = GameSkin.Scale, bw = 34 * S, lw = string.IsNullOrEmpty(label) ? 0 : Mathf.Min(r.width * 0.4f, 170 * S);
             if (lw > 0) GUI.Label(new Rect(r.x, r.y, lw, r.height), label, GameSkin.Style("body", 14, GameSkin.Text));
@@ -91,11 +99,28 @@ namespace HexRevival
             Rect prev = new Rect(r.x + lw, r.y, bw, r.height), next = new Rect(r.xMax - bw, r.y, bw, r.height);
             Rect val = new Rect(prev.xMax, r.y, next.x - prev.xMax, r.height);
             string res = value;
-            if (Small(prev, "<") && options.Length > 0) res = options[(i <= 0 ? options.Length : i) - 1];
-            GameSkin.Label(val, show != null ? show(value ?? "") : value ?? "", GameSkin.Style("bold", 15, GameSkin.Text, TextAnchor.MiddleCenter));
-            if (Small(next, ">") && options.Length > 0) res = options[(i + 1) % options.Length];
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && options.Length > 0 && (wrap || i != 0);
+            if (Small(prev, "<")) res = options[(i <= 0 ? options.Length : i) - 1];
+            GUI.enabled = enabled;
+            GameSkin.Label(val, show != null ? show(value ?? "") : value ?? "", GameSkin.Style("bold", 14, GameSkin.Text, TextAnchor.MiddleCenter));
+            GUI.enabled = enabled && options.Length > 0 && (wrap || i != options.Length - 1);
+            if (Small(next, ">")) res = options[(i + 1) % options.Length];
+            GUI.enabled = enabled;
             if (res != value) Changed = true;
             return res;
+        }
+
+        /// <summary>The game AI's level (see Skills), from Easy to Hard; the arrows stop at both ends.</summary>
+        public static string Skill(Rect r, string label, string value)
+        {
+            return Cycle(r, label, value, Skills, SkillName, false);
+        }
+
+        public static string SkillName(string skill)
+        {
+            int i = Array.IndexOf(Skills, skill);
+            return i < 0 ? skill : (i + 1) + "/" + Skills.Length + " " + Loc.Get("skill_" + skill);
         }
 
         /// <summary>Small square button (the title font has no "+", "-", "&lt;", "&gt;": the body font is used).</summary>

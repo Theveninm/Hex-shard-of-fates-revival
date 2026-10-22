@@ -21,6 +21,15 @@ namespace HexRevival
         public const string Ladder = "ladder", Gauntlet = "gauntlet", Limited = "limited", Arena = "arena", Siege = "siege";
         public static readonly string[] Modes = { Ladder, Gauntlet, Limited, Arena, Siege };
 
+        /// <summary>Roles of a deck in the arena (elites, bosses, rare challengers) and in Siege (third fight: boss, second: elite).</summary>
+        public const string Common = "common", Elite = "elite", Boss = "boss", Rare = "rare";
+
+        /// <summary>The roles a mode uses (none: the mode has no roles).</summary>
+        public static string[] RolesOf(string mode)
+        {
+            return mode == Arena ? new[] { Common, Elite, Boss, Rare } : mode == Siege ? new[] { Common, Elite, Boss } : new string[0];
+        }
+
         /// <summary>Kinds of deck in a tier.</summary>
         public const string Shared = "deck", GameDeck = "game", Encounter = "encounter";
 
@@ -29,6 +38,10 @@ namespace HexRevival
             public string Kind = Shared;
             /// <summary>Shared deck: its id; game deck: "name|champion"; encounter: its scene id.</summary>
             public string Key = "";
+            /// <summary>Relative chance to be drawn among the decks of the tier.</summary>
+            public int Weight = 1;
+            /// <summary>Its place in the modes that have one (arena, Siege): Common, Elite, Boss or Rare.</summary>
+            public string Role = Common;
             public DeckRef() { }
             public DeckRef(string kind, string key) { Kind = kind; Key = key; }
             public bool Same(DeckRef o) { return o != null && o.Kind == Kind && o.Key == Key; }
@@ -39,7 +52,7 @@ namespace HexRevival
             public string Name = "";
             /// <summary>Ladder: stars; gauntlet: match wins; arena: tier 1 to 4; Siege: bounty (gold).</summary>
             public int From, To;
-            /// <summary>The AI's skill in this tier ("" = each deck's own).</summary>
+            /// <summary>Sealed and draft only (no decks: they come from the card pools): the AI's skill in this tier.</summary>
             public string Skill = "";
             public List<DeckRef> Decks = new List<DeckRef>();
         }
@@ -56,7 +69,7 @@ namespace HexRevival
             public List<ModeConfig> Modes = new List<ModeConfig>();
         }
 
-        private const int DefaultsVersion = 1;
+        private const int DefaultsVersion = 2;   // 2: weight and role per deck, no skill per tier
 
         private static string DefaultsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "ai_defaults.json"); } }
         private static string AccountPath { get { return Saves.File("ai.json"); } }
@@ -172,12 +185,11 @@ namespace HexRevival
             ModeConfig ladder = new ModeConfig { Mode = Ladder };
             string[] names = { "Bronze", "Silver", "Gold", "Platinum", "Cosmic" };
             int[] from = { 0, 10, 25, 45, 70 };
-            string[] skills = { "Medium", "BluffWithOneResource", "Kneecap", "Hard", "Hard" };
             for (int i = 0; i < names.Length; i++)
-                ladder.Tiers.Add(new Tier { Name = names[i], From = from[i], To = i + 1 < from.Length ? from[i + 1] - 1 : 9999, Skill = skills[i], Decks = new List<DeckRef>(prebuilt) });
+                ladder.Tiers.Add(new Tier { Name = names[i], From = from[i], To = i + 1 < from.Length ? from[i + 1] - 1 : 9999, Decks = Clone(prebuilt) });
             f.Modes.Add(ladder);
 
-            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = new List<DeckRef>(prebuilt) } } });
+            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = Clone(prebuilt) } } });
             f.Modes.Add(new ModeConfig { Mode = Limited, Tiers = new List<Tier> { new Tier { Name = "Sealed and draft gauntlets", From = 0, To = 99, Skill = "Hard" } } });
 
             ModeConfig arena = new ModeConfig { Mode = Arena };
@@ -185,17 +197,19 @@ namespace HexRevival
             foreach (DeckTemplate d in ArenaDecks())
             {
                 ArenaRole r = Role(d);
-                DeckRef dr = new DeckRef(GameDeck, GameKey(d));
-                if (r.Tier1) t1.Decks.Add(dr);
-                if (r.Tier23) t23.Decks.Add(dr);
-                if (r.Tier4) t4.Decks.Add(dr);
+                string role = r.Rare ? Rare : r.Boss ? Boss : r.Elite ? Elite : Common;
+                if (r.Tier1) t1.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
+                if (r.Tier23) t23.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
+                if (r.Tier4) t4.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
             }
             arena.Tiers.AddRange(new[] { t1, t23, t4 });
             f.Modes.Add(arena);
 
-            f.Modes.Add(new ModeConfig { Mode = Siege, Tiers = new List<Tier> { new Tier { Name = "Placeholder keeps", From = 0, To = 999999999, Decks = new List<DeckRef>(prebuilt) } } });
+            f.Modes.Add(new ModeConfig { Mode = Siege, Tiers = new List<Tier> { new Tier { Name = "Placeholder keeps", From = 0, To = 999999999, Decks = Clone(prebuilt) } } });
             return f;
         }
+
+        private static List<DeckRef> Clone(List<DeckRef> refs) { return refs.ConvertAll(r => new DeckRef(r.Kind, r.Key) { Weight = r.Weight, Role = r.Role }); }
 
         public static string GameKey(DeckTemplate d)
         {
@@ -263,8 +277,7 @@ namespace HexRevival
                     o = new Opponents.Opponent
                     {
                         Name = dt != null ? dt.m_DeckName : r.Key, CustomDeck = id, Skill = ai.Skill, Noise = ai.Noise,
-                        Personality = Decks.PersonalityOf(id).ToString(), Boss = ai.Boss, Elite = ai.Elite, Rare = ai.Rare,
-                        Weight = ai.Frequency, AI = ai.AI, Player = ai.Player,
+                        Personality = Decks.PersonalityOf(id).ToString(), AI = ai.AI, Player = ai.Player,
                     };
                     break;
                 case GameDeck:
@@ -272,7 +285,6 @@ namespace HexRevival
                     o = new Opponents.Opponent { Name = p.Length > 1 && p[1] != "" ? p[1] : p[0], Prebuilt = p[0], Champion = p.Length > 1 ? p[1] : "" };
                     DeckTemplate gd = Opponents.DeckOf(o);
                     if (gd == null) return null;
-                    if (gd.m_DeckName.StartsWith("Arena_")) { ArenaRole role = Role(gd); o.Boss = role.Boss; o.Elite = role.Elite; o.Rare = role.Rare; }
                     break;
                 case Encounter:
                     SceneData sc;
@@ -283,7 +295,9 @@ namespace HexRevival
                     break;
                 default: return null;
             }
-            if (t != null && !string.IsNullOrEmpty(t.Skill)) o.Skill = t.Skill;
+            // The tier's weight and role (an arena boss, a Siege elite...).
+            o.Weight = r.Weight;
+            o.Boss = r.Role == Boss; o.Elite = r.Role == Elite; o.Rare = r.Role == Rare;
             return o;
         }
 

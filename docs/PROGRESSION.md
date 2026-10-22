@@ -446,7 +446,8 @@ Not done: the buyout, Hogarth's dialogues, the arena's frozen game board.
 ## AI opponents
 
 Each mode that had other players (ladder, constructed gauntlet, sealed/draft gauntlets, Frost Ring Arena, Siege
-placeholder keeps) draws its opponents from an AI configuration: tiers (ladder stars, gauntlet wins, arena tier,
+placeholder keeps) draws its opponents from an AI configuration, edited from "Configure the AIs" at the bottom right of
+that mode's screen (Battlegrounds: the selected event's mode): tiers (ladder stars, gauntlet wins, arena tier,
 keep bounty in gold) and, in each tier, decks drawn at random by their frequency. A deck is one of:
 
 - a shared deck (decks outside the campaign are common to every account, in `HexRevivalSaves/decks_common.txt`);
@@ -455,19 +456,21 @@ keep bounty in gold) and, in each tier, decks drawn at random by their frequency
 
 | Setting | Where | Effect |
 |---|---|---|
-| AI skill | per tier, or per deck | the game AI's own levels (EDifficulty, Easy to Hard: each level adds a skill such as combat tricks, bluffs, pre-emptive removal) |
-| Imprecision | per deck | the noise the AI adds to its card values (the game's default 50) |
+| AI level | the deck (deck editor, personality window); game decks: Hard | the game AI's own levels (EDifficulty, cumulative: each adds a skill). Only the 7 that change its play are offered: Easy, + fast cards, + combat tricks, Medium (+ builds its board), + bluffs with one resource, + bluffs when attacking, Hard (+ removes threats early); the game never checks AttackCorrectly, DoubleBlocking and BluffWithManyResources |
+| Randomness of its choices | the deck (personality window) | the AI lowers each card value it computes by a random 50 to 100% of this many hundredths (the game's default 50, 0 = none) |
 | Style | the deck's personality | weighs the AI's choices (Aggressive, Burn...) |
-| Frequency, Boss, Elite | per deck | how often it is drawn; Siege: third fight = boss, second = elite |
-| Modifiers (AI and player) | per deck | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
+| Frequency | each deck of a tier | how often it is drawn |
+| Role | each deck of a tier, arena and Siege only | common, elite, boss, rare (arena); Siege: third fight = boss, second = elite; a warning shows when a tier lacks one |
+| Modifiers (AI and player) | the deck (deck editor, Modifiers) | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
 
+Sealed and draft tiers have no decks: there the tier sets the AI level.
 The settings of the shared decks live in `HexRevivalSaves/decks_common_ai.json`. The configuration of a mode
 is per account (`ai.json` in the account's folder, only the modes it changed); the others use the defaults in
 `HexRevivalSaves/ai_defaults.json`, which "change the default settings" edits for every account that kept them.
 To share opponents, copy these files.
 
-Defaults (PLACEHOLDER: the original opponents were players): the game's prebuilt decks with a PvP champion, the
-AI from Medium (Bronze) to Hard (Platinum and Cosmic), no modifier; the arena uses the game's own Arena_ decks
+Defaults (PLACEHOLDER: the original opponents were players): the game's prebuilt decks with a PvP champion at
+the Hard level, no modifier; the arena uses the game's own Arena_ decks
 (see Frost Ring Arena). The Siege AI skill does not apply to the player's own keep defense.
 
 In sealed and draft gauntlets the configuration only sets the AI's skill and modifiers: the game's AI cannot

@@ -179,11 +179,11 @@ namespace HexRevival
         }
 
         /// <summary>Game tab (Header_Tabs_*).</summary>
-        public static bool Tab(Rect r, string text, bool selected)
+        public static bool Tab(Rect r, string text, bool selected, int size = 17)
         {
             bool hover = r.Contains(Event.current.mousePosition);
             Sprite(r, "A_Buttons", selected ? "Header_Tabs_03_On" : hover ? "Header_Tabs_02_Hover" : "Header_Tabs_01_Base");
-            Label(r, text, Style("title", 17, selected ? Color.white : hover ? Gold : GoldDim, TextAnchor.MiddleCenter));
+            Label(r, text, Style("title", size, selected ? Color.white : hover ? Gold : GoldDim, TextAnchor.MiddleCenter));
             return GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 

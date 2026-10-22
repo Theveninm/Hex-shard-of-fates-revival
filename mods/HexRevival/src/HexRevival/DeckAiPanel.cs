@@ -197,24 +197,18 @@ namespace HexRevival
             Rect f = frame != null ? ScreenRect(frame) : new Rect(Screen.width * 0.1f, Screen.height * 0.1f, Screen.width * 0.8f, Screen.height * 0.8f);
             UIButton select = m_Vm.m_PersonalityVM.MainUI.Btn_Select;
             float bottom = select != null ? ScreenRect(select.transform).y - 6 * S : f.yMax - 80 * S;
-            float w = Mathf.Min(f.width - 80 * S, 1100 * S), h = 90 * S;
+            float w = Mathf.Min(f.width - 80 * S, 1100 * S), h = 64 * S;
             Rect r = new Rect(f.center.x - w / 2f, bottom - h, w, h);
             m_PanelRect = r;
-            GUI.DrawTexture(r, GameSkin.Solid(new Color(0f, 0f, 0f, 0.45f)));
+            GUI.DrawTexture(r, GameSkin.Solid(new Color(0f, 0f, 0f, 0.55f)));
             Decks.AiSettings a = m_PopupEdit;
-            float pad = 18 * S, lh = 28 * S, y = r.y + 4 * S, x = r.x + pad, col = (r.width - 2 * pad) / 3f;
+            float pad = 14 * S, lh = 28 * S, y = r.y + 3 * S, x = r.x + pad, col = (r.width - 2 * pad) / 3f;
             a.ForAI = Controls.Toggle(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_deck"), a.ForAI);
-            a.Skill = Controls.Cycle(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_default_skill"), a.Skill, Controls.Skills);
+            a.Skill = Controls.Skill(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_level"), a.Skill);
             y += lh + 2 * S;
-            a.Frequency = Controls.Stepper(new Rect(x, y, col - 20 * S, lh), Loc.Get("opp_weight"), a.Frequency, 1, 0, 20);
-            float tw = (2 * col) / 3f;
-            a.Boss = Controls.Toggle(new Rect(x + col, y, tw - 10 * S, lh), Cap(Loc.Get("boss")), a.Boss);
-            a.Elite = Controls.Toggle(new Rect(x + col + tw, y, tw - 10 * S, lh), Loc.Get("opp_elite"), a.Elite);
-            a.Rare = Controls.Toggle(new Rect(x + col + 2 * tw, y, tw - 10 * S, lh), Loc.Get("opp_rare"), a.Rare);
-            GUI.Label(new Rect(x, r.yMax - 20 * S, r.width - 2 * pad, 18 * S), Loc.Get("ai_skill_note"), GameSkin.Style("body", 12, GameSkin.Muted));
+            GUI.Label(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_skill_note"), GameSkin.Style("body", 11, GameSkin.Muted, TextAnchor.MiddleLeft, true));
+            a.Noise = Controls.Stepper(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_noise"), a.Noise, 10, 0, 200);
         }
-
-        private static string Cap(string s) { return string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1); }
 
         private void DrawModifiers()
         {
@@ -245,8 +239,7 @@ namespace HexRevival
             h.Resources = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_resources"), h.Resources, 1, 0, 10); y += step;
             h.Charges = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_charges"), h.Charges, 1, 0, 10); y += step;
             h.Cards = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_cards"), h.Cards, 1, 0, 10); y += step;
-            if (ai) { m_ModEdit.Noise = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_noise"), m_ModEdit.Noise, 10, 0, 200); }
-            y += step + 4 * S;   // the same height on both sides
+            y += 4 * S;
 
             GameSkin.Label(new Rect(x, y, w, 26 * S), Loc.Get("opp_shards"), GameSkin.Style("title", 16, GameSkin.Gold));
             y += 28 * S;
@@ -258,16 +251,45 @@ namespace HexRevival
             y += 40 * S;
             Rect list = new Rect(x, y, w, r.yMax - 12 * S - y);
             GUI.DrawTexture(list, GameSkin.Solid(new Color(0, 0, 0, 0.35f)));
-            float rowH = 30 * S;
             int remove = -1;
             List<string> cards = h.InPlay;
-            scroll = Controls.List(new Rect(list.x + 4 * S, list.y + 4 * S, list.width - 8 * S, list.height - 8 * S), scroll, cards.Count, rowH, i =>
+            // The cards as tiles, a small "x" on each to remove it.
+            scroll = CardGrid(new Rect(list.x + 4 * S, list.y + 4 * S, list.width - 8 * S, list.height - 8 * S), scroll, cards.Count, 92 * S, i => Opponents.CardByName(cards[i]), i => false, (i, tile, before) =>
             {
-                Rect row = new Rect(0, i * (rowH + 4 * S), list.width - 32 * S, rowH);
-                GUI.Label(new Rect(row.x + 8 * S, row.y, row.width - 50 * S, row.height), cards[i], GameSkin.Style("bold", 15, GameSkin.Text));
-                return Controls.Small(new Rect(row.xMax - 34 * S, row.y, 32 * S, rowH), "x");
-            }, i => remove = i);
+                Rect xr = new Rect(tile.xMax - 28 * S, tile.y + 4 * S, 24 * S, 24 * S);
+                // Clicked before the tile is drawn (the tile's own button would take the click), shown over it after.
+                if (before) { if (GUI.Button(xr, GUIContent.none, GUIStyle.none)) remove = i; }
+                else Controls.Small(xr, "x");
+            });
             if (remove >= 0) { cards.RemoveAt(remove); Controls.Changed = true; }
+        }
+
+        /// <summary>
+        /// A scrolling grid of card tiles (see CardArt.Tile), only the visible rows drawn. clicked(i) is called when tile i is
+        /// clicked; extra(i, tile, before) is called before the tile is drawn (to take clicks) and after it (to draw over it).
+        /// </summary>
+        private static Vector2 CardGrid(Rect area, Vector2 scroll, int count, float tileW, Func<int, CardTemplate> card, Func<int, bool> clicked, Action<int, Rect, bool> extra = null)
+        {
+            float S = GameSkin.Scale, gap = 6 * S, tileH = tileW * 1.36f;
+            int cols = Mathf.Max(1, (int)((area.width - 20 * S + gap) / (tileW + gap)));
+            int rows = (count + cols - 1) / cols;
+            Rect view = new Rect(0, 0, area.width - 20 * S, rows * (tileH + gap));
+            scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, view.height > area.height ? GameSkin.ScrollBar : GUIStyle.none);
+            int first = Mathf.Max(0, (int)(scroll.y / (tileH + gap))), last = Mathf.Min(rows, first + (int)(area.height / (tileH + gap)) + 2);
+            for (int row = first; row < last; row++)
+                for (int col = 0; col < cols; col++)
+                {
+                    int i = row * cols + col;
+                    if (i >= count) break;
+                    Rect tile = new Rect(col * (tileW + gap), row * (tileH + gap), tileW, tileH);
+                    CardTemplate c = card(i);
+                    if (extra != null) extra(i, tile, true);
+                    if (c == null) GUI.DrawTexture(tile, GameSkin.Solid(new Color(0.2f, 0.2f, 0.2f, 1f)));
+                    else if (CardArt.Tile(tile, c)) clicked(i);
+                    if (extra != null) extra(i, tile, false);
+                }
+            GUI.EndScrollView();
+            return scroll;
         }
 
         // ------------------------------------------------------------------
@@ -284,7 +306,7 @@ namespace HexRevival
         private void DrawPicker()
         {
             float S = GameSkin.Scale;
-            Rect win = Controls.Window(820, 760, Loc.Get("pick_card"));
+            Rect win = Controls.Window(1180, 860, Loc.Get("pick_card"));
             float pad = 34 * S, y = win.y + 64 * S, w = win.width - 2 * pad;
             string search = Controls.TextField(new Rect(win.x + pad, y, w * 0.62f, 38 * S), m_Search, 40);
             bool aiOnly = Controls.Toggle(new Rect(win.x + pad + w * 0.66f, y, w * 0.34f, 38 * S), Loc.Get("ai_cards_only"), m_AiOnly);
@@ -294,6 +316,7 @@ namespace HexRevival
                 m_PickList = new List<CardTemplate>();
                 foreach (CardTemplate c in Opponents.CardsByName())
                 {
+                    if (!CardArt.IsShown(c)) continue;
                     if (m_AiOnly && c.m_SetId != Game.Shared.Resources.BuiltInResources.SetAIOnlyCards) continue;
                     if (m_Search.Length > 0 && c.m_Name.IndexOf(m_Search, StringComparison.OrdinalIgnoreCase) < 0) continue;
                     m_PickList.Add(c);
@@ -302,13 +325,9 @@ namespace HexRevival
             }
             y += 50 * S;
             Rect area = new Rect(win.x + pad, y, w, win.yMax - 92 * S - y);
-            float rowH = 42 * S;
             string chosen = null;
             List<CardTemplate> list = m_PickList;
-            m_PickScroll = Controls.List(area, m_PickScroll, list.Count, rowH, i =>
-                GameSkin.Row(new Rect(0, i * (rowH + 4 * S), area.width - 20 * S, rowH), list[i].m_Name,
-                    list[i].m_SetId == Game.Shared.Resources.BuiltInResources.SetAIOnlyCards ? Loc.Get("ai_card") : "", false),
-                i => chosen = list[i].m_Name);
+            m_PickScroll = CardGrid(area, m_PickScroll, list.Count, 132 * S, i => list[i], i => { chosen = list[i].m_Name; return true; });
             if (chosen != null) { m_PickFor.InPlay.Add(chosen); Controls.Changed = true; m_PickFor = null; }
             GUI.Label(new Rect(win.x + pad, win.yMax - 72 * S, w - 220 * S, 52 * S), list.Count + " " + Loc.Get("cards_found"), GameSkin.Style("body", 14, GameSkin.Muted));
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 190 * S, win.yMax - 72 * S, 190 * S, 52 * S), Loc.Get("cancel"))) m_PickFor = null;
@@ -331,7 +350,7 @@ namespace HexRevival
                 case "reset": if (p.m_DeckId != 0) Decks.SetAi(p.m_DeckId, new Decks.AiSettings()); return "reset";
             }
             Decks.AiSettings a = p.Current();
-            return "deck " + p.m_DeckId + " forAI=" + a.ForAI + " skill=" + a.Skill + " freq=" + a.Frequency + " boss=" + a.Boss + " elite=" + a.Elite
+            return "deck " + p.m_DeckId + " forAI=" + a.ForAI + " skill=" + a.Skill + " noise=" + a.Noise
                 + " AI: hp " + a.AI.Health + " shards " + string.Join(",", Array.ConvertAll(a.AI.Shards ?? new int[0], x => x.ToString())) + " inplay " + string.Join("/", (a.AI.InPlay ?? new List<string>()).ToArray())
                 + " pending=" + (Decks.PendingAi != null);
         }

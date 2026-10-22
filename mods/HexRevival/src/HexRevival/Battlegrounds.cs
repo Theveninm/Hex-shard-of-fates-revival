@@ -423,6 +423,14 @@ namespace HexRevival
             LocalServer.Answer(typeof(TournamentsService.SaveTournamentDeck), res, handler);
         }
 
+        /// <summary>The AI configuration mode of a Battlegrounds event (see AiConfig): gauntlets by format, else the ladder.</summary>
+        public static string ModeOf(ulong tournamentId)
+        {
+            foreach (Gauntlet g in Gauntlets)
+                if (g.Id == tournamentId) return g.Kind == Kind.Constructed ? AiConfig.Gauntlet : AiConfig.Limited;
+            return AiConfig.Ladder;
+        }
+
         /// <summary>The run's deck, when a match asks for it (Decks.GetDeckDetails).</summary>
         public static deck_bits DeckFor(UID deckId)
         {

@@ -21,10 +21,10 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
   against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
 - **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
-- **AI opponents**: "Configure the AIs" (bottom right of the main menu and of the mode screens) sets, per mode
-  and tier, which decks the AI plays: your decks, decks made for the AI, the game's AI decks or its encounters.
-  In the deck editor, "Set Personality" also sets the deck's AI level, frequency and boss / elite role, and
-  "Modifiers" what each side starts with (health, resources, charges, cards, cards in play, shards).
+- **AI opponents**: "Configure the AIs" (bottom right of the Battlegrounds, Arena and Siege screens) sets, per
+  tier, which decks the AI plays (your decks, decks made for the AI, the game's AI decks or its encounters), how
+  often, and their role (arena, Siege). In the deck editor, "Set Personality" also sets the deck's AI level and
+  randomness, and "Modifiers" what each side starts with (health, resources, charges, cards, cards in play, shards).
   Decks outside the campaign are shared by all accounts; the settings are per account, with shared defaults.
 - **Practice match** (F1 on the main menu): one of your decks against any encounter, game deck or deck of yours.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),

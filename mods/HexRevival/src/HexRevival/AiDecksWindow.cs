@@ -11,10 +11,11 @@ namespace HexRevival
     /// <summary>
     /// The AI configuration of each mode (see AiConfig): its tiers, the decks drawn in each tier, and the decks that can
     /// be added, by category: the shared decks made for players, those made for the AI (see DeckAiPanel), the game's own
-    /// AI decks and its encounters. A game deck or an encounter can be copied into a shared deck to change it; a shared
-    /// deck opens in the deck editor or is deleted. The account's settings, or the default settings (every account that
-    /// kept them), are edited; changes are saved when the mode, the target or the window changes.
-    /// Opened by the "Configure the AIs" button at the bottom right of the mode screens (see AiButton).
+    /// AI decks and its encounters. Each deck of a tier has a frequency and, in the arena and Siege, a role (common,
+    /// elite, boss, rare). A game deck or an encounter can be copied into a shared deck to change it; a shared deck
+    /// opens in the deck editor or is deleted. The account's settings, or the default settings (every account that kept
+    /// them), are edited; changes are saved when the target or the window changes.
+    /// Opened on one mode by the "Configure the AIs" button at the bottom right of that mode's screen (see AiButton).
     /// </summary>
     public class AiDecksWindow : MonoBehaviour
     {
@@ -42,7 +43,7 @@ namespace HexRevival
 
         private List<Entry>[] m_Lists;
         private static List<Entry> s_GameDecks, s_Encounters;
-        private readonly Dictionary<string, string> m_Names = new Dictionary<string, string>();
+        private readonly Dictionary<string, Entry> m_Info = new Dictionary<string, Entry>();
 
         private void Awake() { s_Instance = this; }
 
@@ -136,7 +137,8 @@ namespace HexRevival
                 foreach (TemplateCardStack st in t.m_DeckResources) n += st.m_Count;
                 string key = AiConfig.GameKey(t);
                 if (n < 20 || !seen.Add(key)) continue;
-                s_GameDecks.Add(new Entry { Kind = AiConfig.GameDeck, Key = key, Name = t.m_DeckName, Detail = ch.m_Name + " - " + n + " " + Loc.Get("cards_found"), Template = t, Champion = ch });
+                // Shown by champion (the arena's and the AI's deck names are internal: "Arena_...", "AI_...").
+                s_GameDecks.Add(new Entry { Kind = AiConfig.GameDeck, Key = key, Name = ch.m_Name, Detail = t.m_DeckName + " - " + n + " " + Loc.Get("cards_found"), Template = t, Champion = ch });
             }
             s_GameDecks.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             return s_GameDecks;
@@ -175,25 +177,29 @@ namespace HexRevival
             return s_Encounters;
         }
 
-        private string NameOf(AiConfig.DeckRef r)
+        /// <summary>A tier's deck as shown in the lists (name, champion), from the catalogue or else resolved.</summary>
+        private Entry InfoOf(AiConfig.DeckRef r)
         {
-            string k = r.Kind + ":" + r.Key, n;
-            if (m_Names.TryGetValue(k, out n)) return n;
-            Opponents.Opponent o = AiConfig.Resolve(r, null);
-            n = o != null ? o.Name : "? " + r.Key;
-            m_Names[k] = n;
-            return n;
+            string k = r.Kind + ":" + r.Key;
+            Entry e;
+            if (m_Info.TryGetValue(k, out e)) return e;
+            for (int c = 0; c < 4 && e == null; c++) e = List(c).Find(x => x.Kind == r.Kind && x.Key == r.Key);
+            if (e == null)
+            {
+                Opponents.Opponent o = AiConfig.Resolve(r, null);
+                e = new Entry { Kind = r.Kind, Key = r.Key, Name = o != null ? o.Name : "? " + r.Key, Detail = o == null ? Loc.Get("ai_missing_deck") : "" };
+            }
+            m_Info[k] = e;
+            return e;
         }
 
         /// <summary>A shared deck made for the AI from a game deck or an encounter's deck, to change it.</summary>
         private void CopyToShared(Entry e)
         {
-            Opponents.Opponent o = AiConfig.Resolve(new AiConfig.DeckRef(e.Kind, e.Key), null);
             Decks.AiSettings ai = new Decks.AiSettings { ForAI = true };
-            if (o != null) { ai.Boss = o.Boss; ai.Elite = o.Elite; ai.Rare = o.Rare; }
             ulong id = Decks.CopyFromTemplate(e.Template, e.Name, ai, e.Champion != null ? e.Champion.m_Id : default(ResourceId));
             m_Lists = null;
-            m_Names.Clear();
+            m_Info.Clear();
             m_Category = CatAi;
             m_Message = Loc.Get("ai_copied") + " " + e.Name;
             Debug.Log("[HexRevival] [AiDecks] copy of " + e.Kind + " " + e.Key + " -> shared deck " + id);
@@ -211,18 +217,8 @@ namespace HexRevival
             GUI.depth = -1150;
             Controls.Changed = false;
             float S = GameSkin.Scale;
-            Rect win = Controls.Window(1560, 900, Loc.Get("ai_settings"));
-            float pad = 30 * S, y = win.y + 56 * S;
-
-            // Modes
-            float tw = Mathf.Min(220 * S, (win.width - 2 * pad) / AiConfig.Modes.Length);
-            for (int i = 0; i < AiConfig.Modes.Length; i++)
-                if (GameSkin.Tab(new Rect(win.x + pad + i * tw, y, tw - 6 * S, 40 * S), ModeName(AiConfig.Modes[i]), AiConfig.Modes[i] == m_Mode) && AiConfig.Modes[i] != m_Mode)
-                {
-                    SaveIfDirty();
-                    Load(AiConfig.Modes[i]);
-                }
-            y += 50 * S;
+            Rect win = Controls.Window(1600, 900, Loc.Get("ai_settings") + " : " + ModeName(m_Mode));
+            float pad = 30 * S, y = win.y + 60 * S;
 
             // Account or default settings
             bool own = !AiConfig.UsesDefault(m_Mode);
@@ -239,8 +235,8 @@ namespace HexRevival
             y += 46 * S;
 
             float bottom = win.yMax - 84 * S, gap = 16 * S, total = win.width - 2 * pad - 2 * gap;
-            Rect tiers = new Rect(win.x + pad, y, total * 0.25f, bottom - y);
-            Rect decks = new Rect(tiers.xMax + gap, y, total * 0.30f, bottom - y);
+            Rect tiers = new Rect(win.x + pad, y, total * 0.18f, bottom - y);
+            Rect decks = new Rect(tiers.xMax + gap, y, total * 0.46f, bottom - y);
             Rect cat = new Rect(decks.xMax + gap, y, win.xMax - pad - decks.xMax - gap, bottom - y);
             DrawTiers(tiers);
             DrawTierDecks(decks);
@@ -263,73 +259,119 @@ namespace HexRevival
             }
         }
 
+        private AiConfig.Tier CurrentTier { get { return m_Tier >= 0 && m_Tier < m_Cfg.Tiers.Count ? m_Cfg.Tiers[m_Tier] : null; } }
+
         private void DrawTiers(Rect r)
         {
             float S = GameSkin.Scale;
             Controls.Frame(r, Loc.Get("opp_tiers"));
             float rowH = 54 * S, x = r.x + 10 * S, w = r.width - 20 * S;
-            float editH = 210 * S;
+            bool limited = m_Mode == AiConfig.Limited;
+            float editH = (limited ? 170 : 130) * S;
             Rect area = new Rect(x, r.y + 44 * S, w, r.height - 44 * S - editH - 50 * S);
             List<AiConfig.Tier> tiers = m_Cfg.Tiers;
             m_ScrollTiers = Controls.List(area, m_ScrollTiers, tiers.Count, rowH, i =>
-                GameSkin.Row(new Rect(0, i * (rowH + 4 * S), area.width - 20 * S, rowH), tiers[i].Name, tiers[i].From + " - " + tiers[i].To + " (" + tiers[i].Decks.Count + ")", i == m_Tier),
+                GameSkin.Row(new Rect(0, i * (rowH + 4 * S), area.width - 20 * S, rowH), tiers[i].Name, tiers[i].From + " - " + tiers[i].To + (limited ? "" : " (" + tiers[i].Decks.Count + ")"), i == m_Tier),
                 i => { m_Tier = i; m_ScrollDecks = Vector2.zero; });
             float by = area.yMax + 8 * S;
             if (GameSkin.GoldButton(new Rect(x, by, w / 2f - 4 * S, 36 * S), Loc.Get("opp_add"), true, 15))
             {
-                AiConfig.Tier last = m_Tier >= 0 && m_Tier < tiers.Count ? tiers[m_Tier] : null;
-                AiConfig.Tier t = new AiConfig.Tier { Name = Loc.Get("ai_new_tier"), From = last != null ? last.To + 1 : 0, To = last != null ? last.To + 10 : 99 };
-                tiers.Add(t);
+                AiConfig.Tier last = CurrentTier;
+                tiers.Add(new AiConfig.Tier { Name = Loc.Get("ai_new_tier"), From = last != null ? last.To + 1 : 0, To = last != null ? last.To + 10 : 99, Skill = limited ? "Hard" : "" });
                 m_Tier = tiers.Count - 1;
                 m_Dirty = true;
             }
-            if (GameSkin.RedButton(new Rect(x + w / 2f + 4 * S, by, w / 2f - 4 * S, 36 * S), Loc.Get("ai_remove"), 15) && m_Tier >= 0 && m_Tier < tiers.Count)
+            if (GameSkin.RedButton(new Rect(x + w / 2f + 4 * S, by, w / 2f - 4 * S, 36 * S), Loc.Get("ai_remove"), 15) && CurrentTier != null)
             {
                 tiers.RemoveAt(m_Tier);
                 m_Tier = Math.Min(m_Tier, tiers.Count - 1);
                 m_Dirty = true;
             }
-            if (m_Tier < 0 || m_Tier >= tiers.Count) return;
-            AiConfig.Tier tier = tiers[m_Tier];
+            AiConfig.Tier tier = CurrentTier;
+            if (tier == null) return;
             float y = r.yMax - editH, lh = 34 * S, step = 40 * S;
             int unit = m_Mode == AiConfig.Siege ? 500 : 1, max = m_Mode == AiConfig.Siege ? 999999999 : 9999;
             tier.Name = Controls.TextField(new Rect(x, y, w, lh), tier.Name, 40); y += step;
             tier.From = Controls.Stepper(new Rect(x, y, w, lh), FromLabel(), tier.From, unit, 0, max); y += step;
             tier.To = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_to"), tier.To, unit, tier.From, max); y += step;
-            string[] skills = new string[Controls.Skills.Length + 1];
-            skills[0] = "";
-            Array.Copy(Controls.Skills, 0, skills, 1, Controls.Skills.Length);
-            tier.Skill = Controls.Cycle(new Rect(x, y, w, lh), Loc.Get("opp_skill"), tier.Skill ?? "", skills, s => s == "" ? Loc.Get("ai_skill_per_deck") : s);
+            // Sealed and draft have no decks to carry the AI's level: the tier does.
+            if (limited) tier.Skill = Controls.Skill(new Rect(x, y, w, lh), "", string.IsNullOrEmpty(tier.Skill) ? "Hard" : tier.Skill);
         }
 
         private void DrawTierDecks(Rect r)
         {
             float S = GameSkin.Scale;
-            AiConfig.Tier tier = m_Tier >= 0 && m_Tier < m_Cfg.Tiers.Count ? m_Cfg.Tiers[m_Tier] : null;
-            Controls.Frame(r, Loc.Get("ai_tier_decks") + (tier != null ? " (" + tier.Decks.Count + ")" : ""));
+            AiConfig.Tier tier = CurrentTier;
+            Controls.Frame(r, Loc.Get("ai_tier_decks") + (tier != null && m_Mode != AiConfig.Limited ? " (" + tier.Decks.Count + ")" : ""));
             if (tier == null) return;
             if (m_Mode == AiConfig.Limited)
             {
                 GUI.Label(new Rect(r.x + 16 * S, r.y + 50 * S, r.width - 32 * S, 120 * S), Loc.Get("ai_limited_note"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
                 return;
             }
-            float rowH = 44 * S;
-            Rect area = new Rect(r.x + 10 * S, r.y + 44 * S, r.width - 20 * S, r.height - 54 * S);
+            string[] roles = AiConfig.RolesOf(m_Mode);
+            string warning = Warning(tier);
+            float rowH = 58 * S, freqW = 90 * S, roleW = roles.Length > 0 ? 140 * S : 0, xW = 32 * S, gap = 6 * S;
+            float controls = freqW + (roleW > 0 ? roleW + gap : 0) + xW + 2 * gap;
+            // Column titles
+            float hy = r.y + 40 * S, listW = r.width - 20 * S - 20 * S;
+            GUIStyle head = GameSkin.Style("body", 12, GameSkin.Muted, TextAnchor.MiddleCenter);
+            float cx = r.x + 10 * S + listW - controls + gap;
+            GUI.Label(new Rect(cx, hy, freqW, 20 * S), Loc.Get("opp_weight"), head);
+            if (roleW > 0) GUI.Label(new Rect(cx + freqW + gap, hy, roleW, 20 * S), Loc.Get("ai_role"), head);
+            Rect area = new Rect(r.x + 10 * S, r.y + 62 * S, r.width - 20 * S, r.height - 72 * S - (warning != null ? 46 * S : 0));
             int remove = -1;
             List<AiConfig.DeckRef> refs = tier.Decks;
             m_ScrollDecks = Controls.List(area, m_ScrollDecks, refs.Count, rowH, i =>
             {
-                Rect row = new Rect(0, i * (rowH + 4 * S), area.width - 62 * S, rowH);
-                GameSkin.Row(row, NameOf(refs[i]), "", false);
-                GUI.Label(new Rect(row.xMax - 140 * S, row.y, 130 * S, rowH), KindName(refs[i].Kind), GameSkin.Style("body", 12, GameSkin.Muted, TextAnchor.MiddleRight));
-                return Controls.Small(new Rect(row.xMax + 6 * S, row.y + (rowH - 32 * S) / 2f, 32 * S, 32 * S), "x");
+                AiConfig.DeckRef d = refs[i];
+                Entry e = InfoOf(d);
+                Rect row = new Rect(0, i * (rowH + 4 * S), area.width - 20 * S - controls, rowH);
+                GameSkin.Row(row, e.Name, KindName(d.Kind) + (string.IsNullOrEmpty(e.Detail) ? "" : " - " + e.Detail), false, e.Champion);
+                float x = row.xMax + gap, cy = row.y + (rowH - 32 * S) / 2f;
+                // Frequency: "- n +"
+                if (Controls.Small(new Rect(x, cy, 32 * S, 32 * S), "-") && d.Weight > 1) { d.Weight--; Controls.Changed = true; }
+                GameSkin.Label(new Rect(x + 32 * S, cy, freqW - 64 * S, 32 * S), "x" + d.Weight, GameSkin.Style("bold", 15, GameSkin.Text, TextAnchor.MiddleCenter));
+                if (Controls.Small(new Rect(x + freqW - 32 * S, cy, 32 * S, 32 * S), "+") && d.Weight < 20) { d.Weight++; Controls.Changed = true; }
+                x += freqW + gap;
+                if (roleW > 0)
+                {
+                    if (Array.IndexOf(roles, d.Role) < 0) d.Role = AiConfig.Common;
+                    d.Role = Controls.Cycle(new Rect(x, cy, roleW, 32 * S), "", d.Role, roles, v => Loc.Get("role_" + v));
+                    x += roleW + gap;
+                }
+                return Controls.Small(new Rect(x, cy, xW, 32 * S), "x");
             }, i => remove = i);
             if (remove >= 0) { refs.RemoveAt(remove); m_Dirty = true; }
+            if (warning != null)
+            {
+                Rect wr = new Rect(r.x + 14 * S, r.yMax - 52 * S, r.width - 28 * S, 44 * S);
+                GUI.DrawTexture(wr, GameSkin.Solid(new Color(0.35f, 0.15f, 0.05f, 0.6f)));
+                GUI.Label(new Rect(wr.x + 10 * S, wr.y, wr.width - 20 * S, wr.height), "⚠ " + warning, GameSkin.Style("body", 13, new Color(1f, 0.8f, 0.45f), TextAnchor.MiddleLeft, true));
+            }
+        }
+
+        /// <summary>What a tier lacks for its mode (arena: a boss, elites from tier 2; Siege: boss and elite fights).</summary>
+        private string Warning(AiConfig.Tier t)
+        {
+            if (t.Decks.Count == 0) return null;
+            bool boss = t.Decks.Exists(d => d.Role == AiConfig.Boss), elite = t.Decks.Exists(d => d.Role == AiConfig.Elite);
+            if (m_Mode == AiConfig.Arena)
+            {
+                if (!boss) return Loc.Get("warn_arena_boss");
+                if (!elite && t.To >= 2) return Loc.Get("warn_arena_elite");
+            }
+            else if (m_Mode == AiConfig.Siege)
+            {
+                if (!boss) return Loc.Get("warn_siege_boss");
+                if (!elite) return Loc.Get("warn_siege_elite");
+            }
+            return null;
         }
 
         private static string KindName(string kind)
         {
-            return kind == AiConfig.Shared ? Loc.Get("ai_kind_shared") : kind == AiConfig.Encounter ? Loc.Get("ai_cat_enc") : Loc.Get("ai_kind_game");
+            return kind == AiConfig.Shared ? Loc.Get("ai_kind_shared") : kind == AiConfig.Encounter ? Loc.Get("ai_kind_enc") : Loc.Get("ai_kind_game");
         }
 
         private void DrawCatalogue(Rect r)
@@ -339,7 +381,7 @@ namespace HexRevival
             string[] cats = { Loc.Get("ai_cat_player"), Loc.Get("ai_cat_ai"), Loc.Get("ai_cat_game"), Loc.Get("ai_cat_enc") };
             float x = r.x + 10 * S, w = r.width - 20 * S, cw = w / 4f, y = r.y + 10 * S;
             for (int i = 0; i < 4; i++)
-                if (GameSkin.Tab(new Rect(x + i * cw, y, cw - 4 * S, 38 * S), cats[i], i == m_Category) && i != m_Category)
+                if (GameSkin.Tab(new Rect(x + i * cw, y, cw - 4 * S, 38 * S), cats[i], i == m_Category, 14) && i != m_Category)
                 {
                     m_Category = i; m_ScrollCat = Vector2.zero; m_ConfirmDelete = 0;
                 }
@@ -350,14 +392,14 @@ namespace HexRevival
             if (search != m_Search) { m_Search = search; m_ScrollCat = Vector2.zero; }
             y += 42 * S;
 
-            AiConfig.Tier tier = m_Tier >= 0 && m_Tier < m_Cfg.Tiers.Count ? m_Cfg.Tiers[m_Tier] : null;
+            AiConfig.Tier tier = CurrentTier;
             bool canAdd = tier != null && m_Mode != AiConfig.Limited && !(m_Category == CatEncounter && m_Mode == AiConfig.Siege);
             List<Entry> all = List(m_Category), shown = m_Search.Length == 0 ? all : all.FindAll(e => e.Name.IndexOf(m_Search, StringComparison.OrdinalIgnoreCase) >= 0 || e.Detail.IndexOf(m_Search, StringComparison.OrdinalIgnoreCase) >= 0);
-            float rowH = 58 * S, btnW = 110 * S;
+            float rowH = 58 * S, btnW = 100 * S;
             bool custom = m_Category == CatPlayer || m_Category == CatAi;
             float reserve = custom ? 2 * btnW + 52 * S : btnW + 46 * S;
             Rect area = new Rect(x, y, w, r.yMax - 10 * S - y);
-            Entry add = null, copy = null, editDeck = null, delete = null;
+            Entry add = null, removeRef = null, copy = null, editDeck = null, delete = null;
             m_ScrollCat = Controls.List(area, m_ScrollCat, shown.Count, rowH, i =>
             {
                 Entry e = shown[i];
@@ -365,8 +407,9 @@ namespace HexRevival
                 bool inTier = tier != null && tier.Decks.Exists(d => d.Kind == e.Kind && d.Key == e.Key);
                 GameSkin.Row(row, e.Name, e.Detail, inTier, e.Champion);
                 float bx = row.xMax + 6 * S, by = row.y + (rowH - 34 * S) / 2f;
-                GUI.enabled = canAdd && !inTier;
-                if (Controls.Small(new Rect(bx, by, 34 * S, 34 * S), "+")) add = e;
+                // "+" adds the deck to the tier, "-" (once added) takes it out.
+                GUI.enabled = canAdd;
+                if (Controls.Small(new Rect(bx, by, 34 * S, 34 * S), inTier ? "-" : "+")) { if (inTier) removeRef = e; else add = e; }
                 GUI.enabled = true;
                 bx += 40 * S;
                 if (custom)
@@ -379,6 +422,7 @@ namespace HexRevival
                 return false;
             }, i => { });
             if (add != null && tier != null) { tier.Decks.Add(new AiConfig.DeckRef(add.Kind, add.Key)); m_Dirty = true; }
+            if (removeRef != null && tier != null) { tier.Decks.RemoveAll(d => d.Kind == removeRef.Kind && d.Key == removeRef.Key); m_Dirty = true; }
             if (copy != null) CopyToShared(copy);
             if (editDeck != null)
             {
@@ -393,7 +437,7 @@ namespace HexRevival
                     Decks.Delete(delete.DeckId);
                     m_ConfirmDelete = 0;
                     m_Lists = null;
-                    m_Names.Clear();
+                    m_Info.Clear();
                     m_Message = Loc.Get("ai_deleted") + " " + delete.Name;
                 }
             }
@@ -412,6 +456,7 @@ namespace HexRevival
                 case "cat": w.m_Category = int.Parse(parts[2]); return "ok";
                 case "copy": w.CopyToShared(w.List(w.m_Category)[int.Parse(parts[2])]); return w.m_Message;
                 case "delete": Decks.Delete(ulong.Parse(parts[2])); w.m_Lists = null; return "deleted";
+                case "screen": return "button mode: " + (AiButton.ModeOfScreen() ?? "none");
                 case "count": return w.List(w.m_Category).Count + " in category " + w.m_Category;
                 case "search": w.m_Search = parts.Length > 2 ? parts[2] : ""; return "ok";
             }
@@ -420,8 +465,8 @@ namespace HexRevival
     }
 
     /// <summary>
-    /// "Configure the AIs" at the bottom right of the screens of the modes played against the AI (and of the main
-    /// menu), above the game's bottom bar: opens AiDecksWindow on that mode.
+    /// "Configure the AIs" at the bottom right of the screens of the modes played against the AI, above the game's
+    /// bottom bar: opens AiDecksWindow on that mode (Battlegrounds: the mode of the selected event).
     /// </summary>
     public class AiButton : MonoBehaviour
     {
@@ -429,7 +474,8 @@ namespace HexRevival
         private Rect m_Rect;
         private string m_Mode;
 
-        private static string ModeOfScreen()
+        /// <summary>The mode of the screen shown (Battlegrounds: the selected event), null on other screens.</summary>
+        internal static string ModeOfScreen()
         {
             try
             {
@@ -438,15 +484,22 @@ namespace HexRevival
                 if (main.m_GameClient.PlayerProfile == null || !main.m_GameClient.PlayerProfile.IsInitialized()) return null;
                 switch (main.m_GameClient.StateManager.CurrentGameState)
                 {
-                    case EGameState.LandingPage: return AiConfig.Ladder;
-                    case EGameState.Tournament:
-                    case EGameState.TournamentLobby: return AiConfig.Gauntlet;
+                    case EGameState.Tournament: return BattlegroundsMode();
                     case EGameState.ArenaCampaign: return AiConfig.Arena;
                     case EGameState.Siege: return AiConfig.Siege;
                 }
             }
             catch { }
             return null;
+        }
+
+        private static string BattlegroundsMode()
+        {
+            UITournamentPendingViewModel vm = FindObjectOfType<UITournamentPendingViewModel>();
+            UITournamentDescContext sel = vm != null && vm.m_Context != null ? vm.m_Context.SelectedTournament : null;
+            if (sel == null || sel.m_TournamentDesc == null) return null;
+            if (sel.TournamentStyle == Game.Shared.Tournaments.ETournamentStyle.Ladder) return AiConfig.Ladder;
+            return Battlegrounds.ModeOf(sel.m_TournamentDesc.TournamentID);
         }
 
         private void Update()
