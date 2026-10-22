@@ -23,7 +23,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
   against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
 - **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
-- **AI opponents**: shareable opponent packs (decks, AI skill, handicaps), edited in game.
+- **AI opponents**: per-mode AI configuration (decks by tier, AI skill, modifiers), shareable files; decks outside the campaign are shared by all accounts.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a

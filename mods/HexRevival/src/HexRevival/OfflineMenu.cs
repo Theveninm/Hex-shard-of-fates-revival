@@ -570,12 +570,11 @@ namespace HexRevival
 
             // --- Bottom: summary + actions
             float by = win.yMax - 74 * S;
-            Rect summary = new Rect(win.x + pad, by, win.width - 2 * pad - 660 * S, 30 * S);
+            Rect summary = new Rect(win.x + pad, by, win.width - 2 * pad - 420 * S, 30 * S);
             GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + (m_SelOpp != null ? m_SelOpp.Label : "—"), GameSkin.Style("title", 19, GameSkin.Text));
             if (!string.IsNullOrEmpty(m_Message))
                 GUI.Label(new Rect(summary.x, summary.yMax, summary.width, 24 * S), m_Message, GameSkin.Style("body", 13, new Color(1f, 0.55f, 0.45f)));
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by - 4 * S, 180 * S, 52 * S), Loc.Get("close"))) SetOpen(false);
-            if (GameSkin.GoldButton(new Rect(win.xMax - pad - 640 * S, by - 4 * S, 230 * S, 52 * S), Loc.Get("ai_opponents"), true, 18)) { SetOpen(false); OpponentEditor.Open(); }
             if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null)) Fight();
             GUI.enabled = true;
             if (modal) DrawConfirmDelete();

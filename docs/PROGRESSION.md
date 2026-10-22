@@ -445,26 +445,34 @@ Not done: the buyout, Hogarth's dialogues, the arena's frozen game board.
 
 ## AI opponents
 
-The opponents of the modes that had human players (ladder, gauntlets) come from an "opponent pack":
-a JSON file of the `HexRevivalOpponents` folder (next to Hex.exe), chosen per account and edited in game
-(Quick Match menu > AI opponents). A pack lists tiers (ladder stars, constructed gauntlet wins, sealed/draft
-gauntlets, arena tier) and, in each tier, opponents drawn at random (by their frequency):
+Each mode that had other players (ladder, constructed gauntlet, sealed/draft gauntlets, Frost Ring Arena, Siege
+placeholder keeps) draws its opponents from an AI configuration: tiers (ladder stars, gauntlet wins, arena tier,
+keep bounty in gold) and, in each tier, decks drawn at random by their frequency. A deck is one of:
 
-| Setting | Effect |
-|---|---|
-| Deck | a deck of the game, or card names ("4 Crackling Bolt") with a champion: imported from your decks in the editor |
-| AI skill | the game AI's own levels (EDifficulty, Easy to Hard: each level adds a skill such as combat tricks, bluffs, pre-emptive removal) |
-| Imprecision | the noise the AI adds to its card values (the game's default 50) |
-| Style | the deck personality (Aggressive, Burn...) that weighs the AI's choices |
-| Handicaps (AI and player) | health (+/-), resources in play, charges, extra cards, cards in play: applied after the mulligan |
+- a shared deck (decks outside the campaign are common to every account, in `HexRevivalSaves/decks_common.txt`);
+- one of the game's own AI decks (its deck templates);
+- an encounter of the game (its scene, deck and AI), for the arena only.
 
-The default pack (`Default.json`, read-only, rewritten if deleted) uses the game's prebuilt decks with a PvP
-champion, with the AI from Medium (Bronze) to Hard (Platinum and Cosmic) and no handicap (PLACEHOLDER: the
-original opponents were players). To share a pack, copy its file into another player's folder.
+| Setting | Where | Effect |
+|---|---|---|
+| AI skill | per tier, or per deck | the game AI's own levels (EDifficulty, Easy to Hard: each level adds a skill such as combat tricks, bluffs, pre-emptive removal) |
+| Imprecision | per deck | the noise the AI adds to its card values (the game's default 50) |
+| Style | the deck's personality | weighs the AI's choices (Aggressive, Burn...) |
+| Frequency, Boss, Elite | per deck | how often it is drawn; Siege: third fight = boss, second = elite |
+| Modifiers (AI and player) | per deck | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
 
-In sealed and draft gauntlets the pack only sets the AI's skill, style and handicaps: the game's AI cannot draft or
-build a deck (the server did), so the mod's bots pick by the game AI's own card evaluation plus rarity and favor
-their colors, and an AI limited deck is the 23 best cards of its two main colors plus 17 shards (PLACEHOLDER).
+The settings of the shared decks live in `HexRevivalSaves/decks_common_ai.json`. The configuration of a mode
+is per account (`ai.json` in the account's folder, only the modes it changed); the others use the defaults in
+`HexRevivalSaves/ai_defaults.json`, which "change the default settings" edits for every account that kept them.
+To share opponents, copy these files.
+
+Defaults (PLACEHOLDER: the original opponents were players): the game's prebuilt decks with a PvP champion, the
+AI from Medium (Bronze) to Hard (Platinum and Cosmic), no modifier; the arena uses the game's own Arena_ decks
+(see Frost Ring Arena). The Siege AI skill does not apply to the player's own keep defense.
+
+In sealed and draft gauntlets the configuration only sets the AI's skill and modifiers: the game's AI cannot
+draft or build a deck (the server did), so the mod's bots pick by the game AI's own card evaluation plus rarity and
+favor their colors, and an AI limited deck is the 23 best cards of its two main colors plus 17 shards (PLACEHOLDER).
 
 ## Tutorial
 

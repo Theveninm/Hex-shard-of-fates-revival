@@ -95,7 +95,7 @@ namespace HexRevival
 
         private static ulong ChallengerId(Opponents.Opponent o)
         {
-            byte[] b = Opponents.StableGuid("arena|" + o.Name + "|" + o.Prebuilt + "|" + o.Champion).ToByteArray();
+            byte[] b = Opponents.StableGuid("arena|" + o.Name + "|" + o.Prebuilt + "|" + o.Champion + "|" + o.CustomDeck + "|" + o.Encounter).ToByteArray();
             return BitConverter.ToUInt64(b, 0) & 0x7fffffffffffffffUL;
         }
 
@@ -121,8 +121,7 @@ namespace HexRevival
         /// <summary>Every opponent of the pack's arena tiers, and the run's, in the master list.</summary>
         private static void FillMaster()
         {
-            foreach (Opponents.Tier t in Opponents.Active.Tiers)
-                if (t.Mode == Opponents.Arena) foreach (Opponents.Opponent o in t.Opponents) Challenger(o);
+            foreach (Opponents.Opponent o in AiConfig.All(AiConfig.Arena)) Challenger(o);
             if (Current != null) Prepare(Current);
         }
 
@@ -245,7 +244,7 @@ namespace HexRevival
                 if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare && x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(x.Name));
                 if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare && x.Boss == boss && !used.Contains(x.Name));
                 if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare);
-                if (o == null) { Debug.LogError("[HexRevival] [Arena] no opponent for tier " + tier + " in the pack " + Opponents.Active.Name); return null; }
+                if (o == null) { Debug.LogError("[HexRevival] [Arena] no opponent for tier " + tier + " in the arena's AI decks"); return null; }
                 used.Add(o.Name);
                 r.Opponents.Add(o);
                 r.Fights.Add(new ArenaFight
@@ -276,6 +275,12 @@ namespace HexRevival
         {
             Run r = Current;
             if (r == null) return;
+            if (!Decks.Exists(r.Info.DeckId))
+            {
+                // The run's deck was deleted: withdraw so that the player can start again with another deck.
+                Notices.Show("Your arena deck no longer exists: withdraw from this run and start a new one.");
+                return;
+            }
             Opponents.Opponent o = r.Opponents[r.Current];
             DeckTemplate deck = Opponents.DeckOf(o);
             bool boss = (r.Current + 1) % PerTier == 0;
@@ -299,7 +304,7 @@ namespace HexRevival
                 e.ArenaOwner = owner;
             };
             s_InBattle = true;
-            Patches.StartMatch(new UID(UID.Type.Deck, r.Info.DeckId), Patches.NeutralEncounterId, deck,
+            Patches.StartMatch(new UID(UID.Type.Deck, r.Info.DeckId), Opponents.SceneOf(o), deck,
                 "arena fight " + (r.Current + 1) + " vs " + o.Name, Opponents.PersonalityOf(o));
         }
 
@@ -611,7 +616,7 @@ namespace HexRevival
             return null;
         }
 
-        /// <summary>Dev: "arena [state] | win | lose | reset".</summary>
+        /// <summary>Dev: "arena [state] | win | lose | deck <id> | battle | reset".</summary>
         public static string Command(string[] parts)
         {
             string sub = parts.Length > 1 ? parts[1] : "state";
@@ -628,12 +633,20 @@ namespace HexRevival
                     s_InBattle = true;
                     OnGameEnded(sub == "win");
                     return "ok";
+                case "deck":
+                    if (r == null || parts.Length < 3) return "usage: arena deck <id>";
+                    r.Info.DeckId = ulong.Parse(parts[2]);
+                    Save();
+                    return "deck " + r.Info.DeckId;
+                case "battle":
+                    Battle();
+                    return "ok";
                 case "reset":
                     Data.Run = null;
                     Save();
                     return "run removed";
             }
-            return "usage: arena [state] | win | lose | reset";
+            return "usage: arena [state] | win | lose | deck <id> | battle | reset";
         }
     }
 }

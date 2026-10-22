@@ -445,6 +445,9 @@ namespace HexRevival
             Messaging.Create.FightConfig f = a.Seq < a.Fights.Length ? a.Fights[a.Seq] : null;
             if (f == null || f.Deck == null) { Debug.LogError("[HexRevival] [Siege] no deck for fight " + a.Seq); s_Assault = null; return; }
             Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE);
+            // A placeholder keep: the AI opponent chosen for this fight (skill, handicaps), see AiConfig.
+            PlaceholderKeeps pk = Keeps as PlaceholderKeeps;
+            Opponents.SetNext(pk != null ? pk.OpponentOf(a.Keep.Id, a.Seq) : null);
             Patches.StartMatch(a.PlayerDeck, Patches.NeutralEncounterId, ToAIDeck(f.Deck), "siege " + a.Keep.Name + " " + (a.Seq + 1) + "/3",
                 f.Deck.GetPersonality(), f.Message);
         }
@@ -727,9 +730,18 @@ namespace HexRevival
             public ulong NextId = 1000000;
             public List<siege_bits> Keeps = new List<siege_bits>();
             public DateTime LastSimulation = DateTime.UtcNow;
+            /// <summary>The AI opponent of each fight ("keep id/fight"): its skill and handicaps (see AiConfig).</summary>
+            public Dictionary<string, Opponents.Opponent> Opponents = new Dictionary<string, Opponents.Opponent>();
         }
 
         private const int GoldKeeps = 40, PlatinumKeeps = 10;
+
+        /// <summary>The AI opponent chosen for a fight of a placeholder keep (null: the deck's own personality only).</summary>
+        public Opponents.Opponent OpponentOf(ulong keep, int fight)
+        {
+            Opponents.Opponent o;
+            return Data.Opponents != null && Data.Opponents.TryGetValue(keep + "/" + fight, out o) ? o : null;
+        }
         private World m_World;
 
         private static string FilePath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "siege_world.json"); } }
@@ -879,12 +891,42 @@ namespace HexRevival
             k.Created = DateTime.UtcNow.AddHours(-rng.NextDouble() * (2 + wins * 6));
             k.StatusDate = k.Created;
             k.CurStatus = siege_bits.Status.ACTIVE;
-            Messaging.Create.FightConfig[] fights = RandomFights(rng);
+            Messaging.Create.FightConfig[] fights = ConfiguredFights(w, k, rng) ?? RandomFights(rng);
             byte[] json = null;
             JsonUtils.SerializeJson(fights, (byte[] x) => { json = x; });
             k.FightInfo = Compressor.Compress(json);
             Siege.SetFees(k);
             return k;
+        }
+
+        /// <summary>
+        /// The keep's 3 fights from the Siege AI configuration (see AiConfig), by its bounty in gold (platinum x 10): two
+        /// decks then a boss (an elite in second place when there is one). Null when the configuration has no deck.
+        /// Encounters are left out (a keep holds decks).
+        /// </summary>
+        private static Messaging.Create.FightConfig[] ConfiguredFights(World w, siege_bits k, System.Random rng)
+        {
+            int value = k.Currency == siege_bits.CurrencyType.PLATINUM ? k.Pot * 10 : k.Pot;
+            Messaging.Create.FightConfig[] fights = new Messaging.Create.FightConfig[3];
+            HashSet<string> used = new HashSet<string>();
+            for (int i = 0; i < 3; i++)
+            {
+                bool boss = i == 2, elite = i == 1;
+                Func<Opponents.Opponent, bool> ok = o => string.IsNullOrEmpty(o.Encounter) && !used.Contains(o.Name);
+                Opponents.Opponent op = HexRevival.Opponents.Pick(AiConfig.Siege, value, o => ok(o) && o.Boss == boss && o.Elite == elite)
+                    ?? HexRevival.Opponents.Pick(AiConfig.Siege, value, o => ok(o) && !o.Boss)
+                    ?? HexRevival.Opponents.Pick(AiConfig.Siege, value, ok);
+                DeckTemplate d = HexRevival.Opponents.DeckOf(op);
+                if (d == null) return null;
+                used.Add(op.Name);
+                ProfileDeckTemplate t = ToProfile(d);
+                EDeckPersonality pers = HexRevival.Opponents.PersonalityOf(op);
+                t.SetPersonality(pers != EDeckPersonality.Default ? pers : Personalities[rng.Next(Personalities.Length)]);
+                fights[i] = new Messaging.Create.FightConfig { Deck = t, Message = "" };
+                if (w.Opponents == null) w.Opponents = new Dictionary<string, Opponents.Opponent>();
+                w.Opponents[k.Id + "/" + i] = op;
+            }
+            return fights;
         }
 
         /// <summary>3 different prebuilt decks, each with an AI personality.</summary>

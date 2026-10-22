@@ -198,7 +198,6 @@ namespace HexRevival
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 go.AddComponent<TestBehaviour>();
                 go.AddComponent<OfflineMenu>();
-                go.AddComponent<OpponentEditor>();
                 go.AddComponent<AccountMenu>();
                 go.AddComponent<CheatMenu>();
                 go.AddComponent<Notices>();
@@ -937,7 +936,6 @@ namespace HexRevival
                 case "siege": return Siege.Command(parts);
                 case "bg": return Battlegrounds.Command(parts);
                 case "arena": return Arena.Command(parts);
-                case "oppeditor": return OpponentEditor.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)

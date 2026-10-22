@@ -313,6 +313,8 @@ namespace HexRevival
         {
             try
             {
+                // A deck saved before the move to the shared decks is found under its new id.
+                if (playerDeck.IsValid()) playerDeck = new UID(UID.Type.Deck, Decks.CurrentId(playerDeck.GetInstanceId()));
                 s_PendingAIDeck = aiDeck;
                 s_PendingAIPersonality = aiPersonality;
                 Decks.LastDeck = playerDeck;

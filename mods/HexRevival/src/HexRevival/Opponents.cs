@@ -11,44 +11,21 @@ using JsonUtils = Game.Shared.Network.HConnect.Utils;
 namespace HexRevival
 {
     /// <summary>
-    /// The AI opponents of the modes that had human opponents (ladder, gauntlets) and of the Frost Ring Arena:
-    /// "opponent packs", one JSON file each in the HexRevivalOpponents folder of the game, to share by copying the
-    /// file. A pack lists tiers (by ladder stars, gauntlet wins, arena tier); a tier lists opponents: name, deck
-    /// (card names, so that a pack works on any computer; or a prebuilt deck of the game), AI skill, deck
-    /// personality, and handicaps for the AI and for the player. Each account chooses its pack (account.txt).
-    /// The default pack is written by the mod (Default.json) and rewritten when missing.
+    /// An AI opponent at play time (resolved from the AI configuration, see AiConfig): its deck (a shared deck, a deck of
+    /// the game or an encounter), the AI's skill and style, its arena role, and the handicaps applied after the mulligan.
     /// </summary>
     public static class Opponents
     {
-        // ------------------------------------------------------------------
-        // Pack format
-        // ------------------------------------------------------------------
-
-        public class Pack
-        {
-            /// <summary>The default pack's version: rewritten when the mod has a newer one.</summary>
-            public int Version;
-            public string Name = "";
-            public string Author = "";
-            public string Description = "";
-            public List<Tier> Tiers = new List<Tier>();
-        }
-
-        /// <summary>Modes of a tier.</summary>
-        public const string Ladder = "ladder", Gauntlet = "gauntlet", Limited = "limited", Arena = "arena";
-
-        public class Tier
-        {
-            /// <summary>ladder (From/To = stars), gauntlet (= match wins), limited (sealed and draft gauntlets: decks ignored), arena (= arena tier 1 to 4).</summary>
-            public string Mode = Ladder;
-            public string Name = "";
-            public int From, To;
-            public List<Opponent> Opponents = new List<Opponent>();
-        }
+        /// <summary>Modes (see AiConfig).</summary>
+        public const string Ladder = AiConfig.Ladder, Gauntlet = AiConfig.Gauntlet, Limited = AiConfig.Limited, Arena = AiConfig.Arena, Siege = AiConfig.Siege;
 
         public class Opponent
         {
             public string Name = "";
+            /// <summary>A shared deck (its id), see Decks.</summary>
+            public ulong CustomDeck;
+            /// <summary>An encounter of the game (its scene id): its own AI deck and rules.</summary>
+            public string Encounter = "";
             /// <summary>A prebuilt deck of the game (its name), used when Cards is empty.</summary>
             public string Prebuilt = "";
             /// <summary>Champion name (with Cards).</summary>
@@ -78,7 +55,12 @@ namespace HexRevival
             public int Cards;       // cards drawn
             /// <summary>Cards in play from the start (names).</summary>
             public List<string> InPlay = new List<string>();
-            public bool IsEmpty { get { return Health == 0 && Resources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0); } }
+            /// <summary>Shards in play from the start, by color: Blood, Diamond, Ruby, Sapphire, Wild (resource and threshold).</summary>
+            public int[] Shards = new int[5];
+            public bool IsEmpty { get { return Health == 0 && Resources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0) && ShardCount == 0; } }
+            public int ShardCount { get { int n = 0; if (Shards != null) foreach (int x in Shards) n += x; return n; } }
+
+            public static readonly ECardShards[] ShardColors = { ECardShards.Blood, ECardShards.Diamond, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild };
 
             /// <summary>The sum of two handicaps (a mode's own bonus added to a pack's).</summary>
             public static Handicap Add(Handicap a, Handicap b)
@@ -86,6 +68,7 @@ namespace HexRevival
                 if (b == null) return a;
                 if (a == null) return b;
                 Handicap r = new Handicap { Health = a.Health + b.Health, Resources = a.Resources + b.Resources, Charges = a.Charges + b.Charges, Cards = a.Cards + b.Cards };
+                for (int i = 0; i < 5; i++) r.Shards[i] = (a.Shards != null && i < a.Shards.Length ? a.Shards[i] : 0) + (b.Shards != null && i < b.Shards.Length ? b.Shards[i] : 0);
                 if (a.InPlay != null) r.InPlay.AddRange(a.InPlay);
                 if (b.InPlay != null) r.InPlay.AddRange(b.InPlay);
                 return r;
@@ -93,185 +76,31 @@ namespace HexRevival
         }
 
         // ------------------------------------------------------------------
-        // Files
-        // ------------------------------------------------------------------
-
-        public const string DefaultPackName = "Default";
-        private const int DefaultVersion = 2;   // 2: Frost Ring Arena tiers
-
-        public static string Folder { get { return Path.Combine(LocalServer.Root, "HexRevivalOpponents"); } }
-
-        private static string PathOf(string name) { return Path.Combine(Folder, name + ".json"); }
-
-        /// <summary>The names of the packs in the folder (the default one first).</summary>
-        public static List<string> List()
-        {
-            EnsureDefault();
-            List<string> res = new List<string>();
-            foreach (string f in Directory.GetFiles(Folder, "*.json")) res.Add(Path.GetFileNameWithoutExtension(f));
-            res.Sort((a, b) => a == DefaultPackName ? -1 : b == DefaultPackName ? 1 : string.Compare(a, b, StringComparison.OrdinalIgnoreCase));
-            return res;
-        }
-
-        public static Pack Load(string name)
-        {
-            EnsureDefault();
-            Pack p = null;
-            try
-            {
-                string path = PathOf(name);
-                if (File.Exists(path)) JsonUtils.DeserializeJson(File.ReadAllBytes(path), (Pack x) => { p = x; });
-            }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] " + name + ": " + e.Message); }
-            if (p != null && string.IsNullOrEmpty(p.Name)) p.Name = name;
-            return p;
-        }
-
-        public static void Save(Pack p, string fileName)
-        {
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                byte[] b = null;
-                JsonUtils.SerializeJson(p, (byte[] x) => { b = x; }, true);
-                File.WriteAllBytes(PathOf(fileName), b);
-                s_Active = null;
-            }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] save " + fileName + ": " + e.Message); }
-        }
-
-        private static void EnsureDefault()
-        {
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                Pack d = null;
-                if (File.Exists(PathOf(DefaultPackName)))
-                    JsonUtils.DeserializeJson(File.ReadAllBytes(PathOf(DefaultPackName)), (Pack x) => { d = x; });
-                if (d == null || d.Version < DefaultVersion) Save(BuildDefault(), DefaultPackName);
-            }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] default pack: " + e.Message); }
-        }
-
-        private static Pack s_Active;
-        private static string s_ActiveName;
-
-        /// <summary>The account's pack (the default pack if none or unreadable).</summary>
-        public static Pack Active
-        {
-            get
-            {
-                string name = Saves.Current != null && !string.IsNullOrEmpty(Saves.Current.OpponentPack) ? Saves.Current.OpponentPack : DefaultPackName;
-                if (s_Active != null && s_ActiveName == name) return s_Active;
-                s_ActiveName = name;
-                s_Active = Load(name) ?? Load(DefaultPackName) ?? BuildDefault();
-                return s_Active;
-            }
-        }
-
-        /// <summary>
-        /// The default pack: the game's prebuilt decks with a PvP champion, the AI getting better with the rank
-        /// (PLACEHOLDER: the original opponents were players). No handicap.
-        /// </summary>
-        private static Pack BuildDefault()
-        {
-            Pack p = new Pack { Version = DefaultVersion, Name = DefaultPackName, Author = "HEX Revival",
-                Description = "The game's prebuilt decks; the AI plays better as you climb. No handicaps." };
-            string[] ladderNames = { "Bronze", "Silver", "Gold", "Platinum", "Cosmic" };
-            int[] ladderFrom = { 0, 10, 25, 45, 70 };
-            string[] skills = { "Medium", "BluffWithOneResource", "Kneecap", "Hard", "Hard" };
-            List<DeckTemplate> decks = Decks.PrebuiltPvp();
-            for (int i = 0; i < ladderNames.Length; i++)
-            {
-                Tier t = new Tier { Mode = Ladder, Name = ladderNames[i], From = ladderFrom[i], To = i + 1 < ladderFrom.Length ? ladderFrom[i + 1] - 1 : 9999 };
-                foreach (DeckTemplate d in decks) t.Opponents.Add(new Opponent { Name = d.m_DeckName, Prebuilt = d.m_DeckName, Skill = skills[i] });
-                p.Tiers.Add(t);
-            }
-            Tier g = new Tier { Mode = Gauntlet, Name = "Constructed gauntlet", From = 0, To = 99 };
-            foreach (DeckTemplate d in decks) g.Opponents.Add(new Opponent { Name = d.m_DeckName, Prebuilt = d.m_DeckName, Skill = "Hard" });
-            p.Tiers.Add(g);
-            AddArenaTiers(p);
-            p.Tiers.Add(new Tier { Mode = Limited, Name = "Sealed and draft gauntlets", From = 0, To = 99,
-                Opponents = new List<Opponent> { new Opponent { Name = "Limited player", Skill = "Hard" } } });
-            return p;
-        }
-
-        /// <summary>
-        /// The Frost Ring Arena's opponents: the game's "Arena_" decks (Src.Game). Their champions' health sorts them
-        /// (Src.HexCompendium, "Frost Ring Arena": tier 1 has its own pool, its opponents with 7 less health; elites have
-        /// more health; the Eternal Guardian is the tier 1 boss; Uruunaz and Zakiir are rare encounters): 15 = tier 1,
-        /// 19 = the Eternal Guardian, 23 = standard, 25 (or an "Elite" name) = elite, 30 = boss, 40 = rare.
-        /// Which boss belongs to which tier is not known (PLACEHOLDER: tiers 2 to 4 share the bosses; tier 4 takes their
-        /// elite versions and Hogarth, Master of the Arena).
-        /// </summary>
-        private static void AddArenaTiers(Pack p)
-        {
-            Tier t1 = new Tier { Mode = Arena, Name = "Arena tier 1", From = 1, To = 1 };
-            Tier t23 = new Tier { Mode = Arena, Name = "Arena tiers 2-3", From = 2, To = 3 };
-            Tier t4 = new Tier { Mode = Arena, Name = "Arena tier 4", From = 4, To = 4 };
-            TemplateManager tm = Singleton<TemplateManager>.Instance;
-            List<DeckTemplate> decks = new List<DeckTemplate>();
-            foreach (DeckTemplate d in tm.Decks.Values) if (d != null && d.m_DeckName != null && d.m_DeckName.StartsWith("Arena_") && d.m_ChampionId.IsValid) decks.Add(d);
-            decks.Sort((a, b) => string.CompareOrdinal(a.m_DeckName + ChampionName(a.m_ChampionId), b.m_DeckName + ChampionName(b.m_ChampionId)));
-            foreach (DeckTemplate d in decks)
-            {
-                ChampionTemplate ch = tm.GetChampionTemplate(d.m_ChampionId);
-                if (ch == null) continue;
-                int health = ch.m_StartingHealth;
-                bool elite = ch.m_Name.Contains("Elite");
-                Opponent o = new Opponent { Name = ch.m_Name, Prebuilt = d.m_DeckName, Champion = ch.m_Name, Skill = "Hard" };
-                if (health <= 15) t1.Opponents.Add(o);
-                else if (health < 23) { o.Boss = true; t1.Opponents.Add(o); }
-                else if (health >= 40) { o.Rare = true; t23.Opponents.Add(o); t4.Opponents.Add(Copy(o)); }
-                else if (health >= 30)
-                {
-                    o.Boss = true;
-                    if (ch.m_Name.StartsWith("Hogarth")) { if (elite) t4.Opponents.Add(o); continue; }
-                    if (elite) t4.Opponents.Add(o); else t23.Opponents.Add(o);
-                }
-                else
-                {
-                    o.Elite = elite;
-                    t23.Opponents.Add(o);
-                    t4.Opponents.Add(Copy(o));
-                }
-            }
-            p.Tiers.Add(t1); p.Tiers.Add(t23); p.Tiers.Add(t4);
-        }
-
-        private static Opponent Copy(Opponent o)
-        {
-            Opponent c = null;
-            byte[] b = null;
-            JsonUtils.SerializeJson(o, (byte[] x) => { b = x; });
-            JsonUtils.DeserializeJson(b, (Opponent x) => { c = x; });
-            return c;
-        }
-
-        // ------------------------------------------------------------------
         // Choosing and building an opponent
         // ------------------------------------------------------------------
 
-        /// <summary>An opponent of the active pack for this mode and value (stars, wins, arena tier); null if none.</summary>
-        public static Opponent Pick(string mode, int value, Func<Opponent, bool> filter = null)
+        /// <summary>An opponent of the account's AI configuration for this mode and value (stars, wins, arena tier, bounty).</summary>
+        public static Opponent Pick(string mode, int value, Func<Opponent, bool> filter = null) { return AiConfig.Pick(mode, value, filter); }
+
+        /// <summary>The scene of a match against this opponent: its encounter, or the neutral one.</summary>
+        public static ResourceId SceneOf(Opponent o)
         {
-            List<Opponent> all = new List<Opponent>();
-            foreach (Tier t in Active.Tiers)
-                if (t.Mode == mode && value >= t.From && value <= t.To)
-                    foreach (Opponent o in t.Opponents) if (o.Weight > 0 && (filter == null || filter(o))) all.Add(o);
-            if (all.Count == 0) return null;
-            int total = 0;
-            foreach (Opponent o in all) total += o.Weight;
-            int r = UnityEngine.Random.Range(0, total);
-            foreach (Opponent o in all) { r -= o.Weight; if (r < 0) return o; }
-            return all[all.Count - 1];
+            if (o != null && !string.IsNullOrEmpty(o.Encounter))
+                try { return new ResourceId(new Guid(o.Encounter)); } catch { }
+            return Patches.NeutralEncounterId;
         }
 
         /// <summary>The opponent's deck as the AI's deck (null: its cards or prebuilt deck are unknown).</summary>
         public static DeckTemplate DeckOf(Opponent o)
         {
-            if (o == null) return null;
+            if (o == null || !string.IsNullOrEmpty(o.Encounter)) return null;   // an encounter plays its own deck
             TemplateManager tm = Singleton<TemplateManager>.Instance;
+            if (o.CustomDeck != 0)
+            {
+                DeckTemplate own = Decks.ToTemplate(new UID(UID.Type.Deck, o.CustomDeck));
+                if (own != null) own.m_Id = new ResourceId(StableGuid("deck|" + o.CustomDeck));
+                return own;
+            }
             if (o.Cards == null || o.Cards.Count == 0)
             {
                 if (string.IsNullOrEmpty(o.Prebuilt)) return null;
@@ -426,6 +255,15 @@ namespace HexRevival
                     ss.SetChampionHealth(p.m_ChampionCard, Math.Max(1, now + h.Health), false);
                 }
                 if (h.Resources > 0) Cheats.AddResourcesOnly(ss, p, h.Resources);
+                // Shards of a color: a resource and its threshold each.
+                if (h.Shards != null)
+                    for (int i = 0; i < h.Shards.Length && i < 5; i++)
+                        if (h.Shards[i] > 0)
+                        {
+                            ss.IncrementPlayerTotalResourcePool(p, h.Shards[i], false);
+                            ss.IncrementPlayerCurrentResourcePool(p, h.Shards[i], false);
+                            ss.IncrementPlayerResourceThreshold(p, Handicap.ShardColors[i], h.Shards[i], false);
+                        }
                 if (h.Charges > 0) ss.AddChargePoints(p.m_ChampionCard, h.Charges, false);
                 for (int i = 0; i < h.Cards; i++) Cheats.DrawCard(ss, p);
                 if (h.InPlay != null)

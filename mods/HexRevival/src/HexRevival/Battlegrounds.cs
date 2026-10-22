@@ -572,7 +572,8 @@ namespace HexRevival
                 e.SeriesMaxGames = 1;   // the mod plays the best of 3 itself, one game at a time (back to the deck builder in between)
             };
             EDeckPersonality personality = Opponents.PersonalityOf(s_LastOpponent);
-            LocalServer.Later(() => Patches.StartMatch(new UID(UID.Type.Deck, r.Deck.Id), Patches.NeutralEncounterId, ai,
+            ResourceId scene = Opponents.SceneOf(s_LastOpponent);
+            LocalServer.Later(() => Patches.StartMatch(new UID(UID.Type.Deck, r.Deck.Id), scene, ai,
                 g.Name + " match " + match + " game " + game, personality));
         }
 
@@ -861,7 +862,7 @@ namespace HexRevival
             LocalServer.Later(() =>
             {
                 Manager.InUnrankedMatch = false;
-                Patches.StartMatch(new UID(UID.Type.Deck, deck.Id), Patches.NeutralEncounterId, ai, "ladder " + ladderId + (o != null ? " vs " + o.Name : ""), personality);
+                Patches.StartMatch(new UID(UID.Type.Deck, deck.Id), Opponents.SceneOf(o), ai, "ladder " + ladderId + (o != null ? " vs " + o.Name : ""), personality);
             });
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Game.Client;
 using Game.Client.Network.Profile;
 using Game.Shared;
 using Game.Shared.Domain;
@@ -12,9 +13,12 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Local profile decks: AddNewDeck / UpdateDeck / GetDeckInfo / RemoveDeck transactions,
-    /// saved in HexRevival.decks.txt (cards stored by template, not by copy
-    /// number: the generated collection may change from one version to the next).
+    /// Local profile decks: AddNewDeck / UpdateDeck / GetDeckInfo / RemoveDeck transactions. Cards are stored by
+    /// template, not by copy number (the generated collection may change from one version to the next).
+    /// The decks of campaign champions belong to the account (decks.txt of the save); the other decks are shared by
+    /// every account (HexRevivalSaves/decks_common.txt, user's choice): a card an account does not own is shown with a
+    /// copy of its own (VirtualInstance), so that the deck stays whole, and the deck builder reports it as not owned.
+    /// Each shared deck has its settings as an AI opponent (AiSettings, decks_common_ai.json).
     /// </summary>
     public static class Decks
     {
@@ -36,6 +40,43 @@ namespace HexRevival
         private static Dictionary<ulong, card_instance_bits> s_Collection = new Dictionary<ulong, card_instance_bits>();
         private static ulong s_NextId = 1;
 
+        /// <summary>Ids of the shared decks start here (an account's campaign decks stay below).</summary>
+        private const ulong CommonBase = 1000000;
+        private static ulong s_NextCommon = CommonBase;
+        /// <summary>Copies shown for the cards of a shared deck the account does not own (id -> template).</summary>
+        private static readonly Dictionary<ulong, ResourceId> s_Virtual = new Dictionary<ulong, ResourceId>();
+        private const ulong VirtualBase = 8000000000000UL;
+        private static ulong s_NextVirtual = VirtualBase;
+
+        private static bool IsCommon(StoredDeck d) { return d.PveChampion == 0; }
+
+        /// <summary>
+        /// Old id -> shared id of the account's decks moved to the shared decks, so runs saved before the move
+        /// (arena, gauntlets, siege defense) still find their deck. Kept in the account's decks_moved.txt.
+        /// </summary>
+        private static readonly Dictionary<ulong, ulong> s_Moved = new Dictionary<ulong, ulong>();
+
+        private static string MovedPath { get { return Saves.File("decks_moved.txt"); } }
+
+        private static StoredDeck Find(ulong id)
+        {
+            StoredDeck d;
+            if (s_Decks.TryGetValue(id, out d)) return d;
+            ulong to;
+            return s_Moved.TryGetValue(id, out to) && s_Decks.TryGetValue(to, out d) ? d : null;
+        }
+
+        /// <summary>The current id of a deck (its shared id when it was moved there).</summary>
+        public static ulong CurrentId(ulong id)
+        {
+            ulong to;
+            return !s_Decks.ContainsKey(id) && s_Moved.TryGetValue(id, out to) ? to : id;
+        }
+
+        private static ulong NewId(bool common) { return common ? s_NextCommon++ : s_NextId++; }
+
+        private static string CommonPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "decks_common.txt"); } }
+
         /// <summary>Deck to use for matches started by the mod: the last one saved.</summary>
         public static UID LastDeck = UID.Invalid;
 
@@ -50,10 +91,22 @@ namespace HexRevival
             s_Collection = new Dictionary<ulong, card_instance_bits>();
             foreach (card_instance_bits c in collection) s_Collection[c.Id] = c;
             s_Decks.Clear();
+            s_Virtual.Clear();
+            s_NextVirtual = VirtualBase;
             s_NextId = 1;
+            s_NextCommon = CommonBase;
+            s_Moved.Clear();
             try
             {
-                if (File.Exists(FilePath)) Parse(File.ReadAllLines(FilePath));
+                if (File.Exists(MovedPath))
+                    foreach (string l in File.ReadAllLines(MovedPath))
+                    {
+                        string[] p = l.Split(' ');
+                        ulong a, b;
+                        if (p.Length == 2 && ulong.TryParse(p[0], out a) && ulong.TryParse(p[1], out b)) s_Moved[a] = b;
+                    }
+                if (File.Exists(CommonPath)) Parse(File.ReadAllLines(CommonPath));
+                if (File.Exists(FilePath)) MigrateAccountDecks(File.ReadAllLines(FilePath));
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Decks] read: " + e); }
             List<deck_bits> res = new List<deck_bits>();
@@ -75,7 +128,7 @@ namespace HexRevival
         /// <summary>Deck of a new campaign champion, filled with a starter deck (or empty).</summary>
         public static deck_bits CreateForChampion(string name, ulong championId, Reckoning.Game.DeckTemplate starter)
         {
-            StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? "", PveChampion = championId };
+            StoredDeck d = new StoredDeck { Id = NewId(false), Name = name ?? "", PveChampion = championId };
             if (starter != null)
                 foreach (Reckoning.Game.TemplateCardStack st in starter.m_DeckResources)
                     for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
@@ -93,7 +146,7 @@ namespace HexRevival
         {
             StoredDeck d = null;
             foreach (StoredDeck x in s_Decks.Values) if (x.PveChampion == championId && x.PvpChampion == t.Champ) { d = x; break; }
-            if (d == null) { d = new StoredDeck { Id = s_NextId++, PveChampion = championId }; s_Decks[d.Id] = d; }
+            if (d == null) { d = new StoredDeck { Id = NewId(false), PveChampion = championId }; s_Decks[d.Id] = d; }
             d.Name = t.Name ?? "";
             d.PvpChampion = t.Champ;
             d.Sleeve = t.Sleeve;
@@ -125,7 +178,7 @@ namespace HexRevival
         /// <summary>A new player deck made of a game deck (a deck bought in the store): cards, champion, equipment, sleeve.</summary>
         public static deck_bits CreateFromTemplate(string name, Reckoning.Game.DeckTemplate t)
         {
-            StoredDeck d = new StoredDeck { Id = s_NextId++, Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
             foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
                 for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
@@ -142,11 +195,121 @@ namespace HexRevival
             return 0;
         }
 
+        // ------------------------------------------------------------------
+        // The shared decks as AI opponents (see AiConfig)
+        // ------------------------------------------------------------------
+
+        /// <summary>A shared deck's settings as an AI opponent (deck builder: "Set Personality" and "Modifiers").</summary>
+        public class AiSettings
+        {
+            /// <summary>Made for the AI (listed apart from the decks made for players).</summary>
+            public bool ForAI;
+            /// <summary>The AI's default skill with this deck (EDifficulty); not used for the player's own Siege defense.</summary>
+            public string Skill = "Hard";
+            /// <summary>Random noise in the AI's card values (the game's default 50; higher plays worse).</summary>
+            public int Noise = 50;
+            /// <summary>Relative chance to be picked among the decks of a tier.</summary>
+            public int Frequency = 1;
+            public bool Boss, Elite, Rare;
+            /// <summary>What the AI and the player start with when this deck is the opponent.</summary>
+            public Opponents.Handicap AI = new Opponents.Handicap();
+            public Opponents.Handicap Player = new Opponents.Handicap();
+        }
+
+        private static Dictionary<ulong, AiSettings> s_Ai;
+        private static string AiPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "decks_common_ai.json"); } }
+
+        private static Dictionary<ulong, AiSettings> AiStore
+        {
+            get
+            {
+                if (s_Ai != null) return s_Ai;
+                try { if (File.Exists(AiPath)) Game.Shared.Network.HConnect.Utils.DeserializeJson(File.ReadAllBytes(AiPath), (Dictionary<ulong, AiSettings> x) => { s_Ai = x; }); }
+                catch (Exception e) { Debug.LogError("[HexRevival] [Decks] AI settings: " + e.Message); }
+                if (s_Ai == null) s_Ai = new Dictionary<ulong, AiSettings>();
+                return s_Ai;
+            }
+        }
+
+        /// <summary>A shared deck's AI settings (created with the defaults).</summary>
+        public static AiSettings Ai(ulong deckId)
+        {
+            AiSettings a;
+            if (!AiStore.TryGetValue(deckId, out a)) { a = new AiSettings(); AiStore[deckId] = a; }
+            if (a.AI == null) a.AI = new Opponents.Handicap();
+            if (a.Player == null) a.Player = new Opponents.Handicap();
+            return a;
+        }
+
+        public static void SaveAi()
+        {
+            try
+            {
+                byte[] b = null;
+                Game.Shared.Network.HConnect.Utils.SerializeJson(AiStore, (byte[] x) => { b = x; }, true);
+                File.WriteAllBytes(AiPath, b);
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] save AI settings: " + e.Message); }
+        }
+
+        public class SharedDeck
+        {
+            public ulong Id;
+            public string Name;
+            public ResourceId Champion;
+            public int Count;
+            public AiSettings Ai;
+        }
+
+        /// <summary>The shared decks (not the campaign ones).</summary>
+        public static List<SharedDeck> Shared()
+        {
+            List<SharedDeck> res = new List<SharedDeck>();
+            foreach (StoredDeck d in s_Decks.Values)
+                if (IsCommon(d)) res.Add(new SharedDeck { Id = d.Id, Name = d.Name, Champion = d.PvpChampion, Count = d.Cards.Count, Ai = Ai(d.Id) });
+            res.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return res;
+        }
+
+        public static bool Exists(ulong id) { return Find(id) != null; }
+
+        public static EDeckPersonality PersonalityOf(ulong id)
+        {
+            StoredDeck d;
+            return (d = Find(id)) != null ? (EDeckPersonality)d.Persona : EDeckPersonality.Default;
+        }
+
+        /// <summary>A new shared deck copied from a deck of the game (an AI deck or an encounter's), with its settings.</summary>
+        public static ulong CopyFromTemplate(Reckoning.Game.DeckTemplate t, string name, AiSettings ai)
+        {
+            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
+            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
+                for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
+            foreach (ResourceId e in t.m_EquipmentIDs) if (e.IsValid) d.Equipment.Add(e);
+            s_Decks[d.Id] = d;
+            Save();
+            AiStore[d.Id] = ai ?? new AiSettings { ForAI = true };
+            SaveAi();
+            try { GameClient.Instance.PlayerProfile.AddDeck(ToBits(d)); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] AddDeck: " + e.Message); }
+            return d.Id;
+        }
+
+        /// <summary>Removes a shared deck (for every account).</summary>
+        public static void Delete(ulong id)
+        {
+            if (!s_Decks.Remove(id)) return;
+            Save();
+            AiStore.Remove(id);
+            SaveAi();
+            try { GameClient.Instance.PlayerProfile.RemoveDeck(new UID(UID.Type.Deck, id)); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] RemoveDeck: " + e.Message); }
+        }
+
         /// <summary>A player deck as sent to the client (null if unknown).</summary>
         public static deck_bits Bits(ulong deckId)
         {
             StoredDeck d;
-            return s_Decks.TryGetValue(deckId, out d) ? ToBits(d) : null;
+            return (d = Find(deckId)) != null ? ToBits(d) : null;
         }
 
         private static List<Reckoning.Game.DeckTemplate> s_PrebuiltPvp;
@@ -176,7 +339,7 @@ namespace HexRevival
         public static Game.Shared.Profile.ProfileDeckTemplate ToProfileTemplate(ulong deckId)
         {
             StoredDeck d;
-            return s_Decks.TryGetValue(deckId, out d) ? Game.Shared.Profile.ProfileDeckTemplate.FromDeckBits(ToBits(d)) : null;
+            return (d = Find(deckId)) != null ? Game.Shared.Profile.ProfileDeckTemplate.FromDeckBits(ToBits(d)) : null;
         }
 
         /// <summary>The champion's bits with a mercenary in its place (MercID), for the match engine.</summary>
@@ -212,7 +375,7 @@ namespace HexRevival
         public static Reckoning.Game.DeckTemplate ToTemplate(UID id)
         {
             StoredDeck d;
-            if (!s_Decks.TryGetValue(id.GetInstanceId(), out d)) return null;
+            if ((d = Find(id.GetInstanceId())) == null) return null;
             Reckoning.Game.DeckTemplate t = new Reckoning.Game.DeckTemplate();
             t.m_Id = new ResourceId(Guid.NewGuid());
             t.m_DeckName = d.Name;
@@ -242,7 +405,7 @@ namespace HexRevival
             AddNewDeckRequestArgs add = args as AddNewDeckRequestArgs;
             if (add != null)
             {
-                StoredDeck d = new StoredDeck { Id = s_NextId++ };
+                StoredDeck d = new StoredDeck { Id = NewId(add.PvEChampionId.GetInstanceId() == 0) };
                 Fill(d, add.DeckName, add.PvEChampionId, add.PvPChampionId, add.DeckCardIDs, add.SideboardCardIDs, add.EquipmentIDs, add.TalentIDs, add.DeckSleeveId, add.GameboardId, add.CoinId, (int)add.Persona);
                 s_Decks[d.Id] = d;
                 LastDeck = new UID(UID.Type.Deck, d.Id);
@@ -259,7 +422,7 @@ namespace HexRevival
             {
                 StoredDeck d;
                 ulong id = upd.DeckID.GetInstanceId();
-                if (!s_Decks.TryGetValue(id, out d)) { d = new StoredDeck { Id = id }; s_Decks[id] = d; if (id >= s_NextId) s_NextId = id + 1; }
+                if (!s_Decks.TryGetValue(id, out d)) { d = new StoredDeck { Id = id }; s_Decks[id] = d; Bump(id); }
                 Fill(d, upd.DeckName, upd.PvEChampionId, upd.PvPChampionId, upd.DeckCardIDs, upd.SideboardCardIDs, upd.EquipmentIDs, upd.TalentIDs, upd.DeckSleeveId, upd.GameboardId, upd.CoinId, (int)upd.Persona);
                 LastDeck = upd.DeckID;
                 Save();
@@ -283,7 +446,7 @@ namespace HexRevival
                     tr.PlayerName = "";
                     return tr;
                 }
-                if (!s_Decks.TryGetValue(det.DeckID.GetInstanceId(), out d)) return null;
+                if ((d = Find(det.DeckID.GetInstanceId())) == null) return null;
                 deck_bits b = ToBits(d);
                 if (!b.PVPChampionId.IsValid)
                     b.PVPChampionId = new ResourceId(GameConfig.DefaultChampionTemplateId);
@@ -308,7 +471,7 @@ namespace HexRevival
             if (get != null)
             {
                 StoredDeck d;
-                if (!s_Decks.TryGetValue(get.DeckID.GetInstanceId(), out d)) return null;
+                if ((d = Find(get.DeckID.GetInstanceId())) == null) return null;
                 deck_bits b = ToBits(d);
                 GetDeckInfoResponse r = LocalServer.Ok<GetDeckInfoResponse>();
                 r.DeckName = d.Name;
@@ -331,6 +494,7 @@ namespace HexRevival
             {
                 s_Decks.Remove(rem.DeckID.GetInstanceId());
                 Save();
+                if (AiStore.Remove(rem.DeckID.GetInstanceId())) SaveAi();
                 RemoveDeckResponse r = LocalServer.Ok<RemoveDeckResponse>();
                 r.DeckID = rem.DeckID;
                 r.succeded = true;
@@ -359,7 +523,9 @@ namespace HexRevival
             foreach (ulong id in ids)
             {
                 card_instance_bits c;
+                ResourceId v;
                 if (id != 0 && s_Collection.TryGetValue(id, out c)) res.Add(c.TemplateID);
+                else if (s_Virtual.TryGetValue(id, out v)) res.Add(v);
             }
             return res;
         }
@@ -430,8 +596,13 @@ namespace HexRevival
                     if (c.TemplateID != t) continue;
                     if (seen++ == skip) { pick = c; break; }
                 }
-                if (pick == null) continue; // more copies than the collection has
                 used[t] = skip + 1;
+                if (pick == null)
+                {
+                    // Not owned (a shared deck): a copy of its own, kept for the deck builder and the next save.
+                    pick = new card_instance_bits { Id = s_NextVirtual++, TemplateID = t };
+                    s_Virtual[pick.Id] = t;
+                }
                 res.Add(pick);
             }
             return res;
@@ -445,9 +616,18 @@ namespace HexRevival
         {
             try
             {
+                File.WriteAllText(FilePath, Serialize(false));
+                File.WriteAllText(CommonPath, Serialize(true));
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] save: " + e); }
+        }
+
+        private static string Serialize(bool common)
+        {
                 StringBuilder sb = new StringBuilder();
                 foreach (StoredDeck d in s_Decks.Values)
                 {
+                    if (IsCommon(d) != common) continue;
                     sb.Append("DECK|").Append(d.Id).Append('|').Append(d.Name.Replace("|", "/")).Append('|').Append(d.PveChampion).Append('|')
                       .Append(d.PvpChampion).Append('|').Append(d.Sleeve).Append('|').Append(d.Gameboard).Append('|').Append(d.Coin).Append('|').Append(d.Persona).Append('\n');
                     sb.Append("CARDS|").Append(Join(d.Cards)).Append('\n');
@@ -455,9 +635,51 @@ namespace HexRevival
                     sb.Append("EQUIP|").Append(Join(d.Equipment)).Append('\n');
                     sb.Append("TALENT|").Append(Join(d.Talents)).Append('\n');
                 }
-                File.WriteAllText(FilePath, sb.ToString());
+                return sb.ToString();
+        }
+
+        private static void Bump(ulong id)
+        {
+            if (id >= CommonBase) { if (id >= s_NextCommon) s_NextCommon = id + 1; }
+            else if (id >= s_NextId) s_NextId = id + 1;
+        }
+
+        /// <summary>
+        /// The account's file: its campaign decks; its other decks (saves made before the decks were shared) move to the
+        /// shared decks, unless the same deck (name and cards) is already there.
+        /// </summary>
+        private static void MigrateAccountDecks(string[] lines)
+        {
+            Dictionary<ulong, StoredDeck> shared = new Dictionary<ulong, StoredDeck>(s_Decks);
+            s_Decks.Clear();
+            Parse(lines);
+            Dictionary<ulong, StoredDeck> account = new Dictionary<ulong, StoredDeck>(s_Decks);
+            s_Decks.Clear();
+            foreach (KeyValuePair<ulong, StoredDeck> kv in shared) s_Decks[kv.Key] = kv.Value;
+            int moved = 0;
+            foreach (StoredDeck d in account.Values)
+            {
+                if (!IsCommon(d) || d.Id >= CommonBase) { s_Decks[d.Id] = d; continue; }
+                StoredDeck same = null;
+                foreach (StoredDeck x in shared.Values) if (x.Name == d.Name && Join(x.Cards) == Join(d.Cards)) { same = x; break; }
+                ulong old = d.Id;
+                if (same == null) { d.Id = s_NextCommon++; s_Decks[d.Id] = d; moved++; }
+                s_Moved[old] = same != null ? same.Id : d.Id;
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Decks] save: " + e); }
+            if (s_Moved.Count > 0)
+            {
+                List<string> lines2 = new List<string>();
+                foreach (KeyValuePair<ulong, ulong> kv in s_Moved) lines2.Add(kv.Key + " " + kv.Value);
+                File.WriteAllLines(MovedPath, lines2.ToArray());
+            }
+            if (moved > 0 || account.Count != CountAccountDecks()) { Save(); Debug.Log("[HexRevival] [Decks] " + moved + " deck(s) moved to the shared decks"); }
+        }
+
+        private static int CountAccountDecks()
+        {
+            int n = 0;
+            foreach (StoredDeck d in s_Decks.Values) if (!IsCommon(d)) n++;
+            return n;
         }
 
         private static string Join(List<ResourceId> l)
@@ -500,7 +722,7 @@ namespace HexRevival
                         cur.PvpChampion = Rid(p[4]); cur.Sleeve = Rid(p[5]); cur.Gameboard = Rid(p[6]); cur.Coin = Rid(p[7]);
                         int.TryParse(p[8], out cur.Persona);
                         s_Decks[cur.Id] = cur;
-                        if (cur.Id >= s_NextId) s_NextId = cur.Id + 1;
+                        Bump(cur.Id);
                         break;
                     case "CARDS": if (cur != null) cur.Cards = Split(p[1]); break;
                     case "SIDE": if (cur != null) cur.Side = Split(p[1]); break;
