@@ -86,34 +86,7 @@ namespace HexRevival
             Execute(gc, "restart");
         }
 
-        private object m_DismissCandidate;
-        private float m_DismissSince;
-
-        private void AutoDismissInfoStates()
-        {
-            FieldInfo f = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
-            Stack<BattleStateBase> stack = f == null ? null : f.GetValue(UIBattle.Instance) as Stack<BattleStateBase>;
-            BattleStateBase top = (stack != null && stack.Count > 0) ? stack.Peek() : null;
-            BattleStateCoverflow cover = top as BattleStateCoverflow;
-            if (cover == null || cover.UserInitiated)
-            {
-                m_DismissCandidate = null;
-                return;
-            }
-            float now = Time.realtimeSinceStartup;
-            if (!ReferenceEquals(m_DismissCandidate, cover))
-            {
-                m_DismissCandidate = cover;
-                m_DismissSince = now;
-                return;
-            }
-            if (now - m_DismissSince > 3f)
-            {
-                WriteState("aiplay: auto-closing " + cover.GetType().Name);
-                cover.OnButton("Accept", 0, "");
-                m_DismissCandidate = null;
-            }
-        }
+        private void AutoDismissInfoStates() { Spectator.DismissInfoWindows(); }
 
         private float m_LastStatus;
         private string m_LastEncounter = "-";
@@ -156,27 +129,7 @@ namespace HexRevival
 
         private void PressGameOverContinue()
         {
-            try
-            {
-                FieldInfo f = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
-                System.Collections.IEnumerable stack = f == null ? null : f.GetValue(UIBattle.Instance) as System.Collections.IEnumerable;
-                if (stack == null) return;
-                foreach (object st in stack)
-                {
-                    BattleStateGameOver go = st as BattleStateGameOver;
-                    if (go != null)
-                    {
-                        WriteState("GAME OVER: Continue");
-                        go.OnButton("Continue", 0, "");
-                        return;
-                    }
-                }
-                WriteState("GAME OVER: BattleStateGameOver state not found");
-            }
-            catch (Exception e)
-            {
-                WriteState("GAME OVER: Continue a echoue " + e);
-            }
+            WriteState(Spectator.PressContinue() ? "GAME OVER: Continue" : "GAME OVER: BattleStateGameOver state not found");
         }
         private bool m_EncounterStarted;
         private bool m_Quit;
@@ -201,6 +154,11 @@ namespace HexRevival
                 go.AddComponent<AccountMenu>();
                 go.AddComponent<CheatMenu>();
                 go.AddComponent<Notices>();
+                go.AddComponent<DeckAiPanel>();
+                go.AddComponent<ModifiersWindow>();
+                go.AddComponent<Spectator>();
+                go.AddComponent<AiDecksWindow>();
+                go.AddComponent<AiButton>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -265,6 +223,8 @@ namespace HexRevival
             {
                 LocalServer.Pump();
                 Campaign.Pump();
+                Siege.Tick();
+                Battlegrounds.Tick();
                 Tutorial.Tick();
                 LocalProfile.Pump();
                 if (m_Speed != 1f && Time.timeScale != m_Speed)
@@ -931,8 +891,35 @@ namespace HexRevival
                 case "dun": return Dungeons.Command(parts);
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
+                case "siege": return Siege.Command(parts);
+                case "bg": return Battlegrounds.Command(parts);
+                case "arena": return Arena.Command(parts);
+                case "deckai": return DeckAiPanel.Command(parts);
+                case "mods": return ModifiersWindow.Command(parts);
+                case "spectate": return Spectator.Toggle();
+                case "online": return AccountMenu.Command(parts);
+                case "aidecks": return AiDecksWindow.Command(parts);
+                case "store":
+                    if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
+                    if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)
+                    {
+                        Saves.Current.CosmicCoins = int.Parse(parts[2]);
+                        Saves.SaveCurrent();
+                        return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
+                    }
+                    return "usage: store pools | store cosmic <n>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
+                case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
+                    {
+                        if (parts.Length < 3) return "usage: invoke <type> <method>";
+                        Type t = typeof(UIBattle).Assembly.GetType(parts[1]);
+                        UnityEngine.Object o = t != null ? UnityEngine.Object.FindObjectOfType(t) : null;
+                        System.Reflection.MethodInfo m = t != null ? t.GetMethod(parts[2], System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null) : null;
+                        if (o == null || m == null) return "not found: " + (t == null ? "type" : o == null ? "object" : "method");
+                        object res = m.Invoke(o, null);
+                        return "invoked " + parts[1] + "." + parts[2] + (res != null ? " -> " + res : "");
+                    }
                 case "modal":   // dev: "modal 1|2|3" = presses that button of the visible modal popups
                     {
                         int n = 0;
@@ -1196,8 +1183,9 @@ namespace HexRevival
                     {
                         UIBattle ui = UnityEngine.Object.FindObjectOfType<UIBattle>();
                         if (ui == null) return "no game";
-                        System.Reflection.MethodInfo q = typeof(UIBattle).GetMethod("Quit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(bool) }, null);
-                        q.Invoke(ui, new object[] { false });
+                        // The game's own concede: the menu's "Concede", then "Yes".
+                        try { ui.OnButton("Concede_Yes", 0, string.Empty); }
+                        catch (Exception e) { return "ERR " + e; }
                         return "abandon";
                     }
                 case "continue": PressGameOverContinue(); return "continue";

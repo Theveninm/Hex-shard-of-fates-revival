@@ -179,7 +179,9 @@ namespace HexRevival
                         FieldInfo f = typeof(AuthoritativeSessionBase).GetField("m_OverrideDecks", BindingFlags.Instance | BindingFlags.NonPublic);
                         Dictionary<UID, DeckTemplate> over = f.GetValue(self) as Dictionary<UID, DeckTemplate>;
                         over[player.m_PlayerId] = s_PendingAIDeck;
-                        Debug.Log("[HexRevival] AI " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName);
+                        // A deck template carries no AI personality (a player deck does): the Siege defender's is set here.
+                        player.Personality = s_PendingAIPersonality;
+                        Debug.Log("[HexRevival] AI " + player.m_PlayerId + " : deck " + s_PendingAIDeck.m_DeckName + (s_PendingAIPersonality != EDeckPersonality.Default ? ", personality " + s_PendingAIPersonality : ""));
                     }
                     return;
                 }
@@ -205,6 +207,12 @@ namespace HexRevival
                 FillNullLists(encounterData);
                 // Campaign effects of this battle (dungeon boons, the robot, blessings): run like the scene's own.
                 encounterData.AbilitiesToRun.AddRange(Campaign.TakeBattleEffects());
+                // A Siege or Battlegrounds battle: its own session flags (the game's rules for it, where Quit leads).
+                if (PendingEncounterSetup != null)
+                {
+                    PendingEncounterSetup(encounterData);
+                    PendingEncounterSetup = null;
+                }
 
                 StandaloneSession sessionServer = new StandaloneSession(self);
                 sessionServer.m_SessionId = new UID(UID.Type.AuthoritativeSession, 501UL);
@@ -231,7 +239,7 @@ namespace HexRevival
                     sessionClient.AddPlayer(aiPlayer);
 
                     // Attaches the AI tactical component (never initialized anywhere else in the client).
-                    aiPlayer.InitializeAITactical(new Game.Shared.AI.AIPersonality());
+                    aiPlayer.InitializeAITactical(Opponents.TakePersonality());   // the AI skill of the opponent (see Opponents)
 
                     self.m_LocalPlayerMap[aiPlayer.m_PlayerId] = aiPlayer;
                     aiSessions.Add(sessionClient);
@@ -286,12 +294,6 @@ namespace HexRevival
             StartOfflineEncounter("ChallengeAI");
         }
 
-        /// <summary>Replaces UILandingPageViewModel.OnFrostRingButtonClicked (dead screen) with a local encounter.</summary>
-        public static void UILandingPageViewModel_OnFrostRingButtonClicked(UILandingPageViewModel self)
-        {
-            OfflineMenu.Open();
-        }
-
         // ------------------------------------------------------------------
         // Match started from the mod's menu
         // ------------------------------------------------------------------
@@ -301,18 +303,27 @@ namespace HexRevival
 
         /// <summary>Deck forced on the AI for the next match (null: the encounter's deck).</summary>
         private static DeckTemplate s_PendingAIDeck;
+        private static EDeckPersonality s_PendingAIPersonality;
 
-        public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label)
+        /// <summary>Settings of the next match's encounter data (Siege and Battlegrounds flags), applied once.</summary>
+        public static Action<SessionStateEncounterData> PendingEncounterSetup;
+
+        public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label,
+            EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null)
         {
             try
             {
+                // A deck saved before the move to the shared decks is found under its new id.
+                if (playerDeck.IsValid()) playerDeck = new UID(UID.Type.Deck, Decks.CurrentId(playerDeck.GetInstanceId()));
                 s_PendingAIDeck = aiDeck;
+                s_PendingAIPersonality = aiPersonality;
                 Decks.LastDeck = playerDeck;
                 BattleStateContext context = new BattleStateContext();
                 context.m_SceneTemplateId = scene;
                 context.m_PlayerDeckId = playerDeck;
                 context.m_PlayerDeckTemplate = ResourceId.Invalid;
                 context.m_AIPlayerDeckId = ResourceId.Invalid;
+                context.SiegeFightMessage = siegeMessage;
                 Debug.Log("[HexRevival] [Menu] match: deck " + playerDeck + " vs " + label + " (encounter " + scene + (aiDeck != null ? ", AI deck " + aiDeck.m_DeckName : "") + ")");
                 Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(EGameState.Battle, context);
             }

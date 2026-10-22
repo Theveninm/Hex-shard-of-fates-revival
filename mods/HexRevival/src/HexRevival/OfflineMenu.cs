@@ -44,6 +44,11 @@ namespace HexRevival
 
         public static void Open() { if (Instance != null) Instance.SetOpen(true); }
 
+        public static bool IsOpen { get { return Instance != null && Instance.m_Open; } }
+
+        /// <summary>Opens the deck editor on a deck (see AiDecksWindow).</summary>
+        public static void EditDeck(UID deck) { if (Instance != null) Instance.OpenEditor(deck); }
+
         private void Awake() { Instance = this; }
 
         /// <summary>
@@ -117,8 +122,8 @@ namespace HexRevival
             if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
-            if (OnLandingPage()) { EnsureLandingButton(); EnsureLogoutButton(); Tutorial.OnLandingPage(); }
-            else { m_LandingButton = null; m_LogoutButton = null; }
+            if (OnLandingPage()) { EnsureLogoutButton(); Tutorial.OnLandingPage(); }
+            else m_LogoutButton = null;
         }
 
         private void SetOpen(bool open)
@@ -247,79 +252,6 @@ namespace HexRevival
             Patches.StartMatch(m_SelMine.PlayerDeck, scene, aiDeck, m_SelOpp.Label);
         }
 
-        // ------------------------------------------------------------------
-        // "Quick Match" button in the game's main menu
-        // ------------------------------------------------------------------
-
-        private GameObject m_LandingButton, m_HiddenFrostRing;
-        private static readonly Color QuickMatchGold = new Color(1f, 0.78f, 0.25f);
-
-        /// <summary>
-        /// Adds "Quick Match" to the main menu's button column, by cloning the
-        /// Frost Ring Arena button (same look). It takes the place of Frost Ring Arena, a mode that
-        /// needs the official server.
-        /// </summary>
-        private void EnsureLandingButton()
-        {
-            if (m_LandingButton != null)
-            {
-                if (m_LandingButton.name == "HexRevival_QuickMatch")
-                    foreach (UILabel l in m_LandingButton.GetComponentsInChildren<UILabel>())
-                    {
-                        if (l.color != QuickMatchGold) { l.applyGradient = false; l.color = QuickMatchGold; }
-                        string t = Loc.Get("quick_match").ToLower();
-                        if (l.text != t) l.text = t;
-                    }
-                // The game may re-enable Frost Ring Arena afterwards (profile flags): hide it again.
-                if (m_HiddenFrostRing != null && m_HiddenFrostRing.activeSelf && m_LandingButton.name == "HexRevival_QuickMatch")
-                {
-                    m_HiddenFrostRing.SetActive(false);
-                    UIGrid g = m_LandingButton.transform.parent != null ? m_LandingButton.transform.parent.GetComponent<UIGrid>() : null;
-                    if (g != null) g.Reposition();
-                }
-                return;
-            }
-            UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
-            if (vm == null || vm.MenuUI.FrostRingArena == null) return;
-            GameObject src = vm.MenuUI.FrostRingArena.gameObject;
-            Transform parent = src.transform.parent;
-            if (parent == null) return;
-            Transform existing = parent.Find("HexRevival_QuickMatch");
-            m_HiddenFrostRing = src;
-            if (existing != null) { m_LandingButton = existing.gameObject; return; }
-            try
-            {
-                GameObject b = UiClone.Copy(src, "HexRevival_QuickMatch");
-                // At the very top of the column (above Campaign), on a darker background to
-                // show that this mode was added by the mod.
-                Transform campaign = vm.MenuUI.Campaign != null ? vm.MenuUI.Campaign.transform : null;
-                b.transform.SetSiblingIndex(campaign != null && campaign.parent == parent ? campaign.GetSiblingIndex() : 0);
-                StripClone(b, Loc.Get("quick_match"), Loc.Get("quick_match_tip"));
-                foreach (UILabel l in b.GetComponentsInChildren<UILabel>(true)) l.color = new Color(1f, 0.84f, 0.42f);
-                // Green background lighter than the game's grey-blue buttons, gold letters and border
-                // (green / red like the confirm / cancel buttons of the game's dialogs).
-                StyleModButton(b, new Color(0.78f, 1f, 0.78f), new Color(0.6f, 0.85f, 0.6f), new Color(0.55f, 0.95f, 0.55f, 0.28f));
-                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
-                {
-                    ub.onClick.Clear();
-                    ub.onClick.Add(new EventDelegate(() => SetOpen(true)));
-                    ub.isEnabled = true;
-                    RightClick.Add(ub.gameObject, () => SetOpen(true));
-                }
-                b.SetActive(true);
-                src.SetActive(false);
-                UIGrid grid = parent.GetComponent<UIGrid>();
-                if (grid != null) grid.Reposition();
-                m_LandingButton = b;
-                Debug.Log("[HexRevival] [Menu] Quick Match button added");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[HexRevival] [Menu] button: " + e);
-                m_LandingButton = src; // no new attempt every frame
-            }
-        }
-
         /// <summary>
         /// Prepares a clone of a main menu button: keeps only its look (see UiClone), sets its text,
         /// in lower case like the game's own buttons, and tooltip, hides its padlock.
@@ -430,80 +362,6 @@ namespace HexRevival
         {
             try { Singleton<Main>.Instance.RequestLogOut(); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Menu] logout: " + e); }
-        }
-
-        private static UIAtlas FindAtlas(string name)
-        {
-            foreach (UIAtlas a in Resources.FindObjectsOfTypeAll<UIAtlas>())
-                if (a != null && a.name == name && a.texture != null) return a;
-            return null;
-        }
-
-        /// <summary>Colored veil and gold border over the button background, text on top.</summary>
-        /// <summary>Tinted background, colored veil, gold border and gold letters for a mod button.</summary>
-        private static void StyleModButton(GameObject b, Color tint, Color pressed, Color veil)
-        {
-            UISprite baseSprite = null;
-            foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
-                if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) { sp.color = tint; if (baseSprite == null) baseSprite = sp; }
-            if (baseSprite != null) DecorateLandingButton(baseSprite, b, veil);
-            foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
-            {
-                ub.defaultColor = tint;
-                ub.hover = Color.white;
-                ub.pressed = pressed;
-                ub.disabledColor = tint;
-            }
-        }
-
-        private static void DecorateLandingButton(UISprite baseSprite, GameObject button, Color veilColor)
-        {
-            UIAtlas frames = FindAtlas("A_Frames");
-            if (frames == null) return;
-            GameObject host = baseSprite.gameObject;
-            UISprite veil = NGUITools.AddSprite(host, frames, "White_Square");
-            veil.type = UIBasicSprite.Type.Sliced;
-            veil.pivot = UIWidget.Pivot.Center;
-            veil.width = baseSprite.width - 8;
-            veil.height = baseSprite.height - 8;
-            veil.color = veilColor;
-            veil.depth = baseSprite.depth + 1;
-            veil.transform.localPosition = new Vector3((0.5f - baseSprite.pivotOffset.x) * baseSprite.width, (0.5f - baseSprite.pivotOffset.y) * baseSprite.height, 0f);
-            // Gold border: four lines (the tinted white sprite gives a clean gold).
-            Color gold = new Color(1f, 0.80f, 0.32f, 1f);
-            int w = baseSprite.width - 4, h = baseSprite.height - 4, t = 3;
-            Vector2 off = baseSprite.pivotOffset; // widget center according to its pivot
-            Vector3 c = new Vector3((0.5f - off.x) * baseSprite.width, (0.5f - off.y) * baseSprite.height, 0f);
-            UISprite border = null;
-            for (int i = 0; i < 4; i++)
-            {
-                UISprite line = NGUITools.AddSprite(host, frames, "White_Square");
-                line.type = UIBasicSprite.Type.Sliced;
-                line.pivot = UIWidget.Pivot.Center;
-                line.color = gold;
-                line.depth = baseSprite.depth + 2;
-                bool horiz = i < 2;
-                line.width = horiz ? w : t;
-                line.height = horiz ? t : h;
-                line.transform.localPosition = c + (horiz ? new Vector3(0, (i == 0 ? 1 : -1) * (h - t) / 2f, 0) : new Vector3((i == 2 ? 1 : -1) * (w - t) / 2f, 0, 0));
-                border = line;
-            }
-            foreach (UILabel l in button.GetComponentsInChildren<UILabel>(true))
-            {
-                l.depth = Mathf.Max(l.depth, border.depth + 1);
-                l.applyGradient = false;
-                l.color = new Color(1f, 0.78f, 0.25f);
-                l.effectStyle = UILabel.Effect.Outline;
-                l.effectColor = new Color(0.12f, 0.08f, 0.02f, 1f);
-            }
-            // If a hover effect of the game recolors the text, it stays gold.
-            foreach (UIButtonColor bc in button.GetComponentsInChildren<UIButtonColor>(true))
-                if (bc.tweenTarget != null && bc.tweenTarget.GetComponent<UILabel>() != null)
-                {
-                    bc.defaultColor = new Color(1f, 0.78f, 0.25f);
-                    bc.hover = new Color(1f, 0.9f, 0.5f);
-                    bc.pressed = bc.defaultColor;
-                }
         }
 
         // ------------------------------------------------------------------

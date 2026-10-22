@@ -88,6 +88,14 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>Copies of a card the save owns (4 on "unlock everything" saves).</summary>
+        public static int Count(ResourceId template)
+        {
+            if (Saves.Current != null && Saves.Current.UnlockAll) return 4;
+            int n;
+            return s_Counts.TryGetValue(template, out n) ? n : 0;
+        }
+
         /// <summary>Gives the cards of a deck template (missing copies only on progression saves).</summary>
         public static void GrantDeck(DeckTemplate deck)
         {

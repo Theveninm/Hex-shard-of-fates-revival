@@ -6,13 +6,14 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Account selection, drawn over the game's login screen: the list of local saves, with
-    /// "Create a new account" at the top (name, "unlock everything", "play the tutorial").
-    /// Choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
+    /// How to play, drawn over the game's login screen. First the online mode: the saved profile (see OnlineProfile)
+    /// joins the lobby (empty: online play comes later), where it can be changed. Then the offline accounts
+    /// (local saves), with "Create a new account" (name, "unlock everything", "play the tutorial", prices and starting
+    /// gold); choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
     /// </summary>
     public class AccountMenu : MonoBehaviour
     {
-        private enum Screen { List, Create }
+        private enum Screen { List, Create, Online, Lobby }
 
         private Screen m_Screen = Screen.List;
         private List<Saves.Info> m_Saves;
@@ -20,7 +21,24 @@ namespace HexRevival
         private string m_Name = "";
         private bool m_Unlock;
         private bool m_Tutorial = true;
+        private bool m_GoldPrices = true;
+        private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_Error;
+        private string m_PlayerId;
+        private static AccountMenu s_Instance;
+        private void Awake() { s_Instance = this; }
+
+        /// <summary>Dev: "online lobby|profile|list": the screen shown.</summary>
+        public static string Command(string[] parts)
+        {
+            if (s_Instance == null) return "no menu";
+            string sub = parts.Length > 1 ? parts[1] : "";
+            if (sub == "profile") s_Instance.EditProfile();
+            else if (sub == "lobby") s_Instance.m_Screen = Screen.Lobby;
+            else s_Instance.m_Screen = Screen.List;
+            OnlineProfile op = OnlineProfile.Current;
+            return s_Instance.m_Screen + " - " + op.Name + " " + op.PlayerId;
+        }
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
         private readonly List<Behaviour> m_DisabledUi = new List<Behaviour>();
@@ -94,22 +112,43 @@ namespace HexRevival
                 GUI.DrawTexture(win, GameSkin.Solid(new Color(0.06f, 0.07f, 0.1f, 0.97f)));
             Rect title = new Rect(win.center.x - 240 * S, win.y - 22 * S, 480 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
-            GameSkin.Label(title, Loc.Get(m_Screen == Screen.List ? "accounts" : "new_account_title"), GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter));
+            string key = m_Screen == Screen.List ? "play_title" : m_Screen == Screen.Create ? "new_account_title" : m_Screen == Screen.Online ? "online_mode" : "lobby_title";
+            GameSkin.Label(title, Loc.Get(key), GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter));
 
             Rect inner = new Rect(win.x + 40 * S, win.y + 64 * S, win.width - 80 * S, win.height - 100 * S);
-            if (m_Screen == Screen.List) DrawList(inner); else DrawCreate(inner);
+            switch (m_Screen)
+            {
+                case Screen.List: DrawList(inner); break;
+                case Screen.Create: DrawCreate(inner); break;
+                case Screen.Online: DrawOnline(inner); break;
+                default: DrawLobby(inner); break;
+            }
         }
 
         private void DrawList(Rect area)
         {
             float S = GameSkin.Scale;
-            float rowH = 64 * S, gap = 4 * S, newH = 54 * S;
-            float contentH = newH + gap + m_Saves.Count * (rowH + gap);
+            float rowH = 64 * S, gap = 4 * S, newH = 54 * S, headH = 34 * S;
+            // Online first, then the offline accounts.
+            float offlineTop = headH + rowH + 14 * S;
+            float contentH = offlineTop + headH + newH + gap + m_Saves.Count * (rowH + gap);
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             m_Scroll = GUI.BeginScrollView(area, m_Scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
 
-            Rect nr = new Rect(0, 0, view.width, newH);
+            GameSkin.Label(new Rect(0, 0, view.width, headH), Loc.Get("section_online"), GameSkin.Style("title", 19, GameSkin.Gold));
+            // The saved profile joins the lobby at once (it can be changed there); without one, the profile screen first.
+            OnlineProfile op = OnlineProfile.Current;
+            if (GameSkin.Row(new Rect(0, headH, view.width, rowH), Loc.Get("online_mode"), op.Name.Length > 0 ? Loc.Get("online_profile", op.Name) : Loc.Get("online_no_profile"), false))
+            {
+                if (op.Name.Length > 0) m_Screen = Screen.Lobby;
+                else EditProfile();
+            }
+
+            float y = offlineTop;
+            GameSkin.Label(new Rect(0, y, view.width, headH), Loc.Get("section_offline"), GameSkin.Style("title", 19, GameSkin.Gold));
+            y += headH;
+            Rect nr = new Rect(0, y, view.width, newH);
             bool over = nr.Contains(Event.current.mousePosition);
             GameSkin.Sprite(nr, "A_Buttons", over ? "Button_Bar_Main_hover" : "Button_Bar_Main_Mid");
             GameSkin.Sprite(new Rect(nr.x + 16 * S, nr.y + (newH - 34 * S) / 2f, 34 * S, 34 * S), "A_Buttons", over ? "Button_Add_Hover" : "Button_Add_Base", 1f, false);
@@ -118,18 +157,91 @@ namespace HexRevival
             {
                 m_Screen = Screen.Create;
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
+                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0";
             }
+            y += newH + gap;
 
             for (int i = 0; i < m_Saves.Count; i++)
             {
                 Saves.Info s = m_Saves[i];
-                Rect r = new Rect(0, newH + gap + i * (rowH + gap), view.width, rowH);
+                Rect r = new Rect(0, y + i * (rowH + gap), view.width, rowH);
                 string detail = Loc.Get("last_played", s.LastPlayed.ToString("g", System.Globalization.CultureInfo.CurrentCulture));
                 if (GameSkin.Row(r, s.Name, detail, false)) Play(s);
             }
             GUI.EndScrollView();
             if (m_Saves.Count == 0)
-                GUI.Label(new Rect(area.x, area.y + newH + 20 * S, area.width, 40 * S), Loc.Get("no_account"), GameSkin.Style("body", 15, GameSkin.Muted, TextAnchor.MiddleCenter));
+                GUI.Label(new Rect(area.x, area.y + y + 10 * S, area.width, 40 * S), Loc.Get("no_account"), GameSkin.Style("body", 15, GameSkin.Muted, TextAnchor.MiddleCenter));
+        }
+
+        /// <summary>Online mode: the profile name shown to the other players (can be changed each time).</summary>
+        private void DrawOnline(Rect area)
+        {
+            float S = GameSkin.Scale;
+            float y = area.y + 10 * S;
+            GameSkin.Label(new Rect(area.x, y, area.width, 30 * S), Loc.Get("online_name"), GameSkin.Style("title", 19, GameSkin.Gold));
+            y += 36 * S;
+            Rect field = new Rect(area.x, y, area.width, 40 * S);
+            GameSkin.Sprite(field, "A_Frames", "Frame_Inner");
+            GUI.DrawTexture(new Rect(field.x + 2, field.y + 2, field.width - 4, field.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
+            GUI.SetNextControlName("hexrevival_profile_name");
+            m_Name = GUI.TextField(field, m_Name ?? "", 24, GameSkin.Field);
+            if (GUI.GetNameOfFocusedControl() == "") GUI.FocusControl("hexrevival_profile_name");
+            y += 56 * S;
+            GUI.Label(new Rect(area.x, y, area.width, 60 * S), Loc.Get("online_desc"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
+            y += 64 * S;
+            // The player id: generated once, kept; a new one makes a new identity for the server.
+            GameSkin.Label(new Rect(area.x, y, area.width, 30 * S), Loc.Get("online_id"), GameSkin.Style("title", 19, GameSkin.Gold));
+            y += 36 * S;
+            Rect idr = new Rect(area.x, y, area.width - 230 * S, 40 * S);
+            GameSkin.Sprite(idr, "A_Frames", "Frame_Inner");
+            GUI.DrawTexture(new Rect(idr.x + 2, idr.y + 2, idr.width - 4, idr.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
+            GUI.Label(idr, m_PlayerId, GameSkin.Field);
+            if (GameSkin.GoldButton(new Rect(idr.xMax + 10 * S, y, 220 * S, 40 * S), Loc.Get("online_new_id"), true, 15)) m_PlayerId = OnlineProfile.NewId();
+            y += 48 * S;
+            GUI.Label(new Rect(area.x, y, area.width, 44 * S), Loc.Get("online_id_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+            y += 50 * S;
+            if (!string.IsNullOrEmpty(m_Error))
+                GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
+
+            float by = area.yMax - 56 * S;
+            if (GameSkin.RedButton(new Rect(area.x, by, 180 * S, 52 * S), Loc.Get("back"))) m_Screen = Screen.List;
+            bool submit = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+            if (GameSkin.GreenButton(new Rect(area.xMax - 260 * S, by, 260 * S, 52 * S), Loc.Get("online_join")) || submit)
+            {
+                string name = (m_Name ?? "").Trim();
+                m_Error = name.Length == 0 ? "account_name_empty" : null;
+                if (m_Error == null)
+                {
+                    OnlineProfile op = OnlineProfile.Current;
+                    op.Name = name;
+                    op.PlayerId = m_PlayerId;
+                    OnlineProfile.Save();
+                    m_Screen = Screen.Lobby;
+                }
+            }
+        }
+
+        /// <summary>The lobby: empty for now (no server yet).</summary>
+        private void DrawLobby(Rect area)
+        {
+            float S = GameSkin.Scale;
+            OnlineProfile op = OnlineProfile.Current;
+            GameSkin.Label(new Rect(area.x, area.y + 6 * S, area.width, 30 * S), Loc.Get("online_profile", op.Name) + "  (" + op.ShortId() + ")", GameSkin.Style("title", 18, GameSkin.Gold));
+            Rect list = new Rect(area.x, area.y + 48 * S, area.width, area.height - 120 * S);
+            GameSkin.Sprite(list, "A_Frames", "Frame_Generic_Inner");
+            GUI.Label(new Rect(list.x + 30 * S, list.y, list.width - 60 * S, list.height), Loc.Get("lobby_empty"), GameSkin.Style("body", 15, GameSkin.Muted, TextAnchor.MiddleCenter, true));
+            if (GameSkin.RedButton(new Rect(area.x, area.yMax - 56 * S, 180 * S, 52 * S), Loc.Get("back"))) m_Screen = Screen.List;
+            if (GameSkin.GoldButton(new Rect(area.xMax - 260 * S, area.yMax - 56 * S, 260 * S, 52 * S), Loc.Get("online_edit"), true, 17)) EditProfile();
+        }
+
+        /// <summary>The profile screen, filled with the saved profile.</summary>
+        private void EditProfile()
+        {
+            OnlineProfile op = OnlineProfile.Current;
+            m_Name = op.Name;
+            m_PlayerId = op.PlayerId;
+            m_Error = null;
+            m_Screen = Screen.Online;
         }
 
         private void DrawCreate(Rect area)
@@ -149,7 +261,17 @@ namespace HexRevival
             m_Unlock = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
             y += 84 * S;
             m_Tutorial = Checkbox(new Rect(area.x, y, area.width, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
-            y += 104 * S;
+            y += 96 * S;
+            // Progression accounts only (an "unlock everything" account has its gold and gold prices).
+            if (!m_Unlock)
+            {
+                m_GoldPrices = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc"));
+                y += 80 * S;
+                float half = (area.width - 20 * S) / 2f;
+                m_StartGold = NumberField(new Rect(area.x, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
+                m_StartPlatinum = NumberField(new Rect(area.x + half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
+                y += 78 * S;
+            }
 
             if (!string.IsNullOrEmpty(m_Error))
                 GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
@@ -161,8 +283,29 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum)));
             }
+        }
+
+        /// <summary>A labeled field that only takes digits; returns the new text.</summary>
+        private static string NumberField(Rect r, string title, string value, string control)
+        {
+            float S = GameSkin.Scale;
+            GameSkin.Label(new Rect(r.x, r.y, r.width, 28 * S), title, GameSkin.Style("title", 17, GameSkin.Gold));
+            Rect field = new Rect(r.x, r.y + 30 * S, r.width, 38 * S);
+            GameSkin.Sprite(field, "A_Frames", "Frame_Inner");
+            GUI.DrawTexture(new Rect(field.x + 2, field.y + 2, field.width - 4, field.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
+            GUI.SetNextControlName(control);
+            string text = GUI.TextField(field, value ?? "", 9, GameSkin.Field);
+            System.Text.StringBuilder digits = new System.Text.StringBuilder();
+            foreach (char c in text) if (c >= '0' && c <= '9') digits.Append(c);
+            return digits.ToString();
+        }
+
+        private static long Amount(string text)
+        {
+            long v;
+            return long.TryParse(text, out v) ? v : 0;
         }
 
         /// <summary>Check box with a title and a one-line description; returns the new value.</summary>
