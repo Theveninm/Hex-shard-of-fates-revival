@@ -438,6 +438,18 @@ namespace HexRevival
         /// <summary>Called every frame: starts the pending fight when its countdown is over.</summary>
         public static void Tick()
         {
+            if (s_BackToDefense && (s_Defense == null || !s_Defense.InBattle))
+            {
+                global::Siege.UISiege ui = global::Siege.UISiege.Instance;
+                global::Siege.ESiegeState cur = global::Siege.ESiegeState.None;
+                try { if (ui != null && ui.isActiveAndEnabled) cur = ui.CurrentState; } catch { }   // empty until the screen has started
+                if (cur != global::Siege.ESiegeState.None)
+                {
+                    s_BackToDefense = false;
+                    try { if (cur != global::Siege.ESiegeState.Defend) ui.TransitionTo(global::Siege.ESiegeState.Defend); }
+                    catch (Exception e) { Debug.LogWarning("[HexRevival] [Siege] back to the defense: " + e.Message); }
+                }
+            }
             DefenseAttack d = s_Defense;
             if (d != null)
             {
@@ -623,6 +635,8 @@ namespace HexRevival
         }
 
         private static DefenseAttack s_Defense;
+        /// <summary>After a fight on the player's defense: the Siege screen opens on the defense, not on its menu.</summary>
+        private static bool s_BackToDefense;
 
         /// <summary>The player's defense can be attacked now (the button of the defense screen).</summary>
         public static bool CanAttackDefense
@@ -682,7 +696,10 @@ namespace HexRevival
             d.SiegeSince = default(DateTime);
             Opponents.SetNext(d.Attacker, null, ai.AI);   // the defense deck's own bonuses go to its side
             d.InBattle = true;
-            Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE);
+            // As a practice match: the end of the battle goes back to the Siege screen without an assault's results
+            // (with SIEGE, the client shows the results of the player's last assault, and fails without one).
+            Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE_PRACTICE);
+            s_BackToDefense = true;
             Patches.StartMatch(deck, Patches.NeutralEncounterId, d.AttackerDeck,
                 "siege defense vs " + d.Attacker.Name + " " + (d.Seq + 1) + "/3", Opponents.PersonalityOf(d.Attacker));
         }
@@ -754,6 +771,7 @@ namespace HexRevival
                 return res;
             }
             if (sub == "attack") return AttackDefense();   // dev: the defense screen's button
+            if (sub == "defendscreen") { global::Siege.UISiege.Instance.TransitionTo(global::Siege.ESiegeState.Defend); return "defense screen"; }
             if (sub == "defend")
             {
                 // dev: commits a defense of 3 prebuilt decks (as the Defense screen would), bounty 1000 gold

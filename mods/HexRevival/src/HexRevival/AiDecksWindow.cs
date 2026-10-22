@@ -722,7 +722,9 @@ namespace HexRevival
             if (m_Mode == null) return;
             float S = GameSkin.Scale;
             GUI.depth = -900;
-            m_Rect = new Rect(Screen.width - 250 * S, Screen.height - 112 * S, 236 * S, 44 * S);
+            // The defense screen has its events log at the bottom right: the buttons go to its left.
+            float right = m_Mode == AiConfig.SiegeAttackers ? 270 * S : 14 * S;
+            m_Rect = new Rect(Screen.width - right - 236 * S, Screen.height - 112 * S, 236 * S, 44 * S);
             if (GameSkin.GoldButton(m_Rect, Loc.Get("ai_settings"), true, 16)) AiDecksWindow.Open(m_Mode);
             // The defense screen: an attacker of the configuration attacks the player's defense now (AI against AI).
             if (m_Mode == AiConfig.SiegeAttackers && Siege.CanAttackDefense)
