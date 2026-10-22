@@ -205,7 +205,7 @@ namespace HexRevival
             /// <summary>Made for the AI (listed apart from the decks made for players).</summary>
             public bool ForAI;
             /// <summary>The AI's default skill with this deck (EDifficulty); not used for the player's own Siege defense.</summary>
-            public string Skill = "Hard";
+            public string Skill = "Medium";
             /// <summary>
             /// Randomness in the AI's choices: each time it values a card it lowers the value by a random 50 to 100% of
             /// this many hundredths (AICardEvaluator; the game's default 50, 0 = always its best estimate).

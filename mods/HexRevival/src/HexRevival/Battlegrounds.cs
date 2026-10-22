@@ -84,10 +84,20 @@ namespace HexRevival
             // Draft: the packs at the table (seat 0 is the player), round 0..2, pick 0..16.
             public List<List<ResourceId>> Packs;
             public List<List<ResourceId>> BotPicks;
+            /// <summary>Draft: the AI player at each seat 1..7 (see AiConfig, sealed and draft players).</summary>
+            public List<string> Seats;
+            /// <summary>Sealed: the AI player and card pool of each match played.</summary>
+            public List<SealedOpponent> SealedOpponents = new List<SealedOpponent>();
             public List<card_instance_bits> Picks = new List<card_instance_bits>();
             public List<card_instance_bits> PackShown;
             public ulong PackId;
             public int Round, Pick;
+        }
+
+        private class SealedOpponent
+        {
+            public string Player;
+            public List<ResourceId> Pool = new List<ResourceId>();
         }
 
         private class Store
@@ -323,6 +333,7 @@ namespace HexRevival
                     r.Packs = new List<List<ResourceId>>();
                     r.BotPicks = new List<List<ResourceId>>();
                     for (int s = 0; s < DraftSeats; s++) r.BotPicks.Add(new List<ResourceId>());
+                    r.Seats = DrawSeats();
                     OpenDraftRound(r);
                     break;
             }
@@ -590,27 +601,122 @@ namespace HexRevival
 
         private static DeckTemplate Opponent(Gauntlet g, Run r)
         {
-            // The opponent pack (see Opponents): its deck for a constructed gauntlet, its skill and handicaps in all.
-            Opponents.Opponent o = Opponents.Pick(g.Kind == Kind.Constructed ? Opponents.Gauntlet : Opponents.Limited, r.Wins);
-            Opponents.SetNext(o);
-            s_LastOpponent = o;
             if (g.Kind == Kind.Constructed)
             {
+                // The constructed gauntlet's configuration (see AiConfig): a deck with its AI level and modifiers.
+                Opponents.Opponent o = Opponents.Pick(Opponents.Gauntlet, r.Wins);
+                Opponents.SetNext(o);
+                s_LastOpponent = o;
                 DeckTemplate own = Opponents.DeckOf(o);
                 if (own != null) return own;
                 List<DeckTemplate> decks = Decks.PrebuiltPvp();
                 return decks.Count > 0 ? decks[UnityEngine.Random.Range(0, decks.Count)] : null;
             }
-            List<ResourceId> pool = new List<ResourceId>();
+            // Sealed and draft: an AI player of the configuration (its level and modifiers), with the deck built from its
+            // pool: the drafter at the next seat, or a new sealed pool.
+            string player;
+            List<ResourceId> pool;
+            int match = r.Wins + r.Losses;
             if (g.Kind == Kind.Draft && r.BotPicks != null)
-                pool.AddRange(r.BotPicks[1 + (r.Wins + r.Losses) % (DraftSeats - 1)]);
+            {
+                if (r.Seats == null) { r.Seats = DrawSeats(); Save(); }
+                int seat = 1 + match % (DraftSeats - 1);
+                player = r.Seats[seat - 1];
+                pool = r.BotPicks[seat];
+            }
             else
-                for (int i = 0; i < 6; i++) foreach (CardTemplate t in Progression.OpenPack(BoosterSet())) pool.Add(t.m_Id);
-            return LimitedDeck(pool);
+            {
+                if (r.SealedOpponents == null) r.SealedOpponents = new List<SealedOpponent>();
+                if (r.SealedOpponents.Count <= match)
+                {
+                    AiConfig.AiPlayer p = PickPlayer();
+                    SealedOpponent so = new SealedOpponent { Player = p != null ? p.Name : "AI" };
+                    for (int i = 0; i < 6; i++) foreach (CardTemplate t in Progression.OpenPack(BoosterSet())) so.Pool.Add(t.m_Id);
+                    r.SealedOpponents.Add(so);
+                    Save();
+                }
+                player = r.SealedOpponents[match].Player;
+                pool = r.SealedOpponents[match].Pool;
+            }
+            AiConfig.AiPlayer ap = AiConfig.Get(AiConfig.Limited).Players.Find(x => x.Name == player);
+            Opponents.Opponent op = ap != null ? AiConfig.ToOpponent(ap) : new Opponents.Opponent { Name = player };
+            Opponents.SetNext(op);
+            s_LastOpponent = op;
+            return LimitedDeck(pool, player);
+        }
+
+        /// <summary>A sealed / draft AI player of the configuration, by frequency (null if none).</summary>
+        private static AiConfig.AiPlayer PickPlayer()
+        {
+            List<AiConfig.AiPlayer> all = AiConfig.Get(AiConfig.Limited).Players.FindAll(p => p.Weight > 0);
+            int total = 0;
+            foreach (AiConfig.AiPlayer p in all) total += p.Weight;
+            if (total == 0) return null;
+            int x = UnityEngine.Random.Range(0, total);
+            foreach (AiConfig.AiPlayer p in all) { x -= p.Weight; if (x < 0) return p; }
+            return all[all.Count - 1];
+        }
+
+        /// <summary>The 7 AI drafters of a table: the configured players by frequency, each once while there are enough.</summary>
+        private static List<string> DrawSeats()
+        {
+            List<string> seats = new List<string>();
+            List<AiConfig.AiPlayer> left = AiConfig.Get(AiConfig.Limited).Players.FindAll(p => p.Weight > 0);
+            for (int i = 0; i < DraftSeats - 1; i++)
+            {
+                if (left.Count == 0) left = AiConfig.Get(AiConfig.Limited).Players.FindAll(p => p.Weight > 0);
+                if (left.Count == 0) { seats.Add("AI " + (i + 1)); continue; }
+                int total = 0;
+                foreach (AiConfig.AiPlayer p in left) total += p.Weight;
+                int x = UnityEngine.Random.Range(0, total);
+                AiConfig.AiPlayer chosen = left[left.Count - 1];
+                foreach (AiConfig.AiPlayer p in left) { x -= p.Weight; if (x < 0) { chosen = p; break; } }
+                seats.Add(chosen.Name);
+                left.Remove(chosen);
+            }
+            return seats;
+        }
+
+        /// <summary>An AI opponent of a sealed / draft run in progress, and the deck it plays (built from its pool).</summary>
+        public class LimitedOpponent
+        {
+            public string Event, Player;
+            public DeckTemplate Deck;
+            public bool Faced, Next, Drafting;
+        }
+
+        /// <summary>The AI opponents of the sealed / draft runs in progress (for the AI window): faced, next, and the others.</summary>
+        public static List<LimitedOpponent> LimitedOpponents()
+        {
+            List<LimitedOpponent> res = new List<LimitedOpponent>();
+            foreach (Run r in Data.Runs)
+            {
+                Gauntlet g = Find(r.TournamentId);
+                if (g == null || g.Kind == Kind.Constructed) continue;
+                int match = r.Wins + r.Losses;
+                string name = Localization.Get(g.Name);
+                if (g.Kind == Kind.Draft && r.BotPicks != null)
+                {
+                    if (r.Seats == null) { r.Seats = DrawSeats(); Save(); }
+                    for (int seat = 1; seat < DraftSeats; seat++)
+                    {
+                        int order = seat - 1;   // match index of this seat (one match per seat, in order)
+                        res.Add(new LimitedOpponent
+                        {
+                            Event = name, Player = r.Seats[seat - 1], Deck = LimitedDeck(r.BotPicks[seat], r.Seats[seat - 1]),
+                            Faced = order < match, Next = order == match, Drafting = r.Packs != null,
+                        });
+                    }
+                }
+                else if (r.SealedOpponents != null)
+                    for (int i = 0; i < r.SealedOpponents.Count; i++)
+                        res.Add(new LimitedOpponent { Event = name, Player = r.SealedOpponents[i].Player, Deck = LimitedDeck(r.SealedOpponents[i].Pool, r.SealedOpponents[i].Player), Faced = i < match, Next = i == match });
+            }
+            return res;
         }
 
         /// <summary>A 40-card deck from a pool: its two main colors, its 23 best cards (the game AI's evaluation), 17 basic shards.</summary>
-        private static DeckTemplate LimitedDeck(List<ResourceId> pool)
+        private static DeckTemplate LimitedDeck(List<ResourceId> pool, string player = null)
         {
             ECardShards colors = MainColors(pool);
             List<CardTemplate> cards = new List<CardTemplate>();
@@ -625,8 +731,9 @@ namespace HexRevival
             if (cards.Count > 23) cards.RemoveRange(23, cards.Count - 23);
             DeckTemplate d = new DeckTemplate();
             d.m_Id = new ResourceId(Guid.NewGuid());
-            d.m_DeckName = "Gauntlet opponent";
-            d.m_ChampionId = RandomChampion();
+            d.m_DeckName = string.IsNullOrEmpty(player) ? "Gauntlet opponent" : player;
+            // The same champion for the same pool (the deck shown in the AI window is the one played).
+            d.m_ChampionId = RandomChampion(pool.Count + (pool.Count > 0 ? pool[0].GetHashCode() : 0) + (player ?? "").GetHashCode());
             Dictionary<ResourceId, TemplateCardStack> stacks = new Dictionary<ResourceId, TemplateCardStack>();
             Action<ResourceId, int> add = (id, n) =>
             {
@@ -663,10 +770,10 @@ namespace HexRevival
             return v;
         }
 
-        private static ResourceId RandomChampion()
+        private static ResourceId RandomChampion(int seed)
         {
             List<DeckTemplate> decks = Decks.PrebuiltPvp();
-            return decks.Count > 0 ? decks[UnityEngine.Random.Range(0, decks.Count)].m_ChampionId : new ResourceId(GameConfig.DefaultChampionTemplateId);
+            return decks.Count > 0 ? decks[new System.Random(seed).Next(decks.Count)].m_ChampionId : new ResourceId(GameConfig.DefaultChampionTemplateId);
         }
 
         private static CardTemplate Template(ResourceId id)

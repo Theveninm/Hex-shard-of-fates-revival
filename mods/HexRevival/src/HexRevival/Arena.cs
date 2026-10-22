@@ -237,13 +237,12 @@ namespace HexRevival
                 bool boss = slot == PerTier - 1;
                 int elites = tier == 1 ? 0 : tier == 2 ? 1 : 2;
                 bool elite = !boss && slot >= PerTier - 1 - elites;
-                Opponents.Opponent o = null;
-                // Uruunaz and Zakiir: on the 4th fight of tier 2 and on every fight but the boss of tiers 3 and 4 (Src.HexCompendium).
-                bool rareSlot = !boss && (tier >= 3 || (tier == 2 && slot == 3));
-                if (rareSlot && UnityEngine.Random.value < RareChance) o = Opponents.Pick(Opponents.Arena, tier, x => x.Rare && !used.Contains(x.Name));
-                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare && x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(x.Name));
-                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare && x.Boss == boss && !used.Contains(x.Name));
-                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !x.Rare);
+                // The fight's role (boss, elite, common), then any deck of the tier. Uruunaz and Zakiir are common decks
+                // with a low frequency (see AiConfig).
+                Opponents.Opponent o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(x.Name));
+                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && !used.Contains(x.Name));
+                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !used.Contains(x.Name));
+                if (o == null) o = Opponents.Pick(Opponents.Arena, tier);
                 if (o == null) { Debug.LogError("[HexRevival] [Arena] no opponent for tier " + tier + " in the arena's AI decks"); return null; }
                 used.Add(o.Name);
                 r.Opponents.Add(o);
@@ -401,8 +400,8 @@ namespace HexRevival
         // Rewards
         // ------------------------------------------------------------------
 
-        /// <summary>PLACEHOLDER: chance of Uruunaz or Zakiir on a fight where they can appear ("extremely rare", Src.Steam2016).</summary>
-        private const float RareChance = 0.02f;
+        /// <summary>The rare challengers (their own rewards): Uruunaz and Zakiir.</summary>
+        private static bool IsRare(Opponents.Opponent o) { return o.Name.StartsWith("Uruunaz") || o.Name.StartsWith("Zakiir"); }
 
         private static class Rewards
         {
@@ -425,9 +424,9 @@ namespace HexRevival
                 int gold = boss ? GoldBoss : o.Elite ? GoldElite : GoldStandard;
                 res.Add(new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "GOLD", Reason = "GOLD", Gold = gold, Rarity = "", TemplateID = ResourceId.Invalid });
                 r.Info.GoldPacks++;
-                if (o.Rare && o.Name.StartsWith("Uruunaz"))
+                if (o.Name.StartsWith("Uruunaz"))
                     res.Add(new ArenaReward { ArenaInstance = r.Info.ArenaID, FightInstance = f.FightID, Type = "GOLD", Reason = "URUUNAZ", Gold = GoldUruunaz, Rarity = "", TemplateID = ResourceId.Invalid });
-                if (o.Rare) AddChest(res, r, f, o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR");
+                if (IsRare(o)) AddChest(res, r, f, o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR");
                 if (boss)
                 {
                     for (int i = 0; i < (f.FightTier == 1 ? 1 : 2); i++) AddChest(res, r, f, "WIN");
@@ -436,7 +435,7 @@ namespace HexRevival
                 }
                 // The sleeves of the bosses (Src.Game, their "Earned by defeating ..." texts).
                 string sleeve = o.Name.StartsWith("Hogarth") ? "Hogarth Sleeve" : o.Name.StartsWith("Uruunaz") ? "Uruunaz Sleeve" : o.Name.StartsWith("Zakiir") ? "Matriarch of Flames Sleeve" : null;
-                if (sleeve != null) AddSleeve(res, r, f, sleeve, o.Rare ? (o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR") : "WIN");
+                if (sleeve != null) AddSleeve(res, r, f, sleeve, IsRare(o) ? (o.Name.StartsWith("Uruunaz") ? "URUUNAZ" : "ZAKIIR") : "WIN");
                 return res;
             }
 

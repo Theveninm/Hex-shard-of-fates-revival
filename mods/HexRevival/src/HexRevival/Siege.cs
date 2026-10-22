@@ -574,13 +574,25 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// PLACEHOLDER: how often defenses were attacked and how strong attackers were is not known. An attack
-        /// comes every AttackHours on average; each attacker has a skill level, the chance to beat one defense deck.
+        /// The attacks on the defenses are simulated (the attackers were other players): one every AttackHours on average,
+        /// by an attacker of the Siege attackers configuration (see AiConfig), who beats each defense deck with its
+        /// chance. PLACEHOLDER defaults: how often and how well players attacked is not known.
         /// </summary>
-        internal const double AttackHours = 2.0;
-        internal static readonly double[] SkillWinChance = { 0.30, 0.45, 0.60, 0.75 };
+        internal static double AttackHours { get { return Math.Max(0.1, AiConfig.Get(AiConfig.SiegeAttackers).AttackHours); } }
 
-        /// <summary>Plays the placeholder attacks on the player's defense since the last time, then the world's.</summary>
+        /// <summary>An attacker of the configuration (by frequency), or a made-up one at 50% if there is none.</summary>
+        internal static AiConfig.Attacker PickAttacker(System.Random rng)
+        {
+            List<AiConfig.Attacker> all = AiConfig.Get(AiConfig.SiegeAttackers).Attackers.FindAll(a => a.Weight > 0);
+            int total = 0;
+            foreach (AiConfig.Attacker a in all) total += a.Weight;
+            if (total == 0) return new AiConfig.Attacker { Name = PlaceholderKeeps.RandomName(rng), WinChance = 50 };
+            int x = rng.Next(total);
+            foreach (AiConfig.Attacker a in all) { x -= a.Weight; if (x < 0) return a; }
+            return all[all.Count - 1];
+        }
+
+        /// <summary>Plays the simulated attacks on the player's defense since the last time, then the world's.</summary>
         private static void Simulate()
         {
             if (Saves.Current == null) return;
@@ -605,8 +617,9 @@ namespace HexRevival
 
         private static void SimulatedAttack(siege_bits s, System.Random rng, DateTime when)
         {
-            int skill = rng.Next(SkillWinChance.Length);
-            string attacker = PlaceholderKeeps.RandomName(rng);
+            AiConfig.Attacker att = PickAttacker(rng);
+            string attacker = att.Name;
+            double chance = Math.Max(0, Math.Min(100, att.WinChance)) / 100.0;
             int total, defender, pot, rake;
             Calculate(s.Pot, out total, out defender, out pot, out rake);
             // The defender's share goes straight to the account (Src.Video, rules screen).
@@ -618,13 +631,13 @@ namespace HexRevival
             c.Bet = (uint)pot; c.Fee = (uint)defender; c.Rake = (uint)rake;
             for (int i = 0; i < 3; i++)
             {
-                if (rng.NextDouble() >= SkillWinChance[skill])
+                if (rng.NextDouble() >= chance)
                 {
                     siege_ledger_bits w = AddLog(s, siege_ledger_bits.SiegeAction.DEFENDED, null, 0, attacker, when);
                     w.FightSeq = i;
                     s.Wins++;
                     SetFees(s);
-                    Debug.Log("[HexRevival] [Siege] defense held against " + attacker + " (skill " + skill + ") at fight " + (i + 1));
+                    Debug.Log("[HexRevival] [Siege] defense held against " + attacker + " (" + att.WinChance + "%) at fight " + (i + 1));
                     return;
                 }
                 AddLog(s, siege_ledger_bits.SiegeAction.SACKED, null, 0, attacker, when).FightSeq = i;
@@ -637,7 +650,7 @@ namespace HexRevival
             s.Loss++;
             AddLog(s, siege_ledger_bits.SiegeAction.DEFEATED, null, 0, attacker, when);
             Earn(false, 0, sacks);
-            Debug.Log("[HexRevival] [Siege] defense defeated by " + attacker + " (skill " + skill + "), +" + sacks + " sacks");
+            Debug.Log("[HexRevival] [Siege] defense defeated by " + attacker + " (" + att.WinChance + "%), +" + sacks + " sacks");
         }
 
         // ------------------------------------------------------------------
@@ -655,6 +668,20 @@ namespace HexRevival
         public static string Command(string[] parts)
         {
             string sub = parts.Length > 1 ? parts[1] : "state";
+            if (sub == "keeps") { PlaceholderKeeps pk = Keeps as PlaceholderKeeps; return pk != null ? pk.Check() : "no placeholder keeps"; }
+            if (sub == "opponents")
+            {
+                // dev: the AI of each fight of the listed defenses
+                PlaceholderKeeps pk = Keeps as PlaceholderKeeps;
+                string res = "";
+                foreach (siege_bits k in Keeps.Active())
+                {
+                    res += k.Name + " (" + k.Pot + "):";
+                    for (int i = 0; i < 3; i++) { Opponents.Opponent o = pk != null ? pk.OpponentOf(k.Id, i) : null; res += " " + (o != null ? o.Name + "[" + o.Skill + "]" : "?"); }
+                    res += "\n";
+                }
+                return res;
+            }
             if (sub == "attack")
             {
                 // dev: one placeholder attack on the player's defense now
@@ -668,7 +695,7 @@ namespace HexRevival
             {
                 // dev: commits a defense of 3 prebuilt decks (as the Defense screen would), bounty 1000 gold
                 // (through the client's own JSON, as the Defense screen sends it)
-                Messaging.Create c = new Messaging.Create(Messaging.Create.Currency.GOLD, 1000, PlaceholderKeeps.RandomFights(new System.Random()));
+                Messaging.Create c = new Messaging.Create(Messaging.Create.Currency.GOLD, 1000, PlaceholderKeeps.RandomFights());
                 return DevRequest(c);
             }
             if (sub == "withdraw")
@@ -681,7 +708,7 @@ namespace HexRevival
                 // dev: the deck builder's practice game: the player's first deck against a prebuilt defense deck
                 ProfileDeckTemplate mine = Decks.ToProfileTemplate(Decks.FirstPvpDeck());
                 if (mine == null) return "no deck";
-                return DevRequest(new Messaging.PracticeMatch(PlaceholderKeeps.RandomFights(new System.Random())[0].Deck, mine));
+                return DevRequest(new Messaging.PracticeMatch(PlaceholderKeeps.RandomFights()[0].Deck, mine));
             }
             if (sub == "sacks" && parts.Length > 2)
             {
@@ -718,10 +745,10 @@ namespace HexRevival
     }
 
     /// <summary>
-    /// PLACEHOLDER defenses until other players' defenses can be loaded from a server: shared by every account
-    /// (HexRevivalSaves/siege_world.json), each made of 3 of the game's prebuilt decks with a PvP champion, an AI
-    /// personality, a bounty and a record that follow the game's rules (bounty + 37.5% of each fee). Most new
-    /// defenses hold 1000 gold, a few more, some platinum (Src.Video, A 0:28-8:04: most at 1000, some 1500-93056).
+    /// The defenses to attack, until other players' defenses can be loaded from a server: one per defense of the Siege
+    /// keeps configuration (see AiConfig: 3 decks, a bounty, a message), kept in HexRevivalSaves/siege_world.json with
+    /// its record, which follows the game's rules (bounty + 37.5% of each fee). A defense sacked (by the player or a
+    /// simulated attacker) comes back with its starting bounty. The simulated attacks use the Siege attackers.
     /// </summary>
     public class PlaceholderKeeps : IKeepSource
     {
@@ -730,18 +757,11 @@ namespace HexRevival
             public ulong NextId = 1000000;
             public List<siege_bits> Keeps = new List<siege_bits>();
             public DateTime LastSimulation = DateTime.UtcNow;
-            /// <summary>The AI opponent of each fight ("keep id/fight"): its skill and handicaps (see AiConfig).</summary>
-            public Dictionary<string, Opponents.Opponent> Opponents = new Dictionary<string, Opponents.Opponent>();
+            /// <summary>The configured defense of each keep (keep id -> KeepDef.Id), and its version (to update its decks).</summary>
+            public Dictionary<ulong, string> DefOf = new Dictionary<ulong, string>();
+            public Dictionary<ulong, string> DefHash = new Dictionary<ulong, string>();
         }
 
-        private const int GoldKeeps = 40, PlatinumKeeps = 10;
-
-        /// <summary>The AI opponent chosen for a fight of a placeholder keep (null: the deck's own personality only).</summary>
-        public Opponents.Opponent OpponentOf(ulong keep, int fight)
-        {
-            Opponents.Opponent o;
-            return Data.Opponents != null && Data.Opponents.TryGetValue(keep + "/" + fight, out o) ? o : null;
-        }
         private World m_World;
 
         private static string FilePath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "siege_world.json"); } }
@@ -750,18 +770,22 @@ namespace HexRevival
         {
             get
             {
-                if (m_World != null) return m_World;
-                try
+                if (m_World == null)
                 {
-                    if (File.Exists(FilePath))
-                        JsonUtils.DeserializeJson(File.ReadAllBytes(FilePath), (World w) => { m_World = w; });
+                    try
+                    {
+                        if (File.Exists(FilePath))
+                            JsonUtils.DeserializeJson(File.ReadAllBytes(FilePath), (World w) => { m_World = w; });
+                    }
+                    catch (Exception e) { Debug.LogError("[HexRevival] [Siege] world read: " + e); }
+                    if (m_World == null) m_World = new World();
+                    if (m_World.DefOf == null) m_World.DefOf = new Dictionary<ulong, string>();
+                    if (m_World.DefHash == null) m_World.DefHash = new Dictionary<ulong, string>();
+                    // An attack interrupted by quitting the game counts as repelled (the fee is not refunded).
+                    foreach (siege_bits k in m_World.Keeps)
+                        if (k.CurStatus == siege_bits.Status.INGAME) { k.CurStatus = siege_bits.Status.ACTIVE; k.Wins++; Siege.SetFees(k); }
                 }
-                catch (Exception e) { Debug.LogError("[HexRevival] [Siege] world read: " + e); }
-                if (m_World == null) m_World = new World();
-                // An attack interrupted by quitting the game counts as repelled (the fee is not refunded).
-                foreach (siege_bits k in m_World.Keeps)
-                    if (k.CurStatus == siege_bits.Status.INGAME) { k.CurStatus = siege_bits.Status.ACTIVE; k.Wins++; Siege.SetFees(k); }
-                Fill(m_World, new System.Random());
+                Sync(m_World);
                 return m_World;
             }
         }
@@ -771,7 +795,7 @@ namespace HexRevival
             try
             {
                 byte[] b = null;
-                JsonUtils.SerializeJson(Data, (byte[] x) => { b = x; });
+                JsonUtils.SerializeJson(m_World, (byte[] x) => { b = x; });
                 Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
                 File.WriteAllBytes(FilePath, b);
             }
@@ -804,12 +828,12 @@ namespace HexRevival
 
         public void Sacked(siege_bits keep)
         {
-            Data.Keeps.Remove(keep);
-            Fill(Data, new System.Random());
+            Remove(m_World, keep);
+            Sync(m_World);
             Save();
         }
 
-        /// <summary>Placeholder attackers on the other defenses too, so that the list lives (same rules as the player's defense).</summary>
+        /// <summary>The simulated attackers on these defenses too, so that the list lives (same rules as the player's defense).</summary>
         public void Simulate(DateTime now)
         {
             World w = Data;
@@ -823,17 +847,17 @@ namespace HexRevival
                 int n = (int)attacks + (rng.NextDouble() < attacks - Math.Floor(attacks) ? 1 : 0);
                 for (int i = 0; i < n && w.Keeps.Contains(k); i++)
                 {
-                    double p = Siege.SkillWinChance[rng.Next(Siege.SkillWinChance.Length)];
+                    double p = Siege.PickAttacker(rng).WinChance / 100.0;
                     int total, defender, pot, rake;
                     Siege.Calculate(k.Pot, out total, out defender, out pot, out rake);
                     k.Pot += pot;
                     k.ChallengeCount++;
-                    if (rng.NextDouble() < p * p * p) w.Keeps.Remove(k);
+                    if (rng.NextDouble() < p * p * p) Remove(w, k);
                     else { k.Wins++; Siege.SetFees(k); }
                 }
             }
             w.LastSimulation = now;
-            Fill(w, rng);
+            Sync(w);
             Save();
         }
 
@@ -841,107 +865,133 @@ namespace HexRevival
         {
             int gold = 0, plat = 0;
             foreach (siege_bits k in Data.Keeps) if (k.Currency == siege_bits.CurrencyType.PLATINUM) plat++; else gold++;
-            return "placeholder defenses: " + gold + " gold, " + plat + " platinum";
+            return "defenses: " + gold + " gold, " + plat + " platinum";
         }
 
         // ------------------------------------------------------------------
-        // Generation
+        // From the configuration to the keeps
         // ------------------------------------------------------------------
 
-
-        private static List<DeckTemplate> Decks() { return HexRevival.Decks.PrebuiltPvp(); }
-
-        private void Fill(World w, System.Random rng)
+        private static void Remove(World w, siege_bits k)
         {
-            if (Decks().Count < 3) return;
-            int gold = 0, plat = 0;
-            foreach (siege_bits k in w.Keeps) if (k.Currency == siege_bits.CurrencyType.PLATINUM) plat++; else gold++;
-            bool changed = false;
-            while (gold < GoldKeeps) { w.Keeps.Add(NewKeep(w, rng, false)); gold++; changed = true; }
-            while (plat < PlatinumKeeps) { w.Keeps.Add(NewKeep(w, rng, true)); plat++; changed = true; }
-            if (changed && m_World != null) Save();
+            w.Keeps.Remove(k);
+            w.DefOf.Remove(k.Id);
+            w.DefHash.Remove(k.Id);
         }
 
-        private static readonly EDeckPersonality[] Personalities =
+        private static string Hash(AiConfig.KeepDef d)
         {
-            EDeckPersonality.Default, EDeckPersonality.Aggressive, EDeckPersonality.BigThreats, EDeckPersonality.BuildArmy,
-            EDeckPersonality.Burn, EDeckPersonality.Bury, EDeckPersonality.Destruction, EDeckPersonality.HandAdvantage, EDeckPersonality.Reanimation
-        };
-
-        private static siege_bits NewKeep(World w, System.Random rng, bool platinum)
-        {
-            siege_bits k = new siege_bits();
-            k.Id = w.NextId++;
-            k.PlayerID = k.Id;
-            k.Name = RandomName(rng);
-            k.Currency = platinum ? siege_bits.CurrencyType.PLATINUM : siege_bits.CurrencyType.GOLD;
-            // PLACEHOLDER distribution, shaped on the video's list: most at the minimum, a few higher.
-            double r = rng.NextDouble();
-            int min = platinum ? Siege.Fees.MinPotPlatinum : Siege.Fees.MinPotGold;
-            k.Pot = r < 0.75 ? min : r < 0.95 ? min * (2 + rng.Next(4)) / 2 : min * (5 + rng.Next(20));
-            int wins = rng.NextDouble() < 0.6 ? 0 : rng.Next(1, 9);
-            for (int i = 0; i < wins; i++)
-            {
-                int total, defender, pot, rake;
-                Siege.Calculate(k.Pot, out total, out defender, out pot, out rake);
-                k.Pot += pot;
-            }
-            k.Wins = wins;
-            k.ChallengeCount = wins;
-            k.Created = DateTime.UtcNow.AddHours(-rng.NextDouble() * (2 + wins * 6));
-            k.StatusDate = k.Created;
-            k.CurStatus = siege_bits.Status.ACTIVE;
-            Messaging.Create.FightConfig[] fights = ConfiguredFights(w, k, rng) ?? RandomFights(rng);
-            byte[] json = null;
-            JsonUtils.SerializeJson(fights, (byte[] x) => { json = x; });
-            k.FightInfo = Compressor.Compress(json);
-            Siege.SetFees(k);
-            return k;
+            string h = d.Name + "|" + d.Platinum + "|" + d.Message;
+            foreach (AiConfig.KeepFight f in d.Fights) h += "|" + (f.Deck != null ? f.Deck.Kind + ":" + f.Deck.Key : "") + "/" + f.Personality;
+            return h;
         }
 
         /// <summary>
-        /// The keep's 3 fights from the Siege AI configuration (see AiConfig), by its bounty in gold (platinum x 10): two
-        /// decks then a boss (an elite in second place when there is one). Null when the configuration has no deck.
-        /// Encounters are left out (a keep holds decks).
+        /// One keep per configured defense: new ones get theirs (at their starting bounty), changed ones their new decks
+        /// and name (their bounty and record stay), those no longer configured leave the list (unless under attack).
         /// </summary>
-        private static Messaging.Create.FightConfig[] ConfiguredFights(World w, siege_bits k, System.Random rng)
+        private void Sync(World w)
         {
-            int value = k.Currency == siege_bits.CurrencyType.PLATINUM ? k.Pot * 10 : k.Pot;
-            Messaging.Create.FightConfig[] fights = new Messaging.Create.FightConfig[3];
-            HashSet<string> used = new HashSet<string>();
-            for (int i = 0; i < 3; i++)
+            List<AiConfig.KeepDef> defs = AiConfig.Get(AiConfig.SiegeKeeps).Keeps;
+            bool changed = false;
+            HashSet<string> wanted = new HashSet<string>();
+            foreach (AiConfig.KeepDef d in defs) wanted.Add(d.Id);
+            foreach (siege_bits k in new List<siege_bits>(w.Keeps))
             {
-                bool boss = i == 2, elite = i == 1;
-                Func<Opponents.Opponent, bool> ok = o => string.IsNullOrEmpty(o.Encounter) && !used.Contains(o.Name);
-                Opponents.Opponent op = HexRevival.Opponents.Pick(AiConfig.Siege, value, o => ok(o) && o.Boss == boss && o.Elite == elite)
-                    ?? HexRevival.Opponents.Pick(AiConfig.Siege, value, o => ok(o) && !o.Boss)
-                    ?? HexRevival.Opponents.Pick(AiConfig.Siege, value, ok);
-                DeckTemplate d = HexRevival.Opponents.DeckOf(op);
-                if (d == null) return null;
-                used.Add(op.Name);
-                ProfileDeckTemplate t = ToProfile(d);
-                EDeckPersonality pers = HexRevival.Opponents.PersonalityOf(op);
-                t.SetPersonality(pers != EDeckPersonality.Default ? pers : Personalities[rng.Next(Personalities.Length)]);
-                fights[i] = new Messaging.Create.FightConfig { Deck = t, Message = "" };
-                if (w.Opponents == null) w.Opponents = new Dictionary<string, Opponents.Opponent>();
-                w.Opponents[k.Id + "/" + i] = op;
+                string def;
+                if (k.CurStatus == siege_bits.Status.INGAME) continue;
+                if (!w.DefOf.TryGetValue(k.Id, out def) || !wanted.Contains(def)) { Remove(w, k); changed = true; }
             }
-            return fights;
+            foreach (AiConfig.KeepDef d in defs)
+            {
+                siege_bits k = w.Keeps.Find(x => { string id; return w.DefOf.TryGetValue(x.Id, out id) && id == d.Id; });
+                string hash = Hash(d);
+                string old;
+                if (k != null && w.DefHash.TryGetValue(k.Id, out old) && old == hash) continue;
+                byte[] fights = FightInfo(d);
+                if (fights == null) { if (k != null) { Remove(w, k); changed = true; } continue; }   // a deck is missing
+                if (k == null)
+                {
+                    k = new siege_bits();
+                    k.Id = w.NextId++;
+                    k.PlayerID = k.Id;
+                    k.Currency = d.Platinum ? siege_bits.CurrencyType.PLATINUM : siege_bits.CurrencyType.GOLD;
+                    int min = d.Platinum ? Siege.Fees.MinPotPlatinum : Siege.Fees.MinPotGold;
+                    k.Pot = Math.Max(min, d.Bounty);
+                    k.Created = DateTime.UtcNow;
+                    k.StatusDate = k.Created;
+                    k.CurStatus = siege_bits.Status.ACTIVE;
+                    w.Keeps.Add(k);
+                    w.DefOf[k.Id] = d.Id;
+                }
+                k.Name = d.Name;
+                k.FightInfo = fights;
+                Siege.SetFees(k);
+                w.DefHash[k.Id] = hash;
+                changed = true;
+            }
+            if (changed && m_World != null) Save();
         }
 
-        /// <summary>3 different prebuilt decks, each with an AI personality.</summary>
-        internal static Messaging.Create.FightConfig[] RandomFights(System.Random rng)
+        /// <summary>Dev: why each configured defense is listed or not.</summary>
+        public string Check()
         {
-            List<DeckTemplate> decks = Decks();
-            List<int> picked = new List<int>();
+            string res = "";
+            foreach (AiConfig.KeepDef d in AiConfig.Get(AiConfig.SiegeKeeps).Keeps)
+            {
+                res += d.Name + ":";
+                foreach (AiConfig.KeepFight f in d.Fights)
+                {
+                    Opponents.Opponent o = f.Deck != null ? AiConfig.Resolve(f.Deck, null) : null;
+                    res += " " + (f.Deck == null ? "none" : f.Deck.Kind + ":" + f.Deck.Key) + "=" + (o == null ? "unresolved" : HexRevival.Opponents.DeckOf(o) == null ? "no deck" : "ok");
+                }
+                res += "\n";
+            }
+            return res;
+        }
+
+        /// <summary>The 3 fights of a defense as the client reads them (null if one of its decks no longer exists).</summary>
+        private static byte[] FightInfo(AiConfig.KeepDef d)
+        {
+            if (d.Fights.Count == 0) return null;
+            List<Messaging.Create.FightConfig> fights = new List<Messaging.Create.FightConfig>();
+            foreach (AiConfig.KeepFight f in d.Fights)
+            {
+                Opponents.Opponent o = f.Deck != null ? AiConfig.Resolve(f.Deck, null) : null;
+                DeckTemplate t = o != null ? HexRevival.Opponents.DeckOf(o) : null;
+                if (t == null) return null;
+                ProfileDeckTemplate p = ToProfile(t);
+                EDeckPersonality pers = EDeckPersonality.Default;
+                try { pers = (EDeckPersonality)Enum.Parse(typeof(EDeckPersonality), string.IsNullOrEmpty(f.Personality) ? o.Personality ?? "Default" : f.Personality, true); }
+                catch { }
+                p.SetPersonality(pers);
+                fights.Add(new Messaging.Create.FightConfig { Deck = p, Message = d.Message ?? "" });
+            }
+            byte[] json = null;
+            JsonUtils.SerializeJson(fights.ToArray(), (byte[] x) => { json = x; });
+            return Compressor.Compress(json);
+        }
+
+        /// <summary>The AI of a fight of a keep: its deck's level and modifiers (null if unknown).</summary>
+        public Opponents.Opponent OpponentOf(ulong keep, int fight)
+        {
+            string id;
+            if (!Data.DefOf.TryGetValue(keep, out id)) return null;
+            AiConfig.KeepDef d = AiConfig.Get(AiConfig.SiegeKeeps).Keeps.Find(x => x.Id == id);
+            if (d == null || fight >= d.Fights.Count || d.Fights[fight].Deck == null) return null;
+            return AiConfig.Resolve(d.Fights[fight].Deck, null);
+        }
+
+        /// <summary>Dev: 3 different prebuilt decks with an AI style (test defenses).</summary>
+        internal static Messaging.Create.FightConfig[] RandomFights()
+        {
+            System.Random rng = new System.Random();
+            List<DeckTemplate> decks = HexRevival.Decks.PrebuiltPvp();
             Messaging.Create.FightConfig[] fights = new Messaging.Create.FightConfig[3];
             for (int i = 0; i < 3; i++)
             {
-                int d;
-                do d = rng.Next(decks.Count); while (picked.Contains(d) && picked.Count < decks.Count);
-                picked.Add(d);
-                ProfileDeckTemplate t = ToProfile(decks[d]);
-                t.SetPersonality(Personalities[rng.Next(Personalities.Length)]);
+                ProfileDeckTemplate t = ToProfile(decks[rng.Next(decks.Count)]);
+                t.SetPersonality((EDeckPersonality)rng.Next(9));
                 fights[i] = new Messaging.Create.FightConfig { Deck = t, Message = "" };
             }
             return fights;

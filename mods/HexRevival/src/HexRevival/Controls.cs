@@ -75,7 +75,7 @@ namespace HexRevival
         }
 
         /// <summary>Label, then "- value +" at the right.</summary>
-        public static int Stepper(Rect r, string label, int value, int step, int min, int max, bool signed = false)
+        public static int Stepper(Rect r, string label, int value, int step, int min, int max, bool signed = false, Func<int, string> show = null)
         {
             float S = GameSkin.Scale, bw = 34 * S;
             GUI.Label(new Rect(r.x, r.y, r.width - 2 * bw - 70 * S, r.height), label, GameSkin.Style("body", 14, GameSkin.Text));
@@ -84,7 +84,7 @@ namespace HexRevival
             Rect plus = new Rect(val.xMax, r.y, bw, r.height);
             int v = value;
             if (Small(minus, "-")) v = Math.Max(min, value - step);
-            GameSkin.Label(val, (signed && value > 0 ? "+" : "") + value, GameSkin.Style("bold", 16, GameSkin.Text, TextAnchor.MiddleCenter));
+            GameSkin.Label(val, show != null ? show(value) : (signed && value > 0 ? "+" : "") + value, GameSkin.Style("bold", 16, GameSkin.Text, TextAnchor.MiddleCenter));
             if (Small(plus, "+")) v = Math.Min(max, value + step);
             if (v != value) Changed = true;
             return v;
@@ -115,6 +115,14 @@ namespace HexRevival
         public static string Skill(Rect r, string label, string value)
         {
             return Cycle(r, label, value, Skills, SkillName, false);
+        }
+
+        /// <summary>"HandAdvantage" -> "Hand Advantage".</summary>
+        public static string Words(string s)
+        {
+            System.Text.StringBuilder b = new System.Text.StringBuilder();
+            for (int i = 0; i < (s ?? "").Length; i++) { if (i > 0 && char.IsUpper(s[i]) && !char.IsUpper(s[i - 1])) b.Append(' '); b.Append(s[i]); }
+            return b.ToString();
         }
 
         public static string SkillName(string skill)

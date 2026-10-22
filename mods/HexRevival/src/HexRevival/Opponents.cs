@@ -17,7 +17,7 @@ namespace HexRevival
     public static class Opponents
     {
         /// <summary>Modes (see AiConfig).</summary>
-        public const string Ladder = AiConfig.Ladder, Gauntlet = AiConfig.Gauntlet, Limited = AiConfig.Limited, Arena = AiConfig.Arena, Siege = AiConfig.Siege;
+        public const string Ladder = AiConfig.Ladder, Gauntlet = AiConfig.Gauntlet, Limited = AiConfig.Limited, Arena = AiConfig.Arena;
 
         public class Opponent
         {
@@ -33,13 +33,13 @@ namespace HexRevival
             /// <summary>"count name" lines, e.g. "4 Crackling Bolt".</summary>
             public List<string> Cards = new List<string>();
             /// <summary>The game's AI skill (EDifficulty): Easy ... Medium ... Hard (the original AI).</summary>
-            public string Skill = "Hard";
+            public string Skill = "Medium";
             /// <summary>Random noise in the AI's card values (the game's default 50; higher plays worse).</summary>
             public int Noise = 50;
             /// <summary>Deck personality (EDeckPersonality): Default, Aggressive, Burn...</summary>
             public string Personality = "Default";
             /// <summary>Arena: a boss (the last fight of a tier), an elite, or a rare encounter (Uruunaz, Zakiir: only by chance).</summary>
-            public bool Boss, Elite, Rare;
+            public bool Boss, Elite;
             /// <summary>Relative chance to be picked in its tier.</summary>
             public int Weight = 1;
             public Handicap AI = new Handicap();

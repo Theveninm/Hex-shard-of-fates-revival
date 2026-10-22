@@ -9,7 +9,7 @@ namespace HexRevival
     /// AI settings of a deck in the game's deck editor (Collection screen), for when the AI plays it (see AiConfig):
     /// - the game's "Set Personality" button (Siege only in the game) is shown for every deck, and its window gets
     ///   a row below: deck made for the AI, default AI level, frequency, boss / elite / rare;
-    /// - a "Modifiers" button under it opens the modifiers of both sides: health, resources, charges, extra cards,
+    /// - a "Modifiers" button under it opens the modifiers of both sides (see ModifiersWindow): health, resources, charges, extra cards,
     ///   imprecision (AI), cards in play (chosen in a card list) and shards at the start.
     /// Changes apply when the game's window is confirmed (Select) or the modifiers' OK; a deck not saved yet gets them
     /// at its first save (Decks.PendingAi).
@@ -32,21 +32,14 @@ namespace HexRevival
         private Decks.AiSettings m_PopupEdit;
         private Rect m_PanelRect;
 
-        private Decks.AiSettings m_ModEdit;
-        private Vector2 m_ScrollAi, m_ScrollPlayer;
 
-        private Opponents.Handicap m_PickFor;
-        private string m_Search = "";
-        private bool m_AiOnly;
-        private List<CardTemplate> m_PickList;
-        private Vector2 m_PickScroll;
 
         private void Update()
         {
             if (m_Vm == null)
             {
                 Decks.EditorDeck = 0;
-                m_ModEdit = null; m_PickFor = null; m_PopupVisible = false;
+                ModifiersWindow.Close(); m_PopupVisible = false;
                 m_Block.Release();
                 if (Time.realtimeSinceStartup < m_NextFind) return;
                 m_NextFind = Time.realtimeSinceStartup + 1f;
@@ -77,12 +70,7 @@ namespace HexRevival
                 if (!visible && m_PopupVisible && m_PopupConfirmed && m_PopupEdit != null) Commit(m_PopupEdit);
                 m_PopupVisible = visible;
 
-                if (Input.GetKeyDown(KeyCode.Escape))
-                {
-                    if (m_PickFor != null) m_PickFor = null;
-                    else m_ModEdit = null;
-                }
-                m_Block.Update(m_ModEdit != null, m_PopupVisible ? m_PanelRect : new Rect());
+                m_Block.Update(false, m_PopupVisible && !ModifiersWindow.IsOpen ? m_PanelRect : new Rect());
             }
             catch (Exception e)
             {
@@ -158,8 +146,13 @@ namespace HexRevival
 
         private void OpenModifiers()
         {
-            m_ModEdit = Current().Clone();
-            m_ScrollAi = m_ScrollPlayer = Vector2.zero;
+            ulong deck = m_DeckId;
+            ModifiersWindow.Open(Current().Clone(), a =>
+            {
+                // The deck may have changed meanwhile: the settings go to the deck they were opened for.
+                if (deck != 0) Decks.SetAi(deck, a);
+                else Decks.PendingAi = a;
+            });
         }
 
         // ------------------------------------------------------------------
@@ -170,12 +163,7 @@ namespace HexRevival
         {
             if (m_Vm == null) return;
             GUI.depth = -1100;
-            if (m_PopupVisible && m_PopupEdit != null && m_ModEdit == null) DrawPopupRow();
-            if (m_ModEdit != null)
-            {
-                if (m_PickFor != null) { GUI.enabled = false; DrawModifiers(); GUI.enabled = true; DrawPicker(); }
-                else DrawModifiers();
-            }
+            if (m_PopupVisible && m_PopupEdit != null && !ModifiersWindow.IsOpen) DrawPopupRow();
         }
 
         /// <summary>Screen rectangle (GUI coordinates) of an NGUI object.</summary>
@@ -210,130 +198,7 @@ namespace HexRevival
             a.Noise = Controls.Stepper(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_noise"), a.Noise, 10, 0, 200);
         }
 
-        private void DrawModifiers()
-        {
-            float S = GameSkin.Scale;
-            Rect win = Controls.Window(1180, 800, Loc.Get("modifiers_title"));
-            float pad = 34 * S, gap = 24 * S, top = win.y + 64 * S, bottom = win.yMax - 86 * S;
-            float colW = (win.width - 2 * pad - gap) / 2f;
-            Rect left = new Rect(win.x + pad, top, colW, bottom - top), right = new Rect(left.xMax + gap, top, colW, bottom - top);
-            Side(left, Loc.Get("opp_hc_ai"), m_ModEdit.AI, true, ref m_ScrollAi);
-            Side(right, Loc.Get("opp_hc_player"), m_ModEdit.Player, false, ref m_ScrollPlayer);
-            float by = win.yMax - 72 * S;
-            if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by, 190 * S, 52 * S), Loc.Get("cancel"))) m_ModEdit = null;
-            if (GameSkin.GreenButton(new Rect(win.xMax - pad - 190 * S, by, 190 * S, 52 * S), "OK"))
-            {
-                Commit(m_ModEdit);
-                m_ModEdit = null;
-            }
-        }
-
-        private void Side(Rect r, string title, Opponents.Handicap h, bool ai, ref Vector2 scroll)
-        {
-            float S = GameSkin.Scale, lh = 32 * S, step = 37 * S;
-            Controls.Frame(r, title);
-            if (h.Shards == null || h.Shards.Length < 5) h.Shards = new int[5];
-            if (h.InPlay == null) h.InPlay = new List<string>();
-            float x = r.x + 16 * S, w = r.width - 32 * S, y = r.y + 48 * S;
-            h.Health = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_health"), h.Health, 1, -40, 100, true); y += step;
-            h.Resources = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_resources"), h.Resources, 1, 0, 10); y += step;
-            h.Charges = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_charges"), h.Charges, 1, 0, 10); y += step;
-            h.Cards = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_cards"), h.Cards, 1, 0, 10); y += step;
-            y += 4 * S;
-
-            GameSkin.Label(new Rect(x, y, w, 26 * S), Loc.Get("opp_shards"), GameSkin.Style("title", 16, GameSkin.Gold));
-            y += 28 * S;
-            Controls.Shards(new Rect(x, y, w, 96 * S), h.Shards);
-            y += 104 * S;
-
-            GameSkin.Label(new Rect(x, y, w - 200 * S, 34 * S), Loc.Get("opp_in_play"), GameSkin.Style("title", 16, GameSkin.Gold));
-            if (GameSkin.GoldButton(new Rect(x + w - 190 * S, y, 190 * S, 34 * S), Loc.Get("add_card"), true, 15)) OpenPicker(h);
-            y += 40 * S;
-            Rect list = new Rect(x, y, w, r.yMax - 12 * S - y);
-            GUI.DrawTexture(list, GameSkin.Solid(new Color(0, 0, 0, 0.35f)));
-            int remove = -1;
-            List<string> cards = h.InPlay;
-            // The cards as tiles, a small "x" on each to remove it.
-            scroll = CardGrid(new Rect(list.x + 4 * S, list.y + 4 * S, list.width - 8 * S, list.height - 8 * S), scroll, cards.Count, 92 * S, i => Opponents.CardByName(cards[i]), i => false, (i, tile, before) =>
-            {
-                Rect xr = new Rect(tile.xMax - 28 * S, tile.y + 4 * S, 24 * S, 24 * S);
-                // Clicked before the tile is drawn (the tile's own button would take the click), shown over it after.
-                if (before) { if (GUI.Button(xr, GUIContent.none, GUIStyle.none)) remove = i; }
-                else Controls.Small(xr, "x");
-            });
-            if (remove >= 0) { cards.RemoveAt(remove); Controls.Changed = true; }
-        }
-
-        /// <summary>
-        /// A scrolling grid of card tiles (see CardArt.Tile), only the visible rows drawn. clicked(i) is called when tile i is
-        /// clicked; extra(i, tile, before) is called before the tile is drawn (to take clicks) and after it (to draw over it).
-        /// </summary>
-        private static Vector2 CardGrid(Rect area, Vector2 scroll, int count, float tileW, Func<int, CardTemplate> card, Func<int, bool> clicked, Action<int, Rect, bool> extra = null)
-        {
-            float S = GameSkin.Scale, gap = 6 * S, tileH = tileW * 1.36f;
-            int cols = Mathf.Max(1, (int)((area.width - 20 * S + gap) / (tileW + gap)));
-            int rows = (count + cols - 1) / cols;
-            Rect view = new Rect(0, 0, area.width - 20 * S, rows * (tileH + gap));
-            scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, view.height > area.height ? GameSkin.ScrollBar : GUIStyle.none);
-            int first = Mathf.Max(0, (int)(scroll.y / (tileH + gap))), last = Mathf.Min(rows, first + (int)(area.height / (tileH + gap)) + 2);
-            for (int row = first; row < last; row++)
-                for (int col = 0; col < cols; col++)
-                {
-                    int i = row * cols + col;
-                    if (i >= count) break;
-                    Rect tile = new Rect(col * (tileW + gap), row * (tileH + gap), tileW, tileH);
-                    CardTemplate c = card(i);
-                    if (extra != null) extra(i, tile, true);
-                    if (c == null) GUI.DrawTexture(tile, GameSkin.Solid(new Color(0.2f, 0.2f, 0.2f, 1f)));
-                    else if (CardArt.Tile(tile, c)) clicked(i);
-                    if (extra != null) extra(i, tile, false);
-                }
-            GUI.EndScrollView();
-            return scroll;
-        }
-
-        // ------------------------------------------------------------------
-        // Card picker (every card of the game, the AI's own cards included)
-        // ------------------------------------------------------------------
-
-        private void OpenPicker(Opponents.Handicap target)
-        {
-            m_PickFor = target;
-            m_PickScroll = Vector2.zero;
-            m_PickList = null;
-        }
-
-        private void DrawPicker()
-        {
-            float S = GameSkin.Scale;
-            Rect win = Controls.Window(1180, 860, Loc.Get("pick_card"));
-            float pad = 34 * S, y = win.y + 64 * S, w = win.width - 2 * pad;
-            string search = Controls.TextField(new Rect(win.x + pad, y, w * 0.62f, 38 * S), m_Search, 40);
-            bool aiOnly = Controls.Toggle(new Rect(win.x + pad + w * 0.66f, y, w * 0.34f, 38 * S), Loc.Get("ai_cards_only"), m_AiOnly);
-            if (search != m_Search || aiOnly != m_AiOnly || m_PickList == null)
-            {
-                m_Search = search; m_AiOnly = aiOnly;
-                m_PickList = new List<CardTemplate>();
-                foreach (CardTemplate c in Opponents.CardsByName())
-                {
-                    if (!CardArt.IsShown(c)) continue;
-                    if (m_AiOnly && c.m_SetId != Game.Shared.Resources.BuiltInResources.SetAIOnlyCards) continue;
-                    if (m_Search.Length > 0 && c.m_Name.IndexOf(m_Search, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                    m_PickList.Add(c);
-                }
-                m_PickScroll = Vector2.zero;
-            }
-            y += 50 * S;
-            Rect area = new Rect(win.x + pad, y, w, win.yMax - 92 * S - y);
-            string chosen = null;
-            List<CardTemplate> list = m_PickList;
-            m_PickScroll = CardGrid(area, m_PickScroll, list.Count, 132 * S, i => list[i], i => { chosen = list[i].m_Name; return true; });
-            if (chosen != null) { m_PickFor.InPlay.Add(chosen); Controls.Changed = true; m_PickFor = null; }
-            GUI.Label(new Rect(win.x + pad, win.yMax - 72 * S, w - 220 * S, 52 * S), list.Count + " " + Loc.Get("cards_found"), GameSkin.Style("body", 14, GameSkin.Muted));
-            if (GameSkin.RedButton(new Rect(win.xMax - pad - 190 * S, win.yMax - 72 * S, 190 * S, 52 * S), Loc.Get("cancel"))) m_PickFor = null;
-        }
-    
-        /// <summary>Dev: "deckai [state] | mods | pick [search] | shard &lt;0-4&gt; | inplay &lt;card name&gt; | ok | cancel".</summary>
+        /// <summary>Dev: "deckai [state] | mods | reset" (the Modifiers window: "mods ..." commands, see ModifiersWindow).</summary>
         public static string Command(string[] parts)
         {
             DeckAiPanel p = s_Instance;
@@ -342,11 +207,6 @@ namespace HexRevival
             switch (sub)
             {
                 case "mods": p.OpenModifiers(); return "modifiers open";
-                case "shard": if (p.m_ModEdit == null) return "open mods first"; p.m_ModEdit.AI.Shards[int.Parse(parts[2])]++; return "ok";
-                case "inplay": if (p.m_ModEdit == null) return "open mods first"; p.m_ModEdit.AI.InPlay.Add(string.Join(" ", parts, 2, parts.Length - 2)); return "ok";
-                case "pick": if (p.m_ModEdit == null) p.OpenModifiers(); p.OpenPicker(p.m_ModEdit.AI); if (parts.Length > 2) p.m_Search = parts[2]; return "picker open";
-                case "ok": if (p.m_ModEdit != null) p.Commit(p.m_ModEdit); p.m_ModEdit = null; return "saved";
-                case "cancel": p.m_ModEdit = null; return "cancelled";
                 case "reset": if (p.m_DeckId != 0) Decks.SetAi(p.m_DeckId, new Decks.AiSettings()); return "reset";
             }
             Decks.AiSettings a = p.Current();

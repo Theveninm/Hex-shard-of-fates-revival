@@ -231,11 +231,31 @@ namespace HexRevival
             {
                 if (s_ScrollV == null)
                 {
-                    s_ScrollV = new GUIStyle { fixedWidth = Px(14), margin = new RectOffset(4, 0, 0, 0) };
+                    s_ScrollV = new GUIStyle { name = ScrollName, fixedWidth = Px(14), margin = new RectOffset(4, 0, 0, 0) };
                     s_ScrollV.normal.background = Solid(new Color(0, 0, 0, 0.35f));
                 }
+                EnsureScrollParts();
                 return s_ScrollV;
             }
+        }
+
+        private const string ScrollName = "HexRevivalScroll";
+
+        /// <summary>
+        /// Unity draws a scroll bar with the skin's styles named after it ("...thumb", "...upbutton", "...downbutton"):
+        /// missing, each repaint logs a warning with its stack trace (a million log lines in two minutes, the game slows
+        /// down). They are added to the current skin: our thumb, no arrow buttons.
+        /// </summary>
+        private static void EnsureScrollParts()
+        {
+            GUISkin skin = GUI.skin;
+            if (skin == null || skin.FindStyle(ScrollName + "thumb") != null) return;
+            List<GUIStyle> custom = new List<GUIStyle>(skin.customStyles ?? new GUIStyle[0]);
+            GUIStyle thumb = new GUIStyle(Thumb) { name = ScrollName + "thumb" };
+            custom.Add(thumb);
+            custom.Add(new GUIStyle { name = ScrollName + "upbutton", fixedHeight = 0.001f, fixedWidth = 0.001f });
+            custom.Add(new GUIStyle { name = ScrollName + "downbutton", fixedHeight = 0.001f, fixedWidth = 0.001f });
+            skin.customStyles = custom.ToArray();
         }
 
         public static GUIStyle Thumb

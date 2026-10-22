@@ -381,16 +381,15 @@ server; the mod answers the client's Siege requests itself (`Siege.cs`).
 | Rules of the battles | the game's own Siege rules (20-minute clocks, the defender's message, equipment allowed for the defender) | Game |
 
 Without other players:
-- **Defenses to attack**: placeholder defenses (PLACEHOLDER), shared by every account
-  (`HexRevivalSaves/siege_world.json`): 40 in gold, 10 in platinum, each made of 3 of the game's prebuilt
-  decks with a PvP champion and an AI personality, with invented player names. Most hold the minimum
-  bounty, some more, with a record of wins that follows the bounty rule (Video: the keep list shows mostly
-  1000-gold defenses, a few up to 93,056). A beaten defense is replaced by a new one. The source of
-  defenses is an interface (`IKeepSource`): other players' defenses could come from a server later.
-- **Attacks on the player's defense**: placeholder attackers (PLACEHOLDER), AIs simulating players of
-  varied skill: one attack every 2 hours on average while the defense is active (counted from the time
-  spent away too), each attacker with a 30, 45, 60 or 75% chance to beat each defense deck. The other
-  defenses of the list are attacked the same way, so that the list lives.
+- **Defenses to attack**: the defenses of the Siege AI configuration (see AI opponents; PLACEHOLDER defaults:
+  40 in gold, 10 in platinum, each 3 of the game's prebuilt decks with an AI style and an invented player name, most
+  at the minimum bounty, some more: Video, the keep list shows mostly 1000-gold defenses, a few up to 93,056). Their
+  record (`HexRevivalSaves/siege_world.json`) follows the bounty rule; a defense taken comes back with its starting
+  bounty. The source of defenses is an interface (`IKeepSource`): other players' defenses could come from a server.
+- **Attacks on the player's defense**: simulated attackers of the Siege AI configuration (PLACEHOLDER defaults: one
+  attack every 2 hours on average while the defense is active, counted from the time spent away too, 12 attackers
+  with a 30, 45, 60 or 75% chance to beat each defense deck). The other defenses of the list are attacked the same
+  way, so that the list lives.
 - No Siege battle gives account XP (PLACEHOLDER: not known).
 - Siege Sacks are spent in the Store's Prize Exchange tab (see Store). Not done: replays of the
   defense's battles (the log's replay buttons) are not recorded.
@@ -445,37 +444,43 @@ Not done: the buyout, Hogarth's dialogues, the arena's frozen game board.
 
 ## AI opponents
 
-Each mode that had other players (ladder, constructed gauntlet, sealed/draft gauntlets, Frost Ring Arena, Siege
-placeholder keeps) draws its opponents from an AI configuration, edited from "Configure the AIs" at the bottom right of
-that mode's screen (Battlegrounds: the selected event's mode): tiers (ladder stars, gauntlet wins, arena tier,
-keep bounty in gold) and, in each tier, decks drawn at random by their frequency. A deck is one of:
+The modes that had other players draw their opponents from an AI configuration, edited from "Configure the AIs"
+at the bottom right of each mode's screen (Battlegrounds: the selected event's mode; Siege: the attack screen sets
+the defenses to attack, the defense screen the attackers):
 
-- a shared deck (decks outside the campaign are common to every account, in `HexRevivalSaves/decks_common.txt`);
-- one of the game's own AI decks (its deck templates);
-- an encounter of the game (its scene, deck and AI), for the arena only.
+- **Ladder, constructed gauntlet, Frost Ring Arena**: tiers (ladder stars, gauntlet wins, arena tier), each listing
+  decks: shared decks (made for players or for the AI), the game's own AI decks, or its encounters. Each deck of a
+  tier has a frequency; in the arena, a role too: common, elite or boss (a tier's last fight is its boss, tiers 2 to
+  4 have elite fights, Src.Video). Uruunaz and Zakiir, "extremely rare" (Src.Steam2016), are common decks with a low
+  frequency (2% of the common fights where they can appear, PLACEHOLDER) and keep their own rewards.
+- **Sealed and draft**: AI players (name, AI level, randomness, modifiers, frequency). Each builds its deck from its
+  own cards (its 6 boosters, or what it drafted at the player's table: the 7 seats are drawn from these players);
+  the decks of the runs in progress are shown and can be copied.
+- **Siege, defenses to attack**: defenses set up like the game's defense screen (name, gold or platinum, starting
+  bounty, 3 decks with their style, message), PLACEHOLDER defaults of 40 gold and 10 platinum defenses of the game's
+  prebuilt decks. A defense taken comes back with its starting bounty.
+- **Siege, attackers**: the attacks on the player's defense are simulated (not played): an attack every few hours on
+  average (default 2, PLACEHOLDER), by an attacker drawn by frequency who beats each defense deck with its chance
+  (defaults 30 to 75%, PLACEHOLDER) and must beat all three.
 
-| Setting | Where | Effect |
-|---|---|---|
-| AI level | the deck (deck editor, personality window); game decks: Hard | the game AI's own levels (EDifficulty, cumulative: each adds a skill). Only the 7 that change its play are offered: Easy, + fast cards, + combat tricks, Medium (+ builds its board), + bluffs with one resource, + bluffs when attacking, Hard (+ removes threats early); the game never checks AttackCorrectly, DoubleBlocking and BluffWithManyResources |
-| Randomness of its choices | the deck (personality window) | the AI lowers each card value it computes by a random 50 to 100% of this many hundredths (the game's default 50, 0 = none) |
-| Style | the deck's personality | weighs the AI's choices (Aggressive, Burn...) |
-| Frequency | each deck of a tier | how often it is drawn |
-| Role | each deck of a tier, arena and Siege only | common, elite, boss, rare (arena); Siege: third fight = boss, second = elite; a warning shows when a tier lacks one |
-| Modifiers (AI and player) | the deck (deck editor, Modifiers) | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
+What a deck's AI does is set on the deck (deck editor):
 
-Sealed and draft tiers have no decks: there the tier sets the AI level.
-The settings of the shared decks live in `HexRevivalSaves/decks_common_ai.json`. The configuration of a mode
-is per account (`ai.json` in the account's folder, only the modes it changed); the others use the defaults in
-`HexRevivalSaves/ai_defaults.json`, which "change the default settings" edits for every account that kept them.
-To share opponents, copy these files.
+| Setting | Effect |
+|---|---|
+| AI level | the game AI's own levels (EDifficulty, cumulative: each adds a skill). Only the 7 that change its play are offered: Easy, + fast cards, + combat tricks, Medium (+ builds its board), + bluffs with one resource, + bluffs when attacking, Hard (+ removes threats early); the game never checks AttackCorrectly, DoubleBlocking and BluffWithManyResources |
+| Randomness of its choices | the AI lowers each card value it computes by a random 50 to 100% of this many hundredths (the game's default 50, 0 = none) |
+| Style | the deck's personality: weighs the AI's choices (Aggressive, Burn...) |
+| Modifiers (AI and player) | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
 
-Defaults (PLACEHOLDER: the original opponents were players): the game's prebuilt decks with a PvP champion at
-the Hard level, no modifier; the arena uses the game's own Arena_ decks
-(see Frost Ring Arena). The Siege AI skill does not apply to the player's own keep defense.
+The level the original server gave the AI is not in the game's files (the client never sets it; the AI code's own
+default is Hard): decks of the game and new decks play at Medium (PLACEHOLDER, user's choice). The campaign and its
+encounters keep the AI code's default (Hard). The level does not apply when a deck defends the player's keep (those
+fights are simulated).
 
-In sealed and draft gauntlets the configuration only sets the AI's skill and modifiers: the game's AI cannot
-draft or build a deck (the server did), so the mod's bots pick by the game AI's own card evaluation plus rarity and
-favor their colors, and an AI limited deck is the 23 best cards of its two main colors plus 17 shards (PLACEHOLDER).
+Decks outside the campaign are shared by every account (`HexRevivalSaves/decks_common.txt`, their AI settings in
+`decks_common_ai.json`). The configuration of a mode is per account (`ai.json` in the account's folder, only the modes
+it changed); the others use `HexRevivalSaves/ai_defaults.json`, which "Change the default settings" edits for every
+account that kept them. To share opponents, copy these files.
 
 ## Tutorial
 

@@ -202,6 +202,7 @@ namespace HexRevival
                 go.AddComponent<CheatMenu>();
                 go.AddComponent<Notices>();
                 go.AddComponent<DeckAiPanel>();
+                go.AddComponent<ModifiersWindow>();
                 go.AddComponent<AiDecksWindow>();
                 go.AddComponent<AiButton>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
@@ -940,6 +941,7 @@ namespace HexRevival
                 case "bg": return Battlegrounds.Command(parts);
                 case "arena": return Arena.Command(parts);
                 case "deckai": return DeckAiPanel.Command(parts);
+                case "mods": return ModifiersWindow.Command(parts);
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
@@ -1225,8 +1227,9 @@ namespace HexRevival
                     {
                         UIBattle ui = UnityEngine.Object.FindObjectOfType<UIBattle>();
                         if (ui == null) return "no game";
-                        System.Reflection.MethodInfo q = typeof(UIBattle).GetMethod("Quit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(bool) }, null);
-                        q.Invoke(ui, new object[] { false });
+                        // The game's own concede: the menu's "Concede", then "Yes".
+                        try { ui.OnButton("Concede_Yes", 0, string.Empty); }
+                        catch (Exception e) { return "ERR " + e; }
                         return "abandon";
                     }
                 case "continue": PressGameOverContinue(); return "continue";

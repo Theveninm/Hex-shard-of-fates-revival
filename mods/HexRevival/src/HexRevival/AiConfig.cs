@@ -18,17 +18,24 @@ namespace HexRevival
     /// </summary>
     public static class AiConfig
     {
-        public const string Ladder = "ladder", Gauntlet = "gauntlet", Limited = "limited", Arena = "arena", Siege = "siege";
-        public static readonly string[] Modes = { Ladder, Gauntlet, Limited, Arena, Siege };
+        public const string Ladder = "ladder", Gauntlet = "gauntlet", Limited = "limited", Arena = "arena",
+            SiegeKeeps = "siege_keeps", SiegeAttackers = "siege_attackers";
+        public static readonly string[] Modes = { Ladder, Gauntlet, Limited, Arena, SiegeKeeps, SiegeAttackers };
 
-        /// <summary>Roles of a deck in the arena (elites, bosses, rare challengers) and in Siege (third fight: boss, second: elite).</summary>
-        public const string Common = "common", Elite = "elite", Boss = "boss", Rare = "rare";
+        /// <summary>
+        /// The fights of an arena tier (Src.Video): its last one is a boss, tiers 2 to 4 have elite fights before it,
+        /// the others are common. A deck's role says which of these fights it can be.
+        /// </summary>
+        public const string Common = "common", Elite = "elite", Boss = "boss";
 
         /// <summary>The roles a mode uses (none: the mode has no roles).</summary>
         public static string[] RolesOf(string mode)
         {
-            return mode == Arena ? new[] { Common, Elite, Boss, Rare } : mode == Siege ? new[] { Common, Elite, Boss } : new string[0];
+            return mode == Arena ? new[] { Common, Elite, Boss } : new string[0];
         }
+
+        /// <summary>The highest frequency of a deck.</summary>
+        public const int MaxWeight = 99;
 
         /// <summary>Kinds of deck in a tier.</summary>
         public const string Shared = "deck", GameDeck = "game", Encounter = "encounter";
@@ -40,7 +47,7 @@ namespace HexRevival
             public string Key = "";
             /// <summary>Relative chance to be drawn among the decks of the tier.</summary>
             public int Weight = 1;
-            /// <summary>Its place in the modes that have one (arena, Siege): Common, Elite, Boss or Rare.</summary>
+            /// <summary>Its place in the arena: Common, Elite or Boss (see RolesOf).</summary>
             public string Role = Common;
             public DeckRef() { }
             public DeckRef(string kind, string key) { Kind = kind; Key = key; }
@@ -52,15 +59,58 @@ namespace HexRevival
             public string Name = "";
             /// <summary>Ladder: stars; gauntlet: match wins; arena: tier 1 to 4; Siege: bounty (gold).</summary>
             public int From, To;
-            /// <summary>Sealed and draft only (no decks: they come from the card pools): the AI's skill in this tier.</summary>
-            public string Skill = "";
             public List<DeckRef> Decks = new List<DeckRef>();
+        }
+
+        /// <summary>A sealed / draft opponent: its decks come from its card pool, the rest is its own.</summary>
+        public class AiPlayer
+        {
+            public string Name = "";
+            public int Weight = 1;
+            public Decks.AiSettings Settings = new Decks.AiSettings();
+        }
+
+        /// <summary>A Siege defense to attack (as a player would set it up): 3 decks, a bounty, a message.</summary>
+        public class KeepDef
+        {
+            public string Id = Guid.NewGuid().ToString();
+            public string Name = "";
+            public bool Platinum;
+            public int Bounty = 1000;
+            public List<KeepFight> Fights = new List<KeepFight>();
+            public string Message = "";
+        }
+
+        public class KeepFight
+        {
+            public DeckRef Deck;
+            /// <summary>The deck's AI style in this defense ("" = the deck's own).</summary>
+            public string Personality = "";
+        }
+
+        /// <summary>
+        /// A simulated player attacking the player's Siege defense (the attacks are not played, see Siege.Simulate):
+        /// how often it comes, and its chance to beat each of the 3 defense decks.
+        /// </summary>
+        public class Attacker
+        {
+            public string Name = "";
+            public int Weight = 1;
+            public int WinChance = 50;   // percent, per defense deck
         }
 
         public class ModeConfig
         {
             public string Mode = Ladder;
+            /// <summary>Ladder, gauntlet, arena: decks by tier.</summary>
             public List<Tier> Tiers = new List<Tier>();
+            /// <summary>Sealed and draft: the AI players.</summary>
+            public List<AiPlayer> Players = new List<AiPlayer>();
+            /// <summary>Siege: the defenses to attack.</summary>
+            public List<KeepDef> Keeps = new List<KeepDef>();
+            /// <summary>Siege: the attackers of the player's defense, and the hours between two attacks on average.</summary>
+            public List<Attacker> Attackers = new List<Attacker>();
+            public double AttackHours = 2.0;
         }
 
         private class File_
@@ -69,7 +119,7 @@ namespace HexRevival
             public List<ModeConfig> Modes = new List<ModeConfig>();
         }
 
-        private const int DefaultsVersion = 2;   // 2: weight and role per deck, no skill per tier
+        private const int DefaultsVersion = 3;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role
 
         private static string DefaultsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "ai_defaults.json"); } }
         private static string AccountPath { get { return Saves.File("ai.json"); } }
@@ -119,6 +169,8 @@ namespace HexRevival
                 if (s_Account != null && s_AccountPath == AccountPath) return s_Account;
                 s_AccountPath = AccountPath;
                 s_Account = Read(s_AccountPath) ?? new File_();
+                // Settings of an older version: Siege by tiers, sealed and draft by tiers (now AI players).
+                s_Account.Modes.RemoveAll(m => m == null || m.Mode == "siege" || (m.Mode == Limited && (m.Players == null || m.Players.Count == 0)));
                 return s_Account;
             }
         }
@@ -190,23 +242,89 @@ namespace HexRevival
             f.Modes.Add(ladder);
 
             f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = Clone(prebuilt) } } });
-            f.Modes.Add(new ModeConfig { Mode = Limited, Tiers = new List<Tier> { new Tier { Name = "Sealed and draft gauntlets", From = 0, To = 99, Skill = "Hard" } } });
+            f.Modes.Add(new ModeConfig { Mode = Limited, Players = DefaultPlayers() });
 
             ModeConfig arena = new ModeConfig { Mode = Arena };
             Tier t1 = new Tier { Name = "Tier 1", From = 1, To = 1 }, t23 = new Tier { Name = "Tiers 2-3", From = 2, To = 3 }, t4 = new Tier { Name = "Tier 4", From = 4, To = 4 };
             foreach (DeckTemplate d in ArenaDecks())
             {
                 ArenaRole r = Role(d);
-                string role = r.Rare ? Rare : r.Boss ? Boss : r.Elite ? Elite : Common;
-                if (r.Tier1) t1.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
-                if (r.Tier23) t23.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
-                if (r.Tier4) t4.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role });
+                string role = r.Boss ? Boss : r.Elite ? Elite : Common;
+                foreach (Tier t in new[] { t1, t23, t4 })
+                    if ((t == t1 && r.Tier1) || (t == t23 && r.Tier23) || (t == t4 && r.Tier4))
+                        t.Decks.Add(new DeckRef(GameDeck, GameKey(d)) { Role = role, Weight = r.Rare ? 0 : CommonWeight });
+            }
+            // Uruunaz and Zakiir, "extremely rare" (Src.Steam2016; PLACEHOLDER 2% of the common fights where they can
+            // appear, Src.HexCompendium): a frequency that gives them that chance among the tier's common decks.
+            foreach (Tier t in new[] { t23, t4 })
+            {
+                int common = 0, rares = 0;
+                foreach (DeckRef d in t.Decks) if (d.Role == Common) { if (d.Weight == 0) rares++; else common += d.Weight; }
+                int w = rares == 0 ? 1 : Math.Max(1, (int)Math.Round(RareChance * common / (1 - RareChance) / rares));
+                foreach (DeckRef d in t.Decks) if (d.Weight == 0) d.Weight = w;
             }
             arena.Tiers.AddRange(new[] { t1, t23, t4 });
             f.Modes.Add(arena);
 
-            f.Modes.Add(new ModeConfig { Mode = Siege, Tiers = new List<Tier> { new Tier { Name = "Placeholder keeps", From = 0, To = 999999999, Decks = Clone(prebuilt) } } });
+            f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(prebuilt) });
+            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Attackers = DefaultAttackers() });
             return f;
+        }
+
+        /// <summary>The usual frequency of the arena's decks: room below it for the rare challengers.</summary>
+        private const int CommonWeight = 10;
+        private const double RareChance = 0.02;
+
+        /// <summary>7 AI players for sealed and draft (a table of 8 drafters): the game AI at its Medium level, no modifier.</summary>
+        private static List<AiPlayer> DefaultPlayers()
+        {
+            List<AiPlayer> res = new List<AiPlayer>();
+            System.Random rng = new System.Random(7);
+            for (int i = 0; i < 7; i++) res.Add(new AiPlayer { Name = PlaceholderKeeps.RandomName(rng), Settings = new Decks.AiSettings() });
+            return res;
+        }
+
+        /// <summary>
+        /// PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 of the game's
+        /// prebuilt decks with an AI style; most at the minimum bounty, a few higher (Src.Video, A 0:28-8:04).
+        /// </summary>
+        private static List<KeepDef> DefaultKeeps(List<DeckRef> prebuilt)
+        {
+            List<KeepDef> res = new List<KeepDef>();
+            if (prebuilt.Count < 3) return res;
+            System.Random rng = new System.Random(1000);
+            string[] styles = Enum.GetNames(typeof(Game.Shared.Mechanics.EDeckPersonality));
+            for (int i = 0; i < 50; i++)
+            {
+                bool platinum = i >= 40;
+                int min = platinum ? Siege.Fees.MinPotPlatinum : Siege.Fees.MinPotGold;
+                double r = rng.NextDouble();
+                KeepDef k = new KeepDef
+                {
+                    Id = "default-" + i, Name = PlaceholderKeeps.RandomName(rng), Platinum = platinum,
+                    Bounty = r < 0.75 ? min : r < 0.95 ? min * (2 + rng.Next(4)) / 2 : min * (5 + rng.Next(20)),
+                };
+                List<int> used = new List<int>();
+                while (k.Fights.Count < 3)
+                {
+                    int d = rng.Next(prebuilt.Count);
+                    if (used.Contains(d)) continue;
+                    used.Add(d);
+                    k.Fights.Add(new KeepFight { Deck = new DeckRef(prebuilt[d].Kind, prebuilt[d].Key), Personality = styles[rng.Next(styles.Length)] });
+                }
+                res.Add(k);
+            }
+            return res;
+        }
+
+        /// <summary>PLACEHOLDER: how strong the attackers were is not known; four levels, as before (30 to 75% per deck).</summary>
+        private static List<Attacker> DefaultAttackers()
+        {
+            List<Attacker> res = new List<Attacker>();
+            System.Random rng = new System.Random(42);
+            foreach (int c in new[] { 30, 45, 60, 75 })
+                for (int i = 0; i < 3; i++) res.Add(new Attacker { Name = PlaceholderKeeps.RandomName(rng), WinChance = c });
+            return res;
         }
 
         private static List<DeckRef> Clone(List<DeckRef> refs) { return refs.ConvertAll(r => new DeckRef(r.Kind, r.Key) { Weight = r.Weight, Role = r.Role }); }
@@ -297,7 +415,7 @@ namespace HexRevival
             }
             // The tier's weight and role (an arena boss, a Siege elite...).
             o.Weight = r.Weight;
-            o.Boss = r.Role == Boss; o.Elite = r.Role == Elite; o.Rare = r.Role == Rare;
+            o.Boss = r.Role == Boss; o.Elite = r.Role == Elite;
             return o;
         }
 
@@ -308,13 +426,6 @@ namespace HexRevival
             foreach (Tier t in Get(mode).Tiers)
             {
                 if (value < t.From || value > t.To) continue;
-                if (t.Decks.Count == 0)
-                {
-                    // A tier without decks (sealed and draft: the decks come from the pools): its skill only.
-                    Opponents.Opponent skillOnly = new Opponents.Opponent { Name = t.Name, Skill = string.IsNullOrEmpty(t.Skill) ? "Hard" : t.Skill };
-                    if (filter == null || filter(skillOnly)) all.Add(skillOnly);
-                    continue;
-                }
                 foreach (DeckRef r in t.Decks)
                 {
                     Opponents.Opponent o = Resolve(r, t);
@@ -327,6 +438,13 @@ namespace HexRevival
             int x = UnityEngine.Random.Range(0, total);
             foreach (Opponents.Opponent o in all) { x -= o.Weight; if (x < 0) return o; }
             return all[all.Count - 1];
+        }
+
+        /// <summary>A sealed / draft AI player as an opponent: its level and modifiers (its deck comes from its pool).</summary>
+        public static Opponents.Opponent ToOpponent(AiPlayer p)
+        {
+            Decks.AiSettings a = p.Settings ?? new Decks.AiSettings();
+            return new Opponents.Opponent { Name = p.Name, Skill = a.Skill, Noise = a.Noise, AI = a.AI, Player = a.Player };
         }
 
         /// <summary>Every opponent a mode can draw (the arena's challenger list).</summary>
