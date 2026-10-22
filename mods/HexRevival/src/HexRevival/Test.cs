@@ -202,6 +202,8 @@ namespace HexRevival
                 go.AddComponent<CheatMenu>();
                 go.AddComponent<Notices>();
                 go.AddComponent<DeckAiPanel>();
+                go.AddComponent<AiDecksWindow>();
+                go.AddComponent<AiButton>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -938,6 +940,7 @@ namespace HexRevival
                 case "bg": return Battlegrounds.Command(parts);
                 case "arena": return Arena.Command(parts);
                 case "deckai": return DeckAiPanel.Command(parts);
+                case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)

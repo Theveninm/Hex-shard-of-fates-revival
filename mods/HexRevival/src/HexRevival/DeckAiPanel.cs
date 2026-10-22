@@ -328,6 +328,7 @@ namespace HexRevival
                 case "pick": if (p.m_ModEdit == null) p.OpenModifiers(); p.OpenPicker(p.m_ModEdit.AI); if (parts.Length > 2) p.m_Search = parts[2]; return "picker open";
                 case "ok": if (p.m_ModEdit != null) p.Commit(p.m_ModEdit); p.m_ModEdit = null; return "saved";
                 case "cancel": p.m_ModEdit = null; return "cancelled";
+                case "reset": if (p.m_DeckId != 0) Decks.SetAi(p.m_DeckId, new Decks.AiSettings()); return "reset";
             }
             Decks.AiSettings a = p.Current();
             return "deck " + p.m_DeckId + " forAI=" + a.ForAI + " skill=" + a.Skill + " freq=" + a.Frequency + " boss=" + a.Boss + " elite=" + a.Elite

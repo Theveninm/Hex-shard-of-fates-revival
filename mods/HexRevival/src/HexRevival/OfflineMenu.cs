@@ -44,6 +44,11 @@ namespace HexRevival
 
         public static void Open() { if (Instance != null) Instance.SetOpen(true); }
 
+        public static bool IsOpen { get { return Instance != null && Instance.m_Open; } }
+
+        /// <summary>Opens the deck editor on a deck (see AiDecksWindow).</summary>
+        public static void EditDeck(UID deck) { if (Instance != null) Instance.OpenEditor(deck); }
+
         private void Awake() { Instance = this; }
 
         /// <summary>

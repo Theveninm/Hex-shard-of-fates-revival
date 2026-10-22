@@ -305,9 +305,10 @@ namespace HexRevival
         }
 
         /// <summary>A new shared deck copied from a deck of the game (an AI deck or an encounter's), with its settings.</summary>
-        public static ulong CopyFromTemplate(Reckoning.Game.DeckTemplate t, string name, AiSettings ai)
+        public static ulong CopyFromTemplate(Reckoning.Game.DeckTemplate t, string name, AiSettings ai, ResourceId champion = default(ResourceId))
         {
-            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            // An encounter's deck may have no champion of its own (the encounter's champion plays it).
+            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId.IsValid || !champion.IsValid ? t.m_ChampionId : champion };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
             foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
                 for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
