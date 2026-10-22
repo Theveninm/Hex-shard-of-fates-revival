@@ -256,15 +256,6 @@ namespace HexRevival
                         DrawCatalogue(new Rect(editor.xMax + gap, y, win.xMax - pad - editor.xMax - gap, h), InKeep, PutInKeep, TakeFromKeep, CurrentKeep != null, false);
                         break;
                     }
-                case AiConfig.SiegeAttackers:
-                    {
-                        Rect att = new Rect(x0, y, total * 0.62f + gap, h);
-                        DrawAttackers(att);
-                        Rect note = new Rect(att.xMax + gap, y, win.xMax - pad - att.xMax - gap, h);
-                        Controls.Frame(note, null);
-                        GUI.Label(new Rect(note.x + 16 * S, note.y + 16 * S, note.width - 32 * S, note.height - 32 * S), Loc.Get("ai_attackers_note"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
-                        break;
-                    }
                 default:
                     {
                         Rect tiers = new Rect(x0, y, total * 0.18f, h);
@@ -275,7 +266,7 @@ namespace HexRevival
                         AiConfig.Tier tier = CurrentTier;
                         DrawCatalogue(cat, e => tier != null && tier.Decks.Exists(d => d.Kind == e.Kind && d.Key == e.Key),
                             e => tier.Decks.Add(new AiConfig.DeckRef(e.Kind, e.Key) { Weight = m_Mode == AiConfig.Arena ? 10 : 1 }),
-                            e => tier.Decks.RemoveAll(d => d.Kind == e.Kind && d.Key == e.Key), tier != null, true);
+                            e => tier.Decks.RemoveAll(d => d.Kind == e.Kind && d.Key == e.Key), tier != null, m_Mode != AiConfig.SiegeAttackers);
                         break;
                     }
             }
@@ -293,6 +284,7 @@ namespace HexRevival
             {
                 case AiConfig.Ladder: return Loc.Get("opp_from_stars");
                 case AiConfig.Arena: return Loc.Get("opp_from_tier");
+                case AiConfig.SiegeAttackers: return Loc.Get("opp_from_bounty");
                 default: return Loc.Get("opp_from_wins");
             }
         }
@@ -327,7 +319,8 @@ namespace HexRevival
             AiConfig.Tier tier = CurrentTier;
             if (tier == null) return;
             float y = r.yMax - editH, lh = 34 * S, step = 40 * S;
-            int unit = 1, max = 9999;
+            bool siege = m_Mode == AiConfig.SiegeAttackers;
+            int unit = siege ? 500 : 1, max = siege ? 999999999 : 9999;
             tier.Name = Controls.TextField(new Rect(x, y, w, lh), tier.Name, 40); y += step;
             tier.From = Controls.Stepper(new Rect(x, y, w, lh), FromLabel(), tier.From, unit, 0, max); y += step;
             tier.To = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_to"), tier.To, unit, tier.From, max);
@@ -646,51 +639,6 @@ namespace HexRevival
             if (k != null) foreach (AiConfig.KeepFight f in k.Fights) if (f.Deck != null && f.Deck.Kind == e.Kind && f.Deck.Key == e.Key) f.Deck = null;
         }
 
-        // ------------------------------------------------------------------
-        // Siege: the attackers of the player's defense
-        // ------------------------------------------------------------------
-
-        private Vector2 m_ScrollAttackers;
-
-        private void DrawAttackers(Rect r)
-        {
-            float S = GameSkin.Scale;
-            Controls.Frame(r, Loc.Get("ai_attackers"));
-            float x = r.x + 16 * S, w = r.width - 32 * S, y = r.y + 48 * S, lh = 34 * S;
-            int tenths = (int)Math.Round(m_Cfg.AttackHours * 10);
-            int nt = Controls.Stepper(new Rect(x, y, Mathf.Min(w, 560 * S), lh), Loc.Get("ai_attack_hours"), tenths, 5, 1, 480, false, v => (v / 10.0).ToString("0.0") + " h");
-            if (nt != tenths) m_Cfg.AttackHours = nt / 10.0;
-            y += 48 * S;
-            GUIStyle head = GameSkin.Style("body", 12, GameSkin.Muted, TextAnchor.MiddleCenter);
-            float nameW = w * 0.32f, colW = (w - nameW - 50 * S) / 3f;
-            GUI.Label(new Rect(x, y, nameW, 20 * S), Loc.Get("ai_attacker_name"), GameSkin.Style("body", 12, GameSkin.Muted));
-            GUI.Label(new Rect(x + nameW, y, colW, 20 * S), Loc.Get("opp_weight"), head);
-            GUI.Label(new Rect(x + nameW + colW, y, colW, 20 * S), Loc.Get("ai_win_chance"), head);
-            GUI.Label(new Rect(x + nameW + 2 * colW, y, colW, 20 * S), Loc.Get("ai_sack_chance"), head);
-            y += 24 * S;
-            List<AiConfig.Attacker> list = m_Cfg.Attackers;
-            float rowH = 40 * S;
-            Rect area = new Rect(x, y, w, r.yMax - 60 * S - y);
-            int remove = -1;
-            m_ScrollAttackers = Controls.List(area, m_ScrollAttackers, list.Count, rowH, i =>
-            {
-                AiConfig.Attacker a = list[i];
-                float ry = i * (rowH + 4 * S);
-                a.Name = Controls.TextField(new Rect(0, ry + 3 * S, nameW - 10 * S, rowH - 6 * S), a.Name, 24);
-                a.Weight = Controls.Stepper(new Rect(nameW, ry + 3 * S, colW - 8 * S, rowH - 6 * S), "", a.Weight, 1, 0, AiConfig.MaxWeight);
-                a.WinChance = Controls.Stepper(new Rect(nameW + colW, ry + 3 * S, colW - 8 * S, rowH - 6 * S), "", a.WinChance, 5, 0, 100, false, v => v + " %");
-                double p = a.WinChance / 100.0;
-                GameSkin.Label(new Rect(nameW + 2 * colW, ry, colW, rowH), (p * p * p * 100).ToString("0") + " %", GameSkin.Style("bold", 15, GameSkin.Text, TextAnchor.MiddleCenter));
-                return Controls.Small(new Rect(nameW + 3 * colW + 4 * S, ry + 4 * S, 32 * S, 32 * S), "x");
-            }, i => remove = i);
-            if (remove >= 0) { list.RemoveAt(remove); m_Dirty = true; }
-            if (GameSkin.GoldButton(new Rect(x, r.yMax - 50 * S, 220 * S, 38 * S), Loc.Get("opp_add"), GUI.enabled, 15))
-            {
-                list.Add(new AiConfig.Attacker { Name = PlaceholderKeeps.RandomName(new System.Random()), WinChance = 50 });
-                m_Dirty = true;
-            }
-        }
-
         /// <summary>Dev: "aidecks open [mode] | close | state".</summary>
         public static string Command(string[] parts)
         {
@@ -714,7 +662,7 @@ namespace HexRevival
                 case "count": return w.List(w.m_Category).Count + " in category " + w.m_Category;
                 case "search": w.m_Search = parts.Length > 2 ? parts[2] : ""; return "ok";
             }
-            return w.m_Open ? w.m_Mode + " defaults=" + w.m_EditDefaults + " tiers=" + w.m_Cfg.Tiers.Count + " players=" + w.m_Cfg.Players.Count + " keeps=" + w.m_Cfg.Keeps.Count + " attackers=" + w.m_Cfg.Attackers.Count + " dirty=" + w.m_Dirty : "closed";
+            return w.m_Open ? w.m_Mode + " defaults=" + w.m_EditDefaults + " tiers=" + w.m_Cfg.Tiers.Count + " players=" + w.m_Cfg.Players.Count + " keeps=" + w.m_Cfg.Keeps.Count + " dirty=" + w.m_Dirty : "closed";
         }
     }
 
@@ -725,7 +673,7 @@ namespace HexRevival
     public class AiButton : MonoBehaviour
     {
         private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
-        private Rect m_Rect;
+        private Rect m_Rect, m_AttackRect;
         private string m_Mode;
 
         /// <summary>The mode of the screen shown (Battlegrounds: the selected event), null on other screens.</summary>
@@ -766,7 +714,7 @@ namespace HexRevival
         {
             m_Mode = AiDecksWindow.IsOpen || OfflineMenu.IsOpen ? null : ModeOfScreen();
             if (m_Mode == null) { m_Block.Release(); m_Rect = new Rect(); return; }
-            m_Block.Update(false, m_Rect);
+            m_Block.Update(false, m_Rect, m_AttackRect);
         }
 
         private void OnGUI()
@@ -776,6 +724,13 @@ namespace HexRevival
             GUI.depth = -900;
             m_Rect = new Rect(Screen.width - 250 * S, Screen.height - 112 * S, 236 * S, 44 * S);
             if (GameSkin.GoldButton(m_Rect, Loc.Get("ai_settings"), true, 16)) AiDecksWindow.Open(m_Mode);
+            // The defense screen: an attacker of the configuration attacks the player's defense now (AI against AI).
+            if (m_Mode == AiConfig.SiegeAttackers && Siege.CanAttackDefense)
+            {
+                m_AttackRect = new Rect(m_Rect.x, m_Rect.y - 52 * S, m_Rect.width, 44 * S);
+                if (GameSkin.GreenButton(m_AttackRect, Loc.Get("siege_attack_now"), true, 16)) Siege.AttackDefense();
+            }
+            else m_AttackRect = new Rect();
         }
     }
 }

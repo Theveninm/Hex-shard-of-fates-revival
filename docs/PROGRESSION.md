@@ -386,10 +386,9 @@ Without other players:
   at the minimum bounty, some more: Video, the keep list shows mostly 1000-gold defenses, a few up to 93,056). Their
   record (`HexRevivalSaves/siege_world.json`) follows the bounty rule; a defense taken comes back with its starting
   bounty. The source of defenses is an interface (`IKeepSource`): other players' defenses could come from a server.
-- **Attacks on the player's defense**: simulated attackers of the Siege AI configuration (PLACEHOLDER defaults: one
-  attack every 2 hours on average while the defense is active, counted from the time spent away too, 12 attackers
-  with a 30, 45, 60 or 75% chance to beat each defense deck). The other defenses of the list are attacked the same
-  way, so that the list lives.
+- **Attacks on the player's defense**: launched by the player from the defense screen, AI against AI (see AI
+  opponents). The other defenses of the list are attacked by simulated players (PLACEHOLDER: one attack every
+  2 hours on average, each defense deck beaten half of the time), so that the list lives.
 - No Siege battle gives account XP (PLACEHOLDER: not known).
 - Siege Sacks are spent in the Store's Prize Exchange tab (see Store). Not done: replays of the
   defense's battles (the log's replay buttons) are not recorded.
@@ -459,9 +458,12 @@ the defenses to attack, the defense screen the attackers):
 - **Siege, defenses to attack**: defenses set up like the game's defense screen (name, gold or platinum, starting
   bounty, 3 decks with their style, message), PLACEHOLDER defaults of 40 gold and 10 platinum defenses of the game's
   prebuilt decks. A defense taken comes back with its starting bounty.
-- **Siege, attackers**: the attacks on the player's defense are simulated (not played): an attack every few hours on
-  average (default 2, PLACEHOLDER), by an attacker drawn by frequency who beats each defense deck with its chance
-  (defaults 30 to 75%, PLACEHOLDER) and must beat all three.
+- **Siege, attackers**: tiers by the defense's bounty listing decks (PLACEHOLDER default: the game's prebuilt
+  decks). On the defense screen, "Launch an attack" makes one of them attack the player's defense: AI against AI,
+  the player watching (a button speeds the game up x4 until pressed again or the game ends). As for a player's
+  attack, the fee is paid (the defender's share to the player, the rest to the bounty) and the 3 defense decks must
+  be beaten in turn; the defense decks play with the AI settings of the shared deck they come from (same name and
+  champion), or the defaults.
 
 What a deck's AI does is set on the deck (deck editor):
 
@@ -472,10 +474,8 @@ What a deck's AI does is set on the deck (deck editor):
 | Style | the deck's personality: weighs the AI's choices (Aggressive, Burn...) |
 | Modifiers (AI and player) | health, resources, charges, extra cards, cards in play, shards at the start: applied after the mulligan |
 
-The level the original server gave the AI is not in the game's files (the client never sets it; the AI code's own
-default is Hard): decks of the game and new decks play at Medium (PLACEHOLDER, user's choice). The campaign and its
-encounters keep the AI code's default (Hard). The level does not apply when a deck defends the player's keep (those
-fights are simulated).
+The level the original server gave the AI is not in the game's files (the client never sets it): every deck plays at
+the AI code's own default, Hard, unless set otherwise (the campaign and its encounters too).
 
 Decks outside the campaign are shared by every account (`HexRevivalSaves/decks_common.txt`, their AI settings in
 `decks_common_ai.json`). The configuration of a mode is per account (`ai.json` in the account's folder, only the modes

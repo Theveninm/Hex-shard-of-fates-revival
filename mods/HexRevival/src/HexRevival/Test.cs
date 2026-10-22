@@ -86,34 +86,7 @@ namespace HexRevival
             Execute(gc, "restart");
         }
 
-        private object m_DismissCandidate;
-        private float m_DismissSince;
-
-        private void AutoDismissInfoStates()
-        {
-            FieldInfo f = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
-            Stack<BattleStateBase> stack = f == null ? null : f.GetValue(UIBattle.Instance) as Stack<BattleStateBase>;
-            BattleStateBase top = (stack != null && stack.Count > 0) ? stack.Peek() : null;
-            BattleStateCoverflow cover = top as BattleStateCoverflow;
-            if (cover == null || cover.UserInitiated)
-            {
-                m_DismissCandidate = null;
-                return;
-            }
-            float now = Time.realtimeSinceStartup;
-            if (!ReferenceEquals(m_DismissCandidate, cover))
-            {
-                m_DismissCandidate = cover;
-                m_DismissSince = now;
-                return;
-            }
-            if (now - m_DismissSince > 3f)
-            {
-                WriteState("aiplay: auto-closing " + cover.GetType().Name);
-                cover.OnButton("Accept", 0, "");
-                m_DismissCandidate = null;
-            }
-        }
+        private void AutoDismissInfoStates() { Spectator.DismissInfoWindows(); }
 
         private float m_LastStatus;
         private string m_LastEncounter = "-";
@@ -156,27 +129,7 @@ namespace HexRevival
 
         private void PressGameOverContinue()
         {
-            try
-            {
-                FieldInfo f = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
-                System.Collections.IEnumerable stack = f == null ? null : f.GetValue(UIBattle.Instance) as System.Collections.IEnumerable;
-                if (stack == null) return;
-                foreach (object st in stack)
-                {
-                    BattleStateGameOver go = st as BattleStateGameOver;
-                    if (go != null)
-                    {
-                        WriteState("GAME OVER: Continue");
-                        go.OnButton("Continue", 0, "");
-                        return;
-                    }
-                }
-                WriteState("GAME OVER: BattleStateGameOver state not found");
-            }
-            catch (Exception e)
-            {
-                WriteState("GAME OVER: Continue a echoue " + e);
-            }
+            WriteState(Spectator.PressContinue() ? "GAME OVER: Continue" : "GAME OVER: BattleStateGameOver state not found");
         }
         private bool m_EncounterStarted;
         private bool m_Quit;
@@ -203,6 +156,7 @@ namespace HexRevival
                 go.AddComponent<Notices>();
                 go.AddComponent<DeckAiPanel>();
                 go.AddComponent<ModifiersWindow>();
+                go.AddComponent<Spectator>();
                 go.AddComponent<AiDecksWindow>();
                 go.AddComponent<AiButton>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
@@ -942,6 +896,7 @@ namespace HexRevival
                 case "arena": return Arena.Command(parts);
                 case "deckai": return DeckAiPanel.Command(parts);
                 case "mods": return ModifiersWindow.Command(parts);
+                case "spectate": return Spectator.Toggle();
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();

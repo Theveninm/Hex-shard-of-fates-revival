@@ -33,7 +33,7 @@ namespace HexRevival
             /// <summary>"count name" lines, e.g. "4 Crackling Bolt".</summary>
             public List<string> Cards = new List<string>();
             /// <summary>The game's AI skill (EDifficulty): Easy ... Medium ... Hard (the original AI).</summary>
-            public string Skill = "Medium";
+            public string Skill = "Hard";
             /// <summary>Random noise in the AI's card values (the game's default 50; higher plays worse).</summary>
             public int Noise = 50;
             /// <summary>Deck personality (EDeckPersonality): Default, Aggressive, Burn...</summary>

@@ -438,6 +438,26 @@ namespace HexRevival
         /// <summary>Called every frame: starts the pending fight when its countdown is over.</summary>
         public static void Tick()
         {
+            DefenseAttack d = s_Defense;
+            if (d != null)
+            {
+                GameClient gc = Singleton<Main>.Instance != null ? Singleton<Main>.Instance.m_GameClient : null;
+                EGameState state = gc != null && gc.StateManager != null ? gc.StateManager.CurrentGameState : EGameState.Unknown;
+                DateTime now = DateTime.UtcNow;
+                if (d.InBattle)
+                {
+                    if (state == EGameState.Battle) d.BattleSeen = true;
+                    // The battle did not start (the screen was still loading): again.
+                    else if (!d.BattleSeen && (now - d.StartedAt).TotalSeconds > 10) StartDefenseFight();
+                }
+                else if (d.Seq > 0)
+                {
+                    // The next defense deck, once back on the Siege screen for a moment.
+                    if (state != EGameState.Siege) d.SiegeSince = DateTime.MaxValue;
+                    else if (d.SiegeSince == DateTime.MaxValue || d.SiegeSince == default(DateTime)) d.SiegeSince = now;
+                    else if ((now - d.SiegeSince).TotalSeconds > 2 && now >= d.NextAt) StartDefenseFight();
+                }
+            }
             Assault a = s_Assault;
             if (a == null || a.Started || a.Practice || DateTime.UtcNow < a.StartAt) return;
             a.Started = true;
@@ -455,6 +475,7 @@ namespace HexRevival
         /// <summary>End of a match. Returns true if it was a Siege battle.</summary>
         public static bool OnGameEnded(bool won)
         {
+            if (s_Defense != null && s_Defense.InBattle) { OnDefenseFightEnded(won); return true; }
             Assault a = s_Assault;
             Debug.Log("[HexRevival] [Siege] game ended, won " + won + ", assault " + (a != null ? a.Seq + " in battle " + a.InBattle : "none"));
             if (a == null || !a.InBattle) return false;
@@ -574,83 +595,133 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// The attacks on the defenses are simulated (the attackers were other players): one every AttackHours on average,
-        /// by an attacker of the Siege attackers configuration (see AiConfig), who beats each defense deck with its
-        /// chance. PLACEHOLDER defaults: how often and how well players attacked is not known.
+        /// PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not
+        /// known): one attack every WorldAttackHours on average, each defense deck beaten with WorldWinChance.
         /// </summary>
-        internal static double AttackHours { get { return Math.Max(0.1, AiConfig.Get(AiConfig.SiegeAttackers).AttackHours); } }
+        internal const double WorldAttackHours = 2.0, WorldWinChance = 0.5;
 
-        /// <summary>An attacker of the configuration (by frequency), or a made-up one at 50% if there is none.</summary>
-        internal static AiConfig.Attacker PickAttacker(System.Random rng)
-        {
-            List<AiConfig.Attacker> all = AiConfig.Get(AiConfig.SiegeAttackers).Attackers.FindAll(a => a.Weight > 0);
-            int total = 0;
-            foreach (AiConfig.Attacker a in all) total += a.Weight;
-            if (total == 0) return new AiConfig.Attacker { Name = PlaceholderKeeps.RandomName(rng), WinChance = 50 };
-            int x = rng.Next(total);
-            foreach (AiConfig.Attacker a in all) { x -= a.Weight; if (x < 0) return a; }
-            return all[all.Count - 1];
-        }
-
-        /// <summary>Plays the simulated attacks on the player's defense since the last time, then the world's.</summary>
+        /// <summary>Time passes for the other defenses of the list (the player's own is attacked on demand, see AttackDefense).</summary>
         private static void Simulate()
         {
             if (Saves.Current == null) return;
-            DateTime now = DateTime.UtcNow;
-            Store d = Data;
-            siege_bits s = ActiveDefense();
-            if (s != null && s_Assault == null)
-            {
-                System.Random rng = new System.Random();
-                DateTime t = d.LastSimulation;
-                while (s.CurStatus == siege_bits.Status.ACTIVE)
-                {
-                    t = t.AddHours(-AttackHours * Math.Log(1.0 - rng.NextDouble()));
-                    if (t > now) break;
-                    SimulatedAttack(s, rng, t);
-                }
-            }
-            d.LastSimulation = now;
-            SaveData();
-            Keeps.Simulate(now);
+            Data.LastSimulation = DateTime.UtcNow;
+            Keeps.Simulate(DateTime.UtcNow);
         }
 
-        private static void SimulatedAttack(siege_bits s, System.Random rng, DateTime when)
+        // ------------------------------------------------------------------
+        // Attacks on the player's defense: AI against AI, the player watching
+        // ------------------------------------------------------------------
+
+        private class DefenseAttack
         {
-            AiConfig.Attacker att = PickAttacker(rng);
-            string attacker = att.Name;
-            double chance = Math.Max(0, Math.Min(100, att.WinChance)) / 100.0;
+            public siege_bits Keep;
+            public Opponents.Opponent Attacker;
+            public DeckTemplate AttackerDeck;
+            public int Seq;
+            public bool InBattle, BattleSeen;
+            public DateTime NextAt, StartedAt, SiegeSince;
+        }
+
+        private static DefenseAttack s_Defense;
+
+        /// <summary>The player's defense can be attacked now (the button of the defense screen).</summary>
+        public static bool CanAttackDefense
+        {
+            get
+            {
+                if (Saves.Current == null || s_Assault != null || s_Defense != null) return false;
+                siege_bits s = ActiveDefense();
+                return s != null && s.CurStatus == siege_bits.Status.ACTIVE;
+            }
+        }
+
+        /// <summary>
+        /// An attacker of the Siege attackers configuration (a deck, its AI level and modifiers, by the defense's bounty)
+        /// attacks the player's defense: the AI plays both sides, the player watches. As for a player's attack, the fee is
+        /// paid (the defender's share goes to the player, the rest to the bounty) and the 3 defense decks must be beaten.
+        /// </summary>
+        public static string AttackDefense()
+        {
+            if (!CanAttackDefense) return "no active defense";
+            siege_bits s = ActiveDefense();
+            int value = s.Currency == siege_bits.CurrencyType.PLATINUM ? s.Pot * 10 : s.Pot;
+            Opponents.Opponent o = Opponents.Pick(AiConfig.SiegeAttackers, value, x => string.IsNullOrEmpty(x.Encounter));
+            DeckTemplate deck = Opponents.DeckOf(o);
+            if (deck == null) { Notices.Show(Loc.Get("siege_no_attacker")); return "no attacker deck"; }
             int total, defender, pot, rake;
             Calculate(s.Pot, out total, out defender, out pot, out rake);
-            // The defender's share goes straight to the account (Src.Video, rules screen).
             Earn(s.Currency == siege_bits.CurrencyType.PLATINUM, defender, 0);
             s.Pot += pot;
             s.ChallengeCount++;
-            s.LastChallengeDate = when;
-            siege_ledger_bits c = AddLog(s, siege_ledger_bits.SiegeAction.CHALLENGE, null, 0, attacker, when);
+            s.LastChallengeDate = DateTime.UtcNow;
+            siege_ledger_bits c = AddLog(s, siege_ledger_bits.SiegeAction.CHALLENGE, null, 0, o.Name, DateTime.UtcNow);
             c.Bet = (uint)pot; c.Fee = (uint)defender; c.Rake = (uint)rake;
-            for (int i = 0; i < 3; i++)
+            SaveData();
+            s_Defense = new DefenseAttack { Keep = s, Attacker = o, AttackerDeck = deck, Seq = 0 };
+            Debug.Log("[HexRevival] [Siege] " + o.Name + " attacks the player's defense (fee " + total + ")");
+            StartDefenseFight();
+            return "attack by " + o.Name;
+        }
+
+        private static void StartDefenseFight()
+        {
+            DefenseAttack d = s_Defense;
+            List<Messaging.Create.FightConfig> fights = new List<Messaging.Create.FightConfig>(d.Keep.GetFights());
+            if (d.Seq >= fights.Count || fights[d.Seq].Deck == null) { Debug.LogError("[HexRevival] [Siege] no defense deck " + d.Seq); s_Defense = null; return; }
+            ProfileDeckTemplate mine = fights[d.Seq].Deck;
+            UID deck = Decks.SetTemporary(mine);
+            // The player's side: the deck's own AI settings when it is one of the shared decks, its defense style.
+            Decks.AiSettings ai = Decks.AiOfTemplate(mine);
+            Game.Shared.AI.AIPersonality p = new Game.Shared.AI.AIPersonality();
+            try { p.Difficulty = (Game.Shared.AI.EDifficulty)Enum.Parse(typeof(Game.Shared.AI.EDifficulty), ai.Skill, true); } catch { }
+            p.CardNoiseRange = Math.Max(0, ai.Noise);
+            p.DeckPersonality = mine.GetPersonality();
+            Spectator.Begin(p);
+            d.BattleSeen = false;
+            d.StartedAt = DateTime.UtcNow;
+            d.SiegeSince = default(DateTime);
+            Opponents.SetNext(d.Attacker, null, ai.AI);   // the defense deck's own bonuses go to its side
+            d.InBattle = true;
+            Patches.PendingEncounterSetup = SiegeFlags(SessionStateEncounterData.SeriesType.SIEGE);
+            Patches.StartMatch(deck, Patches.NeutralEncounterId, d.AttackerDeck,
+                "siege defense vs " + d.Attacker.Name + " " + (d.Seq + 1) + "/3", Opponents.PersonalityOf(d.Attacker));
+        }
+
+        /// <summary>A fight of an attack on the player's defense is over (won: the defense deck won).</summary>
+        private static void OnDefenseFightEnded(bool won)
+        {
+            DefenseAttack d = s_Defense;
+            d.InBattle = false;   // the Spectator leaves the end screen and stops once out of the battle
+            siege_bits s = d.Keep;
+            DateTime now = DateTime.UtcNow;
+            if (won)
             {
-                if (rng.NextDouble() >= chance)
-                {
-                    siege_ledger_bits w = AddLog(s, siege_ledger_bits.SiegeAction.DEFENDED, null, 0, attacker, when);
-                    w.FightSeq = i;
-                    s.Wins++;
-                    SetFees(s);
-                    Debug.Log("[HexRevival] [Siege] defense held against " + attacker + " (" + att.WinChance + "%) at fight " + (i + 1));
-                    return;
-                }
-                AddLog(s, siege_ledger_bits.SiegeAction.SACKED, null, 0, attacker, when).FightSeq = i;
+                AddLog(s, siege_ledger_bits.SiegeAction.DEFENDED, null, 0, d.Attacker.Name, now).FightSeq = d.Seq;
+                s.Wins++;
+                SetFees(s);
+                s_Defense = null;
+                Notices.Show(Loc.Get("siege_defended", d.Attacker.Name));
             }
-            // Defense defeated: the attacker takes the bounty; the defender gets the Siege Sacks (Src.Video, A 0:40).
-            int sacks = Game.Shared.Campaign.Utils.SiegeSackValue(s);
-            s.CurStatus = siege_bits.Status.DEFEATED;
-            s.StatusDate = when;
-            s.CloseDate = when;
-            s.Loss++;
-            AddLog(s, siege_ledger_bits.SiegeAction.DEFEATED, null, 0, attacker, when);
-            Earn(false, 0, sacks);
-            Debug.Log("[HexRevival] [Siege] defense defeated by " + attacker + " (" + att.WinChance + "%), +" + sacks + " sacks");
+            else
+            {
+                AddLog(s, siege_ledger_bits.SiegeAction.SACKED, null, 0, d.Attacker.Name, now).FightSeq = d.Seq;
+                d.Seq++;
+                if (d.Seq < 3) d.NextAt = now.AddSeconds(3);   // the next defense deck, back from the Siege screen
+                else
+                {
+                    // Defense defeated: the attacker takes the bounty; the defender gets the Siege Sacks (Src.Video, A 0:40).
+                    int sacks = Game.Shared.Campaign.Utils.SiegeSackValue(s);
+                    s.CurStatus = siege_bits.Status.DEFEATED;
+                    s.StatusDate = now;
+                    s.CloseDate = now;
+                    s.Loss++;
+                    AddLog(s, siege_ledger_bits.SiegeAction.DEFEATED, null, 0, d.Attacker.Name, now);
+                    Earn(false, 0, sacks);
+                    s_Defense = null;
+                    Notices.Show(Loc.Get("siege_taken", d.Attacker.Name));
+                }
+            }
+            SaveData();
         }
 
         // ------------------------------------------------------------------
@@ -682,15 +753,7 @@ namespace HexRevival
                 }
                 return res;
             }
-            if (sub == "attack")
-            {
-                // dev: one placeholder attack on the player's defense now
-                siege_bits s = ActiveDefense();
-                if (s == null) return "no active defense";
-                SimulatedAttack(s, new System.Random(), DateTime.UtcNow);
-                SaveData();
-                return "attack done: " + s.CurStatus + ", wins " + s.Wins + ", bounty " + s.Pot;
-            }
+            if (sub == "attack") return AttackDefense();   // dev: the defense screen's button
             if (sub == "defend")
             {
                 // dev: commits a defense of 3 prebuilt decks (as the Defense screen would), bounty 1000 gold
@@ -843,11 +906,11 @@ namespace HexRevival
             foreach (siege_bits k in new List<siege_bits>(w.Keeps))
             {
                 if (k.CurStatus != siege_bits.Status.ACTIVE) continue;
-                double attacks = hours / Siege.AttackHours;
+                double attacks = hours / Siege.WorldAttackHours;
                 int n = (int)attacks + (rng.NextDouble() < attacks - Math.Floor(attacks) ? 1 : 0);
                 for (int i = 0; i < n && w.Keeps.Contains(k); i++)
                 {
-                    double p = Siege.PickAttacker(rng).WinChance / 100.0;
+                    double p = Siege.WorldWinChance;
                     int total, defender, pot, rake;
                     Siege.Calculate(k.Pot, out total, out defender, out pot, out rake);
                     k.Pot += pot;

@@ -58,9 +58,32 @@ namespace HexRevival
 
         private static string MovedPath { get { return Saves.File("decks_moved.txt"); } }
 
+        /// <summary>A deck played by the AI for the player's side (a Siege defense deck, see SetTemporary); never saved.</summary>
+        private static StoredDeck s_Temporary;
+        private const ulong TemporaryId = 9100000000000UL;
+
+        /// <summary>A profile deck template (a Siege defense deck) as a player deck the match engine can load.</summary>
+        public static UID SetTemporary(Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            StoredDeck d = new StoredDeck { Id = TemporaryId, Name = t.Name ?? "", PvpChampion = t.Champ, Sleeve = t.Sleeve, Persona = (int)t.GetPersonality() };
+            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
+                for (int i = 0; i < c.Count; i++) (c.Res ? d.Side : d.Cards).Add(c.Temp);
+            s_Temporary = d;
+            return new UID(UID.Type.Deck, d.Id);
+        }
+
+        /// <summary>The AI settings of the shared deck a template was made from (same name and champion), or the defaults.</summary>
+        public static AiSettings AiOfTemplate(Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            foreach (StoredDeck d in s_Decks.Values)
+                if (IsCommon(d) && d.Name == t.Name && d.PvpChampion == t.Champ) return Ai(d.Id);
+            return new AiSettings();
+        }
+
         private static StoredDeck Find(ulong id)
         {
             StoredDeck d;
+            if (s_Temporary != null && id == TemporaryId) return s_Temporary;
             if (s_Decks.TryGetValue(id, out d)) return d;
             ulong to;
             return s_Moved.TryGetValue(id, out to) && s_Decks.TryGetValue(to, out d) ? d : null;
@@ -205,7 +228,7 @@ namespace HexRevival
             /// <summary>Made for the AI (listed apart from the decks made for players).</summary>
             public bool ForAI;
             /// <summary>The AI's default skill with this deck (EDifficulty); not used for the player's own Siege defense.</summary>
-            public string Skill = "Medium";
+            public string Skill = "Hard";
             /// <summary>
             /// Randomness in the AI's choices: each time it values a card it lowers the value by a random 50 to 100% of
             /// this many hundredths (AICardEvaluator; the game's default 50, 0 = always its best estimate).

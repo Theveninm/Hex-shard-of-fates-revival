@@ -88,29 +88,15 @@ namespace HexRevival
             public string Personality = "";
         }
 
-        /// <summary>
-        /// A simulated player attacking the player's Siege defense (the attacks are not played, see Siege.Simulate):
-        /// how often it comes, and its chance to beat each of the 3 defense decks.
-        /// </summary>
-        public class Attacker
-        {
-            public string Name = "";
-            public int Weight = 1;
-            public int WinChance = 50;   // percent, per defense deck
-        }
-
         public class ModeConfig
         {
             public string Mode = Ladder;
-            /// <summary>Ladder, gauntlet, arena: decks by tier.</summary>
+            /// <summary>Ladder, gauntlet, arena, Siege attackers: decks by tier.</summary>
             public List<Tier> Tiers = new List<Tier>();
             /// <summary>Sealed and draft: the AI players.</summary>
             public List<AiPlayer> Players = new List<AiPlayer>();
             /// <summary>Siege: the defenses to attack.</summary>
             public List<KeepDef> Keeps = new List<KeepDef>();
-            /// <summary>Siege: the attackers of the player's defense, and the hours between two attacks on average.</summary>
-            public List<Attacker> Attackers = new List<Attacker>();
-            public double AttackHours = 2.0;
         }
 
         private class File_
@@ -119,7 +105,7 @@ namespace HexRevival
             public List<ModeConfig> Modes = new List<ModeConfig>();
         }
 
-        private const int DefaultsVersion = 3;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role
+        private const int DefaultsVersion = 4;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role; 4: Siege attackers are decks
 
         private static string DefaultsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "ai_defaults.json"); } }
         private static string AccountPath { get { return Saves.File("ai.json"); } }
@@ -170,7 +156,8 @@ namespace HexRevival
                 s_AccountPath = AccountPath;
                 s_Account = Read(s_AccountPath) ?? new File_();
                 // Settings of an older version: Siege by tiers, sealed and draft by tiers (now AI players).
-                s_Account.Modes.RemoveAll(m => m == null || m.Mode == "siege" || (m.Mode == Limited && (m.Players == null || m.Players.Count == 0)));
+                s_Account.Modes.RemoveAll(m => m == null || m.Mode == "siege" || (m.Mode == Limited && (m.Players == null || m.Players.Count == 0))
+                    || (m.Mode == SiegeAttackers && (m.Tiers == null || m.Tiers.Count == 0)));
                 return s_Account;
             }
         }
@@ -267,7 +254,8 @@ namespace HexRevival
             f.Modes.Add(arena);
 
             f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(prebuilt) });
-            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Attackers = DefaultAttackers() });
+            // The attackers of the player's defense: the game's prebuilt decks (PLACEHOLDER: the attackers were players).
+            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Tiers = new List<Tier> { new Tier { Name = "Attackers", From = 0, To = 999999999, Decks = Clone(prebuilt) } } });
             return f;
         }
 
@@ -314,16 +302,6 @@ namespace HexRevival
                 }
                 res.Add(k);
             }
-            return res;
-        }
-
-        /// <summary>PLACEHOLDER: how strong the attackers were is not known; four levels, as before (30 to 75% per deck).</summary>
-        private static List<Attacker> DefaultAttackers()
-        {
-            List<Attacker> res = new List<Attacker>();
-            System.Random rng = new System.Random(42);
-            foreach (int c in new[] { 30, 45, 60, 75 })
-                for (int i = 0; i < 3; i++) res.Add(new Attacker { Name = PlaceholderKeeps.RandomName(rng), WinChance = c });
             return res;
         }
 

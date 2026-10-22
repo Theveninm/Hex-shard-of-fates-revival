@@ -16,8 +16,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   Rewards follow what gameplay videos of the original game show (see [docs/PROGRESSION.md](docs/PROGRESSION.md));
   see [How faithful is the campaign?](#how-faithful-is-the-campaign) for what may differ from the original.
 - **Siege**: attack other defenses for their bounty, or commit your own defense of 3 decks played by the AI.
-  Until other players' defenses can be shared, the defenses to attack and the players attacking yours are
-  simulated (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
+  Until other players' defenses can be shared, the defenses to attack are configured, and the attacks on yours
+  are AI-against-AI games you launch and watch (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
   against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
 - **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
