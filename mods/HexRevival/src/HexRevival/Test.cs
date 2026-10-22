@@ -897,6 +897,7 @@ namespace HexRevival
                 case "deckai": return DeckAiPanel.Command(parts);
                 case "mods": return ModifiersWindow.Command(parts);
                 case "spectate": return Spectator.Toggle();
+                case "online": return AccountMenu.Command(parts);
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();

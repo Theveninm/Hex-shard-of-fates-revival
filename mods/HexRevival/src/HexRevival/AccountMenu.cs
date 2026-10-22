@@ -6,8 +6,8 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// How to play, drawn over the game's login screen. First the online mode: a profile name (kept in
-    /// HexRevivalSaves/online_profile.txt), then the lobby (empty: online play comes later). Then the offline accounts
+    /// How to play, drawn over the game's login screen. First the online mode: the saved profile (see OnlineProfile)
+    /// joins the lobby (empty: online play comes later), where it can be changed. Then the offline accounts
     /// (local saves), with "Create a new account" (name, "unlock everything", "play the tutorial", prices and starting
     /// gold); choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
     /// </summary>
@@ -24,25 +24,20 @@ namespace HexRevival
         private bool m_GoldPrices = true;
         private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_Error;
-        private string m_Profile;
+        private string m_PlayerId;
+        private static AccountMenu s_Instance;
+        private void Awake() { s_Instance = this; }
 
-        private static string ProfilePath { get { return System.IO.Path.Combine(System.IO.Path.Combine(LocalServer.Root, "HexRevivalSaves"), "online_profile.txt"); } }
-
-        private string Profile
+        /// <summary>Dev: "online lobby|profile|list": the screen shown.</summary>
+        public static string Command(string[] parts)
         {
-            get
-            {
-                if (m_Profile != null) return m_Profile;
-                try { m_Profile = System.IO.File.Exists(ProfilePath) ? System.IO.File.ReadAllText(ProfilePath).Trim() : ""; } catch { m_Profile = ""; }
-                return m_Profile;
-            }
-        }
-
-        private void SaveProfile(string name)
-        {
-            m_Profile = name;
-            try { System.IO.File.WriteAllText(ProfilePath, name); }
-            catch (System.Exception e) { Debug.LogWarning("[HexRevival] [Accounts] profile: " + e.Message); }
+            if (s_Instance == null) return "no menu";
+            string sub = parts.Length > 1 ? parts[1] : "";
+            if (sub == "profile") s_Instance.EditProfile();
+            else if (sub == "lobby") s_Instance.m_Screen = Screen.Lobby;
+            else s_Instance.m_Screen = Screen.List;
+            OnlineProfile op = OnlineProfile.Current;
+            return s_Instance.m_Screen + " - " + op.Name + " " + op.PlayerId;
         }
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
@@ -142,12 +137,12 @@ namespace HexRevival
             m_Scroll = GUI.BeginScrollView(area, m_Scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
 
             GameSkin.Label(new Rect(0, 0, view.width, headH), Loc.Get("section_online"), GameSkin.Style("title", 19, GameSkin.Gold));
-            string profile = Profile;
-            if (GameSkin.Row(new Rect(0, headH, view.width, rowH), Loc.Get("online_mode"), profile.Length > 0 ? Loc.Get("online_profile", profile) : Loc.Get("online_no_profile"), false))
+            // The saved profile joins the lobby at once (it can be changed there); without one, the profile screen first.
+            OnlineProfile op = OnlineProfile.Current;
+            if (GameSkin.Row(new Rect(0, headH, view.width, rowH), Loc.Get("online_mode"), op.Name.Length > 0 ? Loc.Get("online_profile", op.Name) : Loc.Get("online_no_profile"), false))
             {
-                m_Name = profile;
-                m_Error = null;
-                m_Screen = Screen.Online;
+                if (op.Name.Length > 0) m_Screen = Screen.Lobby;
+                else EditProfile();
             }
 
             float y = offlineTop;
@@ -194,6 +189,17 @@ namespace HexRevival
             y += 56 * S;
             GUI.Label(new Rect(area.x, y, area.width, 60 * S), Loc.Get("online_desc"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperLeft, true));
             y += 64 * S;
+            // The player id: generated once, kept; a new one makes a new identity for the server.
+            GameSkin.Label(new Rect(area.x, y, area.width, 30 * S), Loc.Get("online_id"), GameSkin.Style("title", 19, GameSkin.Gold));
+            y += 36 * S;
+            Rect idr = new Rect(area.x, y, area.width - 230 * S, 40 * S);
+            GameSkin.Sprite(idr, "A_Frames", "Frame_Inner");
+            GUI.DrawTexture(new Rect(idr.x + 2, idr.y + 2, idr.width - 4, idr.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
+            GUI.Label(idr, m_PlayerId, GameSkin.Field);
+            if (GameSkin.GoldButton(new Rect(idr.xMax + 10 * S, y, 220 * S, 40 * S), Loc.Get("online_new_id"), true, 15)) m_PlayerId = OnlineProfile.NewId();
+            y += 48 * S;
+            GUI.Label(new Rect(area.x, y, area.width, 44 * S), Loc.Get("online_id_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+            y += 50 * S;
             if (!string.IsNullOrEmpty(m_Error))
                 GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
 
@@ -204,7 +210,14 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = name.Length == 0 ? "account_name_empty" : null;
-                if (m_Error == null) { SaveProfile(name); m_Screen = Screen.Lobby; }
+                if (m_Error == null)
+                {
+                    OnlineProfile op = OnlineProfile.Current;
+                    op.Name = name;
+                    op.PlayerId = m_PlayerId;
+                    OnlineProfile.Save();
+                    m_Screen = Screen.Lobby;
+                }
             }
         }
 
@@ -212,11 +225,23 @@ namespace HexRevival
         private void DrawLobby(Rect area)
         {
             float S = GameSkin.Scale;
-            GameSkin.Label(new Rect(area.x, area.y + 6 * S, area.width, 30 * S), Loc.Get("online_profile", Profile), GameSkin.Style("title", 18, GameSkin.Gold));
+            OnlineProfile op = OnlineProfile.Current;
+            GameSkin.Label(new Rect(area.x, area.y + 6 * S, area.width, 30 * S), Loc.Get("online_profile", op.Name) + "  (" + op.ShortId() + ")", GameSkin.Style("title", 18, GameSkin.Gold));
             Rect list = new Rect(area.x, area.y + 48 * S, area.width, area.height - 120 * S);
             GameSkin.Sprite(list, "A_Frames", "Frame_Generic_Inner");
             GUI.Label(new Rect(list.x + 30 * S, list.y, list.width - 60 * S, list.height), Loc.Get("lobby_empty"), GameSkin.Style("body", 15, GameSkin.Muted, TextAnchor.MiddleCenter, true));
             if (GameSkin.RedButton(new Rect(area.x, area.yMax - 56 * S, 180 * S, 52 * S), Loc.Get("back"))) m_Screen = Screen.List;
+            if (GameSkin.GoldButton(new Rect(area.xMax - 260 * S, area.yMax - 56 * S, 260 * S, 52 * S), Loc.Get("online_edit"), true, 17)) EditProfile();
+        }
+
+        /// <summary>The profile screen, filled with the saved profile.</summary>
+        private void EditProfile()
+        {
+            OnlineProfile op = OnlineProfile.Current;
+            m_Name = op.Name;
+            m_PlayerId = op.PlayerId;
+            m_Error = null;
+            m_Screen = Screen.Online;
         }
 
         private void DrawCreate(Rect area)
