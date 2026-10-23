@@ -208,6 +208,16 @@ namespace HexRevival
         {
             OnlineProfile op = OnlineProfile.Current;
             if (!string.IsNullOrEmpty(name) && name != op.Name) { op.Name = name; OnlineProfile.Save(); }
+            // The game's own name of the player (bottom bar, battle), set at login from the profile.
+            try
+            {
+                var pp = Singleton<Main>.Instance.m_GameClient.PlayerProfile;
+                if (!string.IsNullOrEmpty(name) && pp != null && pp.Keep != null) pp.Keep.Name = name;
+                GameObject bar = GameObject.Find("Bottom_Nav/Anchor_L/Account_XP/XP_Bar/Label_Name");
+                UILabel label = bar != null ? bar.GetComponent<UILabel>() : null;
+                if (label != null && !string.IsNullOrEmpty(name)) label.text = name;
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] name: " + e.Message); }
             if (m_NameRefused == null) return;
             m_Profile.Load();
             m_Profile.Error = Loc.Get("online_name_kept", m_NameRefused, name);
