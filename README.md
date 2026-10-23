@@ -30,8 +30,9 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Online play** (login screen, "Online" row): its own account and lobby (open games, challenges, chat) and
   **Host a game**: against another player in a format (Immortal, Standard, PvE, free), or against the AI. The online
   account plays the decks of every offline account (see [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md)).
-- **Featured Content** (main menu): tells you when a new version is out, with the link to download it, and links to
-  the [Discord server](https://discord.gg/4TWeErkhe), where players meet to talk about the game and find opponents.
+- **Featured Content** (main menu): tells you when a new version is out, with the link to download it. The Discord
+  button of the top bar opens the [Discord server](https://discord.gg/4TWeErkhe), where players meet to talk about
+  the game and find opponents.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
