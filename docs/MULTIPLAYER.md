@@ -29,8 +29,11 @@ Known limits of the prototype:
 
 - Login screen, "Online" row: the profile (name, player id, password with "Generate", server address), saved in
   `HexRevivalSaves/online_profile.json`.
-- In game, Quick Match menu, **Online** tab: connects with the profile; players, chat, Challenge / Accept / Decline.
-  The game uses the deck selected on the left.
+- Main menu, **Online play**: the lobby screen (connects with the profile). Left, the deck to play; middle, the
+  challenges received and the open games (Join), and **Host a game**; right, the connected players (Challenge) and
+  the chat.
+- **Host a game** replaces the former Quick Match (F1): your deck, then the opponent: "Player" opens the game in the
+  lobby, the other tabs start a game against the AI (encounters, game decks, your decks), also without a connection.
 - Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
 
 How the game itself works:
@@ -83,8 +86,11 @@ Server → client on connection: `hello {v, nonce, iterations}`.
 | `cancel` | withdraws the challenge: `challenge_end {with, reason}` |
 | `accept {from}` / `decline {from}` | `match {match, format, seat, opponent}` to both / `challenge_end` |
 | `leave` | ends the match: `match_end {match, reason}` to both |
+| `create {format}` | opens a game (one per player): `game_added {game}` to everyone |
+| `close` | closes our open game: `game_removed {game}` |
+| `join {game}` | `match` to both, the creator hosts |
 
-Lobby events: `welcome {id, name, players, formats}`, `joined {player}`, `left {id}`, `status {id, status}`
+Lobby events: `welcome {id, name, players, games, formats}`, `joined {player}`, `left {id}`, `status {id, status}`
 (`idle` / `playing`). Errors: `error {code, msg}`; after a login error the server closes the connection.
 
 ## Protections

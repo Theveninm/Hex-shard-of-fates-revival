@@ -7,7 +7,7 @@ namespace HexRevival
 {
     /// <summary>
     /// How to play, drawn over the game's login screen. First the online profile (see OnlineProfile; the lobby itself is
-    /// in the Quick Match menu, see OnlineLobby). Then the offline accounts
+    /// in the main menu's "Online play", see OnlineLobby). Then the offline accounts
     /// (local saves), with "Create a new account" (name, "unlock everything", "play the tutorial", prices and starting
     /// gold); choosing an account logs in with it. Same look as the Quick Match menu (see GameSkin).
     /// </summary>
@@ -135,7 +135,7 @@ namespace HexRevival
             m_Scroll = GUI.BeginScrollView(area, m_Scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
 
             GameSkin.Label(new Rect(0, 0, view.width, headH), Loc.Get("section_online"), GameSkin.Style("title", 19, GameSkin.Gold));
-            // The online profile; the lobby is in the Quick Match menu, once logged in with an offline account below.
+            // The online profile; the lobby is the main menu's "Online play", once logged in with an offline account below.
             OnlineProfile op = OnlineProfile.Current;
             if (GameSkin.Row(new Rect(0, headH, view.width, rowH), op.Name.Length > 0 ? Loc.Get("online_profile", op.Name) : Loc.Get("online_no_profile"), Loc.Get("online_where"), false))
                 EditProfile();
@@ -170,7 +170,7 @@ namespace HexRevival
 
         /// <summary>
         /// Online mode: the profile (name shown to the other players, player id, password, server), saved for the next
-        /// times. The lobby itself is in the Quick Match menu once logged in with an offline account (cards and decks).
+        /// times. The lobby itself is the main menu's "Online play" once logged in with an offline account (cards and decks).
         /// </summary>
         private void DrawOnline(Rect area)
         {

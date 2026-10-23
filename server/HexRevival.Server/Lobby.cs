@@ -16,6 +16,14 @@ public sealed class Match(int id, string format, Connection host, Connection gue
     public Connection Opponent(Connection c) => c == Host ? Guest : Host;
 }
 
+/// <summary>A game waiting for an opponent; whoever joins plays against its creator, who hosts it.</summary>
+public sealed class OpenGame(int id, string format, Connection creator)
+{
+    public int Id { get; } = id;
+    public string Format { get; } = format;
+    public Connection Creator { get; } = creator;
+}
+
 /// <summary>
 /// Everything players share once logged in: who is online, the chat, challenges and matches.
 /// One lock guards all of it: messages are tiny and handled quickly, and sending only queues bytes.
@@ -29,7 +37,8 @@ public sealed class Lobby
     private readonly object _lock = new();
     private readonly Dictionary<string, Connection> _online = new(StringComparer.Ordinal);
     private readonly Dictionary<IPAddress, (int Count, DateTime Since)> _failedLogins = new();
-    private int _nextMatch = 1;
+    private readonly Dictionary<int, OpenGame> _games = new();
+    private int _nextMatch = 1, _nextGame = 1;
 
     public int OnlineCount { get { lock (_lock) return _online.Count; } }
 
@@ -61,7 +70,9 @@ public sealed class Lobby
             if (_online.ContainsKey(a.Id)) return false;
             var players = new JsonArray();
             foreach (var o in _online.Values) players.Add(PlayerInfo(o));
-            c.Send(new JsonObject { ["t"] = "welcome", ["id"] = a.Id, ["name"] = a.Name, ["players"] = players, ["formats"] = new JsonArray(Formats.Select(f => (JsonNode)f).ToArray()) });
+            var games = new JsonArray();
+            foreach (var g in _games.Values) games.Add(GameInfo(g));
+            c.Send(new JsonObject { ["t"] = "welcome", ["id"] = a.Id, ["name"] = a.Name, ["players"] = players, ["games"] = games, ["formats"] = new JsonArray(Formats.Select(f => (JsonNode)f).ToArray()) });
             _online[a.Id] = c;
             Broadcast(new JsonObject { ["t"] = "joined", ["player"] = PlayerInfo(c, a) }, except: c);
             Log.Info($"{a.Name} joined ({_online.Count} online)");
@@ -76,6 +87,7 @@ public sealed class Lobby
             if (c.Account == null || !_online.Remove(c.Account.Id)) return;
             EndMatch(c, "disconnected");
             CancelChallenge(c);
+            CloseGame(c);
             foreach (var o in _online.Values)
                 if (o.ChallengeTo == c) { o.ChallengeTo = null; o.Send(new JsonObject { ["t"] = "challenge_end", ["with"] = c.Account.Id, ["reason"] = "offline" }); }
             Broadcast(new JsonObject { ["t"] = "left", ["id"] = c.Account.Id });
@@ -100,6 +112,9 @@ public sealed class Lobby
                 case "accept": OnAnswer(c, (string?)msg["from"], accept: true); return true;
                 case "decline": OnAnswer(c, (string?)msg["from"], accept: false); return true;
                 case "leave": EndMatch(c, "left"); return true;
+                case "create": OnCreate(c, (string?)msg["format"] ?? Formats[0]); return true;
+                case "close": CloseGame(c); return true;
+                case "join": OnJoin(c, (int?)msg["game"]); return true;
                 default:
                     c.Send(Error("bad_request", $"Unknown message '{type}'."));
                     return true;
@@ -154,10 +169,53 @@ public sealed class Lobby
         }
         if (c.Match != null || challenger.Match != null) { c.Send(Error("busy", "A player is already in a game.")); return; }
 
-        // Both players stop challenging anyone else.
-        CancelChallenge(c);
-        var match = new Match(_nextMatch++, challenger.ChallengeFormat, host: challenger, guest: c);
-        challenger.Match = c.Match = match;
+        StartMatch(host: challenger, guest: c, challenger.ChallengeFormat);
+    }
+
+    // ------------------------------------------------------------------
+    // Open games
+    // ------------------------------------------------------------------
+
+    private void OnCreate(Connection c, string format)
+    {
+        if (!Formats.Contains(format)) { c.Send(Error("bad_format", "Unknown game format.")); return; }
+        if (c.Match != null) { c.Send(Error("busy", "You are already in a game.")); return; }
+        CloseGame(c);   // one open game per player
+        var game = new OpenGame(_nextGame++, format, c);
+        _games[game.Id] = game;
+        Broadcast(new JsonObject { ["t"] = "game_added", ["game"] = GameInfo(game) });
+    }
+
+    private void CloseGame(Connection c)
+    {
+        foreach (var g in _games.Values.Where(g => g.Creator == c).ToList())
+        {
+            _games.Remove(g.Id);
+            Broadcast(new JsonObject { ["t"] = "game_removed", ["game"] = g.Id });
+        }
+    }
+
+    private void OnJoin(Connection c, int? id)
+    {
+        if (id == null || !_games.TryGetValue(id.Value, out var game) || game.Creator == c)
+        {
+            c.Send(Error("no_game", "This game is no longer open."));
+            return;
+        }
+        if (c.Match != null || game.Creator.Match != null) { c.Send(Error("busy", "A player is already in a game.")); return; }
+        StartMatch(host: game.Creator, guest: c, game.Format);
+    }
+
+    /// <summary>Starts a game; both players stop challenging and close their open games.</summary>
+    private void StartMatch(Connection host, Connection guest, string format)
+    {
+        foreach (var p in new[] { host, guest })
+        {
+            CancelChallenge(p);
+            CloseGame(p);
+        }
+        var match = new Match(_nextMatch++, format, host, guest);
+        host.Match = guest.Match = match;
         foreach (var p in new[] { match.Host, match.Guest })
         {
             var opponent = match.Opponent(p);
@@ -202,6 +260,11 @@ public sealed class Lobby
         a ??= c.Account!;
         return new JsonObject { ["id"] = a.Id, ["name"] = a.Name, ["status"] = c.Match != null ? "playing" : "idle" };
     }
+
+    private static JsonObject GameInfo(OpenGame g) => new()
+    {
+        ["id"] = g.Id, ["format"] = g.Format, ["host"] = g.Creator.Account!.Id, ["name"] = g.Creator.Account.Name,
+    };
 
     private void BroadcastStatus(Connection c)
     {

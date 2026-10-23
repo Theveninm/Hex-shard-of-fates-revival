@@ -118,4 +118,15 @@ print("relay: ok")
 b.msg(t="leave")
 assert a.expect("match_end")["reason"] == "left"
 print("leave: ok")
+
+# Open game: b creates, a sees it and joins, b hosts.
+b.msg(t="create", format="constructed")
+g = a.expect("game_added")["game"]
+assert g["host"] == b_id
+a.msg(t="join", game=g["id"])
+ma, mb = a.expect("match"), b.expect("match")
+assert (mb["seat"], ma["seat"]) == (0, 1)
+a.msg(t="leave")
+b.expect("match_end")
+print("open game: ok")
 print("ALL OK")

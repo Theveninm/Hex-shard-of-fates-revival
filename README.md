@@ -26,7 +26,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   often, and their role (arena, Siege). In the deck editor, "Set Personality" also sets the deck's AI level and
   randomness, and "Modifiers" what each side starts with (health, resources, charges, cards, cards in play, shards).
   Decks outside the campaign are shared by all accounts; the settings are per account, with shared defaults.
-- **Practice match** (F1 on the main menu): one of your decks against any encounter, game deck or deck of yours.
+- **Online play** (main menu): the lobby (open games, challenges, chat) and **Host a game**: against another player, or against the AI with any encounter, game deck or deck of yours (works offline).
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a

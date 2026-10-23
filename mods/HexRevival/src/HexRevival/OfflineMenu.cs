@@ -8,16 +8,16 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// "Quick Match" menu (mod v1): choose your deck, then an opponent among your own
-    /// decks, the game's decks or the encounters, and start the match against the AI.
-    /// Opens from the main menu's "Quick Match" button (or F1). Drawn with IMGUI using the game's
-    /// sprites and fonts; the game's interface (NGUI) is disabled while it is open.
+    /// "Host a game" menu, opened from the online lobby (see OnlineLobby): choose your deck, then the opponent:
+    /// another player (the game is opened in the lobby, the first player who joins plays it), or the AI with one of
+    /// your decks, one of the game's decks or an encounter. Drawn with IMGUI using the game's sprites and fonts;
+    /// the game's interface (NGUI) is disabled while it is open.
     /// </summary>
     public class OfflineMenu : MonoBehaviour
     {
         public static OfflineMenu Instance;
 
-        private enum Tab { MyDecks, GameDecks, Encounters, Online }
+        private enum Tab { MyDecks, GameDecks, Encounters, Player }
 
         private class Entry
         {
@@ -42,7 +42,15 @@ namespace HexRevival
         private readonly List<Behaviour> m_DisabledUi = new List<Behaviour>();
 
 
-        public static void Open() { if (Instance != null) Instance.SetOpen(true); }
+        /// <summary>Opens the menu with this deck selected (the lobby's), on the "Player" tab when connected.</summary>
+        public static void Open(UID deck)
+        {
+            if (Instance == null) return;
+            Instance.SetOpen(true);
+            Entry e = Instance.m_MyDecks.Find(x => x.PlayerDeck == deck);
+            if (e != null) Instance.m_SelMine = e;
+            Instance.SwitchTab(OnlineLobby.Online ? Tab.Player : Instance.m_Tab == Tab.Player ? Tab.Encounters : Instance.m_Tab);
+        }
 
         public static bool IsOpen { get { return Instance != null && Instance.m_Open; } }
 
@@ -119,11 +127,10 @@ namespace HexRevival
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
             if (OnLandingPage()) { EnsureLogoutButton(); Tutorial.OnLandingPage(); }
-            else m_LogoutButton = null;
+            else m_LogoutButton = m_OnlineButton = null;
         }
 
         private void SetOpen(bool open)
@@ -175,7 +182,7 @@ namespace HexRevival
             return false;
         }
 
-        private static ChampionTemplate SafeChampion(ResourceId id)
+        internal static ChampionTemplate SafeChampion(ResourceId id)
         {
             try { return id.IsValid ? Singleton<TemplateManager>.Instance.GetChampionTemplate(id) : null; }
             catch { return null; }
@@ -273,12 +280,13 @@ namespace HexRevival
         // "Change account" button at the bottom of the main menu
         // ------------------------------------------------------------------
 
-        private GameObject m_LogoutButton;
+        private GameObject m_LogoutButton, m_OnlineButton;
 
+        /// <summary>Main menu buttons added by the mod: "Online play" (see OnlineLobby) and "Switch account".</summary>
         private void EnsureLogoutButton()
         {
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
-            // The column has no room for one more button: the Collection button goes (the
+            // The column has no room for more buttons: the Collection button goes (the
             // collection stays reachable from the deck editor of Quick Match and the game's menus).
             if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
             {
@@ -286,54 +294,63 @@ namespace HexRevival
                 UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
                 if (g != null) g.Reposition();
             }
-            if (m_LogoutButton != null)
+            if (vm == null || vm.MenuUI.Campaign == null) return;
+            // Blue for online play, red (as cancel, opposite the green Quick Match) for switching account.
+            m_OnlineButton = LandingButton(vm, m_OnlineButton, "HexRevival_Online", "online_play", "online_play_tip",
+                new Color(0.55f, 0.75f, 1f), new Color(0.72f, 0.85f, 1f), new Color(0.38f, 0.55f, 0.8f), OnlineLobby.Open);
+            m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
+                new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
+        }
+
+        /// <summary>A copy of the Campaign button, colored, added at the end of the main menu's column (once).</summary>
+        private static GameObject LandingButton(UILandingPageViewModel vm, GameObject current, string name, string labelKey, string tipKey,
+            Color color, Color hover, Color pressed, EventDelegate.Callback action)
+        {
+            if (current != null)
             {
-                foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
+                foreach (UILabel l in current.GetComponentsInChildren<UILabel>())
                 {
-                    string t = Loc.Get("switch_account").ToLower();
+                    string t = Loc.Get(labelKey).ToLower();
                     if (l.text != t) l.text = t;
                 }
-                return;
+                return current;
             }
-            if (vm == null || vm.MenuUI.Campaign == null) return;
             GameObject src = vm.MenuUI.Campaign.gameObject;
             Transform parent = src.transform.parent;
-            if (parent == null) return;
-            Transform existing = parent.Find("HexRevival_ChangeAccount");
-            if (existing != null) { m_LogoutButton = existing.gameObject; return; }
+            if (parent == null) return null;
+            Transform existing = parent.Find(name);
+            if (existing != null) return existing.gameObject;
             try
             {
-                GameObject b = UiClone.Copy(src, "HexRevival_ChangeAccount");
+                GameObject b = UiClone.Copy(src, name);
                 b.transform.SetAsLastSibling();
-                StripClone(b, Loc.Get("switch_account"), Loc.Get("switch_account_tip"));
-                // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
-                Color red = new Color(1f, 0.55f, 0.5f);
+                StripClone(b, Loc.Get(labelKey), Loc.Get(tipKey));
                 foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
-                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = red;
+                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = color;
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     if (ub.tweenTarget != null && ub.tweenTarget.GetComponent<UILabel>() != null) continue;
-                    ub.defaultColor = red;
-                    ub.hover = new Color(1f, 0.72f, 0.68f);
-                    ub.pressed = new Color(0.8f, 0.42f, 0.38f);
-                    ub.disabledColor = red;
+                    ub.defaultColor = color;
+                    ub.hover = hover;
+                    ub.pressed = pressed;
+                    ub.disabledColor = color;
                 }
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     ub.onClick.Clear();
-                    ub.onClick.Add(new EventDelegate(ChangeAccount));
+                    ub.onClick.Add(new EventDelegate(action));
                     ub.isEnabled = true;
-                    RightClick.Add(ub.gameObject, ChangeAccount);
+                    RightClick.Add(ub.gameObject, () => action());
                 }
                 b.SetActive(true);
                 UIGrid grid = parent.GetComponent<UIGrid>();
                 if (grid != null) grid.Reposition();
-                m_LogoutButton = b;
+                return b;
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexRevival] [Menu] change account button: " + e);
-                m_LogoutButton = src; // no new attempt every frame
+                Debug.LogError("[HexRevival] [Menu] " + name + ": " + e);
+                return src; // no new attempt every frame
             }
         }
 
@@ -393,7 +410,7 @@ namespace HexRevival
             // Title
             Rect title = new Rect(win.center.x - 260 * S, win.y - 22 * S, 520 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
-            GameSkin.Label(title, Loc.Get("quick_match"), GameSkin.Style("title", 30, GameSkin.Gold, TextAnchor.MiddleCenter));
+            GameSkin.Label(title, Loc.Get("host_game"), GameSkin.Style("title", 30, GameSkin.Gold, TextAnchor.MiddleCenter));
 
             float pad = 40 * S;
             float top = win.y + 64 * S;
@@ -416,22 +433,21 @@ namespace HexRevival
             GameSkin.Label(rh, Loc.Get("your_opponent"), GameSkin.Style("title", 21, GameSkin.Gold));
             float tabW = Mathf.Min(170 * S, (right.width - 40 * S) / 4f);
             float tabY = rh.yMax + 8 * S;
-            if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_enc"), m_Tab == Tab.Encounters)) SwitchTab(Tab.Encounters);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_game"), m_Tab == Tab.GameDecks)) SwitchTab(Tab.GameDecks);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + 2 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_mine"), m_Tab == Tab.MyDecks)) SwitchTab(Tab.MyDecks);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + 3 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_online"), m_Tab == Tab.Online)) SwitchTab(Tab.Online);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_player"), m_Tab == Tab.Player)) SwitchTab(Tab.Player);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_enc"), m_Tab == Tab.Encounters)) SwitchTab(Tab.Encounters);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + 2 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_game"), m_Tab == Tab.GameDecks)) SwitchTab(Tab.GameDecks);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + 3 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_mine"), m_Tab == Tab.MyDecks)) SwitchTab(Tab.MyDecks);
 
-            if (m_Tab == Tab.Online)
+            if (m_Tab == Tab.Player)
             {
-                // Players, chat and challenges: a game starts with the deck chosen on the left.
-                Rect hintO = new Rect(right.x + 18 * S, right.yMax - 34 * S, right.width - 36 * S, 26 * S);
-                GUI.Label(hintO, Loc.Get("hint_online"), GameSkin.Style("body", 13, GameSkin.Muted));
-                Rect lobby = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, hintO.y - tabY - 48 * S);
-                OnlineLobby.Draw(lobby, m_SelMine != null ? m_SelMine.PlayerDeck : UID.Invalid);
+                // Another player: the game is opened in the lobby with the format and the deck chosen here.
+                Rect info = new Rect(right.x + 24 * S, tabY + 56 * S, right.width - 48 * S, right.yMax - tabY - 80 * S);
+                GameSkin.Label(new Rect(info.x, info.y, info.width, 30 * S), Loc.Get("online_format", Loc.Get("format_constructed")), GameSkin.Style("title", 19, GameSkin.Gold));
+                GUI.Label(new Rect(info.x, info.y + 40 * S, info.width, info.height - 40 * S),
+                    Loc.Get(OnlineLobby.Online ? "hint_player" : "hint_player_offline"), GameSkin.Style("body", 15, GameSkin.Text, TextAnchor.UpperLeft, true));
             }
             else
             {
-
             Rect search = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, 34 * S);
             GameSkin.Sprite(search, "A_Frames", "Frame_Inner");
             GUI.DrawTexture(new Rect(search.x + 2, search.y + 2, search.width - 4, search.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
@@ -452,11 +468,20 @@ namespace HexRevival
             // --- Bottom: summary + actions
             float by = win.yMax - 74 * S;
             Rect summary = new Rect(win.x + pad, by, win.width - 2 * pad - 420 * S, 30 * S);
-            GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + (m_SelOpp != null ? m_SelOpp.Label : "—"), GameSkin.Style("title", 19, GameSkin.Text));
+            string opponent = m_Tab == Tab.Player ? Loc.Get("tab_player") : m_SelOpp != null ? m_SelOpp.Label : "—";
+            GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + opponent, GameSkin.Style("title", 19, GameSkin.Text));
             if (!string.IsNullOrEmpty(m_Message))
                 GUI.Label(new Rect(summary.x, summary.yMax, summary.width, 24 * S), m_Message, GameSkin.Style("body", 13, new Color(1f, 0.55f, 0.45f)));
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by - 4 * S, 180 * S, 52 * S), Loc.Get("close"))) SetOpen(false);
-            if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null && m_Tab != Tab.Online)) Fight();
+            if (m_Tab == Tab.Player)
+            {
+                if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("host"), m_SelMine != null && OnlineLobby.Online))
+                {
+                    OnlineLobby.Host(m_SelMine.PlayerDeck, "constructed");
+                    SetOpen(false);
+                }
+            }
+            else if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null)) Fight();
             GUI.enabled = true;
             if (modal) DrawConfirmDelete();
         }
