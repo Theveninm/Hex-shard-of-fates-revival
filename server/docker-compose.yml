@@ -1,0 +1,14 @@
+# docker compose up -d --build   (from this folder)
+services:
+  hexrevival:
+    build: .
+    container_name: hexrevival-server
+    restart: unless-stopped
+    ports:
+      - "7777:7777"
+    volumes:
+      - hexrevival-data:/data
+    # A small VPS shared with other apps: the server needs far less than this.
+    mem_limit: 256m
+volumes:
+  hexrevival-data:

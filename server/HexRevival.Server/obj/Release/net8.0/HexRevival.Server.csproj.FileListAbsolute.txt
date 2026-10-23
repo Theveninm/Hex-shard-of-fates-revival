@@ -1,0 +1,15 @@
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/bin/Release/net8.0/HexRevival.Server
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/bin/Release/net8.0/HexRevival.Server.deps.json
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/bin/Release/net8.0/HexRevival.Server.runtimeconfig.json
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/bin/Release/net8.0/HexRevival.Server.dll
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/bin/Release/net8.0/HexRevival.Server.pdb
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.GeneratedMSBuildEditorConfig.editorconfig
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.AssemblyInfoInputs.cache
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.AssemblyInfo.cs
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.csproj.CoreCompileInputs.cache
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.sourcelink.json
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.dll
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/refint/HexRevival.Server.dll
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.pdb
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/HexRevival.Server.genruntimeconfig.cache
+/home/claude/hex-shard-of-fates-revival/server/HexRevival.Server/obj/Release/net8.0/ref/HexRevival.Server.dll
