@@ -29,7 +29,7 @@ namespace HexRevival
         public enum Role { None, Host, Guest }
 
         // Relayed message kinds (first byte of the relayed data).
-        private const byte MsgDeck = 1, MsgStart = 2, MsgEvents = 3, MsgTransaction = 4;
+        private const byte MsgDeck = 1, MsgStart = 2, MsgEvents = 3, MsgTransaction = 4, MsgReject = 5;
 
         public static readonly UID LocalId = new UID(UID.Type.ServicePlayer, 0x1001UL);
         public static readonly UID RemoteId = new UID(UID.Type.ServicePlayer, 0x1002UL);
@@ -51,21 +51,28 @@ namespace HexRevival
         private static bool s_GuestJoined;
         private static readonly Queue<NetworkPacketSessionEventArgs> s_GuestEvents = new Queue<NetworkPacketSessionEventArgs>();
 
-        /// <summary>The lobby announced the match: the guest sends its deck, the host waits for it.</summary>
-        public static void Begin(NetClient net, bool host, string opponent, UID myDeck)
+        /// <summary>The game's format (see OnlineFormats): the host checks the guest's deck against it.</summary>
+        public static string Format { get; private set; }
+
+        /// <summary>Host: the guest's deck (Decks.SetRemote), given to the opponent seat (Patches.AuthoritativeSession_AddPlayer).</summary>
+        public static UID RemoteDeck { get; private set; }
+
+        /// <summary>
+        /// The lobby announced the match: the guest sends its deck (cards, champion, a campaign deck's PvE champion) and
+        /// waits for the host's session; the host checks the deck against the format, then starts.
+        /// </summary>
+        public static void Begin(NetClient net, bool host, string opponent, UID myDeck, string format)
         {
             End();
             s_Net = net;
             Current = host ? Role.Host : Role.Guest;
             OpponentName = opponent;
             s_MyDeck = myDeck;
+            Format = string.IsNullOrEmpty(format) ? "free" : format;
+            RemoteDeck = UID.Invalid;
             s_StartedAt = Time.realtimeSinceStartup;
             Debug.Log("[HexRevival] [Online] match against " + opponent + (host ? " (host)" : " (guest)") + ", deck " + myDeck);
-            if (!host)
-            {
-                SendRelay(MsgDeck, Encoding.UTF8.GetBytes(DeckToJson(Decks.ToTemplate(myDeck)).ToString(Newtonsoft.Json.Formatting.None)));
-                StartBattle(null);
-            }
+            if (!host) SendRelay(MsgDeck, Encoding.UTF8.GetBytes(Decks.Export(myDeck).ToString(Newtonsoft.Json.Formatting.None)));
         }
 
         public static void End()
@@ -90,7 +97,8 @@ namespace HexRevival
             {
                 switch (data[0])
                 {
-                    case MsgDeck: if (IsHost && !s_Started) StartBattle(DeckFromJson(JObject.Parse(Encoding.UTF8.GetString(body)))); break;
+                    case MsgDeck: if (IsHost && !s_Started) OnGuestDeck(JObject.Parse(Encoding.UTF8.GetString(body))); break;
+                    case MsgReject: if (IsGuest) Refused(Loc.Get("online_deck_refused", Encoding.UTF8.GetString(body))); break;
                     case MsgStart: if (IsGuest) OnHostStarted(body); break;
                     case MsgEvents: if (IsGuest) s_GuestEvents.Enqueue(DecodeEvents(body)); break;
                     case MsgTransaction: if (IsHost) OnGuestTransaction(body); break;
@@ -122,10 +130,33 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>Both sides enter the battle with their own deck; the host's opponent seat gets the guest's deck.</summary>
-        private static void StartBattle(DeckTemplate guestDeck)
+        private static void StartBattle()
         {
             s_Started = true;
-            Patches.StartMatch(s_MyDeck, Patches.NeutralEncounterId, guestDeck, OpponentName);
+            Patches.StartMatch(s_MyDeck, Patches.NeutralEncounterId, null, OpponentName);
+        }
+
+        /// <summary>Host: the guest's deck must be valid for the game's format (its game checked it too, but it may lie).</summary>
+        private static void OnGuestDeck(JObject deck)
+        {
+            RemoteDeck = Decks.SetRemote(deck);
+            List<string> errors = new List<string>();
+            if (Format != "free" && !OnlineFormats.Validate(Format, RemoteDeck, errors))
+            {
+                string why = OnlineFormats.Name(Format) + (errors.Count > 0 ? " (" + errors[0] + ")" : "");
+                SendRelay(MsgReject, Encoding.UTF8.GetBytes(why));
+                Refused(Loc.Get("online_opponent_deck_refused", why));
+                return;
+            }
+            StartBattle();
+        }
+
+        /// <summary>The game does not start: back to the lobby with the reason.</summary>
+        private static void Refused(string why)
+        {
+            Debug.Log("[HexRevival] [Online] " + why);
+            Notices.Show(why);
+            OnlineLobby.LeaveMatch();
         }
 
         /// <summary>Host: the session exists (Patches.SendStartEncounter); the guest gets its state.</summary>
@@ -145,6 +176,8 @@ namespace HexRevival
         {
             byte[] swapped = SwapInEncoded(body);
             s_GuestState = (SessionState)EncData.Decode(swapped);
+            // The host accepted the deck and started: the guest enters the battle (its game then asks for the session).
+            if (!s_Started) StartBattle();
             TryStartGuest();
         }
 
@@ -335,43 +368,6 @@ namespace HexRevival
         // ------------------------------------------------------------------
         // Deck sent by the guest (card ids only)
         // ------------------------------------------------------------------
-
-        private static JObject DeckToJson(DeckTemplate d)
-        {
-            JObject j = new JObject();
-            if (d == null) return j;
-            j["name"] = d.m_DeckName;
-            j["champion"] = d.m_ChampionId.m_Guid.ToString();
-            JArray cards = new JArray();
-            foreach (TemplateCardStack s in d.m_DeckResources)
-            {
-                JObject c = new JObject();
-                c["id"] = s.m_idTemplate.m_Guid.ToString();
-                c["n"] = s.m_Count;
-                cards.Add(c);
-            }
-            j["cards"] = cards;
-            JArray eq = new JArray();
-            if (d.m_EquipmentIDs != null) foreach (ResourceId e in d.m_EquipmentIDs) eq.Add(e.m_Guid.ToString());
-            j["equipment"] = eq;
-            return j;
-        }
-
-        private static DeckTemplate DeckFromJson(JObject j)
-        {
-            DeckTemplate d = new DeckTemplate();
-            d.m_Id = new ResourceId(Guid.NewGuid());
-            d.m_DeckName = (string)j["name"] ?? OpponentName;
-            d.m_ChampionId = new ResourceId(new Guid((string)j["champion"]));
-            JArray cards = j["cards"] as JArray;
-            if (cards != null)
-                foreach (JToken c in cards)
-                    d.m_DeckResources.Add(new TemplateCardStack { m_idTemplate = new ResourceId(new Guid((string)c["id"])), m_Count = Math.Min(60, Math.Max(0, (int)c["n"])) });
-            d.m_EquipmentIDs = new List<ResourceId>();
-            JArray eq = j["equipment"] as JArray;
-            if (eq != null) foreach (JToken e in eq) d.m_EquipmentIDs.Add(new ResourceId(new Guid((string)e)));
-            return d;
-        }
 
         private static void Invoke(object target, string method, object arg)
         {

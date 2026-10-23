@@ -5,9 +5,7 @@ registration, lobby, chat, challenge, then a full constructed game played to the
 dev command `aiplay`), back to the lobby afterwards.
 
 Known limits of the prototype:
-- the format is checked by each player's game, not by the host; no gems/equipment check; no online rewards (solo
-  rewards are skipped online); a guest playing a campaign deck plays it with the default champion (only the host's
-  campaign champion is sent);
+- no gems/equipment check; no online rewards (solo rewards are skipped online);
 - if a player leaves during a game, the other one gets a notice and must leave the battle themselves;
 - no reconnection, no chess clock (the solo "never expires" rule applies);
 - the host runs the rules, so a modified host could cheat (hidden information stays hidden: the guest only
@@ -38,10 +36,15 @@ Known limits of the prototype:
   are AI opponents. The online account edits only its own decks and plays every offline account's decks, campaign
   ones included (with their PvE champion), listed by account; they cannot be edited from there. Player decks shared
   before this change are copied into each account at its first login.
+- A deck saved as **made for the AI** stays one (it is shared and has no owner any more): its box can no longer be
+  unticked; it can still be edited or deleted, and **Copy as a player deck** (deck editor, AI settings window) copies
+  it into the current account if the account owns every card (accounts with everything unlocked and the online
+  account do; otherwise the missing cards are listed).
 - **Formats** (the server knows the same list): `immortal`, `standard`, `pve` (PvE cards and campaign champions)
   checked with the game's own deck validator (every card owned online), and `free` (any deck). A game in the lobby
   shows its format; the deck list has a format filter; clicking a game or a challenge selects its format, and
   Join / Accept need a deck valid for it. "Host a game" picks the format and lists only the decks valid for it.
+  The host checks the guest's deck again against the format and cancels the game when it is not valid.
 - The **lobby** is the online account's main screen: your deck (Favorites / All decks by account, "+" / "-" to mark a
   favorite), the
   challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
@@ -53,6 +56,9 @@ Known limits of the prototype:
 - Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
 
 How the game itself works:
+- the guest sends its deck (cards, champion, and for a campaign deck its PvE champion: race, class, level, talents);
+  the host plays it under a fixed id (`Decks.SetRemote`) given to the opponent seat; the guest enters the battle once
+  the host's session state arrives;
 - host: a normal solo encounter whose opponent seat (`ServicePlayer.4098`) is not an AI; its events go to the network
   (`Server.Flush`), the guest's transactions are submitted to the host's session, and a transaction without visible
   effect gets an empty packet as answer (the game client waits for one);

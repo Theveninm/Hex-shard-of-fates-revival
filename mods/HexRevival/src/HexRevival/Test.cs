@@ -1122,6 +1122,27 @@ namespace HexRevival
                         }
                         return "no game deck matching " + q;
                     }
+                case "deckforai":   // dev: "deckforai <name>": marks a deck of the account as made for the AI
+                case "deckcopy":    // dev: "deckcopy <name>": copies a deck made for the AI as a player deck (collection checked)
+                    {
+                        string n = string.Join(" ", parts, 1, parts.Length - 1);
+                        Decks.DeckInfo di = Decks.ListAll().Find(x => x.Name == n);
+                        if (di == null) return "no deck " + n;
+                        ulong did = di.Id.GetInstanceId();
+                        if (parts[0] == "deckforai")
+                        {
+                            Decks.AiSettings ai = Decks.Ai(did).Clone();
+                            ai.ForAI = true;
+                            Decks.SetAi(did, ai);
+                            ai = Decks.Ai(did).Clone();
+                            ai.ForAI = false;
+                            Decks.SetAi(did, ai);   // must stay made for the AI
+                            return "forAI=" + Decks.Ai(did).ForAI + " shared=" + Decks.IsAiDeck(did);
+                        }
+                        List<string> missing = new List<string>();
+                        ulong copy = Decks.CopyToAccount(did, missing);
+                        return copy != 0 ? "copied as " + copy : "missing: " + string.Join(", ", missing.ToArray());
+                    }
                 case "accountnew":   // dev: shows the "new account" screen of the account menu (login screen)
                     {
                         AccountMenu am = UnityEngine.Object.FindObjectOfType<AccountMenu>();

@@ -41,6 +41,13 @@ namespace HexRevival
                 s_Instance.Play(name == "online" ? Saves.Online : Saves.FindOrCreate(name));
                 return "logging in " + name;
             }
+            else if (sub == "playnew" && parts.Length > 2)
+            {
+                // Dev: a new progression account (cards earned by playing).
+                string name = string.Join(" ", parts, 2, parts.Length - 2);
+                s_Instance.Play(Saves.Create(name, false));
+                return "logging in new account " + name;
+            }
             else if (sub == "logout") { Singleton<Main>.Instance.RequestLogOut(); return "logging out"; }
             else s_Instance.m_Screen = Screen.List;
             OnlineProfile op = OnlineProfile.Current;

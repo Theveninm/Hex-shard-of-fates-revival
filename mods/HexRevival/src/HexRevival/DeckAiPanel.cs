@@ -191,11 +191,30 @@ namespace HexRevival
             GUI.DrawTexture(r, GameSkin.Solid(new Color(0f, 0f, 0f, 0.55f)));
             Decks.AiSettings a = m_PopupEdit;
             float pad = 14 * S, lh = 28 * S, y = r.y + 3 * S, x = r.x + pad, col = (r.width - 2 * pad) / 3f;
-            a.ForAI = Controls.Toggle(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_deck"), a.ForAI);
+            // A deck saved as made for the AI stays one (it is shared and has no owner any more); it can be copied as a
+            // player deck if the account owns its cards.
+            bool locked = m_DeckId != 0 && Decks.IsAiDeck(m_DeckId);
+            if (locked)
+            {
+                GUI.enabled = false;
+                Controls.Toggle(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_deck"), true);
+                GUI.enabled = true;
+                a.ForAI = true;
+            }
+            else a.ForAI = Controls.Toggle(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_deck"), a.ForAI);
             a.Skill = Controls.Skill(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_level"), a.Skill);
             y += lh + 2 * S;
-            GUI.Label(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_skill_note"), GameSkin.Style("body", 11, GameSkin.Muted, TextAnchor.MiddleLeft, true));
+            if (locked && GameSkin.GoldButton(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_copy_to_player"), true, 13)) CopyToPlayer();
+            else if (!locked) GUI.Label(new Rect(x, y, col - 10 * S, lh), Loc.Get("ai_skill_note"), GameSkin.Style("body", 11, GameSkin.Muted, TextAnchor.MiddleLeft, true));
             a.Noise = Controls.Stepper(new Rect(x + col, y, 2 * col - 10 * S, lh), Loc.Get("ai_noise"), a.Noise, 10, 0, 200);
+        }
+
+        private void CopyToPlayer()
+        {
+            List<string> missing = new List<string>();
+            ulong id = Decks.CopyToAccount(m_DeckId, missing);
+            if (id != 0) Notices.Show(Loc.Get("ai_copy_done", Current() != null ? Decks.NameOf(id) : ""));
+            else if (missing.Count > 0) Notices.Show(Loc.Get("ai_copy_missing", string.Join(", ", missing.GetRange(0, Math.Min(6, missing.Count)).ToArray()) + (missing.Count > 6 ? "..." : "")));
         }
 
         /// <summary>Dev: "deckai [state] | mods | reset" (the Modifiers window: "mods ..." commands, see ModifiersWindow).</summary>
@@ -208,6 +227,7 @@ namespace HexRevival
             {
                 case "mods": p.OpenModifiers(); return "modifiers open";
                 case "reset": if (p.m_DeckId != 0) Decks.SetAi(p.m_DeckId, new Decks.AiSettings()); return "reset";
+                case "copy": p.CopyToPlayer(); return "copy";
             }
             Decks.AiSettings a = p.Current();
             return "deck " + p.m_DeckId + " forAI=" + a.ForAI + " skill=" + a.Skill + " noise=" + a.Noise

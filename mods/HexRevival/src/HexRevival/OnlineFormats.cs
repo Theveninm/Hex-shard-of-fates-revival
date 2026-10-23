@@ -40,6 +40,30 @@ namespace HexRevival
             return ok;
         }
 
+        /// <summary>Dev: each card of a deck with its set and its other versions' sets, valid or not in the format.</summary>
+        public static string Sets(UID deck, string format)
+        {
+            champion_bits champion;
+            deck_bits bits = Decks.BitsForValidation(deck, out champion);
+            if (bits == null) return "no deck";
+            EDeckFormat f = format == "standard" ? EDeckFormat.Standard : format == "pve" ? EDeckFormat.PvE : EDeckFormat.Immortal;
+            Format fmt = DeckValidator.DeckFormatToNormalFormat(f);
+            System.Text.StringBuilder sb = new System.Text.StringBuilder("format " + fmt.SetFormat + "\n");
+            Reckoning.Game.TemplateManager tm = Singleton<Reckoning.Game.TemplateManager>.Instance;
+            HashSet<ResourceId> seen = new HashSet<ResourceId>();
+            foreach (card_instance_bits c in bits.CardsInDeck)
+            {
+                if (!seen.Add(c.TemplateID)) continue;
+                Reckoning.Game.CardTemplate t = tm.GetCardTemplate(c.TemplateID);
+                if (t == null) continue;
+                sb.Append(t.Name).Append(" set=").Append(t.m_SetId).Append(fmt.IsSetValid(t.m_SetId) ? " ok" : " -");
+                foreach (Reckoning.Game.CardTemplate o in tm.GetOtherVersionsOf(t))
+                    if (o != t) sb.Append(" | ").Append(o.m_SetId).Append(fmt.IsSetValid(o.m_SetId) ? " ok" : " -");
+                sb.Append("\n");
+            }
+            return sb.ToString();
+        }
+
         /// <summary>Runs the game's validator; errors (if not null) gets its messages.</summary>
         public static bool Validate(string format, UID deck, List<string> errors)
         {
@@ -52,7 +76,15 @@ namespace HexRevival
                 EDeckFormat f = format == "standard" ? EDeckFormat.Standard : format == "pve" ? EDeckFormat.PvE : EDeckFormat.Immortal;
                 // Online, every card is owned.
                 DeckValidator v = new DeckValidator(bits, DeckValidator.DeckFormatToNormalFormat(f), champion, (id, n) => true);
-                if (errors != null) foreach (string k in v.Errors.Keys) errors.Add(k);
+                if (errors != null)
+                    foreach (KeyValuePair<string, List<object[]>> kv in v.Errors)
+                    {
+                        // The key and the cards or values it is about (e.g. the cards outside the format).
+                        List<string> args = new List<string>();
+                        if (kv.Value != null)
+                            foreach (object[] a in kv.Value) if (a != null) foreach (object o in a) args.Add(o != null ? o.ToString() : "");
+                        errors.Add(kv.Key.Replace("CardCollection_DeckValidation_", "") + (args.Count > 0 ? ": " + string.Join(", ", args.GetRange(0, Math.Min(5, args.Count)).ToArray()) + (args.Count > 5 ? "..." : "") : ""));
+                    }
                 return v.Valid;
             }
             catch (Exception e)

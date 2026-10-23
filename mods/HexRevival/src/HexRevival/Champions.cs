@@ -88,6 +88,9 @@ namespace HexRevival
         /// <summary>Reloads the champions of the save in use.</summary>
         public static void Reload() { Load(s_ReckId, null); }
 
+        /// <summary>A champion outside the account (the other player's, online).</summary>
+        public static champion_bits Make(ulong id, string name) { return New(id, name); }
+
         private static champion_bits New(ulong id, string name)
         {
             champion_bits c = new champion_bits();

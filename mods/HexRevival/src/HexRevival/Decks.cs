@@ -124,6 +124,7 @@ namespace HexRevival
         {
             StoredDeck d;
             if (s_Temporary != null && id == TemporaryId) return s_Temporary;
+            if (s_Remote != null && id == RemoteId) return s_Remote;
             if (s_Decks.TryGetValue(id, out d)) return d;
             ulong to;
             return s_Moved.TryGetValue(id, out to) && s_Decks.TryGetValue(to, out d) ? d : null;
@@ -319,14 +320,16 @@ namespace HexRevival
         /// <summary>Replaces the AI settings of a deck and saves them.</summary>
         public static void SetAi(ulong deckId, AiSettings a)
         {
+            // A deck saved as made for the AI stays one (shared, it has no owner any more): to play it, copy it
+            // (CopyToAccount). A player deck marked for the AI becomes shared.
+            StoredDeck d;
+            bool found = s_Decks.TryGetValue(deckId, out d) && !d.Foreign && !IsCampaign(d);
+            if (found && d.Common) a.ForAI = true;
             AiStore[deckId] = a;
             SaveAi();
-            // Made for the AI: shared by every account; otherwise the account's own.
-            StoredDeck d;
-            if (s_Decks.TryGetValue(deckId, out d) && !d.Foreign && !IsCampaign(d) && d.Common != a.ForAI)
+            if (found && !d.Common && a.ForAI)
             {
-                d.Common = a.ForAI;
-                if (!d.Common) d.Owner = OwnerHere;
+                d.Common = true;
                 Save();
             }
         }
@@ -518,6 +521,108 @@ namespace HexRevival
             return res;
         }
 
+        public static string NameOf(ulong id) { StoredDeck d = Find(id); return d != null ? d.Name : ""; }
+
+        /// <summary>A saved deck made for the AI (its "made for the AI" box can no longer be unticked).</summary>
+        public static bool IsAiDeck(ulong id)
+        {
+            StoredDeck d = Find(id);
+            return d != null && d.Common;
+        }
+
+        /// <summary>
+        /// A deck made for the AI copied as a player deck of the current account, if the account owns every card of it
+        /// (accounts with everything unlocked and the online account do). Returns the new deck's id, 0 when cards are
+        /// missing (their names in missing).
+        /// </summary>
+        public static ulong CopyToAccount(ulong id, List<string> missing)
+        {
+            StoredDeck d = Find(id);
+            if (d == null) return 0;
+            if (!Saves.IsOnline && Saves.Current != null && !Saves.Current.UnlockAll)
+            {
+                Dictionary<ResourceId, int> owned = new Dictionary<ResourceId, int>();
+                foreach (card_instance_bits c in s_Collection.Values) { int n; owned.TryGetValue(c.TemplateID, out n); owned[c.TemplateID] = n + 1; }
+                Dictionary<ResourceId, int> needed = new Dictionary<ResourceId, int>();
+                foreach (ResourceId t in d.Cards) { int n; needed.TryGetValue(t, out n); needed[t] = n + 1; }
+                foreach (ResourceId t in d.Side) { int n; needed.TryGetValue(t, out n); needed[t] = n + 1; }
+                foreach (KeyValuePair<ResourceId, int> kv in needed)
+                {
+                    int have;
+                    owned.TryGetValue(kv.Key, out have);
+                    if (have >= kv.Value) continue;
+                    Reckoning.Game.CardTemplate ct = Singleton<Reckoning.Game.TemplateManager>.Instance.GetCardTemplate(kv.Key);
+                    missing.Add((kv.Value - have) + " x " + (ct != null ? ct.Name : kv.Key.ToString()));
+                }
+                if (missing.Count > 0) return 0;
+            }
+            StoredDeck c2 = d.Copy(NewId(true));
+            c2.Common = false;
+            c2.Foreign = false;
+            c2.Owner = OwnerHere;
+            c2.Name = d.Name;
+            s_Decks[c2.Id] = c2;
+            Save();
+            try { GameClient.Instance.PlayerProfile.AddDeck(ToBits(c2)); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] AddDeck: " + e.Message); }
+            return c2.Id;
+        }
+
+        // ------------------------------------------------------------------
+        // A deck sent over the network (online games: the guest's deck, played on the host)
+        // ------------------------------------------------------------------
+
+        private const ulong RemoteId = 9200000000000UL;
+        private static StoredDeck s_Remote;
+
+        /// <summary>A deck as sent to the host: cards, champion, and a campaign deck's PvE champion.</summary>
+        public static Newtonsoft.Json.Linq.JObject Export(UID id)
+        {
+            StoredDeck d = Find(id.GetInstanceId());
+            Newtonsoft.Json.Linq.JObject j = new Newtonsoft.Json.Linq.JObject();
+            if (d == null) return j;
+            j["name"] = d.Name;
+            j["champion"] = d.PvpChampion.IsValid ? d.PvpChampion.ToString() : "";
+            j["sleeve"] = d.Sleeve.IsValid ? d.Sleeve.ToString() : "";
+            j["cards"] = Join(d.Cards);
+            j["side"] = Join(d.Side);
+            j["equipment"] = Join(d.Equipment);
+            champion_bits c = d.Foreign ? d.Champion : IsCampaign(d) ? Champions.Get(d.PveChampion) : null;
+            if (c != null)
+            {
+                Newtonsoft.Json.Linq.JObject pc = new Newtonsoft.Json.Linq.JObject();
+                pc["name"] = c.Name; pc["level"] = c.Level; pc["class"] = c.ChampionClass.ToString(); pc["race"] = c.Race.ToString();
+                pc["gender"] = c.Gender.ToString(); pc["talents"] = Join(c.ChampionTalents != null ? new List<ResourceId>(c.ChampionTalents) : new List<ResourceId>()); pc["pet"] = c.PetName ?? "";
+                j["pve"] = pc;
+            }
+            return j;
+        }
+
+        /// <summary>The deck received from the other player, playable on this PC under a fixed id (see Export).</summary>
+        public static UID SetRemote(Newtonsoft.Json.Linq.JObject j)
+        {
+            StoredDeck d = new StoredDeck { Id = RemoteId, Name = (string)j["name"] ?? "", Foreign = true };
+            d.PvpChampion = Rid((string)j["champion"] ?? "");
+            d.Sleeve = Rid((string)j["sleeve"] ?? "");
+            d.Cards = Split((string)j["cards"] ?? "");
+            d.Side = Split((string)j["side"] ?? "");
+            d.Equipment = Split((string)j["equipment"] ?? "");
+            Newtonsoft.Json.Linq.JObject pc = j["pve"] as Newtonsoft.Json.Linq.JObject;
+            if (pc != null)
+            {
+                champion_bits c = Champions.Make(RemoteId, (string)pc["name"]);
+                c.Level = Math.Max(1, Math.Min(60, (int)pc["level"]));
+                try { c.ChampionClass = (EChampionClass)Enum.Parse(typeof(EChampionClass), (string)pc["class"]); } catch { }
+                try { c.Race = (ERace)Enum.Parse(typeof(ERace), (string)pc["race"]); } catch { }
+                try { c.Gender = (EGender)Enum.Parse(typeof(EGender), (string)pc["gender"]); } catch { }
+                c.ChampionTalents = Split((string)pc["talents"] ?? "");
+                c.PetName = (string)pc["pet"] ?? "";
+                d.Champion = c;
+                d.PveChampion = RemoteId;
+            }
+            s_Remote = d;
+            return new UID(UID.Type.Deck, RemoteId);
+        }
+
         /// <summary>A deck as the game's deck validator reads it, with the champion of a campaign deck.</summary>
         public static deck_bits BitsForValidation(UID id, out champion_bits champion)
         {
@@ -659,7 +764,7 @@ namespace HexRevival
                 // level, talents: portrait and health as in the original game), unless the
                 // encounter forces its own player deck.
                 champion_bits pveChamp = Campaign.BattleChampion != 0 && d.PveChampion == Campaign.BattleChampion ? Champions.Get(d.PveChampion) : null;
-                // Another account's campaign deck played online: its PvE champion.
+                // Another account's campaign deck (or the other player's) played online: its PvE champion.
                 if (d.Foreign && d.Champion != null && !d.PvpChampion.IsValid)
                 {
                     b.PVPChampionId = ResourceId.Invalid;

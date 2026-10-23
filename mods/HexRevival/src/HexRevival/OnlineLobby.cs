@@ -165,7 +165,7 @@ namespace HexRevival
                     m_ChallengedId = null;
                     m_Challenges.Clear();
                     JObject opp = (JObject)m["opponent"];
-                    OnlineMatch.Begin(m_Net, (int)m["seat"] == 0, (string)opp["name"], m_Deck);
+                    OnlineMatch.Begin(m_Net, (int)m["seat"] == 0, (string)opp["name"], m_Deck, (string)m["format"]);
                     break;
                 case "match_end":
                     if (OnlineMatch.Current != OnlineMatch.Role.None)
@@ -598,6 +598,12 @@ namespace HexRevival
                 case "create": l.Send("create", "format", arg.Length > 0 ? arg : OnlineFormats.Default); return "created, deck " + l.m_Deck;
                 case "host": OfflineMenu.Open(l.m_Deck, l.m_Format); return "host menu";
                 case "format": l.m_Format = arg; return "format '" + arg + "'";
+                case "sets":
+                    {
+                        string[] a2 = arg.Split(' ');
+                        Decks.DeckInfo dd = Decks.ListAll().Find(x => string.Equals(x.Name, a2[0], StringComparison.OrdinalIgnoreCase));
+                        return dd == null ? "no deck " + a2[0] : OnlineFormats.Sets(dd.Id, a2.Length > 1 ? a2[1] : "standard");
+                    }
                 case "deck":
                     Decks.DeckInfo dk = l.m_Decks.Find(x => string.Equals(x.Name, arg, StringComparison.OrdinalIgnoreCase));
                     if (dk == null) return "no deck " + arg;

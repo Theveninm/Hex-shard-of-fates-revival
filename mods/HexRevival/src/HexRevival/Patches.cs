@@ -172,7 +172,14 @@ namespace HexRevival
             try
             {
                 if (!(self is StandaloneSession) || player == null) return;
-                if (player.IsAI() || Server.IsAIId(player.m_PlayerId) || OnlineMatch.IsRemote(player.m_PlayerId))
+                // Online: the other player's deck, received from its game (see OnlineMatch, Decks.SetRemote).
+                if (OnlineMatch.IsRemote(player.m_PlayerId))
+                {
+                    player.m_DeckID = OnlineMatch.RemoteDeck;
+                    Debug.Log("[HexRevival] remote player " + player.m_PlayerId + ": deck " + player.m_DeckID);
+                    return;
+                }
+                if (player.IsAI() || Server.IsAIId(player.m_PlayerId))
                 {
                     if (s_PendingAIDeck != null)
                     {
