@@ -1224,6 +1224,26 @@ namespace HexRevival
                     Progression.AddAccountXp(parts.Length > 1 ? int.Parse(parts[1]) : 50); return "account level " + Saves.Current.AccountLevel + ", xp " + Saves.Current.AccountXp + ", gold " + Saves.Current.Gold;
                 case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
+                case "hover":   // dev: "hover <GameObject path>" = NGUI's OnHover(true) on it, as the mouse entering it would
+                    {
+                        GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
+                        if (go == null) return "not found";
+                        go.SendMessage("OnHover", true, SendMessageOptions.DontRequireReceiver);
+                        return "hover " + go.name;
+                    }
+                case "comps":   // dev: "comps <GameObject path>" = the components of that object and its children
+                    {
+                        GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
+                        if (go == null) return "not found";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
+                        {
+                            sb.Append(t == go.transform ? t.name : "  " + t.name).Append(t.gameObject.activeSelf ? "" : " (off)").Append(":");
+                            foreach (Component c in t.GetComponents<Component>()) sb.Append(' ').Append(c != null ? c.GetType().Name : "null");
+                            sb.Append('\n');
+                        }
+                        return sb.ToString();
+                    }
                 case "concede":
                     {
                         UIBattle ui = UnityEngine.Object.FindObjectOfType<UIBattle>();

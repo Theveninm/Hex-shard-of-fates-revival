@@ -242,18 +242,46 @@ namespace HexRevival
                     ub.pressed = new Color(0.7f, 0.7f, 0.7f);
                     ub.onClick.Clear();
                 }
-                // The game's tooltip, as on the other icons of the bar.
-                UITooltipSetText[] tips = b.GetComponentsInChildren<UITooltipSetText>(true);
-                if (tips.Length == 0) tips = new[] { b.AddComponent<UITooltipSetText>() };
-                foreach (UITooltipSetText tip in tips)
-                {
-                    tip.TooltipLocalizationScript = null;
-                    tip.TooltipText = Loc.Get("lobby_discord");
-                }
+                // The game's tooltip box, as on the other icons of the bar (on the object that receives the mouse).
+                foreach (UITooltipSetText t in b.GetComponentsInChildren<UITooltipSetText>(true)) DestroyImmediate(t);
+                foreach (Collider c in b.GetComponentsInChildren<Collider>(true))
+                    (c.gameObject.GetComponent<Tooltip>() ?? c.gameObject.AddComponent<Tooltip>()).Key = "lobby_discord";
                 UIEventListener.Get(b).onClick = go => Open(DiscordUrl);
                 b.SetActive(true);
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] Discord icon: " + e); }
+        }
+
+        /// <summary>Shows a mod text in the game's tooltip box while the mouse stays over the object (NGUI's OnHover).</summary>
+        private class Tooltip : MonoBehaviour
+        {
+            public string Key;
+            private float m_ShowAt = -1f;
+            private bool m_Shown;
+
+            private void OnHover(bool over)
+            {
+                m_ShowAt = over ? Time.realtimeSinceStartup + 0.4f : -1f;
+                if (!over) Hide();
+            }
+
+            private void Update()
+            {
+                if (m_ShowAt < 0f || Time.realtimeSinceStartup < m_ShowAt) return;
+                m_ShowAt = -1f;
+                m_Shown = true;
+                UITooltip.ShowText(Loc.Get(Key));
+            }
+
+            private void Hide()
+            {
+                if (!m_Shown) return;
+                m_Shown = false;
+                UITooltip.ShowText(string.Empty);
+            }
+
+            private void OnClick() { m_ShowAt = -1f; Hide(); }
+            private void OnDisable() { m_ShowAt = -1f; Hide(); }
         }
 
         private static HarmonyLib.Traverse Traverse(object o) { return HarmonyLib.Traverse.Create(o); }
