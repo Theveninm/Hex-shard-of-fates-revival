@@ -22,7 +22,7 @@ namespace HexRevival
     /// The logic itself is unchanged and shared with the old plugin:
     /// mods/HexRevival/src/HexRevival/{Bootstrap,Patches,Server,Repl,Test}.cs.
     /// </summary>
-    [BepInPlugin("hexrevival", "HexRevival", "1.1.0")]
+    [BepInPlugin("hexrevival", "HexRevival", Community.Version)]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -247,6 +247,11 @@ namespace HexRevival
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "ClientConnection_SendCommand"));
             });
 
+            // Featured Content of the main menu: the mod's panels instead of the HEX website's news (see Community).
+            apply("UINewsEventsViewModel.Start", () =>
+                harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
+            apply("UINewsEventsViewModel.GetNewsAndEvents", () => Prefix(harmony, typeof(UINewsEventsViewModel), "GetNewsAndEvents", Type.EmptyTypes, "News_Get"));
+
             Log.LogInfo("HexRevival loaded: " + ok + " patches OK, " + failed + " failed.");
         }
 
@@ -459,6 +464,18 @@ namespace HexRevival
         public static void Player_HasStop(Game.Shared.Player __instance, Game.Shared.Player __0, Game.Shared.Mechanics.ETurnPhases __1, ref bool __result) { if (!__result) __result = Tutorial.ScriptStop(__instance, __0, __1); }
         public static void Tutorial_BoardSetup(bool __result) { if (__result) Tutorial.OnBoardReset(); }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
+
+        /// <summary>A URL is needed for the carousel to ask for its panels (the game's config has none offline).</summary>
+        public static void News_Start(UINewsEventsViewModel __instance)
+        {
+            if (string.IsNullOrEmpty(__instance.m_NewsEventsURL)) __instance.m_NewsEventsURL = Community.RepoUrl;
+        }
+
+        public static bool News_Get(UINewsEventsViewModel __instance)
+        {
+            Community.FillNews(__instance);
+            return false;
+        }
 
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)
         {

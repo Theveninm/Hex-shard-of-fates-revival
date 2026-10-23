@@ -164,6 +164,7 @@ namespace HexRevival
                 go.AddComponent<AiDecksWindow>();
                 go.AddComponent<AiButton>();
                 go.AddComponent<OnlineLobby>();
+                go.AddComponent<Community>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)

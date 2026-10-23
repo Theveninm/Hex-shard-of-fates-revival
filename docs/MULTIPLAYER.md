@@ -44,7 +44,8 @@ Known limits of the prototype:
   shows its format; the deck list has a format filter; clicking a game or a challenge selects its format, and
   Join / Accept need a deck valid for it. "Host a game" picks the format and lists only the decks valid for it.
   The host checks the guest's deck again against the format and cancels the game when it is not valid.
-- The **lobby** is the online account's main screen: your deck (Favorites / All decks by account, "+" / "-" to mark a
+- The **lobby** is the online account's main screen: a banner with the Discord server (and, when there is one, the
+  newer version to download: players with different versions may not be able to play together), your deck (Favorites / All decks by account, "+" / "-" to mark a
   favorite), the
   challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
   buttons Deck editor, Game settings, Online profile, Switch account. It opens again after each game.

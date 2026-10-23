@@ -8,8 +8,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 
 ## What you get
 
-- **Start screen**: online mode (a profile name and a lobby, empty until online play exists) or an
-  offline account (create one: everything unlocked or earned by playing, tutorial, starting gold).
+- **Start screen**: online play, or an offline account (create one: everything unlocked or earned by playing,
+  tutorial, starting gold).
 - **Campaign**: your campaign champions on the game's own world maps, the Howling Plains (AZ1) and
   the Alachian Sea (AZ2, reached by boat), with their quests, hubs and dialogues, the ten dungeons
   (Castle Crayburn to the Ruins of Kukatan), mercenaries, and the sea voyages of your own ship.
@@ -25,8 +25,13 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   tier, which decks the AI plays (your decks, decks made for the AI, the game's AI decks or its encounters), how
   often, and their role (arena, Siege). In the deck editor, "Set Personality" also sets the deck's AI level and
   randomness, and "Modifiers" what each side starts with (health, resources, charges, cards, cards in play, shards).
-  Decks outside the campaign are shared by all accounts; the settings are per account, with shared defaults.
-- **Online play** (login screen, "Online" row): its own account and lobby (open games, challenges, chat) and **Host a game**: against another player, or against the AI with one of your decks.
+  Each account has its own decks; the decks made for the AI are shared by all accounts. The settings are per
+  account, with shared defaults.
+- **Online play** (login screen, "Online" row): its own account and lobby (open games, challenges, chat) and
+  **Host a game**: against another player in a format (Immortal, Standard, PvE, free), or against the AI. The online
+  account plays the decks of every offline account (see [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md)).
+- **Featured Content** (main menu): tells you when a new version is out, with the link to download it, and links to
+  the [Discord server](https://discord.gg/4TWeErkhe), where players meet to talk about the game and find opponents.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
@@ -37,7 +42,9 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - The game's original AI, combat engine reconstructed from the client code.
 - Interface in the game's language (English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Chinese).
 
-Not available (yet): Swiss and single-elimination tournaments, multiplayer.
+Not available (yet): Swiss and single-elimination tournaments.
+
+Come and talk about the game, report bugs and find opponents on the **[Discord server](https://discord.gg/4TWeErkhe)**.
 
 ## Install and play
 

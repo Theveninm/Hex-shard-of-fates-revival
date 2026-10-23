@@ -357,6 +357,18 @@ namespace HexRevival
                 GUI.Label(new Rect(win.x + pad + win.width * 0.35f, top, win.width * 0.45f, 28 * S), m_Message, GameSkin.Style("body", 13, new Color(1f, 0.55f, 0.45f)));
             if (m_Net == null && GameSkin.GoldButton(new Rect(win.xMax - pad - 190 * S, top - 2 * S, 190 * S, 32 * S), Loc.Get("online_connect"), true, 14)) { m_Message = null; Connect(); }
             top += 36 * S;
+            if (!m_EditingProfile)
+            {
+                // A newer version (other players may have it), then the Discord server.
+                if (Community.NewVersion != null)
+                {
+                    Banner(new Rect(win.x + pad, top, win.width - 2 * pad, 40 * S), Loc.Get("lobby_update", Community.NewVersion), new Color(1f, 0.72f, 0.35f),
+                           Loc.Get("lobby_update_get"), Community.NewVersionUrl);
+                    top += 46 * S;
+                }
+                Banner(new Rect(win.x + pad, top, win.width - 2 * pad, 40 * S), Loc.Get("lobby_discord"), GameSkin.Gold, Loc.Get("lobby_discord_join"), Community.DiscordUrl);
+                top += 50 * S;
+            }
 
             float w = win.width - 2 * pad - 2 * gap;
             Rect left = new Rect(win.x + pad, top, w * 0.31f, bottom - top);
@@ -379,6 +391,16 @@ namespace HexRevival
             if (GameSkin.GoldButton(new Rect(win.x + pad + bw + 12 * S, by, bw, bh), Loc.Get("online_settings"), true, 17)) ShowGameSettings();
             if (GameSkin.GoldButton(new Rect(win.x + pad + 2 * (bw + 12 * S), by, bw, bh), Loc.Get("online_edit_profile"), true, 17)) { m_Profile.Load(); m_EditingProfile = true; }
             if (GameSkin.RedButton(new Rect(win.xMax - pad - bw, by, bw, bh), Loc.Get("switch_account"), 17)) LogOut();
+        }
+
+        /// <summary>A one-line notice across the window with a button that opens a web page.</summary>
+        private static void Banner(Rect r, string text, Color color, string button, string url)
+        {
+            float S = GameSkin.Scale;
+            GameSkin.Sprite(r, "A_Frames", "Frame_Generic_Inner");
+            float bw = 220 * S;
+            GameSkin.Label(new Rect(r.x + 16 * S, r.y, r.width - bw - 40 * S, r.height), text, GameSkin.Style("title", 16, color));
+            if (GameSkin.GoldButton(new Rect(r.xMax - bw - 6 * S, r.y + 4 * S, bw, r.height - 8 * S), button, true, 14)) Community.Open(url);
         }
 
         /// <summary>The online profile's form; saving reconnects with it.</summary>

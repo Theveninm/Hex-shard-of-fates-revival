@@ -823,10 +823,10 @@ namespace HexRevival
             {
                 bool matchWon = r.GameWins >= needed;
                 if (matchWon) r.Wins++; else r.Losses++;
-                text = (matchWon ? "Match won" : "Match lost") + ": " + r.Wins + "-" + r.Losses;
+                text = Loc.Get(matchWon ? "bg_match_won" : "bg_match_lost", r.Wins, r.Losses);
                 r.GameWins = r.GameLosses = 0;
             }
-            else text = "Game " + (won ? "won" : "lost") + ": " + r.GameWins + "-" + r.GameLosses + " in this match";
+            else text = Loc.Get(won ? "bg_game_won" : "bg_game_lost", r.GameWins, r.GameLosses);
             TournamentPlayerInfo me;
             if (Manager.AsynchPlayerOverrides.TryGetValue(g.Id, out me)) { me.Wins = r.Wins; me.Losses = r.Losses; }
             Manager.CurrentlyInMatch = r.GameWins + r.GameLosses > 0;
@@ -996,7 +996,7 @@ namespace HexRevival
             l.ConstructedStars = Math.Max(0, l.ConstructedStars + stars);
             l.ConstructedMax = Math.Max(l.ConstructedMax, l.ConstructedStars);
             Save();
-            Notices.Show("Ladder: " + l.ConstructedStars + " stars");
+            Notices.Show(Loc.Get("ladder_stars", l.ConstructedStars));
             return true;
         }
     }
