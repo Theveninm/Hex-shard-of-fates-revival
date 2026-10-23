@@ -29,6 +29,10 @@ namespace HexRevival
             public ResourceId Encounter = ResourceId.Invalid;
             public ChampionTemplate Champion;
             public bool ForAI;
+            /// <summary>An account's title above its decks (not a deck).</summary>
+            public bool Header;
+            /// <summary>A deck of the current account (can be edited and deleted here).</summary>
+            public bool Own;
         }
 
         private bool m_Open;
@@ -92,12 +96,12 @@ namespace HexRevival
             }
             m.Refresh();
             string tab = parts.Length > 2 ? parts[2] : "enc";
-            List<Entry> list = tab == "game" ? m.m_GameDecks : tab == "mine" ? m.m_MyDecks : m.m_Encounters;
+            List<Entry> list = tab == "game" ? m.m_GameDecks : tab == "mine" ? m.m_MyDecks : tab == "ai" ? m.m_AiDecks : m.m_Encounters;
             int idx = 0;
             int argStart = 3;
             if (sub == "fight") { if (parts.Length > 3) int.TryParse(parts[3], out idx); argStart = 4; }
             string q = parts.Length > argStart ? string.Join(" ", parts, argStart, parts.Length - argStart).ToLowerInvariant() : "";
-            List<Entry> found = list.FindAll(e => q.Length == 0 || e.Search.IndexOf(q, StringComparison.Ordinal) >= 0);
+            List<Entry> found = list.FindAll(e => !e.Header && (q.Length == 0 || e.Search.IndexOf(q, StringComparison.Ordinal) >= 0));
             if (sub == "list")
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -160,23 +164,33 @@ namespace HexRevival
         private void Refresh()
         {
             m_Message = "";
-            m_MyDecks.Clear();
-            foreach (Decks.DeckInfo d in Decks.List())
-                m_MyDecks.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion) });
-            m_MyDecks.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
-            // As opponents: the same decks, those made for the AI first.
-            m_AiDecks.Clear();
-            foreach (Entry e in m_MyDecks)
-            {
-                bool ai = Decks.HasAi(e.PlayerDeck.GetInstanceId()) && Decks.Ai(e.PlayerDeck.GetInstanceId()).ForAI;
-                m_AiDecks.Add(new Entry { Label = e.Label, Detail = ai ? e.Detail + " - " + Loc.Get("ai_deck") : e.Detail, Search = e.Search, PlayerDeck = e.PlayerDeck, Champion = e.Champion, ForAI = ai });
-            }
-            m_AiDecks.Sort((a, b) => a.ForAI != b.ForAI ? (a.ForAI ? -1 : 1) : string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
-            if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == m_SelMine.PlayerDeck);
-            if (m_SelMine == null && m_MyDecks.Count > 0) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks[0];
+            // Your deck: the player decks by account; the AI's: the decks made for the AI, by account too.
+            Fill(m_MyDecks, Decks.ByOwner(false));
+            Fill(m_AiDecks, Decks.ByOwner(true));
+            if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == m_SelMine.PlayerDeck);
+            if (m_SelMine == null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks.Find(e => !e.Header);
             if (m_SelOpp != null && m_SelOpp.PlayerDeck != UID.Invalid) m_SelOpp = null;
             if (m_ListLang != Loc.Lang) { m_GameDecks = null; m_ListLang = Loc.Lang; }
             if (m_GameDecks == null) BuildTemplateLists();
+        }
+
+        private static void Fill(List<Entry> list, List<Decks.DeckGroup> groups)
+        {
+            list.Clear();
+            foreach (Decks.DeckGroup g in groups)
+            {
+                list.Add(new Entry { Label = g.Title, Header = true, Search = "" });
+                foreach (Decks.DeckInfo d in g.Decks)
+                    list.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion), ForAI = d.ForAI, Own = g.Own });
+            }
+        }
+
+        /// <summary>A separator row: the account's name over a thin line.</summary>
+        private static void DrawHeader(Rect r, string title)
+        {
+            float S = GameSkin.Scale;
+            GameSkin.Label(new Rect(r.x + 4 * S, r.y + 2 * S, r.width - 8 * S, r.height - 6 * S), title, GameSkin.Style("title", 14, GameSkin.GoldDim));
+            GUI.DrawTexture(new Rect(r.x + 4 * S, r.yMax - 3 * S, r.width - 8 * S, 1), GameSkin.Solid(new Color(0.8f, 0.72f, 0.57f, 0.5f)));
         }
 
         internal static bool IsBattle(EncounterScene es, TemplateManager tm)
@@ -512,7 +526,8 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             float rowH = 72 * S, gap = 4 * S, newH = 54 * S;
-            float contentH = newH + gap + m_MyDecks.Count * (rowH + gap);
+            float contentH = newH + gap;
+            foreach (Entry e in m_MyDecks) contentH += (e.Header ? 30 * S : rowH) + gap;
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
@@ -525,12 +540,21 @@ namespace HexRevival
             GameSkin.Label(new Rect(nr.x + 62 * S, nr.y, nr.width - 70 * S, newH), Loc.Get("new_deck"), GameSkin.Style("title", 18, over ? Color.white : GameSkin.Gold));
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none)) OpenEditor(UID.Invalid);
 
-            float icon = 38 * S, iconGap = 6 * S;
+            float icon = 38 * S, iconGap = 6 * S, headH = 30 * S;
             float reserve = 2 * icon + iconGap + 14 * S;
+            float y = newH + gap;
             for (int i = 0; i < m_MyDecks.Count; i++)
             {
                 Entry e = m_MyDecks[i];
-                Rect r = new Rect(0, newH + gap + i * (rowH + gap), view.width, rowH);
+                if (e.Header) { DrawHeader(new Rect(0, y, view.width, headH), e.Label); y += headH + gap; continue; }
+                Rect r = new Rect(0, y, view.width, rowH);
+                y += rowH + gap;
+                if (!e.Own)
+                {
+                    // Another account's deck: played as it is, edited from that account.
+                    if (GameSkin.Row(r, e.Label, e.Detail, m_SelMine == e, e.Champion)) { m_SelMine = e; m_Message = ""; }
+                    continue;
+                }
                 // Icons on the right (drawn before the row: they get the click first).
                 Rect del = new Rect(r.xMax - 12 * S - icon, r.y + (rowH - icon) / 2f, icon, icon);
                 Rect edit = new Rect(del.x - iconGap - icon, del.y, icon, icon);
@@ -639,26 +663,29 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             float rowH = 72 * S, gap = 4 * S;
-            List<Entry> shown = query.Length == 0 ? list : list.FindAll(e => e.Search.IndexOf(query, StringComparison.Ordinal) >= 0);
-            if (shown.Count == 0)
+            List<Entry> shown = query.Length == 0 ? list : list.FindAll(e => !e.Header && e.Search.IndexOf(query, StringComparison.Ordinal) >= 0);
+            if (!shown.Exists(e => !e.Header))
             {
                 GUI.Label(new Rect(area.x + 8 * S, area.y + 6 * S, area.width, 30 * S), Loc.Get("no_match"), GameSkin.Style("body", 14, GameSkin.Muted));
                 return Vector2.zero;
             }
-            float contentH = shown.Count * (rowH + gap);
+            float headH = 30 * S, contentH = 0;
+            foreach (Entry e in shown) contentH += (e.Header ? headH : rowH) + gap;
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
-            int first = Mathf.Max(0, (int)(scroll.y / (rowH + gap)) - 1);
-            int last = Mathf.Min(shown.Count - 1, (int)((scroll.y + area.height) / (rowH + gap)) + 1);
-            for (int i = first; i <= last; i++)
+            float y = 0;
+            foreach (Entry e in shown)
             {
-                Entry e = shown[i];
-                if (GameSkin.Row(new Rect(0, i * (rowH + gap), view.width, rowH), e.Label, e.Detail, selected == e, e.Champion))
+                if (e.Header) { DrawHeader(new Rect(0, y, view.width, headH), e.Label); y += headH + gap; continue; }
+                // Only the visible rows are drawn.
+                if (y + rowH >= scroll.y && y <= scroll.y + area.height
+                    && GameSkin.Row(new Rect(0, y, view.width, rowH), e.Label, e.Detail, selected == e, e.Champion))
                 {
                     selected = e;
                     m_Message = "";
                 }
+                y += rowH + gap;
             }
             GUI.EndScrollView();
             return scroll;

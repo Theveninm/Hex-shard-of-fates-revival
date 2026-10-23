@@ -34,6 +34,28 @@ namespace HexRevival
             public List<ResourceId> Side = new List<ResourceId>();
             public List<ResourceId> Equipment = new List<ResourceId>();
             public List<ResourceId> Talents = new List<ResourceId>();
+            /// <summary>The account that created it (see OwnerHere); "" for the decks made before owners were kept.</summary>
+            public string Owner = "";
+        }
+
+        /// <summary>Owner of the online profile's decks (offline accounts are named by their save).</summary>
+        public const string OnlineOwner = "@online";
+
+        /// <summary>The account decks created now belong to.</summary>
+        private static string OwnerHere { get { return Saves.IsOnline ? OnlineOwner : Saves.Current != null ? Saves.Current.Name : ""; } }
+
+        private static bool IsForAI(StoredDeck d) { return HasAi(d.Id) && Ai(d.Id).ForAI; }
+
+        /// <summary>
+        /// Decks the current account lists and edits. Online: its own decks and the decks made for the AI (shared by
+        /// everyone); the offline accounts' player decks can only be played (see ListAll). Offline: every deck except
+        /// the online profile's player decks.
+        /// </summary>
+        private static bool Visible(StoredDeck d)
+        {
+            if (!IsCommon(d)) return true;
+            if (Saves.IsOnline) return d.Owner == OnlineOwner || IsForAI(d);
+            return d.Owner != OnlineOwner || IsForAI(d);
         }
 
         private static readonly Dictionary<ulong, StoredDeck> s_Decks = new Dictionary<ulong, StoredDeck>();
@@ -133,7 +155,8 @@ namespace HexRevival
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Decks] read: " + e); }
             List<deck_bits> res = new List<deck_bits>();
-            foreach (StoredDeck d in s_Decks.Values) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
+            foreach (StoredDeck d in s_Decks.Values)
+                if (Visible(d)) { res.Add(ToBits(d)); LastDeck = new UID(UID.Type.Deck, d.Id); }
             Debug.Log("[HexRevival] [Decks] " + res.Count + " deck(s) loaded");
             return res;
         }
@@ -201,7 +224,7 @@ namespace HexRevival
         /// <summary>A new player deck made of a game deck (a deck bought in the store): cards, champion, equipment, sleeve.</summary>
         public static deck_bits CreateFromTemplate(string name, Reckoning.Game.DeckTemplate t)
         {
-            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId, Owner = OwnerHere };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
             foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
                 for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
@@ -314,7 +337,7 @@ namespace HexRevival
         {
             List<SharedDeck> res = new List<SharedDeck>();
             foreach (StoredDeck d in s_Decks.Values)
-                if (IsCommon(d)) res.Add(new SharedDeck { Id = d.Id, Name = d.Name, Champion = d.PvpChampion, Count = d.Cards.Count, Ai = Ai(d.Id) });
+                if (IsCommon(d) && Visible(d)) res.Add(new SharedDeck { Id = d.Id, Name = d.Name, Champion = d.PvpChampion, Count = d.Cards.Count, Ai = Ai(d.Id) });
             res.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             return res;
         }
@@ -331,7 +354,7 @@ namespace HexRevival
         public static ulong CopyFromTemplate(Reckoning.Game.DeckTemplate t, string name, AiSettings ai, ResourceId champion = default(ResourceId))
         {
             // An encounter's deck may have no champion of its own (the encounter's champion plays it).
-            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId.IsValid || !champion.IsValid ? t.m_ChampionId : champion };
+            StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId.IsValid || !champion.IsValid ? t.m_ChampionId : champion, Owner = OwnerHere };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
             foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
                 for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
@@ -408,15 +431,75 @@ namespace HexRevival
             public string Name;
             public int Count;
             public ResourceId Champion = ResourceId.Invalid;
+            /// <summary>Account that created it ("" unknown, OnlineOwner for the online profile).</summary>
+            public string Owner = "";
+            public bool ForAI;
         }
 
-        /// <summary>Player decks outside the campaign (PvP), for the mod's menu.</summary>
+        private static DeckInfo Info(StoredDeck d)
+        {
+            return new DeckInfo
+            {
+                Id = new UID(UID.Type.Deck, d.Id), Name = string.IsNullOrEmpty(d.Name) ? "Deck " + d.Id : d.Name, Count = d.Cards.Count,
+                Champion = d.PvpChampion.IsValid ? d.PvpChampion : new ResourceId(GameConfig.DefaultChampionTemplateId),
+                Owner = d.Owner ?? "", ForAI = IsForAI(d),
+            };
+        }
+
+        /// <summary>Player decks outside the campaign (PvP) that the current account lists, for the mod's menus.</summary>
         public static List<DeckInfo> List()
         {
             List<DeckInfo> res = new List<DeckInfo>();
             foreach (StoredDeck d in s_Decks.Values)
-                if (d.PveChampion == 0)
-                    res.Add(new DeckInfo { Id = new UID(UID.Type.Deck, d.Id), Name = string.IsNullOrEmpty(d.Name) ? "Deck " + d.Id : d.Name, Count = d.Cards.Count, Champion = d.PvpChampion.IsValid ? d.PvpChampion : new ResourceId(GameConfig.DefaultChampionTemplateId) });
+                if (d.PveChampion == 0 && Visible(d)) res.Add(Info(d));
+            return res;
+        }
+
+        /// <summary>Every deck outside the campaign, whoever owns it (the online lobby: the offline decks can be played).</summary>
+        public static List<DeckInfo> ListAll()
+        {
+            List<DeckInfo> res = new List<DeckInfo>();
+            foreach (StoredDeck d in s_Decks.Values)
+                if (d.PveChampion == 0) res.Add(Info(d));
+            return res;
+        }
+
+        public class DeckGroup
+        {
+            public string Title;
+            /// <summary>The current account's own decks (editable).</summary>
+            public bool Own;
+            public List<DeckInfo> Decks = new List<DeckInfo>();
+        }
+
+        /// <summary>
+        /// Decks (player decks, or those made for the AI) by account: the current account's first, then each offline
+        /// account, then the decks made before owners were kept. Sorted by name in each group.
+        /// </summary>
+        public static List<DeckGroup> ByOwner(bool forAI)
+        {
+            Dictionary<string, DeckGroup> groups = new Dictionary<string, DeckGroup>();
+            foreach (DeckInfo d in ListAll())
+            {
+                if (d.ForAI != forAI) continue;
+                DeckGroup g;
+                if (!groups.TryGetValue(d.Owner, out g)) groups[d.Owner] = g = new DeckGroup { Own = d.Owner == OwnerHere };
+                g.Decks.Add(d);
+            }
+            List<string> owners = new List<string>(groups.Keys);
+            owners.Sort((a, b) =>
+            {
+                int ra = a == OwnerHere ? 0 : a == "" ? 2 : 1, rb = b == OwnerHere ? 0 : b == "" ? 2 : 1;
+                return ra != rb ? ra.CompareTo(rb) : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+            });
+            List<DeckGroup> res = new List<DeckGroup>();
+            foreach (string o in owners)
+            {
+                DeckGroup g = groups[o];
+                g.Title = o == OnlineOwner ? Loc.Get("deck_src_online") : o == "" ? Loc.Get("deck_src_common") : Loc.Get("deck_src_account", o);
+                g.Decks.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+                res.Add(g);
+            }
             return res;
         }
 
@@ -454,7 +537,7 @@ namespace HexRevival
             AddNewDeckRequestArgs add = args as AddNewDeckRequestArgs;
             if (add != null)
             {
-                StoredDeck d = new StoredDeck { Id = NewId(add.PvEChampionId.GetInstanceId() == 0) };
+                StoredDeck d = new StoredDeck { Id = NewId(add.PvEChampionId.GetInstanceId() == 0), Owner = OwnerHere };
                 Fill(d, add.DeckName, add.PvEChampionId, add.PvPChampionId, add.DeckCardIDs, add.SideboardCardIDs, add.EquipmentIDs, add.TalentIDs, add.DeckSleeveId, add.GameboardId, add.CoinId, (int)add.Persona);
                 s_Decks[d.Id] = d;
                 LastDeck = new UID(UID.Type.Deck, d.Id);
@@ -685,7 +768,7 @@ namespace HexRevival
                 {
                     if (IsCommon(d) != common) continue;
                     sb.Append("DECK|").Append(d.Id).Append('|').Append(d.Name.Replace("|", "/")).Append('|').Append(d.PveChampion).Append('|')
-                      .Append(d.PvpChampion).Append('|').Append(d.Sleeve).Append('|').Append(d.Gameboard).Append('|').Append(d.Coin).Append('|').Append(d.Persona).Append('\n');
+                      .Append(d.PvpChampion).Append('|').Append(d.Sleeve).Append('|').Append(d.Gameboard).Append('|').Append(d.Coin).Append('|').Append(d.Persona).Append('|').Append((d.Owner ?? "").Replace("|", "/")).Append('\n');
                     sb.Append("CARDS|").Append(Join(d.Cards)).Append('\n');
                     sb.Append("SIDE|").Append(Join(d.Side)).Append('\n');
                     sb.Append("EQUIP|").Append(Join(d.Equipment)).Append('\n');
@@ -777,6 +860,7 @@ namespace HexRevival
                         cur.PveChampion = ulong.Parse(p[3]);
                         cur.PvpChampion = Rid(p[4]); cur.Sleeve = Rid(p[5]); cur.Gameboard = Rid(p[6]); cur.Coin = Rid(p[7]);
                         int.TryParse(p[8], out cur.Persona);
+                        if (p.Length > 9) cur.Owner = p[9];
                         s_Decks[cur.Id] = cur;
                         Bump(cur.Id);
                         break;

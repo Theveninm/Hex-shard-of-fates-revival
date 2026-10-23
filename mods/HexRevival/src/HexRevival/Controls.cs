@@ -196,8 +196,9 @@ namespace HexRevival
                 bool block = modal;
                 Vector2 mouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
                 if (!block) foreach (Rect a in areas) if (a.width > 0 && a.Contains(mouse)) { block = true; break; }
-                if (block && m_Disabled.Count == 0)
+                if (block)
                 {
+                    // Every frame: a screen loading meanwhile (the main menu right after logging in) brings new cameras.
                     foreach (UICamera c in Controls.UiCameras())
                         if (c != null && c.enabled) { c.enabled = false; m_Disabled.Add(c); }
                 }

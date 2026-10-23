@@ -30,13 +30,17 @@ Known limits of the prototype:
 - Login screen, **Online** row: logs in with the online profile and opens the lobby (the first time, the profile form:
   name, player id, password with "Generate", server address; saved in `HexRevivalSaves/online_profile.json`).
 - The online profile has its own account (`HexRevivalOnline/`, everything unlocked), separate from the offline
-  accounts; it sees every deck (decks outside the campaign are shared) and keeps its favorites for online play.
-  Offline accounts have no online feature at all.
-- The **lobby** is the online account's main screen: your deck (Favorites / All decks, "+" / "-" to mark one), the
+  accounts. Offline accounts have no online feature at all.
+- Decks: each deck remembers the account that created it (`decks_common.txt`, last field; older decks are "Shared
+  decks"). The online account edits only its own decks; the offline accounts' player decks are listed by account
+  and can be played, not edited. The decks made for the AI stay shared by everyone and are only offered as AI
+  opponents. Offline accounts do not see the online profile's player decks.
+- The **lobby** is the online account's main screen: your deck (Favorites / All decks by account, "+" / "-" to mark a
+  favorite), the
   challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
   buttons Deck editor, Game settings, Online profile, Switch account. It opens again after each game.
 - **Host a game** replaces the former Quick Match: your deck, then the opponent: "Player" opens the game in the lobby,
-  "AI" plays one of your decks (those made for the AI first; the encounters and the game's decks are not offered).
+  "AI" plays a deck made for the AI, listed by account (the encounters and the game's decks are not offered).
 - No cheat menu on the online account, and its option is hidden from the game's settings.
 - Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
 

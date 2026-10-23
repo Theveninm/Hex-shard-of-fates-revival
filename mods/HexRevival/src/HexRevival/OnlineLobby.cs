@@ -44,6 +44,8 @@ namespace HexRevival
         private bool m_EditingProfile;
         private float m_ReopenAfter;
         private HashSet<ulong> m_Favorites;
+        /// <summary>The player decks by account (the decks made for the AI are only opponents, see OfflineMenu).</summary>
+        private List<Decks.DeckGroup> m_Groups = new List<Decks.DeckGroup>();
         private List<Decks.DeckInfo> m_Decks = new List<Decks.DeckInfo>();
         private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
 
@@ -233,8 +235,9 @@ namespace HexRevival
         {
             OnlineLobby l = s_Instance;
             if (l == null) return;
-            l.m_Decks = Decks.List();
-            l.m_Decks.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            l.m_Groups = Decks.ByOwner(false);
+            l.m_Decks = new List<Decks.DeckInfo>();
+            foreach (Decks.DeckGroup g in l.m_Groups) l.m_Decks.AddRange(g.Decks);
             if (!l.m_Decks.Exists(d => d.Id == l.m_Deck))
                 l.m_Deck = l.m_Decks.Exists(d => d.Id == Decks.LastDeck) ? Decks.LastDeck : l.m_Decks.Count > 0 ? l.m_Decks[0].Id : UID.Invalid;
             l.m_Open = true;
@@ -276,15 +279,13 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] favorites: " + e.Message); }
         }
 
-        /// <summary>The game's system menu or options screen, opened from the lobby's "Settings".</summary>
+        /// <summary>The game's options screen, opened from the lobby's "Game settings".</summary>
         private static bool GameMenuShown()
         {
             try
             {
-                UIGameMenu gm = UIGameMenu.Instance();
-                if (gm != null && gm.Context != null && gm.Context.SystemMenuVisible) return true;
                 UIOptionsScreenViewModel o = FindObjectOfType<UIOptionsScreenViewModel>();
-                return o != null && o.m_Context != null && o.m_Context.OptionsScreenVisible;
+                return o != null && o.m_Context != null && o.IsVisible();
             }
             catch { return false; }
         }
@@ -292,7 +293,7 @@ namespace HexRevival
         private void ShowGameSettings()
         {
             Close();
-            try { UIGameMenu.Instance().OnShowOptions(); }
+            try { UISystem.SetTaggedUIElementVisible("OptionsScreen", true, true); }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] settings: " + e.Message); }
         }
 
@@ -384,35 +385,64 @@ namespace HexRevival
             }
         }
 
-        /// <summary>The deck to play: the favorites (when there are some), or every deck; "+" / "-" marks a favorite.</summary>
+        /// <summary>
+        /// The deck to play: the favorites (when there are some), or every player deck by account (the online profile's
+        /// own first, then each offline account's, which can be played but not edited here); "+" / "-" marks a favorite.
+        /// </summary>
         private void DrawDecks(Rect r)
         {
             float S = GameSkin.Scale;
             Controls.Frame(r, Loc.Get("online_your_deck"));
-            bool all = m_AllDecks || Favorites.Count == 0;
+            bool all = m_AllDecks || !m_Decks.Exists(d => Favorites.Contains(d.Id.GetInstanceId()));
             float tabW = (r.width - 28 * S) / 2f, tabY = r.y + 42 * S;
             if (GameSkin.Tab(new Rect(r.x + 14 * S, tabY, tabW, 30 * S), Loc.Get("online_favorites"), !all)) m_AllDecks = false;
             if (GameSkin.Tab(new Rect(r.x + 14 * S + tabW, tabY, tabW, 30 * S), Loc.Get("online_all_decks"), all)) m_AllDecks = true;
-            List<Decks.DeckInfo> decks = all ? m_Decks : m_Decks.FindAll(d => Favorites.Contains(d.Id.GetInstanceId()));
+
+            // Rows: a title per account, then its decks.
+            List<KeyValuePair<string, Decks.DeckInfo>> rows = new List<KeyValuePair<string, Decks.DeckInfo>>();
+            if (all)
+                foreach (Decks.DeckGroup g in m_Groups)
+                {
+                    rows.Add(new KeyValuePair<string, Decks.DeckInfo>(g.Title, null));
+                    foreach (Decks.DeckInfo d in g.Decks) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
+                }
+            else
+                foreach (Decks.DeckInfo d in m_Decks)
+                    if (Favorites.Contains(d.Id.GetInstanceId())) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
+
             Rect list = new Rect(r.x + 10 * S, tabY + 38 * S, r.width - 20 * S, r.yMax - tabY - 48 * S);
-            if (decks.Count == 0)
+            if (rows.Count == 0)
             {
                 GUI.Label(list, Loc.Get(m_Decks.Count == 0 ? "online_no_deck" : "online_no_favorite"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.MiddleCenter, true));
                 return;
             }
-            float rowH = 64 * S, fw = 34 * S;
-            m_ScrollDecks = Controls.List(list, m_ScrollDecks, decks.Count, rowH, i =>
+            float rowH = 64 * S, headH = 30 * S, gap = 4 * S, fw = 34 * S;
+            float contentH = 0;
+            foreach (KeyValuePair<string, Decks.DeckInfo> row in rows) contentH += (row.Value == null ? headH : rowH) + gap;
+            Rect view = new Rect(0, 0, list.width - 20 * S, contentH);
+            m_ScrollDecks = GUI.BeginScrollView(list, m_ScrollDecks, view, false, false, GUIStyle.none, contentH > list.height ? GameSkin.ScrollBar : GUIStyle.none);
+            float y = 0;
+            foreach (KeyValuePair<string, Decks.DeckInfo> row in rows)
             {
-                Decks.DeckInfo d = decks[i];
-                Rect row = new Rect(0, i * (rowH + 4 * S), list.width - 20 * S, rowH);
+                if (row.Value == null)
+                {
+                    // Separator: the account's name over a thin line.
+                    GameSkin.Label(new Rect(4 * S, y + 2 * S, view.width - 8 * S, headH - 6 * S), row.Key, GameSkin.Style("title", 14, GameSkin.GoldDim));
+                    GUI.DrawTexture(new Rect(4 * S, y + headH - 3 * S, view.width - 8 * S, 1), GameSkin.Solid(new Color(0.8f, 0.72f, 0.57f, 0.5f)));
+                    y += headH + gap;
+                    continue;
+                }
+                Decks.DeckInfo d = row.Value;
+                Rect rr = new Rect(0, y, view.width, rowH);
+                y += rowH + gap;
                 bool fav = Favorites.Contains(d.Id.GetInstanceId());
                 // The favorite button handles the click before the row (whose button covers it), and is drawn after it.
-                Rect fb = new Rect(row.xMax - fw - 8 * S, row.y + (rowH - fw) / 2f, fw, fw);
-                if (Event.current.type != EventType.Repaint && Controls.Small(fb, fav ? "-" : "+")) { ToggleFavorite(d.Id); return false; }
-                bool picked = GameSkin.Row(row, d.Name, Loc.Get("cards", d.Count), d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion), fw + 12 * S);
+                Rect fb = new Rect(rr.xMax - fw - 8 * S, rr.y + (rowH - fw) / 2f, fw, fw);
+                if (Event.current.type != EventType.Repaint && Controls.Small(fb, fav ? "-" : "+")) { ToggleFavorite(d.Id); continue; }
+                if (GameSkin.Row(rr, d.Name, Loc.Get("cards", d.Count), d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion), fw + 12 * S)) m_Deck = d.Id;
                 if (Event.current.type == EventType.Repaint) Controls.Small(fb, fav ? "-" : "+");
-                return picked;
-            }, i => m_Deck = decks[i].Id);
+            }
+            GUI.EndScrollView();
         }
 
         /// <summary>Challenges received first, then the open games (ours first), and "Create a game".</summary>
@@ -543,6 +573,7 @@ namespace HexRevival
                     return "accepted, deck " + l.m_Deck;
                 case "create": l.Send("create", "format", "constructed"); return "created, deck " + l.m_Deck;
                 case "host": OfflineMenu.Open(l.m_Deck); return "host menu";
+                case "settings": l.ShowGameSettings(); return "settings";
                 case "join":
                     OpenGame g = l.m_Games.Find(x => string.Equals(x.Name, arg, StringComparison.OrdinalIgnoreCase));
                     if (g == null) return "no game by " + arg;
