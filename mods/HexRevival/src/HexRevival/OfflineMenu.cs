@@ -49,9 +49,13 @@ namespace HexRevival
 
 
         /// <summary>Opens the menu with this deck selected (the lobby's), on the "Player" tab when connected.</summary>
-        public static void Open(UID deck)
+        /// <summary>The format of the game opened in the lobby (the "Player" tab); your decks are those valid for it.</summary>
+        private string m_HostFormat = OnlineFormats.Default;
+
+        public static void Open(UID deck, string format)
         {
             if (Instance == null) return;
+            if (!string.IsNullOrEmpty(format)) Instance.m_HostFormat = format;
             Instance.SetOpen(true);
             Entry e = Instance.m_MyDecks.Find(x => x.PlayerDeck == deck);
             if (e != null) Instance.m_SelMine = e;
@@ -166,7 +170,10 @@ namespace HexRevival
             m_Message = "";
             // Your deck: the player decks by account; the AI's: the decks made for the AI, by account too.
             Fill(m_MyDecks, Decks.ByOwner(false));
-            Fill(m_AiDecks, Decks.ByOwner(true));
+            // The AI's: the decks made for the AI, then the player decks.
+            List<Decks.DeckGroup> ai = Decks.ByOwner(true);
+            ai.AddRange(Decks.ByOwner(false));
+            Fill(m_AiDecks, ai);
             if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == m_SelMine.PlayerDeck);
             if (m_SelMine == null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks.Find(e => !e.Header);
             if (m_SelOpp != null && m_SelOpp.PlayerDeck != UID.Invalid) m_SelOpp = null;
@@ -183,6 +190,21 @@ namespace HexRevival
                 foreach (Decks.DeckInfo d in g.Decks)
                     list.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion), ForAI = d.ForAI, Own = g.Own });
             }
+        }
+
+        /// <summary>The decks valid for a format, with the titles of the accounts that keep some.</summary>
+        private static List<Entry> ValidFor(List<Entry> list, string format)
+        {
+            List<Entry> res = new List<Entry>();
+            Entry header = null;
+            foreach (Entry e in list)
+            {
+                if (e.Header) { header = e; continue; }
+                if (!OnlineFormats.Accepts(format, e.PlayerDeck)) continue;
+                if (header != null) { res.Add(header); header = null; }
+                res.Add(e);
+            }
+            return res;
         }
 
         /// <summary>A separator row: the account's name over a thin line.</summary>
@@ -472,8 +494,11 @@ namespace HexRevival
             {
                 // Another player: the game is opened in the lobby with the format and the deck chosen here.
                 Rect info = new Rect(right.x + 24 * S, tabY + 56 * S, right.width - 48 * S, right.yMax - tabY - 80 * S);
-                GameSkin.Label(new Rect(info.x, info.y, info.width, 30 * S), Loc.Get("online_format", Loc.Get("format_constructed")), GameSkin.Style("title", 19, GameSkin.Gold));
-                GUI.Label(new Rect(info.x, info.y + 40 * S, info.width, info.height - 40 * S),
+                string before = m_HostFormat;
+                m_HostFormat = Controls.Cycle(new Rect(info.x, info.y, info.width, 32 * S), Loc.Get("online_format_filter"), m_HostFormat, OnlineFormats.All, OnlineFormats.Name);
+                if (m_HostFormat != before && m_SelMine != null && !OnlineFormats.Accepts(m_HostFormat, m_SelMine.PlayerDeck)) m_SelMine = null;
+                GUI.Label(new Rect(info.x, info.y + 40 * S, info.width, 22 * S), Loc.Get("hint_format_" + m_HostFormat), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                GUI.Label(new Rect(info.x, info.y + 80 * S, info.width, info.height - 80 * S),
                     Loc.Get(OnlineLobby.Online ? "hint_player" : "hint_player_offline"), GameSkin.Style("body", 15, GameSkin.Text, TextAnchor.UpperLeft, true));
             }
             else
@@ -505,9 +530,9 @@ namespace HexRevival
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by - 4 * S, 180 * S, 52 * S), Loc.Get("close"))) SetOpen(false);
             if (m_Tab == Tab.Player)
             {
-                if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("host"), m_SelMine != null && OnlineLobby.Online))
+                if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("host"), m_SelMine != null && OnlineLobby.Online && OnlineFormats.Accepts(m_HostFormat, m_SelMine.PlayerDeck)))
                 {
-                    OnlineLobby.Host(m_SelMine.PlayerDeck, "constructed");
+                    OnlineLobby.Host(m_SelMine.PlayerDeck, m_HostFormat);
                     SetOpen(false);
                 }
             }
@@ -526,8 +551,10 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             float rowH = 72 * S, gap = 4 * S, newH = 54 * S;
+            // Against a player: only the decks valid for the game's format.
+            List<Entry> decks = m_Tab == Tab.Player ? ValidFor(m_MyDecks, m_HostFormat) : m_MyDecks;
             float contentH = newH + gap;
-            foreach (Entry e in m_MyDecks) contentH += (e.Header ? 30 * S : rowH) + gap;
+            foreach (Entry e in decks) contentH += (e.Header ? 30 * S : rowH) + gap;
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
@@ -543,9 +570,9 @@ namespace HexRevival
             float icon = 38 * S, iconGap = 6 * S, headH = 30 * S;
             float reserve = 2 * icon + iconGap + 14 * S;
             float y = newH + gap;
-            for (int i = 0; i < m_MyDecks.Count; i++)
+            for (int i = 0; i < decks.Count; i++)
             {
-                Entry e = m_MyDecks[i];
+                Entry e = decks[i];
                 if (e.Header) { DrawHeader(new Rect(0, y, view.width, headH), e.Label); y += headH + gap; continue; }
                 Rect r = new Rect(0, y, view.width, rowH);
                 y += rowH + gap;

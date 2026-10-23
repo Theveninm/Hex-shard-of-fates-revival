@@ -1109,6 +1109,19 @@ namespace HexRevival
                         });
                         return "tutorial: " + scene.GetType().Name;
                     }
+                case "decknew":   // dev: "decknew <name> <game deck search>": a player deck of the account, copied from a game deck
+                    {
+                        if (parts.Length < 3) return "usage: decknew <name> <game deck search>";
+                        string q = string.Join(" ", parts, 2, parts.Length - 2).ToLowerInvariant();
+                        foreach (Reckoning.Game.DeckTemplate t in Singleton<Reckoning.Game.TemplateManager>.Instance.Decks.Values)
+                        {
+                            if (t == null || !t.m_ChampionId.IsValid || string.IsNullOrEmpty(t.m_DeckName) || t.m_DeckName.ToLowerInvariant().IndexOf(q, StringComparison.Ordinal) < 0) continue;
+                            Game.Shared.Domain.deck_bits b = Decks.CreateFromTemplate(parts[1], t);
+                            try { GameClient.Instance.PlayerProfile.AddDeck(b); } catch (Exception e) { return "created " + b.Id + ", profile: " + e.Message; }
+                            return "created deck " + b.Id + " '" + parts[1] + "' from " + t.m_DeckName;
+                        }
+                        return "no game deck matching " + q;
+                    }
                 case "accountnew":   // dev: shows the "new account" screen of the account menu (login screen)
                     {
                         AccountMenu am = UnityEngine.Object.FindObjectOfType<AccountMenu>();

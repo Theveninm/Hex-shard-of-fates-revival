@@ -5,7 +5,9 @@ registration, lobby, chat, challenge, then a full constructed game played to the
 dev command `aiplay`), back to the lobby afterwards.
 
 Known limits of the prototype:
-- constructed format only, no gems/equipment check, no online rewards (solo rewards are skipped online);
+- the format is checked by each player's game, not by the host; no gems/equipment check; no online rewards (solo
+  rewards are skipped online); a guest playing a campaign deck plays it with the default champion (only the host's
+  campaign champion is sent);
 - if a player leaves during a game, the other one gets a notice and must leave the battle themselves;
 - no reconnection, no chess clock (the solo "never expires" rule applies);
 - the host runs the rules, so a modified host could cheat (hidden information stays hidden: the guest only
@@ -31,16 +33,22 @@ Known limits of the prototype:
   name, player id, password with "Generate", server address; saved in `HexRevivalSaves/online_profile.json`).
 - The online profile has its own account (`HexRevivalOnline/`, everything unlocked), separate from the offline
   accounts. Offline accounts have no online feature at all.
-- Decks: each deck remembers the account that created it (`decks_common.txt`, last field; older decks are "Shared
-  decks"). The online account edits only its own decks; the offline accounts' player decks are listed by account
-  and can be played, not edited. The decks made for the AI stay shared by everyone and are only offered as AI
-  opponents. Offline accounts do not see the online profile's player decks.
+- Decks (user's choice, 2026-10-23): **each account has its own decks** (campaign and player decks, in its save);
+  nothing is shared between offline accounts any more, except the decks made for the AI (`decks_common.txt`), which
+  are AI opponents. The online account edits only its own decks and plays every offline account's decks, campaign
+  ones included (with their PvE champion), listed by account; they cannot be edited from there. Player decks shared
+  before this change are copied into each account at its first login.
+- **Formats** (the server knows the same list): `immortal`, `standard`, `pve` (PvE cards and campaign champions)
+  checked with the game's own deck validator (every card owned online), and `free` (any deck). A game in the lobby
+  shows its format; the deck list has a format filter; clicking a game or a challenge selects its format, and
+  Join / Accept need a deck valid for it. "Host a game" picks the format and lists only the decks valid for it.
 - The **lobby** is the online account's main screen: your deck (Favorites / All decks by account, "+" / "-" to mark a
   favorite), the
   challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
   buttons Deck editor, Game settings, Online profile, Switch account. It opens again after each game.
-- **Host a game** replaces the former Quick Match: your deck, then the opponent: "Player" opens the game in the lobby,
-  "AI" plays a deck made for the AI, listed by account (the encounters and the game's decks are not offered).
+- **Host a game** replaces the former Quick Match: your deck, then the opponent: "Player" opens the game in the lobby
+  (in the chosen format), "AI" plays a deck made for the AI or a player deck, listed by account (the encounters and
+  the game's decks are not offered).
 - No cheat menu on the online account, and its option is hidden from the game's settings.
 - Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
 

@@ -94,7 +94,7 @@ print("chat: ok")
 
 # Relay before a match is ignored, then challenge -> accept -> match.
 a.send(RELAY, b"ignored")
-a.msg(t="challenge", to=b_id, format="constructed")
+a.msg(t="challenge", to=b_id, format="immortal")
 a.expect("challenge_sent")
 assert b.expect("challenged")["from"] == a_id
 b.msg(t="accept", **{"from": a_id})
@@ -120,7 +120,7 @@ assert a.expect("match_end")["reason"] == "left"
 print("leave: ok")
 
 # Open game: b creates, a sees it and joins, b hosts.
-b.msg(t="create", format="constructed")
+b.msg(t="create", format="immortal")
 g = a.expect("game_added")["game"]
 assert g["host"] == b_id
 a.msg(t="join", game=g["id"])

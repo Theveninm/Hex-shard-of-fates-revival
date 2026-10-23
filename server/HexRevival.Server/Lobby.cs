@@ -30,7 +30,7 @@ public sealed class OpenGame(int id, string format, Connection creator)
 /// </summary>
 public sealed class Lobby
 {
-    public static readonly string[] Formats = ["constructed"];
+    public static readonly string[] Formats = ["immortal", "standard", "pve", "free"];
     private static readonly TimeSpan ChallengeLifetime = TimeSpan.FromSeconds(60);
     private const int MaxChat = 300;
 

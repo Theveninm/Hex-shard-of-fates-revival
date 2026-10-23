@@ -28,12 +28,20 @@ namespace HexRevival
         private static AccountMenu s_Instance;
         private void Awake() { s_Instance = this; }
 
-        /// <summary>Dev: "profile edit|list": the screen shown.</summary>
+        /// <summary>Dev: "profile edit|list" (the screen shown), "profile play &lt;account&gt;|online", "profile logout".</summary>
         public static string Command(string[] parts)
         {
             if (s_Instance == null) return "no menu";
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "profile") s_Instance.EditProfile();
+            else if (sub == "play" && parts.Length > 2)
+            {
+                // Dev: logs in with an offline account (created, everything unlocked, if missing) or "online".
+                string name = string.Join(" ", parts, 2, parts.Length - 2);
+                s_Instance.Play(name == "online" ? Saves.Online : Saves.FindOrCreate(name));
+                return "logging in " + name;
+            }
+            else if (sub == "logout") { Singleton<Main>.Instance.RequestLogOut(); return "logging out"; }
             else s_Instance.m_Screen = Screen.List;
             OnlineProfile op = OnlineProfile.Current;
             return s_Instance.m_Screen + " - " + op.Name + " " + op.PlayerId;

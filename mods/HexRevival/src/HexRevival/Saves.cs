@@ -50,6 +50,9 @@ namespace HexRevival
 
         private static string RootDir { get { return Path.Combine(LocalServer.Root, "HexRevivalSaves"); } }
 
+        /// <summary>The folder of a save.</summary>
+        public static string FolderOf(Info i) { return i.Folder ?? Path.Combine(RootDir, i.Name); }
+
         /// <summary>Path of a file of the current save.</summary>
         public static string File(string name)
         {

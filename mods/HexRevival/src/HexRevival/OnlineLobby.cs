@@ -33,7 +33,15 @@ namespace HexRevival
         private string m_ChatInput = "";
         private string m_Message;
         private string m_ChallengedId;                      // our challenge waiting for an answer
-        private readonly Dictionary<string, string> m_Challenges = new Dictionary<string, string>();   // id -> name of who challenged us
+        private class ChallengeIn
+        {
+            public string Name, Format;
+        }
+
+        /// <summary>Who challenged us (player id -> name and format).</summary>
+        private readonly Dictionary<string, ChallengeIn> m_Challenges = new Dictionary<string, ChallengeIn>();
+        /// <summary>The format the deck list shows ("" every deck); joining or answering a game of a format selects it.</summary>
+        private string m_Format = "";
         private readonly List<OpenGame> m_Games = new List<OpenGame>();
         private UID m_Deck = UID.Invalid;
         private Vector2 m_ScrollPlayers, m_ScrollChat, m_ScrollGames, m_ScrollDecks;
@@ -143,7 +151,7 @@ namespace HexRevival
                     AddChat((string)m["name"] + ": " + (string)m["text"]);
                     break;
                 case "challenged":
-                    m_Challenges[(string)m["from"]] = (string)m["name"];
+                    m_Challenges[(string)m["from"]] = new ChallengeIn { Name = (string)m["name"], Format = (string)m["format"] ?? OnlineFormats.Default };
                     AddChat(Loc.Get("online_challenged", (string)m["name"]));
                     if (!m_Open) Notices.Show(Loc.Get("online_challenged", (string)m["name"]));
                     break;
@@ -209,7 +217,8 @@ namespace HexRevival
             JObject msg = new JObject();
             msg["t"] = "challenge";
             msg["to"] = id;
-            msg["format"] = "constructed";
+            // The format the deck list shows (any deck: free).
+            msg["format"] = string.IsNullOrEmpty(m_Format) ? "free" : m_Format;
             m_Net.Send(msg);
         }
 
@@ -235,6 +244,7 @@ namespace HexRevival
         {
             OnlineLobby l = s_Instance;
             if (l == null) return;
+            OnlineFormats.ClearCache();   // the deck editor may have changed decks
             l.m_Groups = Decks.ByOwner(false);
             l.m_Decks = new List<Decks.DeckInfo>();
             foreach (Decks.DeckGroup g in l.m_Groups) l.m_Decks.AddRange(g.Decks);
@@ -318,6 +328,7 @@ namespace HexRevival
             OnlineLobby l = s_Instance;
             if (l == null) return;
             l.m_Deck = deck;
+            l.m_Format = format;
             l.Send("create", "format", format);
         }
 
@@ -394,7 +405,12 @@ namespace HexRevival
             float S = GameSkin.Scale;
             Controls.Frame(r, Loc.Get("online_your_deck"));
             bool all = m_AllDecks || !m_Decks.Exists(d => Favorites.Contains(d.Id.GetInstanceId()));
-            float tabW = (r.width - 28 * S) / 2f, tabY = r.y + 42 * S;
+            // Format: only the decks valid for it.
+            string[] formats = new string[OnlineFormats.All.Length + 1];
+            formats[0] = "";
+            OnlineFormats.All.CopyTo(formats, 1);
+            m_Format = Controls.Cycle(new Rect(r.x + 14 * S, r.y + 42 * S, r.width - 28 * S, 30 * S), Loc.Get("online_format_filter"), m_Format, formats, OnlineFormats.Name);
+            float tabW = (r.width - 28 * S) / 2f, tabY = r.y + 78 * S;
             if (GameSkin.Tab(new Rect(r.x + 14 * S, tabY, tabW, 30 * S), Loc.Get("online_favorites"), !all)) m_AllDecks = false;
             if (GameSkin.Tab(new Rect(r.x + 14 * S + tabW, tabY, tabW, 30 * S), Loc.Get("online_all_decks"), all)) m_AllDecks = true;
 
@@ -403,17 +419,19 @@ namespace HexRevival
             if (all)
                 foreach (Decks.DeckGroup g in m_Groups)
                 {
+                    List<Decks.DeckInfo> valid = g.Decks.FindAll(d => OnlineFormats.Accepts(m_Format, d.Id));
+                    if (valid.Count == 0) continue;
                     rows.Add(new KeyValuePair<string, Decks.DeckInfo>(g.Title, null));
-                    foreach (Decks.DeckInfo d in g.Decks) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
+                    foreach (Decks.DeckInfo d in valid) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
                 }
             else
                 foreach (Decks.DeckInfo d in m_Decks)
-                    if (Favorites.Contains(d.Id.GetInstanceId())) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
+                    if (Favorites.Contains(d.Id.GetInstanceId()) && OnlineFormats.Accepts(m_Format, d.Id)) rows.Add(new KeyValuePair<string, Decks.DeckInfo>(null, d));
 
             Rect list = new Rect(r.x + 10 * S, tabY + 38 * S, r.width - 20 * S, r.yMax - tabY - 48 * S);
             if (rows.Count == 0)
             {
-                GUI.Label(list, Loc.Get(m_Decks.Count == 0 ? "online_no_deck" : "online_no_favorite"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.MiddleCenter, true));
+                GUI.Label(list, Loc.Get(m_Decks.Count == 0 ? "online_no_deck" : m_Format != "" ? "online_no_valid_deck" : "online_no_favorite"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.MiddleCenter, true));
                 return;
             }
             float rowH = 64 * S, headH = 30 * S, gap = 4 * S, fw = 34 * S;
@@ -439,7 +457,8 @@ namespace HexRevival
                 // The favorite button handles the click before the row (whose button covers it), and is drawn after it.
                 Rect fb = new Rect(rr.xMax - fw - 8 * S, rr.y + (rowH - fw) / 2f, fw, fw);
                 if (Event.current.type != EventType.Repaint && Controls.Small(fb, fav ? "-" : "+")) { ToggleFavorite(d.Id); continue; }
-                if (GameSkin.Row(rr, d.Name, Loc.Get("cards", d.Count), d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion), fw + 12 * S)) m_Deck = d.Id;
+                string detail = Loc.Get("cards", d.Count) + (d.Campaign ? " - " + Loc.Get("deck_campaign") : "");
+                if (GameSkin.Row(rr, d.Name, detail, d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion), fw + 12 * S)) m_Deck = d.Id;
                 if (Event.current.type == EventType.Repaint) Controls.Small(fb, fav ? "-" : "+");
             }
             GUI.EndScrollView();
@@ -456,12 +475,12 @@ namespace HexRevival
             // "Host a game": against a player (opened here) or against the AI, works offline too.
             if (mine == null)
             {
-                if (GameSkin.GreenButton(create, Loc.Get("host_game"), true, 18)) OfflineMenu.Open(m_Deck);
+                if (GameSkin.GreenButton(create, Loc.Get("host_game"), true, 18)) OfflineMenu.Open(m_Deck, m_Format);
             }
             else if (GameSkin.RedButton(create, Loc.Get("online_close_game"), 18)) Send("close");
 
             // One list: challenges, our game, the others' games.
-            List<KeyValuePair<string, string>> challenges = new List<KeyValuePair<string, string>>(m_Challenges);
+            List<KeyValuePair<string, ChallengeIn>> challenges = new List<KeyValuePair<string, ChallengeIn>>(m_Challenges);
             List<OpenGame> games = new List<OpenGame>();
             if (mine != null) games.Add(mine);
             games.AddRange(m_Games.FindAll(g => g != mine));
@@ -476,20 +495,25 @@ namespace HexRevival
                 Rect b1 = new Rect(row.xMax - bw - 6 * S, row.y + 7 * S, bw, row.height - 14 * S), b2 = new Rect(b1.x - bw - 6 * S, b1.y, bw, b1.height);
                 GameSkin.Sprite(row, "A_Buttons", "Button_Bar_Main_Mid");
                 Rect text = new Rect(row.x + 14 * S, row.y, b2.x - row.x - 20 * S, row.height);
+                // The buttons handle their click before the row's own (which shows the decks valid for its format).
                 if (i < challenges.Count)
                 {
-                    KeyValuePair<string, string> c = challenges[i];
-                    GameSkin.Label(new Rect(text.x, text.y + 4 * S, text.width, 26 * S), Loc.Get("online_challenge_row", c.Value), GameSkin.Style("title", 15, GameSkin.Gold));
-                    GUI.Label(new Rect(text.x, text.y + 28 * S, text.width, 22 * S), Loc.Get("format_constructed"), GameSkin.Style("body", 13, GameSkin.Muted));
-                    if (GameSkin.GreenButton(b1, Loc.Get("online_accept"), ready, 14)) Send("accept", "from", c.Key);
+                    KeyValuePair<string, ChallengeIn> c = challenges[i];
+                    bool valid = ready && OnlineFormats.Accepts(c.Value.Format, m_Deck);
+                    if (GameSkin.GreenButton(b1, Loc.Get("online_accept"), valid, 14)) Send("accept", "from", c.Key);
                     if (GameSkin.RedButton(b2, Loc.Get("online_decline"), 14)) { Send("decline", "from", c.Key); m_Challenges.Remove(c.Key); }
+                    GameSkin.Label(new Rect(text.x, text.y + 4 * S, text.width, 26 * S), Loc.Get("online_challenge_row", c.Value.Name), GameSkin.Style("title", 15, GameSkin.Gold));
+                    GUI.Label(new Rect(text.x, text.y + 28 * S, text.width, 22 * S), OnlineFormats.Name(c.Value.Format) + (ready && !valid ? " - " + Loc.Get("online_deck_not_valid") : ""), GameSkin.Style("body", 13, GameSkin.Muted));
+                    if (GUI.Button(text, GUIContent.none, GUIStyle.none)) m_Format = c.Value.Format;
                     return false;
                 }
                 OpenGame g = games[i - challenges.Count];
                 bool own = g == mine;
+                bool ok = ready && OnlineFormats.Accepts(g.Format, m_Deck);
+                if (!own && GameSkin.GreenButton(b1, Loc.Get("online_join_game"), ok, 14)) Send("join", "game", g.Id);
                 GameSkin.Label(new Rect(text.x, text.y + 4 * S, text.width, 26 * S), own ? Loc.Get("online_your_game") : g.Name, GameSkin.Style("title", 15, GameSkin.Gold));
-                GUI.Label(new Rect(text.x, text.y + 28 * S, text.width, 22 * S), Loc.Get("format_" + g.Format) + (own ? " - " + Loc.Get("online_waiting") : ""), GameSkin.Style("body", 13, GameSkin.Muted));
-                if (!own && GameSkin.GreenButton(b1, Loc.Get("online_join_game"), ready, 14)) Send("join", "game", g.Id);
+                GUI.Label(new Rect(text.x, text.y + 28 * S, text.width, 22 * S), OnlineFormats.Name(g.Format) + (own ? " - " + Loc.Get("online_waiting") : ready && !ok ? " - " + Loc.Get("online_deck_not_valid") : ""), GameSkin.Style("body", 13, GameSkin.Muted));
+                if (GUI.Button(text, GUIContent.none, GUIStyle.none)) m_Format = g.Format;
                 return false;
             }, i => { });
         }
@@ -515,7 +539,7 @@ namespace HexRevival
                 {
                     if (GameSkin.RedButton(b, Loc.Get("cancel"), 13)) { Send("cancel"); m_ChallengedId = null; }
                 }
-                else if (GameSkin.GoldButton(b, Loc.Get("online_challenge"), Online && m_Deck.IsValid() && m_ChallengedId == null, 13)) Challenge(p.Id);
+                else if (GameSkin.GoldButton(b, Loc.Get("online_challenge"), Online && OnlineFormats.Accepts(m_Format, m_Deck) && m_ChallengedId == null, 13)) Challenge(p.Id);
                 return false;
             }, i => { });
         }
@@ -571,8 +595,37 @@ namespace HexRevival
                     if (target == null) return "no player " + arg;
                     l.Send("accept", "from", target.Id);
                     return "accepted, deck " + l.m_Deck;
-                case "create": l.Send("create", "format", "constructed"); return "created, deck " + l.m_Deck;
-                case "host": OfflineMenu.Open(l.m_Deck); return "host menu";
+                case "create": l.Send("create", "format", arg.Length > 0 ? arg : OnlineFormats.Default); return "created, deck " + l.m_Deck;
+                case "host": OfflineMenu.Open(l.m_Deck, l.m_Format); return "host menu";
+                case "format": l.m_Format = arg; return "format '" + arg + "'";
+                case "deck":
+                    Decks.DeckInfo dk = l.m_Decks.Find(x => string.Equals(x.Name, arg, StringComparison.OrdinalIgnoreCase));
+                    if (dk == null) return "no deck " + arg;
+                    l.m_Deck = dk.Id;
+                    return "deck " + dk.Id;
+                case "decks":
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    foreach (Decks.DeckGroup gr in Decks.ByOwner(false))
+                    {
+                        sb.Append("[").Append(gr.Title).Append("]\n");
+                        foreach (Decks.DeckInfo d in gr.Decks)
+                        {
+                            sb.Append("  ").Append(d.Name).Append(" ").Append(d.Id).Append(d.Campaign ? " campaign" : "").Append(" :");
+                            foreach (string f in OnlineFormats.All)
+                            {
+                                List<string> errors = new List<string>();
+                                bool ok = OnlineFormats.Validate(f, d.Id, errors);
+                                sb.Append(" ").Append(f).Append(ok ? "=ok" : "=no(" + string.Join(";", errors.ToArray()) + ")");
+                            }
+                            sb.Append("\n");
+                        }
+                    }
+                    foreach (Decks.DeckGroup gr in Decks.ByOwner(true))
+                    {
+                        sb.Append("[").Append(gr.Title).Append("]\n");
+                        foreach (Decks.DeckInfo d in gr.Decks) sb.Append("  ").Append(d.Name).Append(" ").Append(d.Id).Append("\n");
+                    }
+                    return sb.ToString();
                 case "settings": l.ShowGameSettings(); return "settings";
                 case "join":
                     OpenGame g = l.m_Games.Find(x => string.Equals(x.Name, arg, StringComparison.OrdinalIgnoreCase));
@@ -585,7 +638,7 @@ namespace HexRevival
             List<string> games = l.m_Games.ConvertAll(g => g.Name + ":" + g.Format);
             return (l.m_Net == null ? "offline" : l.m_Net.State.ToString()) + " open=" + l.m_Open + " msg=" + l.m_Message + " match=" + OnlineMatch.Current
                 + " players: " + string.Join(", ", names.ToArray()) + " games: " + string.Join(", ", games.ToArray())
-                + " challenges: " + string.Join(", ", new List<string>(l.m_Challenges.Values).ToArray());
+                + " challenges: " + string.Join(", ", new List<ChallengeIn>(l.m_Challenges.Values).ConvertAll(c => c.Name + ":" + c.Format).ToArray());
         }
     }
 }
