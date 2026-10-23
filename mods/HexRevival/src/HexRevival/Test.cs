@@ -528,7 +528,11 @@ namespace HexRevival
                         // Developer shortcut: the most recently played account (the account menu is skipped).
                         // A second instance ("-hexinstance N") plays its own account, never the first one's save.
                         if (Saves.Current == null && Instance.Id > 0) Saves.Select(Saves.FindOrCreate("Instance" + Instance.Id));
-                        if (Saves.Current == null) { List<Saves.Info> saves = Saves.List(); Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline")); }
+                        if (Saves.Current == null)
+                        {
+                            List<Saves.Info> saves = Saves.List().FindAll(x => !x.Name.StartsWith("Instance", StringComparison.Ordinal));
+                            Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline"));
+                        }
                         login.LoginToGame();
                     }
                 }
@@ -626,7 +630,7 @@ namespace HexRevival
                     if (cmd.Length == 0) continue;
                     resp.Add("> " + cmd);
                     try { resp.Add(Execute(gc, cmd)); }
-                    catch (Exception e) { resp.Add("ERR " + e.Message); }
+                    catch (Exception e) { resp.Add("ERR " + e.Message); Debug.LogWarning("[HexRevival] command failed: " + e); }
                 }
                 try { File.WriteAllLines(m_RespPath, resp.ToArray()); } catch { }
             }

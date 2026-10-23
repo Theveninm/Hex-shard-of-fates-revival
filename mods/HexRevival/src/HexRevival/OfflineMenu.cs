@@ -141,7 +141,7 @@ namespace HexRevival
             {
                 Refresh();
                 // Blocks clicks to the game interface under the menu.
-                foreach (UICamera c in UICamera.list.ToArray())
+                foreach (UICamera c in Controls.UiCameras())
                     if (c != null && c.enabled) { c.enabled = false; m_DisabledUi.Add(c); }
             }
             else
@@ -300,6 +300,19 @@ namespace HexRevival
                 new Color(0.55f, 0.75f, 1f), new Color(0.72f, 0.85f, 1f), new Color(0.38f, 0.55f, 0.8f), OnlineLobby.Open);
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
+            TightenColumn(vm.MenuUI.Campaign.transform.parent);
+        }
+
+        private static UIGrid s_Tightened;
+
+        /// <summary>Seven buttons do not fit the column's spacing above the bottom bar: the rows get closer (once).</summary>
+        private static void TightenColumn(Transform column)
+        {
+            UIGrid grid = column != null ? column.GetComponent<UIGrid>() : null;
+            if (grid == null || ReferenceEquals(grid, s_Tightened)) return;
+            s_Tightened = grid;
+            grid.cellHeight *= 0.86f;
+            grid.Reposition();
         }
 
         /// <summary>A copy of the Campaign button, colored, added at the end of the main menu's column (once).</summary>

@@ -53,7 +53,7 @@ namespace HexRevival
             bool over = LoggedIn() && (m_ToggleRect.Contains(mouse) || (m_Open && m_PanelRect.Contains(mouse)));
             if (over && m_DisabledUi.Count == 0)
             {
-                foreach (UICamera c in UICamera.list.ToArray())
+                foreach (UICamera c in Controls.UiCameras())
                     if (c != null && c.enabled) { c.enabled = false; m_DisabledUi.Add(c); }
             }
             else if (!over && m_DisabledUi.Count > 0)

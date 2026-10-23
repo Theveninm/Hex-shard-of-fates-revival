@@ -135,6 +135,7 @@ namespace HexRevival
             { "online_format", new[] { "Format: {0}", "Format : {0}" } },
             { "hint_player", new[] { "Your game appears in the lobby's open games; the first player who joins it plays against you. You host it: keep the game open until the end.", "Votre partie apparaît dans les parties ouvertes du lobby ; le premier joueur qui la rejoint vous affronte. C'est vous qui l'hébergez : gardez le jeu ouvert jusqu'à la fin." } },
             { "hint_player_offline", new[] { "Not connected to the server: you can still play against the AI (other tabs).", "Pas connecté au serveur : vous pouvez quand même jouer contre l'IA (autres onglets)." } },
+            { "online_your_deck", new[] { "Your deck", "Votre deck" } },
             { "online_play", new[] { "Online play", "Jeu en ligne" } },
             { "online_play_tip", new[] { "Play against other players: open games, challenges, chat.", "Jouer contre d'autres joueurs : parties ouvertes, défis, chat." } },
             { "online_title", new[] { "Online play", "Jeu en ligne" } },

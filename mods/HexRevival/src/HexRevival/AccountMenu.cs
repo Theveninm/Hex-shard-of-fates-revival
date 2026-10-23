@@ -74,7 +74,7 @@ namespace HexRevival
         {
             if (block && m_DisabledUi.Count == 0)
             {
-                foreach (UICamera c in UICamera.list.ToArray())
+                foreach (UICamera c in Controls.UiCameras())
                     if (c != null && c.enabled) { c.enabled = false; m_DisabledUi.Add(c); }
             }
             else if (!block && m_DisabledUi.Count > 0)

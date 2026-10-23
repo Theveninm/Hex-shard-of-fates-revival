@@ -266,9 +266,9 @@ namespace HexRevival
             top += 36 * S;
 
             float w = win.width - 2 * pad - 2 * gap;
-            Rect left = new Rect(win.x + pad, top, w * 0.28f, bottom - top);
-            Rect mid = new Rect(left.xMax + gap, top, w * 0.38f, bottom - top);
-            Rect right = new Rect(mid.xMax + gap, top, w * 0.34f, bottom - top);
+            Rect left = new Rect(win.x + pad, top, w * 0.31f, bottom - top);
+            Rect mid = new Rect(left.xMax + gap, top, w * 0.36f, bottom - top);
+            Rect right = new Rect(mid.xMax + gap, top, w * 0.33f, bottom - top);
             DrawDecks(left);
             DrawGames(mid);
             float playersH = right.height * 0.42f;
@@ -281,7 +281,7 @@ namespace HexRevival
         private void DrawDecks(Rect r)
         {
             float S = GameSkin.Scale;
-            Controls.Frame(r, Loc.Get("your_deck"));
+            Controls.Frame(r, Loc.Get("online_your_deck"));
             Rect list = new Rect(r.x + 10 * S, r.y + 46 * S, r.width - 20 * S, r.height - 56 * S);
             if (m_Decks.Count == 0)
             {
@@ -397,7 +397,7 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Dev: "online open|close|connect|disconnect|status|chat &lt;text&gt;|challenge &lt;name&gt;|accept &lt;name&gt;|create|join &lt;name&gt;|leave".</summary>
+        /// <summary>Dev: "online open|close|host|connect|disconnect|status|chat &lt;text&gt;|challenge &lt;name&gt;|accept &lt;name&gt;|create|join &lt;name&gt;|leave".</summary>
         public static string Command(string[] parts)
         {
             OnlineLobby l = s_Instance;
@@ -422,6 +422,7 @@ namespace HexRevival
                     l.Send("accept", "from", target.Id);
                     return "accepted, deck " + l.m_Deck;
                 case "create": l.Send("create", "format", "constructed"); return "created, deck " + l.m_Deck;
+                case "host": OfflineMenu.Open(l.m_Deck); return "host menu";
                 case "join":
                     OpenGame g = l.m_Games.Find(x => string.Equals(x.Name, arg, StringComparison.OrdinalIgnoreCase));
                     if (g == null) return "no game by " + arg;
