@@ -48,7 +48,7 @@ Known limits of the prototype:
   newer version to download: players with different versions may not be able to play together), your deck (Favorites / All decks by account, "+" / "-" to mark a
   favorite), the
   challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
-  buttons Deck editor, Game settings, Online profile, Switch account. It opens again after each game.
+  buttons Deck editor, Game settings, Online profile, Switch account (also Esc). It opens again after each game.
 - **Host a game** replaces the former Quick Match: your deck, then the opponent: "Player" opens the game in the lobby
   (in the chosen format), "AI" plays a deck made for the AI or a player deck, listed by account (the encounters and
   the game's decks are not offered).
@@ -91,6 +91,11 @@ The game's Unity version cannot do modern TLS, so the password never travels:
    (`iterations` is announced in `hello`; SHA1 because .NET 3.5 only has that one).
 3. `register` sends the key once; `login` sends `HMAC-SHA256(key, nonce)` where the nonce is random per connection.
 4. The server stores the key, never the password.
+
+Names are unique: compared without case, spaces, `_` and `-` ("Some_One" is "some one"), and the names listed in
+`reserved_names.txt` (data folder, created with admin, moderator, HEX Revival...; read again when edited) cannot be
+taken. A refused name at registration or at login (renaming) opens the profile form with the reason; the client always
+shows the name the server confirms (`welcome`).
 
 Limit: someone able to read the traffic of the **registration** could log in as that player. Fine for a community
 prototype; a TLS tunnel (stunnel) or a key exchange can be added later without changing the accounts.
