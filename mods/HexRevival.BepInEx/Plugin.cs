@@ -92,6 +92,11 @@ namespace HexRevival
             apply("StandaloneGameClient.SendStartEncounter", () => Prefix(harmony, typeof(StandaloneGameClient), "SendStartEncounter",
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
+            // Online guest: joins the host's game, its actions go to the host (see OnlineMatch).
+            apply("StandaloneGameClient.SendJoinSession (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendJoinSession", null, "Online_JoinSession"));
+            apply("StandaloneGameClient.SendReadyToStartGame (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendReadyToStartGame", null, "Online_ReadyToStart"));
+            apply("SessionClient.PumpSyncEventQueue", () => Prefix(harmony, typeof(Game.Client.SessionClient), "PumpSyncEventQueue", Type.EmptyTypes, "Session_PumpSync"));
+            apply("StandaloneGameClient.SendSessionTransaction (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendSessionTransaction", null, "Online_SessionTransaction"));
             apply("UILandingPageContext.OnClickChallengeAI", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickChallengeAI", Type.EmptyTypes, "UILandingPage_OnClickChallengeAI"));
 
             // Local campaign service: the client's campaign requests are answered by Campaign.
@@ -297,6 +302,49 @@ namespace HexRevival
             if (s_Initialized) return;
             s_Initialized = true;
             Bootstrap.Init();
+        }
+
+        public static bool Online_JoinSession(StandaloneGameClient __instance)
+        {
+            if (!OnlineMatch.IsGuest) return true;
+            try { OnlineMatch.GuestJoinSession(__instance); }
+            catch (Exception e) { Plugin.Log.LogError("Online join: " + e); }
+            return false;
+        }
+
+        private static FieldInfo s_SyncQueue, s_Responded;
+
+        /// <summary>
+        /// A packet from the server answers the last transaction as soon as the game starts handling it. The game only
+        /// marked it after all the packet's events, so an AI answering one of them (a triggered ability's targets) was
+        /// refused as "still waiting for the server" and the game stopped.
+        /// </summary>
+        public static void Session_PumpSync(Game.Client.SessionClient __instance)
+        {
+            if (s_SyncQueue == null)
+            {
+                s_SyncQueue = AccessTools.Field(typeof(Game.Client.SessionClient), "m_SyncEventsQueue");
+                s_Responded = AccessTools.Field(typeof(ClientSessionBase), "m_HasPreviousTransactionBeenRespondedByServer");
+            }
+            System.Collections.ICollection q = s_SyncQueue.GetValue(__instance) as System.Collections.ICollection;
+            if (q != null && q.Count > 0) s_Responded.SetValue(__instance, true);
+        }
+
+        public static bool Online_ReadyToStart() { return !OnlineMatch.IsGuest; }
+
+        private static FieldInfo s_SessionServer;
+
+        public static bool Online_SessionTransaction(StandaloneGameClient __instance, Game.Shared.Mechanics.Transactions.Transaction __0)
+        {
+            if (!OnlineMatch.IsGuest)
+            {
+                // Right after an online game the guest has no session to send to.
+                if (s_SessionServer == null) s_SessionServer = AccessTools.Field(typeof(StandaloneGameClient), "m_SessionServer");
+                return s_SessionServer.GetValue(__instance) != null;
+            }
+            try { OnlineMatch.SendTransaction(__0); }
+            catch (Exception e) { Plugin.Log.LogError("Online transaction: " + e); }
+            return false;
         }
 
         public static bool Steamy_IsRunningSteam(ref bool __result)

@@ -44,7 +44,8 @@ public sealed class Connection
         _tcp = tcp;
         _lobby = lobby;
         _accounts = accounts;
-        Ip = ((IPEndPoint)tcp.Client.RemoteEndPoint!).Address;
+        var ip = ((IPEndPoint)tcp.Client.RemoteEndPoint!).Address;
+        Ip = ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip;
     }
 
     public string Label => Account != null ? $"{Account.Name} ({Ip})" : Ip.ToString();

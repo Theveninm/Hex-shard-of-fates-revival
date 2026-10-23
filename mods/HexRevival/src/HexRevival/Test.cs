@@ -54,6 +54,8 @@ namespace HexRevival
         /// </summary>
         private void CheckStall(StandaloneGameClient gc, StandaloneSession ss, string line)
         {
+            // Online, waiting for the other player is normal (and the guest has no session).
+            if (OnlineMatch.Current != OnlineMatch.Role.None) return;
             if (!m_AutoAI || ReferenceEquals(gc.Player, null) || ReferenceEquals(gc.Player.AITactical, null)
                 || (!ReferenceEquals(UIBattle.Instance, null) && UIBattle.Instance.GameOver))
             {
@@ -159,6 +161,7 @@ namespace HexRevival
                 go.AddComponent<Spectator>();
                 go.AddComponent<AiDecksWindow>();
                 go.AddComponent<AiButton>();
+                go.AddComponent<OnlineLobby>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -523,6 +526,8 @@ namespace HexRevival
                     {
                         WriteState("autostart: login");
                         // Developer shortcut: the most recently played account (the account menu is skipped).
+                        // A second instance ("-hexinstance N") plays its own account, never the first one's save.
+                        if (Saves.Current == null && Instance.Id > 0) Saves.Select(Saves.FindOrCreate("Instance" + Instance.Id));
                         if (Saves.Current == null) { List<Saves.Info> saves = Saves.List(); Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline")); }
                         login.LoginToGame();
                     }
@@ -897,7 +902,9 @@ namespace HexRevival
                 case "deckai": return DeckAiPanel.Command(parts);
                 case "mods": return ModifiersWindow.Command(parts);
                 case "spectate": return Spectator.Toggle();
-                case "online": return AccountMenu.Command(parts);
+                case "online": return OnlineLobby.Command(parts);
+                case "profile": return AccountMenu.Command(parts);
+                case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();

@@ -153,6 +153,7 @@ namespace HexRevival
                 EnqueueNow(self, transaction);
                 return true;
             }
+            if (NetCodec.Loopback && !IsAIId(transaction.m_PlayerId)) transaction = NetCodec.LoopTransaction(transaction);
             s_Pending.Enqueue(new PendingTransaction { Tx = transaction, Time = UnityEngine.Time.realtimeSinceStartup });
             // No MarkDirty here: sending GreenLight before the transaction is processed
             // makes the AI submit it twice (loop). See Pump.
@@ -425,6 +426,9 @@ namespace HexRevival
                 };
                 NetworkPacketSessionEventArgs packet = NetworkPacketSessionEventArgs.Create(bulk);
                 packet.SessionId = self.m_SessionId;
+                if (NetCodec.Loopback && !IsAIId(lp.m_PlayerId)) packet = NetCodec.LoopEvents(packet);
+                // Online: the opponent's seat is played on another PC.
+                if (OnlineMatch.IsRemote(lp.m_PlayerId)) { OnlineMatch.SendEvents(packet); continue; }
 
                 // A handler (e.g. the AI on GreenLight) may submit a transaction while the packet
                 // is being processed, before the packet itself sets this flag back to true:

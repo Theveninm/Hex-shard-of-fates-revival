@@ -17,7 +17,7 @@ namespace HexRevival
     {
         public static OfflineMenu Instance;
 
-        private enum Tab { MyDecks, GameDecks, Encounters }
+        private enum Tab { MyDecks, GameDecks, Encounters, Online }
 
         private class Entry
         {
@@ -414,11 +414,23 @@ namespace HexRevival
             GameSkin.Sprite(right, "A_Frames", "Frame_Generic_Inner");
             Rect rh = new Rect(right.x + 16 * S, right.y + 10 * S, right.width - 32 * S, 34 * S);
             GameSkin.Label(rh, Loc.Get("your_opponent"), GameSkin.Style("title", 21, GameSkin.Gold));
-            float tabW = Mathf.Min(170 * S, (right.width - 40 * S) / 3f);
+            float tabW = Mathf.Min(170 * S, (right.width - 40 * S) / 4f);
             float tabY = rh.yMax + 8 * S;
             if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_enc"), m_Tab == Tab.Encounters)) SwitchTab(Tab.Encounters);
             if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_game"), m_Tab == Tab.GameDecks)) SwitchTab(Tab.GameDecks);
             if (GameSkin.Tab(new Rect(right.x + 16 * S + 2 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_mine"), m_Tab == Tab.MyDecks)) SwitchTab(Tab.MyDecks);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + 3 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_online"), m_Tab == Tab.Online)) SwitchTab(Tab.Online);
+
+            if (m_Tab == Tab.Online)
+            {
+                // Players, chat and challenges: a game starts with the deck chosen on the left.
+                Rect hintO = new Rect(right.x + 18 * S, right.yMax - 34 * S, right.width - 36 * S, 26 * S);
+                GUI.Label(hintO, Loc.Get("hint_online"), GameSkin.Style("body", 13, GameSkin.Muted));
+                Rect lobby = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, hintO.y - tabY - 48 * S);
+                OnlineLobby.Draw(lobby, m_SelMine != null ? m_SelMine.PlayerDeck : UID.Invalid);
+            }
+            else
+            {
 
             Rect search = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, 34 * S);
             GameSkin.Sprite(search, "A_Frames", "Frame_Inner");
@@ -435,6 +447,7 @@ namespace HexRevival
             Rect listR = new Rect(right.x + 12 * S, search.yMax + 10 * S, right.width - 24 * S, hintR.y - search.yMax - 14 * S);
             List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_MyDecks;
             m_ScrollOpp = DrawList(listR, list ?? new List<Entry>(), m_ScrollOpp, ref m_SelOpp, (m_Search ?? "").Trim().ToLowerInvariant());
+            }
 
             // --- Bottom: summary + actions
             float by = win.yMax - 74 * S;
@@ -443,7 +456,7 @@ namespace HexRevival
             if (!string.IsNullOrEmpty(m_Message))
                 GUI.Label(new Rect(summary.x, summary.yMax, summary.width, 24 * S), m_Message, GameSkin.Style("body", 13, new Color(1f, 0.55f, 0.45f)));
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by - 4 * S, 180 * S, 52 * S), Loc.Get("close"))) SetOpen(false);
-            if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null)) Fight();
+            if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null && m_Tab != Tab.Online)) Fight();
             GUI.enabled = true;
             if (modal) DrawConfirmDelete();
         }

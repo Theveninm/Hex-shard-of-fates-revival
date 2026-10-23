@@ -1,6 +1,15 @@
 # Multiplayer (prototype)
 
-Status: **work in progress**. The master server works and is tested (`server/smoke_test.py`); the game client side is being written.
+Status: **prototype working**. Tested on one PC with two game instances and a local server (2026-10-23): login and
+registration, lobby, chat, challenge, then a full constructed game played to the end (both sides driven by the game AI,
+dev command `aiplay`), back to the lobby afterwards.
+
+Known limits of the prototype:
+- constructed format only, no gems/equipment check, no online rewards (solo rewards are skipped online);
+- if a player leaves during a game, the other one gets a notice and must leave the battle themselves;
+- no reconnection, no chess clock (the solo "never expires" rule applies);
+- the host runs the rules, so a modified host could cheat (hidden information stays hidden: the guest only
+  receives its own events).
 
 ## Architecture
 
@@ -15,6 +24,27 @@ Status: **work in progress**. The master server works and is tested (`server/smo
   like a solo game, the opponent (seat 1) only displays it. The server relays their game data without reading it,
   so no port has to be opened on the players' side.
 - Game data is the game's own network format (`EncData`), see `NetCodec.cs` in the mod.
+
+## In the game
+
+- Login screen, "Online" row: the profile (name, player id, password with "Generate", server address), saved in
+  `HexRevivalSaves/online_profile.json`.
+- In game, Quick Match menu, **Online** tab: connects with the profile; players, chat, Challenge / Accept / Decline.
+  The game uses the deck selected on the left.
+- Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
+
+How the game itself works:
+- host: a normal solo encounter whose opponent seat (`ServicePlayer.4098`) is not an AI; its events go to the network
+  (`Server.Flush`), the guest's transactions are submitted to the host's session, and a transaction without visible
+  effect gets an empty packet as answer (the game client waits for one);
+- guest: no session at all; `SendStartEncounter` waits for the host's session state, `SendJoinSession` joins like a
+  network client, `SendSessionTransaction` sends to the host;
+- both games call their own player `ServicePlayer.4097`: the guest swaps 4097 and 4098 in everything it receives and
+  sends (raw ids in the events, field by field in transactions and the session state).
+
+Testing on one PC: start a second game with `Hex.exe -hexinstance 2 -logFile "<path>\output_log_2.txt"`. It uses its
+own profile (`online_profile_2.json`), its own offline account ("Instance2" with the autostart file) and its own
+dev command files (`HexRevival.cmd.2`).
 
 ## Wire format
 

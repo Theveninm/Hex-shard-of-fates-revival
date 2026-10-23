@@ -8,3 +8,7 @@ out/
 Hex_Data/
 decompiled/
 extracted/
+
+# .NET build output
+bin/
+obj/
