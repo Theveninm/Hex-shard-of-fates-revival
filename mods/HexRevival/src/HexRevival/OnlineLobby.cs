@@ -7,11 +7,11 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// The online lobby: its own screen, opened from the main menu's "Online play" button. Left, the deck to play;
-    /// middle, the open games (create one, join one) and the challenges received; right, the connected players (to
-    /// challenge one) and the chat. A game joined or a challenge accepted starts the match (see OnlineMatch).
-    /// The connection is opened with the online profile when the screen is first shown and stays open in the
-    /// background: a challenge received meanwhile is announced.
+    /// The online lobby: the main screen of the online profile (chosen on the login screen, see Saves.Online); offline
+    /// accounts never see it. Left, the deck to play (favorites or every deck); middle, the challenges received, the
+    /// open games (join one) and "Host a game"; right, the connected players (to challenge one) and the chat. Below:
+    /// deck editor, game settings, online profile, log out. A game joined or a challenge accepted starts the match
+    /// (see OnlineMatch). The connection opens with the lobby and stays open during the games.
     /// </summary>
     public class OnlineLobby : MonoBehaviour
     {
@@ -39,7 +39,11 @@ namespace HexRevival
         private Vector2 m_ScrollPlayers, m_ScrollChat, m_ScrollGames, m_ScrollDecks;
 
         // The screen
-        private bool m_Open;
+        private bool m_Open, m_AllDecks, m_SettingsShown;
+        private readonly ProfileForm m_Profile = new ProfileForm();
+        private bool m_EditingProfile;
+        private float m_ReopenAfter;
+        private HashSet<ulong> m_Favorites;
         private List<Decks.DeckInfo> m_Decks = new List<Decks.DeckInfo>();
         private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
 
@@ -83,8 +87,13 @@ namespace HexRevival
         private void Update()
         {
             OnlineMatch.Update();
-            if (m_Open && (!OnLandingPage() || Input.GetKeyDown(KeyCode.Escape))) Close();
-            m_Block.Update(m_Open);
+            if (m_Open && !OnLandingPage()) Close();
+            // The online account lives in the lobby: back on the main menu (after a game, the deck editor, the game's
+            // settings), it opens again.
+            if (!m_Open && Saves.IsOnline && OnLandingPage() && !OfflineMenu.IsOpen && !GameMenuShown() && Time.realtimeSinceStartup > m_ReopenAfter) Open();
+            m_Block.Update(m_Open && !m_SettingsShown);
+            // An offline account has no online features: a connection left from the online account closes.
+            if (!Saves.IsOnline && m_Net != null && OnlineMatch.Current == OnlineMatch.Role.None) Disconnect();
             if (m_Net == null) return;
             foreach (NetClient.Incoming m in m_Net.Poll())
             {
@@ -229,7 +238,77 @@ namespace HexRevival
             if (!l.m_Decks.Exists(d => d.Id == l.m_Deck))
                 l.m_Deck = l.m_Decks.Exists(d => d.Id == Decks.LastDeck) ? Decks.LastDeck : l.m_Decks.Count > 0 ? l.m_Decks[0].Id : UID.Invalid;
             l.m_Open = true;
+            l.m_SettingsShown = false;
             if (l.m_Net == null) { l.m_Message = null; Connect(); }
+        }
+
+        // ------------------------------------------------------------------
+        // Favorite decks (the online account sees every deck; the favorites come first)
+        // ------------------------------------------------------------------
+
+        private HashSet<ulong> Favorites
+        {
+            get
+            {
+                if (m_Favorites != null) return m_Favorites;
+                m_Favorites = new HashSet<ulong>();
+                try
+                {
+                    string f = Saves.File("favorites.txt");
+                    if (System.IO.File.Exists(f))
+                        foreach (string line in System.IO.File.ReadAllLines(f)) { ulong id; if (ulong.TryParse(line.Trim(), out id)) m_Favorites.Add(id); }
+                }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] favorites: " + e.Message); }
+                return m_Favorites;
+            }
+        }
+
+        private void ToggleFavorite(UID deck)
+        {
+            ulong id = deck.GetInstanceId();
+            if (!Favorites.Remove(id)) Favorites.Add(id);
+            try
+            {
+                List<string> lines = new List<string>();
+                foreach (ulong f in Favorites) lines.Add(f.ToString());
+                System.IO.File.WriteAllLines(Saves.File("favorites.txt"), lines.ToArray());
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] favorites: " + e.Message); }
+        }
+
+        /// <summary>The game's system menu or options screen, opened from the lobby's "Settings".</summary>
+        private static bool GameMenuShown()
+        {
+            try
+            {
+                UIGameMenu gm = UIGameMenu.Instance();
+                if (gm != null && gm.Context != null && gm.Context.SystemMenuVisible) return true;
+                UIOptionsScreenViewModel o = FindObjectOfType<UIOptionsScreenViewModel>();
+                return o != null && o.m_Context != null && o.m_Context.OptionsScreenVisible;
+            }
+            catch { return false; }
+        }
+
+        private void ShowGameSettings()
+        {
+            Close();
+            try { UIGameMenu.Instance().OnShowOptions(); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] settings: " + e.Message); }
+        }
+
+        private void OpenDeckEditor()
+        {
+            Close();
+            try { Singleton<Main>.Instance.m_GameClient.StateManager.TransitionToState(Reckoning.Game.EGameState.CardCollection, null); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Online] deck editor: " + e); }
+        }
+
+        private void LogOut()
+        {
+            Disconnect();
+            Close();
+            try { Singleton<Main>.Instance.RequestLogOut(); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Online] log out: " + e); }
         }
 
         /// <summary>The "Host a game" menu opens a game in the lobby, played with this deck.</summary>
@@ -244,6 +323,8 @@ namespace HexRevival
         private void Close()
         {
             m_Open = false;
+            // Leaving for another screen: the main menu is still shown for a moment.
+            m_ReopenAfter = Time.realtimeSinceStartup + 3f;
             m_Block.Release();
         }
 
@@ -269,31 +350,69 @@ namespace HexRevival
             Rect left = new Rect(win.x + pad, top, w * 0.31f, bottom - top);
             Rect mid = new Rect(left.xMax + gap, top, w * 0.36f, bottom - top);
             Rect right = new Rect(mid.xMax + gap, top, w * 0.33f, bottom - top);
+            if (m_EditingProfile)
+            {
+                DrawProfile(new Rect(win.x + pad + 120 * S, top, win.width - 2 * pad - 240 * S, win.yMax - top - 20 * S));
+                return;
+            }
             DrawDecks(left);
             DrawGames(mid);
             float playersH = right.height * 0.42f;
             DrawPlayers(new Rect(right.x, right.y, right.width, playersH));
             DrawChat(new Rect(right.x, right.y + playersH + gap, right.width, right.height - playersH - gap));
 
-            if (GameSkin.RedButton(new Rect(win.xMax - pad - 200 * S, win.yMax - 72 * S, 200 * S, 52 * S), Loc.Get("close"))) Close();
+            // The online account's buttons.
+            float by = win.yMax - 72 * S, bw = 230 * S, bh = 52 * S;
+            if (GameSkin.GoldButton(new Rect(win.x + pad, by, bw, bh), Loc.Get("online_deck_editor"), true, 17)) OpenDeckEditor();
+            if (GameSkin.GoldButton(new Rect(win.x + pad + bw + 12 * S, by, bw, bh), Loc.Get("online_settings"), true, 17)) ShowGameSettings();
+            if (GameSkin.GoldButton(new Rect(win.x + pad + 2 * (bw + 12 * S), by, bw, bh), Loc.Get("online_edit_profile"), true, 17)) { m_Profile.Load(); m_EditingProfile = true; }
+            if (GameSkin.RedButton(new Rect(win.xMax - pad - bw, by, bw, bh), Loc.Get("switch_account"), 17)) LogOut();
         }
 
+        /// <summary>The online profile's form; saving reconnects with it.</summary>
+        private void DrawProfile(Rect area)
+        {
+            float S = GameSkin.Scale;
+            m_Profile.Draw(area);
+            float by = area.yMax - 56 * S;
+            if (GameSkin.RedButton(new Rect(area.x, by, 180 * S, 52 * S), Loc.Get("cancel"))) m_EditingProfile = false;
+            if ((GameSkin.GreenButton(new Rect(area.xMax - 260 * S, by, 260 * S, 52 * S), Loc.Get("online_save")) || ProfileForm.SubmitPressed()) && m_Profile.Save())
+            {
+                m_EditingProfile = false;
+                Disconnect();
+                Connect();
+            }
+        }
+
+        /// <summary>The deck to play: the favorites (when there are some), or every deck; "+" / "-" marks a favorite.</summary>
         private void DrawDecks(Rect r)
         {
             float S = GameSkin.Scale;
             Controls.Frame(r, Loc.Get("online_your_deck"));
-            Rect list = new Rect(r.x + 10 * S, r.y + 46 * S, r.width - 20 * S, r.height - 56 * S);
-            if (m_Decks.Count == 0)
+            bool all = m_AllDecks || Favorites.Count == 0;
+            float tabW = (r.width - 28 * S) / 2f, tabY = r.y + 42 * S;
+            if (GameSkin.Tab(new Rect(r.x + 14 * S, tabY, tabW, 30 * S), Loc.Get("online_favorites"), !all)) m_AllDecks = false;
+            if (GameSkin.Tab(new Rect(r.x + 14 * S + tabW, tabY, tabW, 30 * S), Loc.Get("online_all_decks"), all)) m_AllDecks = true;
+            List<Decks.DeckInfo> decks = all ? m_Decks : m_Decks.FindAll(d => Favorites.Contains(d.Id.GetInstanceId()));
+            Rect list = new Rect(r.x + 10 * S, tabY + 38 * S, r.width - 20 * S, r.yMax - tabY - 48 * S);
+            if (decks.Count == 0)
             {
-                GUI.Label(list, Loc.Get("online_no_deck"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.MiddleCenter, true));
+                GUI.Label(list, Loc.Get(m_Decks.Count == 0 ? "online_no_deck" : "online_no_favorite"), GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.MiddleCenter, true));
                 return;
             }
-            float rowH = 64 * S;
-            m_ScrollDecks = Controls.List(list, m_ScrollDecks, m_Decks.Count, rowH, i =>
+            float rowH = 64 * S, fw = 34 * S;
+            m_ScrollDecks = Controls.List(list, m_ScrollDecks, decks.Count, rowH, i =>
             {
-                Decks.DeckInfo d = m_Decks[i];
-                return GameSkin.Row(new Rect(0, i * (rowH + 4 * S), list.width - 20 * S, rowH), d.Name, Loc.Get("cards", d.Count), d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion));
-            }, i => m_Deck = m_Decks[i].Id);
+                Decks.DeckInfo d = decks[i];
+                Rect row = new Rect(0, i * (rowH + 4 * S), list.width - 20 * S, rowH);
+                bool fav = Favorites.Contains(d.Id.GetInstanceId());
+                // The favorite button handles the click before the row (whose button covers it), and is drawn after it.
+                Rect fb = new Rect(row.xMax - fw - 8 * S, row.y + (rowH - fw) / 2f, fw, fw);
+                if (Event.current.type != EventType.Repaint && Controls.Small(fb, fav ? "-" : "+")) { ToggleFavorite(d.Id); return false; }
+                bool picked = GameSkin.Row(row, d.Name, Loc.Get("cards", d.Count), d.Id == m_Deck, OfflineMenu.SafeChampion(d.Champion), fw + 12 * S);
+                if (Event.current.type == EventType.Repaint) Controls.Small(fb, fav ? "-" : "+");
+                return picked;
+            }, i => m_Deck = decks[i].Id);
         }
 
         /// <summary>Challenges received first, then the open games (ours first), and "Create a game".</summary>
@@ -410,6 +529,7 @@ namespace HexRevival
             {
                 case "open": Open(); return "open";
                 case "close": l.Close(); return "closed";
+                case "profile": l.m_Profile.Load(); l.m_EditingProfile = !l.m_EditingProfile; return "profile " + l.m_EditingProfile;
                 case "connect": Connect(); return "connecting";
                 case "disconnect": Disconnect(); return "disconnected";
                 case "chat": l.Send("chat", "text", arg); return "sent";

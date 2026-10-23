@@ -27,7 +27,15 @@ namespace HexRevival
                 if (t.name == "Checkbox_Hints") { hints = t; break; }
             if (hints == null || hints.transform.parent == null) return;
             Transform row = hints.transform.parent;
-            if (row.parent == null || row.parent.Find("HexRevival_ShowCheats") != null) return;
+            if (row.parent == null) return;
+            // The online account has no cheat menu, so no option for it either.
+            Transform existing = row.parent.Find("HexRevival_ShowCheats");
+            if (existing != null)
+            {
+                if (existing.gameObject.activeSelf == Saves.IsOnline) { existing.gameObject.SetActive(!Saves.IsOnline); UiClone.Reposition(row.parent); }
+                return;
+            }
+            if (Saves.IsOnline) return;
             try
             {
                 GameObject copy = UiClone.Copy(row.gameObject, "HexRevival_ShowCheats");

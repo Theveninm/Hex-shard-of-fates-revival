@@ -10,7 +10,7 @@ namespace HexRevival
     /// <summary>
     /// "Host a game" menu, opened from the online lobby (see OnlineLobby): choose your deck, then the opponent:
     /// another player (the game is opened in the lobby, the first player who joins plays it), or the AI with one of
-    /// your decks, one of the game's decks or an encounter. Drawn with IMGUI using the game's sprites and fonts;
+    /// your decks (those made for the AI first). Drawn with IMGUI using the game's sprites and fonts;
     /// the game's interface (NGUI) is disabled while it is open.
     /// </summary>
     public class OfflineMenu : MonoBehaviour
@@ -28,6 +28,7 @@ namespace HexRevival
             public DeckTemplate Template;
             public ResourceId Encounter = ResourceId.Invalid;
             public ChampionTemplate Champion;
+            public bool ForAI;
         }
 
         private bool m_Open;
@@ -35,6 +36,7 @@ namespace HexRevival
         private string m_Search = "";
         private Vector2 m_ScrollMine, m_ScrollOpp;
         private List<Entry> m_MyDecks = new List<Entry>();
+        private readonly List<Entry> m_AiDecks = new List<Entry>();
         private List<Entry> m_GameDecks, m_Encounters;
         private Entry m_SelMine, m_SelOpp;
         private string m_ListLang;
@@ -49,7 +51,7 @@ namespace HexRevival
             Instance.SetOpen(true);
             Entry e = Instance.m_MyDecks.Find(x => x.PlayerDeck == deck);
             if (e != null) Instance.m_SelMine = e;
-            Instance.SwitchTab(OnlineLobby.Online ? Tab.Player : Instance.m_Tab == Tab.Player ? Tab.Encounters : Instance.m_Tab);
+            Instance.SwitchTab(OnlineLobby.Online ? Tab.Player : Tab.MyDecks);
         }
 
         public static bool IsOpen { get { return Instance != null && Instance.m_Open; } }
@@ -130,7 +132,7 @@ namespace HexRevival
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
             if (OnLandingPage()) { EnsureLogoutButton(); Tutorial.OnLandingPage(); }
-            else m_LogoutButton = m_OnlineButton = null;
+            else m_LogoutButton = null;
         }
 
         private void SetOpen(bool open)
@@ -162,6 +164,14 @@ namespace HexRevival
             foreach (Decks.DeckInfo d in Decks.List())
                 m_MyDecks.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion) });
             m_MyDecks.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
+            // As opponents: the same decks, those made for the AI first.
+            m_AiDecks.Clear();
+            foreach (Entry e in m_MyDecks)
+            {
+                bool ai = Decks.HasAi(e.PlayerDeck.GetInstanceId()) && Decks.Ai(e.PlayerDeck.GetInstanceId()).ForAI;
+                m_AiDecks.Add(new Entry { Label = e.Label, Detail = ai ? e.Detail + " - " + Loc.Get("ai_deck") : e.Detail, Search = e.Search, PlayerDeck = e.PlayerDeck, Champion = e.Champion, ForAI = ai });
+            }
+            m_AiDecks.Sort((a, b) => a.ForAI != b.ForAI ? (a.ForAI ? -1 : 1) : string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
             if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == m_SelMine.PlayerDeck);
             if (m_SelMine == null && m_MyDecks.Count > 0) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks[0];
             if (m_SelOpp != null && m_SelOpp.PlayerDeck != UID.Invalid) m_SelOpp = null;
@@ -280,24 +290,14 @@ namespace HexRevival
         // "Change account" button at the bottom of the main menu
         // ------------------------------------------------------------------
 
-        private GameObject m_LogoutButton, m_OnlineButton;
+        private GameObject m_LogoutButton;
 
-        /// <summary>Main menu buttons added by the mod: "Online play" (see OnlineLobby) and "Switch account".</summary>
+        /// <summary>Main menu button added by the mod: "Switch account".</summary>
         private void EnsureLogoutButton()
         {
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
-            // The column has no room for more buttons: the Collection button goes (the
-            // collection stays reachable from the deck editor of Quick Match and the game's menus).
-            if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
-            {
-                vm.MenuUI.Collection.gameObject.SetActive(false);
-                UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
-                if (g != null) g.Reposition();
-            }
             if (vm == null || vm.MenuUI.Campaign == null) return;
-            // Blue for online play, red (as cancel, opposite the green Quick Match) for switching account.
-            m_OnlineButton = LandingButton(vm, m_OnlineButton, "HexRevival_Online", "online_play", "online_play_tip",
-                new Color(0.55f, 0.75f, 1f), new Color(0.72f, 0.85f, 1f), new Color(0.38f, 0.55f, 0.8f), OnlineLobby.Open);
+            // Red, as a cancel button.
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
             TightenColumn(vm.MenuUI.Campaign.transform.parent);
@@ -305,7 +305,10 @@ namespace HexRevival
 
         private static UIGrid s_Tightened;
 
-        /// <summary>Seven buttons do not fit the column's spacing above the bottom bar: the rows get closer (once).</summary>
+        /// <summary>
+        /// Seven buttons (the game's six with Collection, the deck editor's way in now that Quick Match is gone, and
+        /// "Switch account") do not fit the column's spacing above the bottom bar: the rows get closer (once).
+        /// </summary>
         private static void TightenColumn(Transform column)
         {
             UIGrid grid = column != null ? column.GetComponent<UIGrid>() : null;
@@ -444,12 +447,12 @@ namespace HexRevival
             GameSkin.Sprite(right, "A_Frames", "Frame_Generic_Inner");
             Rect rh = new Rect(right.x + 16 * S, right.y + 10 * S, right.width - 32 * S, 34 * S);
             GameSkin.Label(rh, Loc.Get("your_opponent"), GameSkin.Style("title", 21, GameSkin.Gold));
-            float tabW = Mathf.Min(170 * S, (right.width - 40 * S) / 4f);
+            // Against a player, or the AI with one of your decks (the encounters and the game's decks are not offered:
+            // too many choices of little interest online; still reachable with the dev command "menu fight").
+            float tabW = Mathf.Min(200 * S, (right.width - 40 * S) / 2f);
             float tabY = rh.yMax + 8 * S;
             if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_player"), m_Tab == Tab.Player)) SwitchTab(Tab.Player);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_enc"), m_Tab == Tab.Encounters)) SwitchTab(Tab.Encounters);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + 2 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_game"), m_Tab == Tab.GameDecks)) SwitchTab(Tab.GameDecks);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + 3 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_mine"), m_Tab == Tab.MyDecks)) SwitchTab(Tab.MyDecks);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_ai"), m_Tab != Tab.Player)) SwitchTab(Tab.MyDecks);
 
             if (m_Tab == Tab.Player)
             {
@@ -470,11 +473,11 @@ namespace HexRevival
                 GUI.Label(search, "   " + Loc.Get("search"), GameSkin.Style("body", 14, GameSkin.Muted));
 
             string hint = m_Tab == Tab.Encounters ? Loc.Get("hint_enc")
-                : m_Tab == Tab.GameDecks ? Loc.Get("hint_game") : Loc.Get("hint_mine");
+                : m_Tab == Tab.GameDecks ? Loc.Get("hint_game") : Loc.Get("hint_ai");
             Rect hintR = new Rect(right.x + 18 * S, right.yMax - 34 * S, right.width - 36 * S, 26 * S);
             GUI.Label(hintR, hint, GameSkin.Style("body", 13, GameSkin.Muted));
             Rect listR = new Rect(right.x + 12 * S, search.yMax + 10 * S, right.width - 24 * S, hintR.y - search.yMax - 14 * S);
-            List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_MyDecks;
+            List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_AiDecks;
             m_ScrollOpp = DrawList(listR, list ?? new List<Entry>(), m_ScrollOpp, ref m_SelOpp, (m_Search ?? "").Trim().ToLowerInvariant());
             }
 

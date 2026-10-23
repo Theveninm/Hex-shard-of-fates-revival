@@ -27,7 +27,8 @@ namespace HexRevival
         {
             try
             {
-                return Settings.ShowCheats && Saves.Current != null && M != null && M.m_GameClient != null
+                // Never on the online account (a determined player can force it, but nobody is tempted).
+                return Settings.ShowCheats && Saves.Current != null && !Saves.IsOnline && M != null && M.m_GameClient != null
                     && M.m_GameClient.PlayerProfile != null && M.m_GameClient.PlayerProfile.IsInitialized();
             }
             catch { return false; }

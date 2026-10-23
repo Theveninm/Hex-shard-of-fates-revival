@@ -27,13 +27,17 @@ Known limits of the prototype:
 
 ## In the game
 
-- Login screen, "Online" row: the profile (name, player id, password with "Generate", server address), saved in
-  `HexRevivalSaves/online_profile.json`.
-- Main menu, **Online play**: the lobby screen (connects with the profile). Left, the deck to play; middle, the
-  challenges received and the open games (Join), and **Host a game**; right, the connected players (Challenge) and
-  the chat.
-- **Host a game** replaces the former Quick Match (F1): your deck, then the opponent: "Player" opens the game in the
-  lobby, the other tabs start a game against the AI (encounters, game decks, your decks), also without a connection.
+- Login screen, **Online** row: logs in with the online profile and opens the lobby (the first time, the profile form:
+  name, player id, password with "Generate", server address; saved in `HexRevivalSaves/online_profile.json`).
+- The online profile has its own account (`HexRevivalOnline/`, everything unlocked), separate from the offline
+  accounts; it sees every deck (decks outside the campaign are shared) and keeps its favorites for online play.
+  Offline accounts have no online feature at all.
+- The **lobby** is the online account's main screen: your deck (Favorites / All decks, "+" / "-" to mark one), the
+  challenges received and the open games (Join), **Host a game**, the connected players (Challenge), the chat, and the
+  buttons Deck editor, Game settings, Online profile, Switch account. It opens again after each game.
+- **Host a game** replaces the former Quick Match: your deck, then the opponent: "Player" opens the game in the lobby,
+  "AI" plays one of your decks (those made for the AI first; the encounters and the game's decks are not offered).
+- No cheat menu on the online account, and its option is hidden from the game's settings.
 - Code: `NetClient.cs` (connection), `OnlineLobby.cs` (lobby and tab), `OnlineMatch.cs` (the game itself).
 
 How the game itself works:
@@ -46,8 +50,9 @@ How the game itself works:
   sends (raw ids in the events, field by field in transactions and the session state).
 
 Testing on one PC: start a second game with `Hex.exe -hexinstance 2 -logFile "<path>\output_log_2.txt"`. It uses its
-own profile (`online_profile_2.json`), its own offline account ("Instance2" with the autostart file) and its own
-dev command files (`HexRevival.cmd.2`).
+own profile (`online_profile_2.json`) and online account (`HexRevivalOnline_2/`), logs in online with the
+autostart file, and has its own dev command files (`HexRevival.cmd.2`). The keyword `online` in `HexRevival.autostart`
+makes the first instance log in online too.
 
 ## Wire format
 

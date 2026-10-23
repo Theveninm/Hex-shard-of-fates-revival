@@ -127,9 +127,43 @@ namespace HexRevival
             if (s_Current != null) Write(s_Current);
         }
 
+        // ------------------------------------------------------------------
+        // The online profile's account
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The account the online profile plays with: not one of the offline accounts (its own folder, outside the
+        /// account list), everything unlocked. Decks outside the campaign are shared by every account anyway.
+        /// </summary>
+        private static string OnlineDir { get { return Path.Combine(LocalServer.Root, "HexRevivalOnline" + Instance.Suffix); } }
+
+        public static Info Online
+        {
+            get
+            {
+                Info i = ReadFrom(OnlineDir, "account.txt") ?? new Info { UnlockAll = true, Gold = UnlockedGold, LastPlayed = DateTime.Now };
+                i.Folder = OnlineDir;
+                i.Name = string.IsNullOrEmpty(OnlineProfile.Current.Name) ? "Online" : OnlineProfile.Current.Name;
+                i.UnlockAll = true;
+                i.GoldPrices = true;
+                return i;
+            }
+        }
+
+        /// <summary>Logged in with the online profile: the solo features (cheats...) are hidden.</summary>
+        public static bool IsOnline { get { return s_Current != null && s_Current.Folder == OnlineDir; } }
+
         private static Info Read(string name)
         {
-            string path = Path.Combine(Path.Combine(RootDir, name), "account.txt");
+            Info i = ReadFrom(Path.Combine(RootDir, name), "account.txt");
+            if (i != null) i.Name = name;
+            return i;
+        }
+
+        private static Info ReadFrom(string dir, string file)
+        {
+            string path = Path.Combine(dir, file);
+            string name = Path.GetFileName(dir);
             if (!System.IO.File.Exists(path)) return null;
             Info i = new Info { Name = name };
             try
@@ -161,7 +195,7 @@ namespace HexRevival
         {
             try
             {
-                string dir = Path.Combine(RootDir, i.Name);
+                string dir = i.Folder ?? Path.Combine(RootDir, i.Name);
                 Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllLines(Path.Combine(dir, "account.txt"), new[] {
                     "unlock=" + (i.UnlockAll ? "1" : "0"),

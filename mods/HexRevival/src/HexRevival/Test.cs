@@ -40,6 +40,8 @@ namespace HexRevival
         private string m_StallSig;
         /// <summary>"menu" keyword: automatic login only, stay on the main menu.</summary>
         private bool m_MenuOnly;
+        /// <summary>Autostart logs in with the online profile ("online" keyword; always for a second instance).</summary>
+        private bool m_AutoOnline;
         private float m_StallSince;
 
         private static StandaloneSession GetServer(StandaloneGameClient gc)
@@ -191,6 +193,7 @@ namespace HexRevival
                     {
                         if (tok == "aiplay") { m_AutoAI = true; continue; }
                         if (tok == "menu") { m_MenuOnly = true; continue; }
+                        if (tok == "online") { m_AutoOnline = true; continue; }
                         if (tok == "manualblock") { m_ManualBlock = true; continue; }
                         if (tok == "mute") { m_Mute = true; continue; }
                         if (tok == "background") { Application.runInBackground = true; continue; }
@@ -526,13 +529,9 @@ namespace HexRevival
                     {
                         WriteState("autostart: login");
                         // Developer shortcut: the most recently played account (the account menu is skipped).
-                        // A second instance ("-hexinstance N") plays its own account, never the first one's save.
-                        if (Saves.Current == null && Instance.Id > 0) Saves.Select(Saves.FindOrCreate("Instance" + Instance.Id));
-                        if (Saves.Current == null)
-                        {
-                            List<Saves.Info> saves = Saves.List().FindAll(x => !x.Name.StartsWith("Instance", StringComparison.Ordinal));
-                            Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline"));
-                        }
+                        // A second instance ("-hexinstance N") is there for online tests: its own online profile and account.
+                        if (Saves.Current == null && (m_AutoOnline || Instance.Id > 0)) Saves.Select(Saves.Online);
+                        if (Saves.Current == null) { List<Saves.Info> saves = Saves.List(); Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline")); }
                         login.LoginToGame();
                     }
                 }
