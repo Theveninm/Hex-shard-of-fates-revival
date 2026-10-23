@@ -97,7 +97,7 @@ namespace HexRevival
         private void Update()
         {
             OnlineMatch.Update();
-            if (m_Open && !OnLandingPage()) Close();
+            if (m_Open && (!OnLandingPage() || GameMenuShown())) Close();
             // The online account lives in the lobby: back on the main menu (after a game, the deck editor, the game's
             // settings), it opens again.
             if (!m_Open && Saves.IsOnline && OnLandingPage() && !OfflineMenu.IsOpen && !GameMenuShown() && Time.realtimeSinceStartup > m_ReopenAfter) Open();
@@ -289,11 +289,15 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] favorites: " + e.Message); }
         }
 
-        /// <summary>The game's options screen, opened from the lobby's "Game settings".</summary>
+        /// <summary>
+        /// The game's options screen (the lobby's "Game settings") or its system menu (Esc: Resume, Settings, Help, Exit):
+        /// the lobby gives way to them and comes back when they close.
+        /// </summary>
         private static bool GameMenuShown()
         {
             try
             {
+                if (UISystem.IsTaggedUIElementVisible("SystemMenu")) return true;
                 UIOptionsScreenViewModel o = FindObjectOfType<UIOptionsScreenViewModel>();
                 return o != null && o.m_Context != null && o.IsVisible();
             }
@@ -532,6 +536,8 @@ namespace HexRevival
                 OpenGame g = games[i - challenges.Count];
                 bool own = g == mine;
                 bool ok = ready && OnlineFormats.Accepts(g.Format, m_Deck);
+                // One button (Join), none on our own game: the text takes the room left.
+                text.width = (own ? row.xMax - 14 * S : b1.x - 6 * S) - text.x;
                 if (!own && GameSkin.GreenButton(b1, Loc.Get("online_join_game"), ok, 14)) Send("join", "game", g.Id);
                 GameSkin.Label(new Rect(text.x, text.y + 4 * S, text.width, 26 * S), own ? Loc.Get("online_your_game") : g.Name, GameSkin.Style("title", 15, GameSkin.Gold));
                 GUI.Label(new Rect(text.x, text.y + 28 * S, text.width, 22 * S), OnlineFormats.Name(g.Format) + (own ? " - " + Loc.Get("online_waiting") : ready && !ok ? " - " + Loc.Get("online_deck_not_valid") : ""), GameSkin.Style("body", 13, GameSkin.Muted));
@@ -580,10 +586,11 @@ namespace HexRevival
             GUI.EndScrollView();
 
             Rect input = new Rect(r.x + 10 * S, r.yMax - 46 * S, r.width - 140 * S, 36 * S);
-            GUI.SetNextControlName("hexrevival_chat");
-            m_ChatInput = Controls.TextField(input, m_ChatInput, 300);
+            // Enter is read before the text field, which takes the key for itself.
             bool enter = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter)
                 && GUI.GetNameOfFocusedControl() == "hexrevival_chat";
+            GUI.SetNextControlName("hexrevival_chat");
+            m_ChatInput = Controls.TextField(input, m_ChatInput, 300);
             if ((GameSkin.GoldButton(new Rect(input.xMax + 8 * S, input.y, 112 * S, 36 * S), Loc.Get("online_send"), Online, 14) || enter) && m_ChatInput.Trim().Length > 0)
             {
                 Send("chat", "text", m_ChatInput.Trim());

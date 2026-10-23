@@ -58,6 +58,33 @@ namespace HexRevival
         public static UID RemoteDeck { get; private set; }
 
         /// <summary>
+        /// Online, each side's name in the battle is the player's (the game showed the champion's name twice: its
+        /// session names the players after their champions). Postfix of UIBattle.OnChampionCardPlayed.
+        /// </summary>
+        public static void ShowPlayerNames(UIBattle ui, ChampionCardPlayedSessionEventArgs args)
+        {
+            if (Current == Role.None || ui == null || args == null) return;
+            try
+            {
+                bool local = ui.IsLocalPlayer(args.PlayerId);
+                string name = local ? OnlineProfile.Current.Name : OpponentName;
+                if (string.IsNullOrEmpty(name)) return;
+                BattleScenePlayerObjects o = ui.GetPlayerSceneObjects(args.PlayerId);
+                if (o == null || o.PlayerHUD == null || o.PlayerHUD.Context == null) return;
+                string champion = o.PlayerHUD.Context.NameText;
+                o.PlayerHUD.Context.NameText = name;
+                o.PlayerHUD.Context.KeepText = champion != name ? champion : string.Empty;
+                if (!local)
+                {
+                    // "<name>'s turn" and the like.
+                    o.PlayerHUD.m_OpponentName = name;
+                    HarmonyLib.Traverse.Create(ui).Field("m_OpponentName").SetValue(name);
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] names: " + e.Message); }
+        }
+
+        /// <summary>
         /// The lobby announced the match: the guest sends its deck (cards, champion, a campaign deck's PvE champion) and
         /// waits for the host's session; the host checks the deck against the format, then starts.
         /// </summary>
