@@ -254,25 +254,16 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] Discord icon: " + e); }
         }
 
-        /// <summary>Shows a mod text in the game's tooltip box while the mouse stays over the object (NGUI's OnHover).</summary>
+        /// <summary>Shows a mod text in the game's tooltip box while the mouse is over the object (NGUI's OnHover), at once like the bar's other icons.</summary>
         private class Tooltip : MonoBehaviour
         {
             public string Key;
-            private float m_ShowAt = -1f;
             private bool m_Shown;
 
             private void OnHover(bool over)
             {
-                m_ShowAt = over ? Time.realtimeSinceStartup + 0.4f : -1f;
-                if (!over) Hide();
-            }
-
-            private void Update()
-            {
-                if (m_ShowAt < 0f || Time.realtimeSinceStartup < m_ShowAt) return;
-                m_ShowAt = -1f;
-                m_Shown = true;
-                UITooltip.ShowText(Loc.Get(Key));
+                if (over) { m_Shown = true; UITooltip.ShowText(Loc.Get(Key)); }
+                else Hide();
             }
 
             private void Hide()
@@ -282,8 +273,8 @@ namespace HexRevival
                 UITooltip.ShowText(string.Empty);
             }
 
-            private void OnClick() { m_ShowAt = -1f; Hide(); }
-            private void OnDisable() { m_ShowAt = -1f; Hide(); }
+            private void OnClick() { Hide(); }
+            private void OnDisable() { Hide(); }
         }
 
         private static HarmonyLib.Traverse Traverse(object o) { return HarmonyLib.Traverse.Create(o); }
