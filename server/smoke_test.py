@@ -129,4 +129,13 @@ assert (mb["seat"], ma["seat"]) == (0, 1)
 a.msg(t="leave")
 b.expect("match_end")
 print("open game: ok")
+# Names: taken by another account (case, spaces, '_' and '-' ignored) or reserved by the server.
+c_id, _, c_pw = account()
+c = Client(); c.register(c_id, a_name.upper().replace("T", "T_", 1), c_pw); assert c.expect("error")["code"] == "name_taken"
+c = Client(); c.register(c_id, "Ad-Min", c_pw); assert c.expect("error")["code"] == "name_taken"
+c = Client(); c.register(c_id, "C" + c_id[:8], c_pw); c.expect("welcome")
+c.sock.close()
+c = Client(); c.login(c_id, c_pw, name=b_name.lower())
+assert c.expect("notice")["code"] == "name_taken" and c.expect("welcome")["name"] == "C" + c_id[:8]
+print("names: ok")
 print("ALL OK")

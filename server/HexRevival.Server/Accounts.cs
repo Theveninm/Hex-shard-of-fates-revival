@@ -23,14 +23,22 @@ public sealed partial class Accounts
     /// <summary>Must match the client. SHA1 because the game's .NET 3.5 only offers PBKDF2 with SHA1.</summary>
     public const int Iterations = 20000;
 
-    private readonly string _path;
+    private readonly string _path, _reservedPath;
     private readonly Dictionary<string, Account> _byId = new(StringComparer.Ordinal);
     private readonly object _lock = new();
+    private HashSet<string> _reserved = [];
+    private DateTime _reservedTime;
+
+    /// <summary>Names nobody can take (reserved_names.txt in the data folder, one per line; created with these).</summary>
+    private static readonly string[] DefaultReserved = ["admin", "administrator", "moderator", "mod", "server", "system", "support", "HEX Revival", "HexRevival", "HEX Entertainment"];
 
     public Accounts(string dataDir)
     {
         Directory.CreateDirectory(dataDir);
         _path = Path.Combine(dataDir, "accounts.json");
+        _reservedPath = Path.Combine(dataDir, "reserved_names.txt");
+        if (!File.Exists(_reservedPath))
+            File.WriteAllLines(_reservedPath, ["# Names no player can take (one per line; spaces, '_', '-' and case are ignored). Read again when changed.", .. DefaultReserved]);
         if (File.Exists(_path))
             foreach (var a in JsonSerializer.Deserialize<List<Account>>(File.ReadAllText(_path)) ?? [])
                 _byId[a.Id] = a;
@@ -48,8 +56,34 @@ public sealed partial class Accounts
 
     public Account? Find(string id) { lock (_lock) return _byId.GetValueOrDefault(id); }
 
-    private bool NameTaken(string name, string exceptId) =>
-        _byId.Values.Any(a => a.Id != exceptId && string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+    /// <summary>
+    /// A name is taken when another account has it or it is reserved. Compared without case, spaces, '_' and '-', so
+    /// that "Some_One" cannot pass for "some one".
+    /// </summary>
+    private bool NameTaken(string name, string exceptId)
+    {
+        string key = NameKey(name);
+        return Reserved().Contains(key) || _byId.Values.Any(a => a.Id != exceptId && NameKey(a.Name) == key);
+    }
+
+    public static string NameKey(string name) =>
+        new string(name.Where(c => c != ' ' && c != '_' && c != '-').ToArray()).ToLowerInvariant();
+
+    /// <summary>The reserved names, read again when the file changes (an admin edits it on the server).</summary>
+    private HashSet<string> Reserved()
+    {
+        try
+        {
+            DateTime t = File.GetLastWriteTimeUtc(_reservedPath);
+            if (t != _reservedTime)
+            {
+                _reservedTime = t;
+                _reserved = File.ReadAllLines(_reservedPath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#')).Select(NameKey).ToHashSet();
+            }
+        }
+        catch (IOException e) { Log.Info("reserved names: " + e.Message); }
+        return _reserved;
+    }
 
     /// <summary>Null on success, otherwise an error code for the client.</summary>
     public string? Register(string id, string name, byte[] key)

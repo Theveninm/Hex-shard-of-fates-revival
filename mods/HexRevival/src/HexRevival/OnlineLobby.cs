@@ -50,7 +50,9 @@ namespace HexRevival
         private bool m_Open, m_AllDecks, m_SettingsShown;
         private readonly ProfileForm m_Profile = new ProfileForm();
         private bool m_EditingProfile;
-        private float m_ReopenAfter;
+        private float m_ReopenAfter, m_NoSystemMenuUntil;
+        /// <summary>The name asked for at login when the server refused it (taken by another player or reserved).</summary>
+        private string m_NameRefused;
         private HashSet<ulong> m_Favorites;
         /// <summary>The player decks by account (the decks made for the AI are only opponents, see OfflineMenu).</summary>
         private List<Decks.DeckGroup> m_Groups = new List<Decks.DeckGroup>();
@@ -96,6 +98,15 @@ namespace HexRevival
 
         private void Update()
         {
+            // Esc on the lobby = "Switch account" (the online account's way back, as Esc leaves the game's other
+            // screens); on the profile form, it closes the form. The game's own Esc menu is kept closed meanwhile.
+            if (m_Open && !OfflineMenu.IsOpen && Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (m_EditingProfile) m_EditingProfile = false;
+                else { m_NoSystemMenuUntil = Time.realtimeSinceStartup + 2f; LogOut(); }
+            }
+            if (Time.realtimeSinceStartup < m_NoSystemMenuUntil && UISystem.IsTaggedUIElementVisible("SystemMenu"))
+                UISystem.SetTaggedUIElementVisible("SystemMenu", false);
             OnlineMatch.Update();
             if (m_Open && (!OnLandingPage() || GameMenuShown())) Close();
             // The online account lives in the lobby: back on the main menu (after a game, the deck editor, the game's
@@ -132,6 +143,7 @@ namespace HexRevival
             {
                 case "welcome":
                     m_Message = null;
+                    WelcomeName((string)m["name"]);
                     m_Players.Clear();
                     foreach (JToken p in (JArray)m["players"]) m_Players.Add(ToPlayer(p));
                     m_Games.Clear();
@@ -173,9 +185,35 @@ namespace HexRevival
                     break;
                 case "error":
                 case "notice":
-                    m_Message = (string)m["msg"];
+                    string code = (string)m["code"];
+                    m_Message = Loc.Get("online_err_" + code) != "online_err_" + code ? ErrorText(code) : (string)m["msg"];
+                    if (code == "name_taken" && (string)m["t"] == "notice") m_NameRefused = OnlineProfile.Current.Name;
+                    else if (code == "name_taken" || code == "bad_name")
+                    {
+                        // Registration refused: the profile form, to choose another name.
+                        m_Profile.Load();
+                        m_Profile.Error = ErrorText(code);
+                        m_EditingProfile = true;
+                    }
                     break;
             }
+        }
+
+        /// <summary>
+        /// The name the server gave us is the one shown (in the lobby and in battle). When the name asked for was
+        /// refused (another player has it, or it is reserved), the profile keeps the account's name and its form opens
+        /// to say so.
+        /// </summary>
+        private void WelcomeName(string name)
+        {
+            OnlineProfile op = OnlineProfile.Current;
+            if (!string.IsNullOrEmpty(name) && name != op.Name) { op.Name = name; OnlineProfile.Save(); }
+            if (m_NameRefused == null) return;
+            m_Profile.Load();
+            m_Profile.Error = Loc.Get("online_name_kept", m_NameRefused, name);
+            m_EditingProfile = true;
+            m_NameRefused = null;
+            m_Message = null;
         }
 
         /// <summary>A server error code in words (the code itself when there is no text for it).</summary>

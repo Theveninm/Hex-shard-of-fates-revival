@@ -11,6 +11,9 @@ namespace HexRevival
     {
         private string m_Name, m_PlayerId, m_Password, m_Server, m_Error;
 
+        /// <summary>A message shown above the fields (a Loc key or a text).</summary>
+        public string Error { set { m_Error = value; } }
+
         /// <summary>Fills the form with the saved profile.</summary>
         public void Load()
         {
