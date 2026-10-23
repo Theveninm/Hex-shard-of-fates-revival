@@ -25,8 +25,6 @@ namespace HexRevival
 
         private static string Dir { get { return Path.Combine(LocalServer.Root, "HexRevivalSaves"); } }
         private static string FilePath { get { return Path.Combine(Dir, "online_profile" + Suffix + ".json"); } }
-        /// <summary>The first version kept the name alone in a text file.</summary>
-        private static string OldPath { get { return Path.Combine(Dir, "online_profile.txt"); } }
 
         /// <summary>A second game instance on the same PC (dev, "-hexinstance N") has its own profile.</summary>
         private static string Suffix { get { return Instance.Id == 0 ? "" : "_" + Instance.Id; } }
@@ -42,11 +40,7 @@ namespace HexRevival
                     if (File.Exists(FilePath)) JsonUtils.DeserializeJson(File.ReadAllBytes(FilePath), (OnlineProfile p) => { s_Current = p; });
                 }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Online] profile: " + e.Message); }
-                if (s_Current == null)
-                {
-                    s_Current = new OnlineProfile();
-                    try { if (Suffix == "" && File.Exists(OldPath)) s_Current.Name = File.ReadAllText(OldPath).Trim(); } catch { }
-                }
+                if (s_Current == null) s_Current = new OnlineProfile();
                 bool changed = false;
                 if (string.IsNullOrEmpty(s_Current.PlayerId)) { s_Current.PlayerId = NewId(); changed = true; }
                 if (string.IsNullOrEmpty(s_Current.Password)) { s_Current.Password = NewPassword(); changed = true; }

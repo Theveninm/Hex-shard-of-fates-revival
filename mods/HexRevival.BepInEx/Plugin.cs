@@ -27,30 +27,9 @@ namespace HexRevival
     {
         internal static ManualLogSource Log;
 
-        /// <summary>
-        /// The mod used to be called "HexOffline" (1.0): takes over its files in the game folder
-        /// (decks, champions, settings) under the new name, never overwriting an existing file.
-        /// </summary>
-        private static void MigrateOldName()
-        {
-            try
-            {
-                string root = System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../");
-                foreach (string f in System.IO.Directory.GetFiles(root, "HexOffline*"))
-                {
-                    string name = System.IO.Path.GetFileName(f);
-                    string dest = System.IO.Path.Combine(root, "HexRevival" + name.Substring("HexOffline".Length));
-                    if (System.IO.File.Exists(dest)) continue;
-                    try { System.IO.File.Move(f, dest); } catch (Exception e) { Log.LogWarning("Migration " + name + " : " + e.Message); }
-                }
-            }
-            catch { }
-        }
-
         private void Awake()
         {
             Log = Logger;
-            MigrateOldName();
             Harmony harmony = new Harmony("hexrevival");
             int ok = 0, failed = 0;
 

@@ -71,7 +71,6 @@ namespace HexRevival
         /// <summary>Saves, most recently played first.</summary>
         public static List<Info> List()
         {
-            MigrateLegacyFiles();
             List<Info> res = new List<Info>();
             if (Directory.Exists(RootDir))
                 foreach (string dir in Directory.GetDirectories(RootDir))
@@ -215,29 +214,6 @@ namespace HexRevival
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }
-        }
-
-        /// <summary>
-        /// Before saves existed, decks, champions and campaign were stored next to Hex.exe:
-        /// they become a first save, "Offline", with everything unlocked.
-        /// </summary>
-        private static void MigrateLegacyFiles()
-        {
-            if (Directory.Exists(RootDir)) return;
-            string root = LocalServer.Root;
-            string[,] files = { { "HexRevival.decks.txt", "decks.txt" }, { "HexRevival.champions.txt", "champions.txt" }, { "HexRevival.campaign.txt", "campaign.txt" } };
-            bool any = false;
-            for (int k = 0; k < files.GetLength(0); k++) any |= System.IO.File.Exists(Path.Combine(root, files[k, 0]));
-            if (!any) return;
-            Info i = Create("Offline", true);
-            string dir = Path.Combine(RootDir, i.Name);
-            for (int k = 0; k < files.GetLength(0); k++)
-            {
-                string src = Path.Combine(root, files[k, 0]);
-                try { if (System.IO.File.Exists(src)) System.IO.File.Move(src, Path.Combine(dir, files[k, 1])); }
-                catch (Exception e) { Debug.LogError("[HexRevival] [Saves] migrate " + files[k, 0] + ": " + e.Message); }
-            }
-            Debug.Log("[HexRevival] [Saves] previous decks and champions moved to the account 'Offline'");
         }
     }
 }

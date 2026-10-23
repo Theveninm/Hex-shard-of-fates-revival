@@ -79,8 +79,6 @@ namespace HexRevival
         private const ulong CommonBase = 1000000;
         /// <summary>Ids given to the other accounts' decks listed by the online account.</summary>
         private const ulong ForeignBase = 7000000000000UL;
-        /// <summary>Player decks of decks_common.txt from before 1.2 (shared by every account then): each account gets its copy once.</summary>
-        private static readonly List<StoredDeck> s_Legacy = new List<StoredDeck>();
         private static ulong s_NextCommon = CommonBase;
         /// <summary>Copies shown for the cards of a shared deck the account does not own (id -> template).</summary>
         private static readonly Dictionary<ulong, ResourceId> s_Virtual = new Dictionary<ulong, ResourceId>();
@@ -88,15 +86,6 @@ namespace HexRevival
         private static ulong s_NextVirtual = VirtualBase;
 
         private static string IdsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "deck_ids.txt"); } }
-        private static string SplitMarker { get { return Saves.File("decks_split.txt"); } }
-
-        /// <summary>
-        /// Old id -> shared id of the account's decks moved to the shared decks, so runs saved before the move
-        /// (arena, gauntlets, siege defense) still find their deck. Kept in the account's decks_moved.txt.
-        /// </summary>
-        private static readonly Dictionary<ulong, ulong> s_Moved = new Dictionary<ulong, ulong>();
-
-        private static string MovedPath { get { return Saves.File("decks_moved.txt"); } }
 
         /// <summary>A deck played by the AI for the player's side (a Siege defense deck, see SetTemporary); never saved.</summary>
         private static StoredDeck s_Temporary;
@@ -125,16 +114,7 @@ namespace HexRevival
             StoredDeck d;
             if (s_Temporary != null && id == TemporaryId) return s_Temporary;
             if (s_Remote != null && id == RemoteId) return s_Remote;
-            if (s_Decks.TryGetValue(id, out d)) return d;
-            ulong to;
-            return s_Moved.TryGetValue(id, out to) && s_Decks.TryGetValue(to, out d) ? d : null;
-        }
-
-        /// <summary>The current id of a deck (its shared id when it was moved there).</summary>
-        public static ulong CurrentId(ulong id)
-        {
-            ulong to;
-            return !s_Decks.ContainsKey(id) && s_Moved.TryGetValue(id, out to) ? to : id;
+            return s_Decks.TryGetValue(id, out d) ? d : null;
         }
 
         /// <summary>A new id: campaign decks count per account; the others are unique across accounts (deck_ids.txt).</summary>
@@ -168,26 +148,12 @@ namespace HexRevival
             s_NextVirtual = VirtualBase;
             s_NextId = 1;
             s_NextCommon = CommonBase;
-            s_Moved.Clear();
             try
             {
-                if (File.Exists(MovedPath))
-                    foreach (string l in File.ReadAllLines(MovedPath))
-                    {
-                        string[] p = l.Split(' ');
-                        ulong a, b;
-                        if (p.Length == 2 && ulong.TryParse(p[0], out a) && ulong.TryParse(p[1], out b)) s_Moved[a] = b;
-                    }
-                s_Legacy.Clear();
                 if (File.Exists(CommonPath))
-                    foreach (StoredDeck d in Parse(File.ReadAllLines(CommonPath)))
-                    {
-                        if (IsForAI(d)) { d.Common = true; s_Decks[d.Id] = d; }
-                        else s_Legacy.Add(d);
-                    }
+                    foreach (StoredDeck d in Parse(File.ReadAllLines(CommonPath))) { d.Common = true; s_Decks[d.Id] = d; }
                 if (File.Exists(FilePath))
                     foreach (StoredDeck d in Parse(File.ReadAllLines(FilePath))) s_Decks[d.Id] = d;
-                TakeLegacyDecks();
                 if (Saves.IsOnline) LoadOtherAccounts();
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Decks] read: " + e); }
@@ -941,7 +907,6 @@ namespace HexRevival
                 StringBuilder sb = new StringBuilder();
                 List<StoredDeck> decks = new List<StoredDeck>();
                 foreach (StoredDeck d in s_Decks.Values) if (!d.Foreign && d.Common == common) decks.Add(d);
-                if (common) decks.AddRange(s_Legacy);
                 foreach (StoredDeck d in decks)
                 {
                     sb.Append("DECK|").Append(d.Id).Append('|').Append(d.Name.Replace("|", "/")).Append('|').Append(d.PveChampion).Append('|')
@@ -958,26 +923,6 @@ namespace HexRevival
         {
             if (id >= CommonBase) { if (id >= s_NextCommon) s_NextCommon = id + 1; }
             else if (id >= s_NextId) s_NextId = id + 1;
-        }
-
-        /// <summary>
-        /// Before 1.2 the player decks were shared by every account: each account takes a copy of them at its first
-        /// login (same ids, so its saved runs still find them). They are dropped once every account has its copy.
-        /// </summary>
-        private static void TakeLegacyDecks()
-        {
-            if (s_Legacy.Count == 0 || Saves.IsOnline || Saves.Current == null) return;
-            if (!File.Exists(SplitMarker))
-            {
-                foreach (StoredDeck d in s_Legacy)
-                    if (!s_Decks.ContainsKey(d.Id)) { StoredDeck c = d.Copy(d.Id); c.Owner = Saves.Current.Name; s_Decks[c.Id] = c; }
-                try { File.WriteAllText(SplitMarker, DateTime.Now.ToString("o")); } catch { }
-                Debug.Log("[HexRevival] [Decks] " + s_Legacy.Count + " formerly shared deck(s) copied to the account");
-            }
-            bool all = true;
-            foreach (Saves.Info i in Saves.List()) if (!File.Exists(Path.Combine(Saves.FolderOf(i), "decks_split.txt"))) all = false;
-            if (all) s_Legacy.Clear();
-            Save();
         }
 
         /// <summary>The online account: every offline account's decks, to play them (campaign decks with their champion).</summary>

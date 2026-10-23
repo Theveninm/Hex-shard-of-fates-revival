@@ -34,8 +34,7 @@ Known limits of the prototype:
 - Decks (user's choice, 2026-10-23): **each account has its own decks** (campaign and player decks, in its save);
   nothing is shared between offline accounts any more, except the decks made for the AI (`decks_common.txt`), which
   are AI opponents. The online account edits only its own decks and plays every offline account's decks, campaign
-  ones included (with their PvE champion), listed by account; they cannot be edited from there. Player decks shared
-  before this change are copied into each account at its first login.
+  ones included (with their PvE champion), listed by account; they cannot be edited from there.
 - A deck saved as **made for the AI** stays one (it is shared and has no owner any more): its box can no longer be
   unticked; it can still be edited or deleted, and **Copy as a player deck** (deck editor, AI settings window) copies
   it into the current account if the account owns every card (accounts with everything unlocked and the online

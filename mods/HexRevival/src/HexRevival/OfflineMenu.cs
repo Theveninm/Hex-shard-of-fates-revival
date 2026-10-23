@@ -332,26 +332,18 @@ namespace HexRevival
         private void EnsureLogoutButton()
         {
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+            // The column has no room for one more button: the Collection button goes (the collection is reachable
+            // from the icon of the top bar).
+            if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
+            {
+                vm.MenuUI.Collection.gameObject.SetActive(false);
+                UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
+                if (g != null) g.Reposition();
+            }
             if (vm == null || vm.MenuUI.Campaign == null) return;
             // Red, as a cancel button.
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
-            TightenColumn(vm.MenuUI.Campaign.transform.parent);
-        }
-
-        private static UIGrid s_Tightened;
-
-        /// <summary>
-        /// Seven buttons (the game's six with Collection, the deck editor's way in now that Quick Match is gone, and
-        /// "Switch account") do not fit the column's spacing above the bottom bar: the rows get closer (once).
-        /// </summary>
-        private static void TightenColumn(Transform column)
-        {
-            UIGrid grid = column != null ? column.GetComponent<UIGrid>() : null;
-            if (grid == null || ReferenceEquals(grid, s_Tightened)) return;
-            s_Tightened = grid;
-            grid.cellHeight *= 0.86f;
-            grid.Reposition();
         }
 
         /// <summary>A copy of the Campaign button, colored, added at the end of the main menu's column (once).</summary>
