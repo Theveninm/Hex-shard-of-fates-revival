@@ -172,6 +172,13 @@ namespace HexRevival
             try
             {
                 if (!(self is StandaloneSession) || player == null) return;
+                // Online: the other player's deck, received from its game (see OnlineMatch, Decks.SetRemote).
+                if (OnlineMatch.IsRemote(player.m_PlayerId))
+                {
+                    player.m_DeckID = OnlineMatch.RemoteDeck;
+                    Debug.Log("[HexRevival] remote player " + player.m_PlayerId + ": deck " + player.m_DeckID);
+                    return;
+                }
                 if (player.IsAI() || Server.IsAIId(player.m_PlayerId))
                 {
                     if (s_PendingAIDeck != null)
@@ -202,6 +209,8 @@ namespace HexRevival
         {
             try
             {
+                // An online guest runs no session: the host's comes through the network (see OnlineMatch).
+                if (OnlineMatch.IsGuest) { OnlineMatch.OnGuestStartRequested(self); return; }
                 Debug.Log("[HexRevival] starting local encounter: " + encounterData.SceneTemplateId);
                 Server.ResetCache();
                 FillNullLists(encounterData);
@@ -229,7 +238,9 @@ namespace HexRevival
                     PlayerState playerState = new PlayerState();
                     bool tutorial = encounterData.SessionFlags.HasAnyFlags(ESessionFlags.IsTutorial);
                     playerState.PlayerId = new UID(tutorial ? UID.Type.ServiceAI : UID.Type.AIPlayer, (ulong)(1000 + i));
-                    AIPlayer aiPlayer = new AIPlayer(playerState);
+                    // Online, the opponent's seat is the other player (no AI): its events go to the network (Server.Flush).
+                    if (OnlineMatch.IsHost) playerState.PlayerId = OnlineMatch.RemoteId;
+                    LocalPlayer aiPlayer = OnlineMatch.IsHost ? new LocalPlayer(playerState, UID.Invalid) : new AIPlayer(playerState);
 
                     SessionClient sessionClient = new SessionClient(BuildSessionState(sessionServer, encounterData), self);
                     sessionClient.m_SessionName = "AILocalSession_" + aiPlayer.m_PlayerId;
@@ -238,10 +249,10 @@ namespace HexRevival
                     sessionClient.m_SessionId = sessionServer.m_SessionId;
                     sessionClient.AddPlayer(aiPlayer);
 
+                    self.m_LocalPlayerMap[aiPlayer.m_PlayerId] = aiPlayer;
+                    if (OnlineMatch.IsHost) continue;
                     // Attaches the AI tactical component (never initialized anywhere else in the client).
                     aiPlayer.InitializeAITactical(Opponents.TakePersonality());   // the AI skill of the opponent (see Opponents)
-
-                    self.m_LocalPlayerMap[aiPlayer.m_PlayerId] = aiPlayer;
                     aiSessions.Add(sessionClient);
                 }
                 SetField(self, "m_AISessions", aiSessions);
@@ -251,6 +262,7 @@ namespace HexRevival
                     Success = true,
                     SessionState = BuildSessionState(sessionServer, encounterData)
                 };
+                if (OnlineMatch.IsHost) OnlineMatch.OnHostSessionCreated(response.SessionState);
                 InvokeNonPublic(self, "OnStartEncounter", response);
             }
             catch (Exception e)
@@ -313,8 +325,6 @@ namespace HexRevival
         {
             try
             {
-                // A deck saved before the move to the shared decks is found under its new id.
-                if (playerDeck.IsValid()) playerDeck = new UID(UID.Type.Deck, Decks.CurrentId(playerDeck.GetInstanceId()));
                 s_PendingAIDeck = aiDeck;
                 s_PendingAIPersonality = aiPersonality;
                 Decks.LastDeck = playerDeck;

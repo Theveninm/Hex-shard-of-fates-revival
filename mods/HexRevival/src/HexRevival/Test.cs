@@ -40,6 +40,8 @@ namespace HexRevival
         private string m_StallSig;
         /// <summary>"menu" keyword: automatic login only, stay on the main menu.</summary>
         private bool m_MenuOnly;
+        /// <summary>Autostart logs in with the online profile ("online" keyword; always for a second instance).</summary>
+        private bool m_AutoOnline;
         private float m_StallSince;
 
         private static StandaloneSession GetServer(StandaloneGameClient gc)
@@ -54,6 +56,8 @@ namespace HexRevival
         /// </summary>
         private void CheckStall(StandaloneGameClient gc, StandaloneSession ss, string line)
         {
+            // Online, waiting for the other player is normal (and the guest has no session).
+            if (OnlineMatch.Current != OnlineMatch.Role.None) return;
             if (!m_AutoAI || ReferenceEquals(gc.Player, null) || ReferenceEquals(gc.Player.AITactical, null)
                 || (!ReferenceEquals(UIBattle.Instance, null) && UIBattle.Instance.GameOver))
             {
@@ -159,6 +163,8 @@ namespace HexRevival
                 go.AddComponent<Spectator>();
                 go.AddComponent<AiDecksWindow>();
                 go.AddComponent<AiButton>();
+                go.AddComponent<OnlineLobby>();
+                go.AddComponent<Community>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -188,6 +194,7 @@ namespace HexRevival
                     {
                         if (tok == "aiplay") { m_AutoAI = true; continue; }
                         if (tok == "menu") { m_MenuOnly = true; continue; }
+                        if (tok == "online") { m_AutoOnline = true; continue; }
                         if (tok == "manualblock") { m_ManualBlock = true; continue; }
                         if (tok == "mute") { m_Mute = true; continue; }
                         if (tok == "background") { Application.runInBackground = true; continue; }
@@ -523,6 +530,8 @@ namespace HexRevival
                     {
                         WriteState("autostart: login");
                         // Developer shortcut: the most recently played account (the account menu is skipped).
+                        // A second instance ("-hexinstance N") is there for online tests: its own online profile and account.
+                        if (Saves.Current == null && (m_AutoOnline || Instance.Id > 0)) Saves.Select(Saves.Online);
                         if (Saves.Current == null) { List<Saves.Info> saves = Saves.List(); Saves.Select(saves.Count > 0 ? saves[0] : Saves.FindOrCreate("Offline")); }
                         login.LoginToGame();
                     }
@@ -621,7 +630,7 @@ namespace HexRevival
                     if (cmd.Length == 0) continue;
                     resp.Add("> " + cmd);
                     try { resp.Add(Execute(gc, cmd)); }
-                    catch (Exception e) { resp.Add("ERR " + e.Message); }
+                    catch (Exception e) { resp.Add("ERR " + e.Message); Debug.LogWarning("[HexRevival] command failed: " + e); }
                 }
                 try { File.WriteAllLines(m_RespPath, resp.ToArray()); } catch { }
             }
@@ -897,7 +906,9 @@ namespace HexRevival
                 case "deckai": return DeckAiPanel.Command(parts);
                 case "mods": return ModifiersWindow.Command(parts);
                 case "spectate": return Spectator.Toggle();
-                case "online": return AccountMenu.Command(parts);
+                case "online": return OnlineLobby.Command(parts);
+                case "profile": return AccountMenu.Command(parts);
+                case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
@@ -1099,6 +1110,40 @@ namespace HexRevival
                         });
                         return "tutorial: " + scene.GetType().Name;
                     }
+                case "decknew":   // dev: "decknew <name> <game deck search>": a player deck of the account, copied from a game deck
+                    {
+                        if (parts.Length < 3) return "usage: decknew <name> <game deck search>";
+                        string q = string.Join(" ", parts, 2, parts.Length - 2).ToLowerInvariant();
+                        foreach (Reckoning.Game.DeckTemplate t in Singleton<Reckoning.Game.TemplateManager>.Instance.Decks.Values)
+                        {
+                            if (t == null || !t.m_ChampionId.IsValid || string.IsNullOrEmpty(t.m_DeckName) || t.m_DeckName.ToLowerInvariant().IndexOf(q, StringComparison.Ordinal) < 0) continue;
+                            Game.Shared.Domain.deck_bits b = Decks.CreateFromTemplate(parts[1], t);
+                            try { GameClient.Instance.PlayerProfile.AddDeck(b); } catch (Exception e) { return "created " + b.Id + ", profile: " + e.Message; }
+                            return "created deck " + b.Id + " '" + parts[1] + "' from " + t.m_DeckName;
+                        }
+                        return "no game deck matching " + q;
+                    }
+                case "deckforai":   // dev: "deckforai <name>": marks a deck of the account as made for the AI
+                case "deckcopy":    // dev: "deckcopy <name>": copies a deck made for the AI as a player deck (collection checked)
+                    {
+                        string n = string.Join(" ", parts, 1, parts.Length - 1);
+                        Decks.DeckInfo di = Decks.ListAll().Find(x => x.Name == n);
+                        if (di == null) return "no deck " + n;
+                        ulong did = di.Id.GetInstanceId();
+                        if (parts[0] == "deckforai")
+                        {
+                            Decks.AiSettings ai = Decks.Ai(did).Clone();
+                            ai.ForAI = true;
+                            Decks.SetAi(did, ai);
+                            ai = Decks.Ai(did).Clone();
+                            ai.ForAI = false;
+                            Decks.SetAi(did, ai);   // must stay made for the AI
+                            return "forAI=" + Decks.Ai(did).ForAI + " shared=" + Decks.IsAiDeck(did);
+                        }
+                        List<string> missing = new List<string>();
+                        ulong copy = Decks.CopyToAccount(did, missing);
+                        return copy != 0 ? "copied as " + copy : "missing: " + string.Join(", ", missing.ToArray());
+                    }
                 case "accountnew":   // dev: shows the "new account" screen of the account menu (login screen)
                     {
                         AccountMenu am = UnityEngine.Object.FindObjectOfType<AccountMenu>();
@@ -1179,6 +1224,26 @@ namespace HexRevival
                     Progression.AddAccountXp(parts.Length > 1 ? int.Parse(parts[1]) : 50); return "account level " + Saves.Current.AccountLevel + ", xp " + Saves.Current.AccountXp + ", gold " + Saves.Current.Gold;
                 case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
+                case "hover":   // dev: "hover <GameObject path>" = NGUI's OnHover(true) on it, as the mouse entering it would
+                    {
+                        GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
+                        if (go == null) return "not found";
+                        go.SendMessage("OnHover", true, SendMessageOptions.DontRequireReceiver);
+                        return "hover " + go.name;
+                    }
+                case "comps":   // dev: "comps <GameObject path>" = the components of that object and its children
+                    {
+                        GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
+                        if (go == null) return "not found";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
+                        {
+                            sb.Append(t == go.transform ? t.name : "  " + t.name).Append(t.gameObject.activeSelf ? "" : " (off)").Append(":");
+                            foreach (Component c in t.GetComponents<Component>()) sb.Append(' ').Append(c != null ? c.GetType().Name : "null");
+                            sb.Append('\n');
+                        }
+                        return sb.ToString();
+                    }
                 case "concede":
                     {
                         UIBattle ui = UnityEngine.Object.FindObjectOfType<UIBattle>();

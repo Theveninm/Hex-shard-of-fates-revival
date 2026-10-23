@@ -50,6 +50,9 @@ namespace HexRevival
 
         private static string RootDir { get { return Path.Combine(LocalServer.Root, "HexRevivalSaves"); } }
 
+        /// <summary>The folder of a save.</summary>
+        public static string FolderOf(Info i) { return i.Folder ?? Path.Combine(RootDir, i.Name); }
+
         /// <summary>Path of a file of the current save.</summary>
         public static string File(string name)
         {
@@ -68,7 +71,6 @@ namespace HexRevival
         /// <summary>Saves, most recently played first.</summary>
         public static List<Info> List()
         {
-            MigrateLegacyFiles();
             List<Info> res = new List<Info>();
             if (Directory.Exists(RootDir))
                 foreach (string dir in Directory.GetDirectories(RootDir))
@@ -127,9 +129,43 @@ namespace HexRevival
             if (s_Current != null) Write(s_Current);
         }
 
+        // ------------------------------------------------------------------
+        // The online profile's account
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The account the online profile plays with: not one of the offline accounts (its own folder, outside the
+        /// account list), everything unlocked. Decks outside the campaign are shared by every account anyway.
+        /// </summary>
+        private static string OnlineDir { get { return Path.Combine(LocalServer.Root, "HexRevivalOnline" + Instance.Suffix); } }
+
+        public static Info Online
+        {
+            get
+            {
+                Info i = ReadFrom(OnlineDir, "account.txt") ?? new Info { UnlockAll = true, Gold = UnlockedGold, LastPlayed = DateTime.Now };
+                i.Folder = OnlineDir;
+                i.Name = string.IsNullOrEmpty(OnlineProfile.Current.Name) ? "Online" : OnlineProfile.Current.Name;
+                i.UnlockAll = true;
+                i.GoldPrices = true;
+                return i;
+            }
+        }
+
+        /// <summary>Logged in with the online profile: the solo features (cheats...) are hidden.</summary>
+        public static bool IsOnline { get { return s_Current != null && s_Current.Folder == OnlineDir; } }
+
         private static Info Read(string name)
         {
-            string path = Path.Combine(Path.Combine(RootDir, name), "account.txt");
+            Info i = ReadFrom(Path.Combine(RootDir, name), "account.txt");
+            if (i != null) i.Name = name;
+            return i;
+        }
+
+        private static Info ReadFrom(string dir, string file)
+        {
+            string path = Path.Combine(dir, file);
+            string name = Path.GetFileName(dir);
             if (!System.IO.File.Exists(path)) return null;
             Info i = new Info { Name = name };
             try
@@ -161,7 +197,7 @@ namespace HexRevival
         {
             try
             {
-                string dir = Path.Combine(RootDir, i.Name);
+                string dir = i.Folder ?? Path.Combine(RootDir, i.Name);
                 Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllLines(Path.Combine(dir, "account.txt"), new[] {
                     "unlock=" + (i.UnlockAll ? "1" : "0"),
@@ -178,29 +214,6 @@ namespace HexRevival
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }
-        }
-
-        /// <summary>
-        /// Before saves existed, decks, champions and campaign were stored next to Hex.exe:
-        /// they become a first save, "Offline", with everything unlocked.
-        /// </summary>
-        private static void MigrateLegacyFiles()
-        {
-            if (Directory.Exists(RootDir)) return;
-            string root = LocalServer.Root;
-            string[,] files = { { "HexRevival.decks.txt", "decks.txt" }, { "HexRevival.champions.txt", "champions.txt" }, { "HexRevival.campaign.txt", "campaign.txt" } };
-            bool any = false;
-            for (int k = 0; k < files.GetLength(0); k++) any |= System.IO.File.Exists(Path.Combine(root, files[k, 0]));
-            if (!any) return;
-            Info i = Create("Offline", true);
-            string dir = Path.Combine(RootDir, i.Name);
-            for (int k = 0; k < files.GetLength(0); k++)
-            {
-                string src = Path.Combine(root, files[k, 0]);
-                try { if (System.IO.File.Exists(src)) System.IO.File.Move(src, Path.Combine(dir, files[k, 1])); }
-                catch (Exception e) { Debug.LogError("[HexRevival] [Saves] migrate " + files[k, 0] + ": " + e.Message); }
-            }
-            Debug.Log("[HexRevival] [Saves] previous decks and champions moved to the account 'Offline'");
         }
     }
 }

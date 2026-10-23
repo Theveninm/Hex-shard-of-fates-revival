@@ -18,21 +18,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\HexRevival\src\HexRevival\Bootstrap.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Patches.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Server.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Repl.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Test.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Cheats.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Instance.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\LocalProfile.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\LocalServer.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Decks.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Champions.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\OfflineMenu.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\GameSkin.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Portraits.cs" />
-    <Compile Include="..\HexRevival\src\HexRevival\Loc.cs" />
+    <Compile Include="..\HexRevival\src\HexRevival\*.cs" />
+    <EmbeddedResource Include="..\HexRevival\assets\discord_badge.png" LogicalName="HexRevival.discord_badge.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1014,6 +1014,8 @@ namespace HexRevival
             // The tutorial gives nothing (it can be replayed at will from the menus).
             StandaloneSession ss = session as StandaloneSession;
             if (ss != null && ss.m_EncounterData != null && ss.m_EncounterData.SessionFlags.HasAnyFlags(ESessionFlags.IsTutorial)) return;
+            // An online game gives no solo rewards (online rewards are not decided yet).
+            if (OnlineMatch.Current != OnlineMatch.Role.None) return;
             bool won = false;
             if (winners != null)
                 foreach (UID u in winners)

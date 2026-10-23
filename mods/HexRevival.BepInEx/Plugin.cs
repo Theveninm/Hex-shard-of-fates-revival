@@ -22,35 +22,14 @@ namespace HexRevival
     /// The logic itself is unchanged and shared with the old plugin:
     /// mods/HexRevival/src/HexRevival/{Bootstrap,Patches,Server,Repl,Test}.cs.
     /// </summary>
-    [BepInPlugin("hexrevival", "HexRevival", "1.1.0")]
+    [BepInPlugin("hexrevival", "HexRevival", Community.Version)]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
 
-        /// <summary>
-        /// The mod used to be called "HexOffline" (1.0): takes over its files in the game folder
-        /// (decks, champions, settings) under the new name, never overwriting an existing file.
-        /// </summary>
-        private static void MigrateOldName()
-        {
-            try
-            {
-                string root = System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../");
-                foreach (string f in System.IO.Directory.GetFiles(root, "HexOffline*"))
-                {
-                    string name = System.IO.Path.GetFileName(f);
-                    string dest = System.IO.Path.Combine(root, "HexRevival" + name.Substring("HexOffline".Length));
-                    if (System.IO.File.Exists(dest)) continue;
-                    try { System.IO.File.Move(f, dest); } catch (Exception e) { Log.LogWarning("Migration " + name + " : " + e.Message); }
-                }
-            }
-            catch { }
-        }
-
         private void Awake()
         {
             Log = Logger;
-            MigrateOldName();
             Harmony harmony = new Harmony("hexrevival");
             int ok = 0, failed = 0;
 
@@ -92,6 +71,11 @@ namespace HexRevival
             apply("StandaloneGameClient.SendStartEncounter", () => Prefix(harmony, typeof(StandaloneGameClient), "SendStartEncounter",
                 new[] { typeof(string), typeof(SessionStateEncounterData) }, "StandaloneGameClient_SendStartEncounter"));
 
+            // Online guest: joins the host's game, its actions go to the host (see OnlineMatch).
+            apply("StandaloneGameClient.SendJoinSession (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendJoinSession", null, "Online_JoinSession"));
+            apply("StandaloneGameClient.SendReadyToStartGame (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendReadyToStartGame", null, "Online_ReadyToStart"));
+            apply("SessionClient.PumpSyncEventQueue", () => Prefix(harmony, typeof(Game.Client.SessionClient), "PumpSyncEventQueue", Type.EmptyTypes, "Session_PumpSync"));
+            apply("StandaloneGameClient.SendSessionTransaction (online)", () => Prefix(harmony, typeof(StandaloneGameClient), "SendSessionTransaction", null, "Online_SessionTransaction"));
             apply("UILandingPageContext.OnClickChallengeAI", () => Prefix(harmony, typeof(UILandingPageContext), "OnClickChallengeAI", Type.EmptyTypes, "UILandingPage_OnClickChallengeAI"));
 
             // Local campaign service: the client's campaign requests are answered by Campaign.
@@ -263,6 +247,14 @@ namespace HexRevival
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "ClientConnection_SendCommand"));
             });
 
+            // Online: the players' names in the battle instead of their champions' (see OnlineMatch).
+            apply("UIBattle.OnChampionCardPlayed", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnChampionCardPlayed"), postfix: new HarmonyMethod(typeof(Hooks), "Battle_ChampionCardPlayed")));
+            // Featured Content of the main menu: the mod's panels instead of the HEX website's news (see Community).
+            apply("UINewsEventsViewModel.Start", () =>
+                harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
+            apply("UINewsEventsViewModel.GetNewsAndEvents", () => Prefix(harmony, typeof(UINewsEventsViewModel), "GetNewsAndEvents", Type.EmptyTypes, "News_Get"));
+
             Log.LogInfo("HexRevival loaded: " + ok + " patches OK, " + failed + " failed.");
         }
 
@@ -297,6 +289,49 @@ namespace HexRevival
             if (s_Initialized) return;
             s_Initialized = true;
             Bootstrap.Init();
+        }
+
+        public static bool Online_JoinSession(StandaloneGameClient __instance)
+        {
+            if (!OnlineMatch.IsGuest) return true;
+            try { OnlineMatch.GuestJoinSession(__instance); }
+            catch (Exception e) { Plugin.Log.LogError("Online join: " + e); }
+            return false;
+        }
+
+        private static FieldInfo s_SyncQueue, s_Responded;
+
+        /// <summary>
+        /// A packet from the server answers the last transaction as soon as the game starts handling it. The game only
+        /// marked it after all the packet's events, so an AI answering one of them (a triggered ability's targets) was
+        /// refused as "still waiting for the server" and the game stopped.
+        /// </summary>
+        public static void Session_PumpSync(Game.Client.SessionClient __instance)
+        {
+            if (s_SyncQueue == null)
+            {
+                s_SyncQueue = AccessTools.Field(typeof(Game.Client.SessionClient), "m_SyncEventsQueue");
+                s_Responded = AccessTools.Field(typeof(ClientSessionBase), "m_HasPreviousTransactionBeenRespondedByServer");
+            }
+            System.Collections.ICollection q = s_SyncQueue.GetValue(__instance) as System.Collections.ICollection;
+            if (q != null && q.Count > 0) s_Responded.SetValue(__instance, true);
+        }
+
+        public static bool Online_ReadyToStart() { return !OnlineMatch.IsGuest; }
+
+        private static FieldInfo s_SessionServer;
+
+        public static bool Online_SessionTransaction(StandaloneGameClient __instance, Game.Shared.Mechanics.Transactions.Transaction __0)
+        {
+            if (!OnlineMatch.IsGuest)
+            {
+                // Right after an online game the guest has no session to send to.
+                if (s_SessionServer == null) s_SessionServer = AccessTools.Field(typeof(StandaloneGameClient), "m_SessionServer");
+                return s_SessionServer.GetValue(__instance) != null;
+            }
+            try { OnlineMatch.SendTransaction(__0); }
+            catch (Exception e) { Plugin.Log.LogError("Online transaction: " + e); }
+            return false;
         }
 
         public static bool Steamy_IsRunningSteam(ref bool __result)
@@ -432,6 +467,20 @@ namespace HexRevival
         public static void Player_HasStop(Game.Shared.Player __instance, Game.Shared.Player __0, Game.Shared.Mechanics.ETurnPhases __1, ref bool __result) { if (!__result) __result = Tutorial.ScriptStop(__instance, __0, __1); }
         public static void Tutorial_BoardSetup(bool __result) { if (__result) Tutorial.OnBoardReset(); }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
+
+        public static void Battle_ChampionCardPlayed(UIBattle __instance, ChampionCardPlayedSessionEventArgs __0) { OnlineMatch.ShowPlayerNames(__instance, __0); }
+
+        /// <summary>A URL is needed for the carousel to ask for its panels (the game's config has none offline).</summary>
+        public static void News_Start(UINewsEventsViewModel __instance)
+        {
+            if (string.IsNullOrEmpty(__instance.m_NewsEventsURL)) __instance.m_NewsEventsURL = Community.RepoUrl;
+        }
+
+        public static bool News_Get(UINewsEventsViewModel __instance)
+        {
+            Community.FillNews(__instance);
+            return false;
+        }
 
         public static bool UILandingPage_OnClickChallengeAI(UILandingPageContext __instance)
         {

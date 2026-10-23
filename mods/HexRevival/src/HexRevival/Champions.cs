@@ -26,31 +26,8 @@ namespace HexRevival
         {
             s_ReckId = reckId;
             s_Champions.Clear();
-            try
-            {
-                if (File.Exists(FilePath))
-                    foreach (string line in File.ReadAllLines(FilePath))
-                    {
-                        string[] p = line.Split('|');
-                        if (p.Length < 10) continue;
-                        champion_bits c = New(ulong.Parse(p[0]), p[1]);
-                        c.Level = int.Parse(p[2]);
-                        c.ChampionClass = (EChampionClass)Enum.Parse(typeof(EChampionClass), p[3]);
-                        c.Race = (ERace)Enum.Parse(typeof(ERace), p[4]);
-                        c.Gender = (EGender)Enum.Parse(typeof(EGender), p[5]);
-                        c.OwnerChampionId = ulong.Parse(p[6]);
-                        c.LastDeckID = ulong.Parse(p[7]);
-                        c.DeckTemplateId = ulong.Parse(p[8]);
-                        c.PetName = p[9];
-                        if (p.Length > 10)
-                            foreach (string t in p[10].Split(';'))
-                                if (t.Length > 0) { try { c.ChampionTalents.Add(new ResourceId(t)); } catch { } }
-                        if (p.Length > 11) { int xp; if (int.TryParse(p[11], out xp)) c.CurrentXP = xp; }
-                        c.LastCampaignID = Campaign.HasSave(c.Id) ? c.Id : 0UL;
-                        s_Champions.Add(c);
-                    }
-            }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] read: " + e); }
+            s_Champions.AddRange(ReadFile(FilePath));
+            foreach (champion_bits c in s_Champions) c.LastCampaignID = Campaign.HasSave(c.Id) ? c.Id : 0UL;
             if (s_Champions.Count == 0)
             {
                 champion_bits c = New(1UL, defaultName);
@@ -77,8 +54,42 @@ namespace HexRevival
             return new List<champion_bits>(s_Champions);
         }
 
+        /// <summary>The champions saved in a champions.txt (also another account's: its campaign decks played online).</summary>
+        public static List<champion_bits> ReadFile(string path)
+        {
+            List<champion_bits> res = new List<champion_bits>();
+            try
+            {
+                if (File.Exists(path))
+                    foreach (string line in File.ReadAllLines(path))
+                    {
+                        string[] p = line.Split('|');
+                        if (p.Length < 10) continue;
+                        champion_bits c = New(ulong.Parse(p[0]), p[1]);
+                        c.Level = int.Parse(p[2]);
+                        c.ChampionClass = (EChampionClass)Enum.Parse(typeof(EChampionClass), p[3]);
+                        c.Race = (ERace)Enum.Parse(typeof(ERace), p[4]);
+                        c.Gender = (EGender)Enum.Parse(typeof(EGender), p[5]);
+                        c.OwnerChampionId = ulong.Parse(p[6]);
+                        c.LastDeckID = ulong.Parse(p[7]);
+                        c.DeckTemplateId = ulong.Parse(p[8]);
+                        c.PetName = p[9];
+                        if (p.Length > 10)
+                            foreach (string t in p[10].Split(';'))
+                                if (t.Length > 0) { try { c.ChampionTalents.Add(new ResourceId(t)); } catch { } }
+                        if (p.Length > 11) { int xp; if (int.TryParse(p[11], out xp)) c.CurrentXP = xp; }
+                        res.Add(c);
+                    }
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Champions] read " + path + ": " + e); }
+            return res;
+        }
+
         /// <summary>Reloads the champions of the save in use.</summary>
         public static void Reload() { Load(s_ReckId, null); }
+
+        /// <summary>A champion outside the account (the other player's, online).</summary>
+        public static champion_bits Make(ulong id, string name) { return New(id, name); }
 
         private static champion_bits New(ulong id, string name)
         {

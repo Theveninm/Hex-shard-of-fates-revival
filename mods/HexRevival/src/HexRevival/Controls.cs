@@ -178,6 +178,15 @@ namespace HexRevival
         /// Blocks the game's interface (its NGUI cameras) while the mouse is over one of the given areas, or always
         /// when modal: clicks on the mod's windows must not reach the game's buttons underneath.
         /// </summary>
+        /// <summary>
+        /// The game's active UI cameras. NGUI's list only holds enabled cameras and its ToArray() gives null when empty
+        /// (another window of the mod already disabled them all).
+        /// </summary>
+        public static UICamera[] UiCameras()
+        {
+            return UICamera.list.ToArray() ?? new UICamera[0];
+        }
+
         public class UiBlocker
         {
             private readonly List<Behaviour> m_Disabled = new List<Behaviour>();
@@ -187,9 +196,10 @@ namespace HexRevival
                 bool block = modal;
                 Vector2 mouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
                 if (!block) foreach (Rect a in areas) if (a.width > 0 && a.Contains(mouse)) { block = true; break; }
-                if (block && m_Disabled.Count == 0)
+                if (block)
                 {
-                    foreach (UICamera c in UICamera.list.ToArray())
+                    // Every frame: a screen loading meanwhile (the main menu right after logging in) brings new cameras.
+                    foreach (UICamera c in Controls.UiCameras())
                         if (c != null && c.enabled) { c.enabled = false; m_Disabled.Add(c); }
                 }
                 else if (!block && m_Disabled.Count > 0) Release();

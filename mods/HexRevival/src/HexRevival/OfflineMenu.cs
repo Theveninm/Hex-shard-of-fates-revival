@@ -8,16 +8,16 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// "Quick Match" menu (mod v1): choose your deck, then an opponent among your own
-    /// decks, the game's decks or the encounters, and start the match against the AI.
-    /// Opens from the main menu's "Quick Match" button (or F1). Drawn with IMGUI using the game's
-    /// sprites and fonts; the game's interface (NGUI) is disabled while it is open.
+    /// "Host a game" menu, opened from the online lobby (see OnlineLobby): choose your deck, then the opponent:
+    /// another player (the game is opened in the lobby, the first player who joins plays it), or the AI with one of
+    /// your decks (those made for the AI first). Drawn with IMGUI using the game's sprites and fonts;
+    /// the game's interface (NGUI) is disabled while it is open.
     /// </summary>
     public class OfflineMenu : MonoBehaviour
     {
         public static OfflineMenu Instance;
 
-        private enum Tab { MyDecks, GameDecks, Encounters }
+        private enum Tab { MyDecks, GameDecks, Encounters, Player }
 
         private class Entry
         {
@@ -28,6 +28,11 @@ namespace HexRevival
             public DeckTemplate Template;
             public ResourceId Encounter = ResourceId.Invalid;
             public ChampionTemplate Champion;
+            public bool ForAI;
+            /// <summary>An account's title above its decks (not a deck).</summary>
+            public bool Header;
+            /// <summary>A deck of the current account (can be edited and deleted here).</summary>
+            public bool Own;
         }
 
         private bool m_Open;
@@ -35,6 +40,7 @@ namespace HexRevival
         private string m_Search = "";
         private Vector2 m_ScrollMine, m_ScrollOpp;
         private List<Entry> m_MyDecks = new List<Entry>();
+        private readonly List<Entry> m_AiDecks = new List<Entry>();
         private List<Entry> m_GameDecks, m_Encounters;
         private Entry m_SelMine, m_SelOpp;
         private string m_ListLang;
@@ -42,7 +48,19 @@ namespace HexRevival
         private readonly List<Behaviour> m_DisabledUi = new List<Behaviour>();
 
 
-        public static void Open() { if (Instance != null) Instance.SetOpen(true); }
+        /// <summary>Opens the menu with this deck selected (the lobby's), on the "Player" tab when connected.</summary>
+        /// <summary>The format of the game opened in the lobby (the "Player" tab); your decks are those valid for it.</summary>
+        private string m_HostFormat = OnlineFormats.Default;
+
+        public static void Open(UID deck, string format)
+        {
+            if (Instance == null) return;
+            if (!string.IsNullOrEmpty(format)) Instance.m_HostFormat = format;
+            Instance.SetOpen(true);
+            Entry e = Instance.m_MyDecks.Find(x => x.PlayerDeck == deck);
+            if (e != null) Instance.m_SelMine = e;
+            Instance.SwitchTab(OnlineLobby.Online ? Tab.Player : Tab.MyDecks);
+        }
 
         public static bool IsOpen { get { return Instance != null && Instance.m_Open; } }
 
@@ -82,12 +100,12 @@ namespace HexRevival
             }
             m.Refresh();
             string tab = parts.Length > 2 ? parts[2] : "enc";
-            List<Entry> list = tab == "game" ? m.m_GameDecks : tab == "mine" ? m.m_MyDecks : m.m_Encounters;
+            List<Entry> list = tab == "game" ? m.m_GameDecks : tab == "mine" ? m.m_MyDecks : tab == "ai" ? m.m_AiDecks : m.m_Encounters;
             int idx = 0;
             int argStart = 3;
             if (sub == "fight") { if (parts.Length > 3) int.TryParse(parts[3], out idx); argStart = 4; }
             string q = parts.Length > argStart ? string.Join(" ", parts, argStart, parts.Length - argStart).ToLowerInvariant() : "";
-            List<Entry> found = list.FindAll(e => q.Length == 0 || e.Search.IndexOf(q, StringComparison.Ordinal) >= 0);
+            List<Entry> found = list.FindAll(e => !e.Header && (q.Length == 0 || e.Search.IndexOf(q, StringComparison.Ordinal) >= 0));
             if (sub == "list")
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -119,7 +137,6 @@ namespace HexRevival
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F1) && (m_Open || OnLandingPage())) SetOpen(!m_Open);
             if (m_Open && Input.GetKeyDown(KeyCode.Escape)) SetOpen(false);
             if (m_Open && !OnLandingPage()) SetOpen(false);
             if (OnLandingPage()) { EnsureLogoutButton(); Tutorial.OnLandingPage(); }
@@ -134,7 +151,7 @@ namespace HexRevival
             {
                 Refresh();
                 // Blocks clicks to the game interface under the menu.
-                foreach (UICamera c in UICamera.list.ToArray())
+                foreach (UICamera c in Controls.UiCameras())
                     if (c != null && c.enabled) { c.enabled = false; m_DisabledUi.Add(c); }
             }
             else
@@ -151,15 +168,51 @@ namespace HexRevival
         private void Refresh()
         {
             m_Message = "";
-            m_MyDecks.Clear();
-            foreach (Decks.DeckInfo d in Decks.List())
-                m_MyDecks.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion) });
-            m_MyDecks.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
-            if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == m_SelMine.PlayerDeck);
-            if (m_SelMine == null && m_MyDecks.Count > 0) m_SelMine = m_MyDecks.Find(e => e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks[0];
+            // Your deck: the player decks by account; the AI's: the decks made for the AI, by account too.
+            Fill(m_MyDecks, Decks.ByOwner(false));
+            // The AI's: the decks made for the AI, then the player decks.
+            List<Decks.DeckGroup> ai = Decks.ByOwner(true);
+            ai.AddRange(Decks.ByOwner(false));
+            Fill(m_AiDecks, ai);
+            if (m_SelMine != null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == m_SelMine.PlayerDeck);
+            if (m_SelMine == null) m_SelMine = m_MyDecks.Find(e => !e.Header && e.PlayerDeck == Decks.LastDeck) ?? m_MyDecks.Find(e => !e.Header);
             if (m_SelOpp != null && m_SelOpp.PlayerDeck != UID.Invalid) m_SelOpp = null;
             if (m_ListLang != Loc.Lang) { m_GameDecks = null; m_ListLang = Loc.Lang; }
             if (m_GameDecks == null) BuildTemplateLists();
+        }
+
+        private static void Fill(List<Entry> list, List<Decks.DeckGroup> groups)
+        {
+            list.Clear();
+            foreach (Decks.DeckGroup g in groups)
+            {
+                list.Add(new Entry { Label = g.Title, Header = true, Search = "" });
+                foreach (Decks.DeckInfo d in g.Decks)
+                    list.Add(new Entry { Label = d.Name, Detail = Loc.Get("cards", d.Count), Search = d.Name.ToLowerInvariant(), PlayerDeck = d.Id, Champion = SafeChampion(d.Champion), ForAI = d.ForAI, Own = g.Own });
+            }
+        }
+
+        /// <summary>The decks valid for a format, with the titles of the accounts that keep some.</summary>
+        private static List<Entry> ValidFor(List<Entry> list, string format)
+        {
+            List<Entry> res = new List<Entry>();
+            Entry header = null;
+            foreach (Entry e in list)
+            {
+                if (e.Header) { header = e; continue; }
+                if (!OnlineFormats.Accepts(format, e.PlayerDeck)) continue;
+                if (header != null) { res.Add(header); header = null; }
+                res.Add(e);
+            }
+            return res;
+        }
+
+        /// <summary>A separator row: the account's name over a thin line.</summary>
+        private static void DrawHeader(Rect r, string title)
+        {
+            float S = GameSkin.Scale;
+            GameSkin.Label(new Rect(r.x + 4 * S, r.y + 2 * S, r.width - 8 * S, r.height - 6 * S), title, GameSkin.Style("title", 14, GameSkin.GoldDim));
+            GUI.DrawTexture(new Rect(r.x + 4 * S, r.yMax - 3 * S, r.width - 8 * S, 1), GameSkin.Solid(new Color(0.8f, 0.72f, 0.57f, 0.5f)));
         }
 
         internal static bool IsBattle(EncounterScene es, TemplateManager tm)
@@ -175,7 +228,7 @@ namespace HexRevival
             return false;
         }
 
-        private static ChampionTemplate SafeChampion(ResourceId id)
+        internal static ChampionTemplate SafeChampion(ResourceId id)
         {
             try { return id.IsValid ? Singleton<TemplateManager>.Instance.GetChampionTemplate(id) : null; }
             catch { return null; }
@@ -275,65 +328,73 @@ namespace HexRevival
 
         private GameObject m_LogoutButton;
 
+        /// <summary>Main menu button added by the mod: "Switch account".</summary>
         private void EnsureLogoutButton()
         {
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
-            // The column has no room for one more button: the Collection button goes (the
-            // collection stays reachable from the deck editor of Quick Match and the game's menus).
+            // The column has no room for one more button: the Collection button goes (the collection is reachable
+            // from the icon of the top bar).
             if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
             {
                 vm.MenuUI.Collection.gameObject.SetActive(false);
                 UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
                 if (g != null) g.Reposition();
             }
-            if (m_LogoutButton != null)
+            if (vm == null || vm.MenuUI.Campaign == null) return;
+            // Red, as a cancel button.
+            m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
+                new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
+        }
+
+        /// <summary>A copy of the Campaign button, colored, added at the end of the main menu's column (once).</summary>
+        private static GameObject LandingButton(UILandingPageViewModel vm, GameObject current, string name, string labelKey, string tipKey,
+            Color color, Color hover, Color pressed, EventDelegate.Callback action)
+        {
+            if (current != null)
             {
-                foreach (UILabel l in m_LogoutButton.GetComponentsInChildren<UILabel>())
+                foreach (UILabel l in current.GetComponentsInChildren<UILabel>())
                 {
-                    string t = Loc.Get("switch_account").ToLower();
+                    string t = Loc.Get(labelKey).ToLower();
                     if (l.text != t) l.text = t;
                 }
-                return;
+                return current;
             }
-            if (vm == null || vm.MenuUI.Campaign == null) return;
             GameObject src = vm.MenuUI.Campaign.gameObject;
             Transform parent = src.transform.parent;
-            if (parent == null) return;
-            Transform existing = parent.Find("HexRevival_ChangeAccount");
-            if (existing != null) { m_LogoutButton = existing.gameObject; return; }
+            if (parent == null) return null;
+            Transform existing = parent.Find(name);
+            if (existing != null) return existing.gameObject;
             try
             {
-                GameObject b = UiClone.Copy(src, "HexRevival_ChangeAccount");
+                GameObject b = UiClone.Copy(src, name);
                 b.transform.SetAsLastSibling();
-                StripClone(b, Loc.Get("switch_account"), Loc.Get("switch_account_tip"));
-                // Red background (as cancel, opposite the green Quick Match), otherwise a classic button.
-                Color red = new Color(1f, 0.55f, 0.5f);
+                StripClone(b, Loc.Get(labelKey), Loc.Get(tipKey));
                 foreach (UISprite sp in b.GetComponentsInChildren<UISprite>(true))
-                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = red;
+                    if (sp.spriteName != null && sp.spriteName.StartsWith("Button_Landing", StringComparison.Ordinal)) sp.color = color;
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     if (ub.tweenTarget != null && ub.tweenTarget.GetComponent<UILabel>() != null) continue;
-                    ub.defaultColor = red;
-                    ub.hover = new Color(1f, 0.72f, 0.68f);
-                    ub.pressed = new Color(0.8f, 0.42f, 0.38f);
-                    ub.disabledColor = red;
+                    ub.defaultColor = color;
+                    ub.hover = hover;
+                    ub.pressed = pressed;
+                    ub.disabledColor = color;
                 }
                 foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
                 {
                     ub.onClick.Clear();
-                    ub.onClick.Add(new EventDelegate(ChangeAccount));
+                    ub.onClick.Add(new EventDelegate(action));
                     ub.isEnabled = true;
-                    RightClick.Add(ub.gameObject, ChangeAccount);
+                    RightClick.Add(ub.gameObject, () => action());
                 }
                 b.SetActive(true);
                 UIGrid grid = parent.GetComponent<UIGrid>();
                 if (grid != null) grid.Reposition();
-                m_LogoutButton = b;
+                return b;
             }
             catch (Exception e)
             {
-                Debug.LogError("[HexRevival] [Menu] change account button: " + e);
-                m_LogoutButton = src; // no new attempt every frame
+                Debug.LogError("[HexRevival] [Menu] " + name + ": " + e);
+                return src; // no new attempt every frame
             }
         }
 
@@ -393,7 +454,7 @@ namespace HexRevival
             // Title
             Rect title = new Rect(win.center.x - 260 * S, win.y - 22 * S, 520 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
-            GameSkin.Label(title, Loc.Get("quick_match"), GameSkin.Style("title", 30, GameSkin.Gold, TextAnchor.MiddleCenter));
+            GameSkin.Label(title, Loc.Get("host_game"), GameSkin.Style("title", 30, GameSkin.Gold, TextAnchor.MiddleCenter));
 
             float pad = 40 * S;
             float top = win.y + 64 * S;
@@ -414,12 +475,26 @@ namespace HexRevival
             GameSkin.Sprite(right, "A_Frames", "Frame_Generic_Inner");
             Rect rh = new Rect(right.x + 16 * S, right.y + 10 * S, right.width - 32 * S, 34 * S);
             GameSkin.Label(rh, Loc.Get("your_opponent"), GameSkin.Style("title", 21, GameSkin.Gold));
-            float tabW = Mathf.Min(170 * S, (right.width - 40 * S) / 3f);
+            // Against a player, or the AI with one of your decks (the encounters and the game's decks are not offered:
+            // too many choices of little interest online; still reachable with the dev command "menu fight").
+            float tabW = Mathf.Min(200 * S, (right.width - 40 * S) / 2f);
             float tabY = rh.yMax + 8 * S;
-            if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_enc"), m_Tab == Tab.Encounters)) SwitchTab(Tab.Encounters);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_game"), m_Tab == Tab.GameDecks)) SwitchTab(Tab.GameDecks);
-            if (GameSkin.Tab(new Rect(right.x + 16 * S + 2 * tabW, tabY, tabW, 32 * S), Loc.Get("tab_mine"), m_Tab == Tab.MyDecks)) SwitchTab(Tab.MyDecks);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S, tabY, tabW, 32 * S), Loc.Get("tab_player"), m_Tab == Tab.Player)) SwitchTab(Tab.Player);
+            if (GameSkin.Tab(new Rect(right.x + 16 * S + tabW, tabY, tabW, 32 * S), Loc.Get("tab_ai"), m_Tab != Tab.Player)) SwitchTab(Tab.MyDecks);
 
+            if (m_Tab == Tab.Player)
+            {
+                // Another player: the game is opened in the lobby with the format and the deck chosen here.
+                Rect info = new Rect(right.x + 24 * S, tabY + 56 * S, right.width - 48 * S, right.yMax - tabY - 80 * S);
+                string before = m_HostFormat;
+                m_HostFormat = Controls.Cycle(new Rect(info.x, info.y, info.width, 32 * S), Loc.Get("online_format_filter"), m_HostFormat, OnlineFormats.All, OnlineFormats.Name);
+                if (m_HostFormat != before && m_SelMine != null && !OnlineFormats.Accepts(m_HostFormat, m_SelMine.PlayerDeck)) m_SelMine = null;
+                GUI.Label(new Rect(info.x, info.y + 40 * S, info.width, 22 * S), Loc.Get("hint_format_" + m_HostFormat), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                GUI.Label(new Rect(info.x, info.y + 80 * S, info.width, info.height - 80 * S),
+                    Loc.Get(OnlineLobby.Online ? "hint_player" : "hint_player_offline"), GameSkin.Style("body", 15, GameSkin.Text, TextAnchor.UpperLeft, true));
+            }
+            else
+            {
             Rect search = new Rect(right.x + 16 * S, tabY + 42 * S, right.width - 32 * S, 34 * S);
             GameSkin.Sprite(search, "A_Frames", "Frame_Inner");
             GUI.DrawTexture(new Rect(search.x + 2, search.y + 2, search.width - 4, search.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
@@ -429,21 +504,31 @@ namespace HexRevival
                 GUI.Label(search, "   " + Loc.Get("search"), GameSkin.Style("body", 14, GameSkin.Muted));
 
             string hint = m_Tab == Tab.Encounters ? Loc.Get("hint_enc")
-                : m_Tab == Tab.GameDecks ? Loc.Get("hint_game") : Loc.Get("hint_mine");
+                : m_Tab == Tab.GameDecks ? Loc.Get("hint_game") : Loc.Get("hint_ai");
             Rect hintR = new Rect(right.x + 18 * S, right.yMax - 34 * S, right.width - 36 * S, 26 * S);
             GUI.Label(hintR, hint, GameSkin.Style("body", 13, GameSkin.Muted));
             Rect listR = new Rect(right.x + 12 * S, search.yMax + 10 * S, right.width - 24 * S, hintR.y - search.yMax - 14 * S);
-            List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_MyDecks;
+            List<Entry> list = m_Tab == Tab.Encounters ? m_Encounters : m_Tab == Tab.GameDecks ? m_GameDecks : m_AiDecks;
             m_ScrollOpp = DrawList(listR, list ?? new List<Entry>(), m_ScrollOpp, ref m_SelOpp, (m_Search ?? "").Trim().ToLowerInvariant());
+            }
 
             // --- Bottom: summary + actions
             float by = win.yMax - 74 * S;
             Rect summary = new Rect(win.x + pad, by, win.width - 2 * pad - 420 * S, 30 * S);
-            GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + (m_SelOpp != null ? m_SelOpp.Label : "—"), GameSkin.Style("title", 19, GameSkin.Text));
+            string opponent = m_Tab == Tab.Player ? Loc.Get("tab_player") : m_SelOpp != null ? m_SelOpp.Label : "—";
+            GameSkin.Label(summary, (m_SelMine != null ? m_SelMine.Label : "—") + Loc.Get("versus") + opponent, GameSkin.Style("title", 19, GameSkin.Text));
             if (!string.IsNullOrEmpty(m_Message))
                 GUI.Label(new Rect(summary.x, summary.yMax, summary.width, 24 * S), m_Message, GameSkin.Style("body", 13, new Color(1f, 0.55f, 0.45f)));
             if (GameSkin.RedButton(new Rect(win.xMax - pad - 400 * S, by - 4 * S, 180 * S, 52 * S), Loc.Get("close"))) SetOpen(false);
-            if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null)) Fight();
+            if (m_Tab == Tab.Player)
+            {
+                if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("host"), m_SelMine != null && OnlineLobby.Online && OnlineFormats.Accepts(m_HostFormat, m_SelMine.PlayerDeck)))
+                {
+                    OnlineLobby.Host(m_SelMine.PlayerDeck, m_HostFormat);
+                    SetOpen(false);
+                }
+            }
+            else if (GameSkin.GreenButton(new Rect(win.xMax - pad - 210 * S, by - 4 * S, 210 * S, 52 * S), Loc.Get("fight"), m_SelMine != null && m_SelOpp != null)) Fight();
             GUI.enabled = true;
             if (modal) DrawConfirmDelete();
         }
@@ -458,7 +543,10 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             float rowH = 72 * S, gap = 4 * S, newH = 54 * S;
-            float contentH = newH + gap + m_MyDecks.Count * (rowH + gap);
+            // Against a player: only the decks valid for the game's format.
+            List<Entry> decks = m_Tab == Tab.Player ? ValidFor(m_MyDecks, m_HostFormat) : m_MyDecks;
+            float contentH = newH + gap;
+            foreach (Entry e in decks) contentH += (e.Header ? 30 * S : rowH) + gap;
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
@@ -471,12 +559,21 @@ namespace HexRevival
             GameSkin.Label(new Rect(nr.x + 62 * S, nr.y, nr.width - 70 * S, newH), Loc.Get("new_deck"), GameSkin.Style("title", 18, over ? Color.white : GameSkin.Gold));
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none)) OpenEditor(UID.Invalid);
 
-            float icon = 38 * S, iconGap = 6 * S;
+            float icon = 38 * S, iconGap = 6 * S, headH = 30 * S;
             float reserve = 2 * icon + iconGap + 14 * S;
-            for (int i = 0; i < m_MyDecks.Count; i++)
+            float y = newH + gap;
+            for (int i = 0; i < decks.Count; i++)
             {
-                Entry e = m_MyDecks[i];
-                Rect r = new Rect(0, newH + gap + i * (rowH + gap), view.width, rowH);
+                Entry e = decks[i];
+                if (e.Header) { DrawHeader(new Rect(0, y, view.width, headH), e.Label); y += headH + gap; continue; }
+                Rect r = new Rect(0, y, view.width, rowH);
+                y += rowH + gap;
+                if (!e.Own)
+                {
+                    // Another account's deck: played as it is, edited from that account.
+                    if (GameSkin.Row(r, e.Label, e.Detail, m_SelMine == e, e.Champion)) { m_SelMine = e; m_Message = ""; }
+                    continue;
+                }
                 // Icons on the right (drawn before the row: they get the click first).
                 Rect del = new Rect(r.xMax - 12 * S - icon, r.y + (rowH - icon) / 2f, icon, icon);
                 Rect edit = new Rect(del.x - iconGap - icon, del.y, icon, icon);
@@ -585,26 +682,29 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             float rowH = 72 * S, gap = 4 * S;
-            List<Entry> shown = query.Length == 0 ? list : list.FindAll(e => e.Search.IndexOf(query, StringComparison.Ordinal) >= 0);
-            if (shown.Count == 0)
+            List<Entry> shown = query.Length == 0 ? list : list.FindAll(e => !e.Header && e.Search.IndexOf(query, StringComparison.Ordinal) >= 0);
+            if (!shown.Exists(e => !e.Header))
             {
                 GUI.Label(new Rect(area.x + 8 * S, area.y + 6 * S, area.width, 30 * S), Loc.Get("no_match"), GameSkin.Style("body", 14, GameSkin.Muted));
                 return Vector2.zero;
             }
-            float contentH = shown.Count * (rowH + gap);
+            float headH = 30 * S, contentH = 0;
+            foreach (Entry e in shown) contentH += (e.Header ? headH : rowH) + gap;
             bool needBar = contentH > area.height;
             Rect view = new Rect(0, 0, area.width - (needBar ? 20 * S : 0), contentH);
             scroll = GUI.BeginScrollView(area, scroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
-            int first = Mathf.Max(0, (int)(scroll.y / (rowH + gap)) - 1);
-            int last = Mathf.Min(shown.Count - 1, (int)((scroll.y + area.height) / (rowH + gap)) + 1);
-            for (int i = first; i <= last; i++)
+            float y = 0;
+            foreach (Entry e in shown)
             {
-                Entry e = shown[i];
-                if (GameSkin.Row(new Rect(0, i * (rowH + gap), view.width, rowH), e.Label, e.Detail, selected == e, e.Champion))
+                if (e.Header) { DrawHeader(new Rect(0, y, view.width, headH), e.Label); y += headH + gap; continue; }
+                // Only the visible rows are drawn.
+                if (y + rowH >= scroll.y && y <= scroll.y + area.height
+                    && GameSkin.Row(new Rect(0, y, view.width, rowH), e.Label, e.Detail, selected == e, e.Champion))
                 {
                     selected = e;
                     m_Message = "";
                 }
+                y += rowH + gap;
             }
             GUI.EndScrollView();
             return scroll;

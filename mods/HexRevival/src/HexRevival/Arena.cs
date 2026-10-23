@@ -277,7 +277,7 @@ namespace HexRevival
             if (!Decks.Exists(r.Info.DeckId))
             {
                 // The run's deck was deleted: withdraw so that the player can start again with another deck.
-                Notices.Show("Your arena deck no longer exists: withdraw from this run and start a new one.");
+                Notices.Show(Loc.Get("arena_deck_missing"));
                 return;
             }
             Opponents.Opponent o = r.Opponents[r.Current];
@@ -289,7 +289,7 @@ namespace HexRevival
             {
                 Challenge c = Challenges[ch];
                 ai = c.AI; me = c.Player;
-                Notices.Show(c.Name + ": " + c.Text + " Goal: win the game.");
+                Notices.Show(Loc.Get("arena_goal", c.Name, c.Text));
             }
             if (boss)
                 foreach (string b in r.Buffs) me = Opponents.Handicap.Add(me, Buff(b).Effect);
@@ -546,20 +546,29 @@ namespace HexRevival
 
         private class Challenge
         {
-            public string Name, Text;
+            public string Key, Card;
             public Opponents.Handicap AI, Player;
+            /// <summary>In the game's language (the card's name as the game shows it).</summary>
+            public string Name { get { return Loc.Get("arena_ch_" + Key); } }
+            public string Text { get { return Loc.Get(Player != null ? "arena_ch_reflection_text" : "arena_ch_opponent_text", CardName(Card)); } }
+        }
+
+        private static string CardName(string name)
+        {
+            CardTemplate c = Opponents.CardByName(name);
+            return c != null && !string.IsNullOrEmpty(c.m_Name) ? c.m_Name : name;
         }
 
         /// <summary>The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game").</summary>
         private static readonly Dictionary<string, Challenge> Challenges = new Dictionary<string, Challenge>
         {
-            { "reflection", new Challenge { Name = "Reflection Challenge", Text = "Both players start this game with Locket of Reflection in play.",
+            { "reflection", new Challenge { Key = "reflection", Card = "Locket of Reflection",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Locket of Reflection" } }, Player = new Opponents.Handicap { InPlay = new List<string> { "Locket of Reflection" } } } },
-            { "primordial", new Challenge { Name = "Primordial Challenge", Text = "Your opponent starts this game with Primordial Caves in play.",
+            { "primordial", new Challenge { Key = "primordial", Card = "Primordial Caves",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Primordial Caves" } } } },
-            { "gooplasm", new Challenge { Name = "Gooplasm Challenge", Text = "Your opponent starts this game with a Gooplasm in play.",
+            { "gooplasm", new Challenge { Key = "gooplasm", Card = "Gooplasm",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Gooplasm" } } } },
-            { "fulmination", new Challenge { Name = "Fulmination Challenge", Text = "Your opponent starts this game with Cerebral Fulmination in play.",
+            { "fulmination", new Challenge { Key = "fulmination", Card = "Cerebral Fulmination",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Cerebral Fulmination" } } } },
         };
         private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination" };
@@ -571,10 +580,10 @@ namespace HexRevival
         {
             switch (key)
             {
-                case "charge": return new BuffDef { Shown = Shown("Charge Buff", "You start the game with 2 extra charges."), Effect = new Opponents.Handicap { Charges = 2 } };
-                case "health": return new BuffDef { Shown = Shown("Health Buff", "You start the game with 5 extra health."), Effect = new Opponents.Handicap { Health = 5 } };
-                case "resource": return new BuffDef { Shown = Shown("Resource Buff", "You start the game with a resource in play."), Effect = new Opponents.Handicap { Resources = 1 } };
-                default: return new BuffDef { Shown = Shown("Brawler Buff", "You start the game with an Arena Brawler in play."), Effect = new Opponents.Handicap { InPlay = new List<string> { "Arena Brawler" } } };
+                case "charge": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_charge"), Loc.Get("arena_buff_charge_text")), Effect = new Opponents.Handicap { Charges = 2 } };
+                case "health": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_health"), Loc.Get("arena_buff_health_text")), Effect = new Opponents.Handicap { Health = 5 } };
+                case "resource": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_resource"), Loc.Get("arena_buff_resource_text")), Effect = new Opponents.Handicap { Resources = 1 } };
+                default: return new BuffDef { Shown = Shown(Loc.Get("arena_buff_brawler"), Loc.Get("arena_buff_brawler_text", CardName("Arena Brawler"))), Effect = new Opponents.Handicap { InPlay = new List<string> { "Arena Brawler" } } };
             }
         }
         private static readonly string[] BuffKeys = { "brawler", "charge", "health", "resource" };
