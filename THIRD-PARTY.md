@@ -12,3 +12,7 @@ https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.2
 | Mono.Cecil | MIT | `mod/BepInEx/core/Mono.Cecil*.dll` |
 
 `mod/BepInEx/plugins/HexRevival/HexRevival.dll` and `HexRevival.exe` are built from this repository's source.
+
+`HexRevival.dll` embeds the Discord logo (its top bar button opening the Discord server), drawn from the
+[Simple Icons](https://simpleicons.org) path (CC0-1.0). The logo is a trademark of Discord Inc., used to link to a
+Discord server as its brand guidelines allow.
