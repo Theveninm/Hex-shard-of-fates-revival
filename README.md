@@ -1,10 +1,23 @@
 # HEX Revival
 
-Play **HEX: Shards of Fate** solo, offline, now that the official servers are gone (December 2020).
+Play **HEX: Shards of Fate** again, solo against the AI or online against other players, now that the official servers
+are gone (December 2020). **[Download the latest release](https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/latest)** · **[Discord server](https://discord.gg/4TWeErkhe)**
 
 HEX Revival is a mod: it does not include or modify any game file. It adds a small loader
 ([BepInEx](https://github.com/BepInEx/BepInEx)) and the HexRevival plugin next to `Hex.exe`,
 and rebuilds locally what the server used to do: game rules, AI opponent, your collection and your decks.
+
+## Feature highlights
+
+<table>
+<tr><td width="50%"><img src="docs/screenshots/online-lobby.jpg" alt="Online lobby"><br><b>Online lobby</b><br>Open games, challenges, players online and chat, through the community server. No port to open.</td><td width="50%"><img src="docs/screenshots/online-game.jpg" alt="Play against other players"><br><b>Play against other players</b><br>The host runs the game, the server relays it. Each side shows the player's name.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/host-a-game.jpg" alt="Host a game"><br><b>Host a game</b><br>Against another player in Immortal, Standard, PvE or free format, or against the AI with any of your decks.</td><td width="50%"><img src="docs/screenshots/accounts.jpg" alt="Online play or offline accounts"><br><b>Online play or offline accounts</b><br>Each offline account keeps its own collection, decks and campaign.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/configure-ais.jpg" alt="Configure the AIs"><br><b>Configure the AIs</b><br>For each mode and tier, which decks the AI plays and how often.</td><td width="50%"><img src="docs/screenshots/deck-modifiers.jpg" alt="Deck modifiers"><br><b>Deck modifiers</b><br>Give the AI or yourself a head start: health, resources, charges, extra cards, shards, cards in play.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/ai-level.jpg" alt="AI level per deck"><br><b>AI level per deck</b><br>A deck's personality, how strong the AI plays it and how random its choices are.</td><td width="50%"><img src="docs/screenshots/new-account.jpg" alt="Offline accounts your way"><br><b>Offline accounts your way</b><br>Everything unlocked or cards earned by playing, tutorial, starting gold.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/alachian-sea.jpg" alt="The campaign is back"><br><b>The campaign is back</b><br>The Howling Plains and the Alachian Sea: quests, hubs, dialogues, the ten dungeons, mercenaries, your own ship.</td><td width="50%"><img src="docs/screenshots/sea-voyages.jpg" alt="Sea voyages"><br><b>Sea voyages</b><br>Ship battles against the creatures of the Alachian Sea.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/siege.jpg" alt="Siege"><br><b>Siege</b><br>Attack defenses for their bounty, or commit your own defense of 3 decks played by the AI.</td><td width="50%"><img src="docs/screenshots/frost-ring-arena.jpg" alt="Frost Ring Arena"><br><b>Frost Ring Arena</b><br>The PvE boss rush: 20 fights in 4 tiers, on the game's own arena screens.</td></tr>
+<tr><td width="50%"><img src="docs/screenshots/battlegrounds.jpg" alt="Battlegrounds"><br><b>Battlegrounds</b><br>Constructed, sealed and draft gauntlets and the ladder, against the AI.</td><td width="50%"><img src="docs/screenshots/store.jpg" alt="Store"><br><b>Store</b><br>Boosters, preconstructed decks, Prize Exchange, primal packs and battleboards, for gold.</td></tr>
+</table>
 
 ## What you get
 
