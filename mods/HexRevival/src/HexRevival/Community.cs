@@ -11,8 +11,8 @@ namespace HexRevival
     /// <summary>
     /// The mod's links to its community: the check for a newer release on GitHub, and the panels of the main menu's
     /// "Featured Content" (the game's news carousel, UINewsEventsViewModel, which downloaded its panels from the HEX
-    /// website): a new version when there is one, the Discord server, the project page. The online lobby shows the same
-    /// links in a banner (OnlineLobby).
+    /// website): a new version when there is one, the project page; a Discord button in the top bar, right of Options.
+    /// The online lobby shows the Discord server and the new version in a banner (OnlineLobby).
     /// </summary>
     public class Community : MonoBehaviour
     {
@@ -32,14 +32,45 @@ namespace HexRevival
         private static readonly string[][] PanelArt =
         {
             new[] { "update", "Phoenix Guard Messenger" },
-            new[] { "discord", "Royal Herald" },
             new[] { "project", "Argus, Herald of Doom" },
         };
 
         private static readonly Dictionary<string, Texture2D> s_Pictures = new Dictionary<string, Texture2D>();
 
+        /// <summary>
+        /// The last answer, kept 6 hours (HexRevivalSaves/update_check.txt: time, latest release, its page), so that
+        /// restarting the game often does not ask GitHub each time (60 requests per hour and address without account).
+        /// </summary>
+        private static string CacheFile { get { return System.IO.Path.Combine(System.IO.Path.Combine(LocalServer.Root, "HexRevivalSaves"), "update_check.txt"); } }
+        private static readonly TimeSpan CacheTime = TimeSpan.FromHours(6);
+
+        private static bool FromCache()
+        {
+            try
+            {
+                if (!System.IO.File.Exists(CacheFile)) return false;
+                string[] l = System.IO.File.ReadAllLines(CacheFile);
+                long ticks;
+                if (l.Length < 3 || !long.TryParse(l[0], out ticks)) return false;
+                TimeSpan age = DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc);
+                if (age < TimeSpan.Zero || age > CacheTime) return false;
+                Found(l[1], l[2]);
+                Debug.Log("[HexRevival] update check: latest " + l[1] + " (checked " + (int)age.TotalMinutes + " min ago), this one " + Version);
+                return true;
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] update check cache: " + e.Message); return false; }
+        }
+
+        private static void Found(string tag, string url)
+        {
+            if (!IsNewer(tag, Version)) return;
+            NewVersion = tag.TrimStart('v', 'V');
+            NewVersionUrl = string.IsNullOrEmpty(url) ? RepoUrl + "/releases/latest" : url;
+        }
+
         private IEnumerator Start()
         {
+            if (FromCache()) { Checked = true; yield break; }
             // The game's Unity (5.6) asks Windows to download (WinINet), which handles GitHub's TLS.
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers["Accept"] = "application/vnd.github+json";
@@ -53,10 +84,11 @@ namespace HexRevival
                 else
                 {
                     Release r = JsonConvert.DeserializeObject<Release>(www.text);
-                    if (r != null && !r.draft && !r.prerelease && IsNewer(r.tag_name, Version))
+                    if (r != null && !r.draft && !r.prerelease && !string.IsNullOrEmpty(r.tag_name))
                     {
-                        NewVersion = r.tag_name.TrimStart('v', 'V');
-                        NewVersionUrl = string.IsNullOrEmpty(r.html_url) ? RepoUrl + "/releases/latest" : r.html_url;
+                        Found(r.tag_name, r.html_url);
+                        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CacheFile));
+                        System.IO.File.WriteAllLines(CacheFile, new[] { DateTime.UtcNow.Ticks.ToString(), r.tag_name, r.html_url ?? "" });
                     }
                     Debug.Log("[HexRevival] update check: latest " + (r != null ? r.tag_name : "?") + ", this one " + Version);
                 }
@@ -97,6 +129,170 @@ namespace HexRevival
                 if (digits.Length == 0 || !int.TryParse(digits, out res[i])) return null;
             }
             return res;
+        }
+
+        // ---- Featured Content: arrows, no change under the mouse ----
+
+        private UINewsEventsViewModel m_News;
+        private UIWidget m_NewsFrame;
+        private Rect m_NewsRect;
+        private bool m_NewsHover;
+        private float m_NextSearch;
+        private readonly Controls.UiBlocker m_ArrowBlock = new Controls.UiBlocker();
+
+        /// <summary>
+        /// While the mouse is over the panel, it does not change by itself (the game only paused it over the picture);
+        /// it starts again 8 s after the mouse leaves.
+        /// </summary>
+        private void Update()
+        {
+            AddDiscordIcon();
+            bool hover = false;
+            if ((m_News == null || m_NewsFrame == null) && Time.realtimeSinceStartup > m_NextSearch)
+            {
+                m_NextSearch = Time.realtimeSinceStartup + 1f;
+                m_News = FindObjectOfType<UINewsEventsViewModel>();
+                m_NewsFrame = null;
+                if (m_News != null)
+                    foreach (UIWidget w in m_News.GetComponentsInChildren<UIWidget>(true))
+                        if (w.name == "_Subframe") { m_NewsFrame = w; break; }
+            }
+            if (m_News != null && m_NewsFrame != null && m_News.isActiveAndEnabled && m_News.Context != null && !m_News.Context.ItemZoomed && PanelCount() > 0)
+            {
+                m_NewsRect = ScreenRect(m_NewsFrame);
+                Vector2 mouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+                if (m_NewsRect.Contains(mouse))
+                {
+                    // Over the arrows the game's input is off (its click would open the panel): the hover goes on.
+                    GameObject over = UICamera.hoveredObject;
+                    hover = (m_NewsHover && OverArrow(mouse)) || (over != null && over.transform.IsChildOf(m_News.transform));
+                }
+            }
+            if (hover) Traverse(m_News).Field("m_UpdatePanelTime").SetValue(DateTime.MaxValue);
+            else if (m_NewsHover && m_News != null) Traverse(m_News).Field("m_UpdatePanelTime").SetValue(DateTime.Now.AddSeconds(8));
+            m_NewsHover = hover;
+            m_ArrowBlock.Update(false, hover ? LeftArrow() : new Rect(), hover ? RightArrow() : new Rect());
+        }
+
+        private void OnGUI()
+        {
+            if (!m_NewsHover || PanelCount() < 2) return;
+            GUI.depth = 10;
+            if (Controls.Small(LeftArrow(), "<")) Step(-1);
+            if (Controls.Small(RightArrow(), ">")) Step(1);
+        }
+
+        // ---- Discord button in the top bar ----
+
+        private float m_NextNavCheck, m_NavStep;
+
+        /// <summary>
+        /// The top bar's icons (MainMenu/Buttons/Anchor_R, Siege leftmost, Options rightmost): a copy of Options showing
+        /// the Discord logo, one place left of Siege (away from Options, which is clicked often). Done again when the game
+        /// rebuilds the bar.
+        /// </summary>
+        private void AddDiscordIcon()
+        {
+            if (Time.realtimeSinceStartup < m_NextNavCheck) return;
+            m_NextNavCheck = Time.realtimeSinceStartup + 1f;
+            GameObject options = GameObject.Find("MainMenu/Buttons/Anchor_R/Icon_Options");
+            if (options == null) return;
+            Transform bar = options.transform.parent;
+            Transform existing = bar.Find("Icon_Discord");
+            if (existing != null)
+            {
+                // The bar's icons can be laid out again (the game moves them by screen): kept one place left of Siege.
+                Transform s = bar.Find("Icon_Siege");
+                if (s != null && m_NavStep > 0f) existing.localPosition = s.localPosition - new Vector3(m_NavStep, 0f, 0f);
+                return;
+            }
+            try
+            {
+                // One place = the distance from Options to the nearest icon on its left.
+                float x = options.transform.localPosition.x, step = 0f;
+                foreach (Transform t in bar)
+                {
+                    float d = x - t.localPosition.x;
+                    if (t != options.transform && t.GetComponentInChildren<UIWidget>(true) != null && d > 1f && (step == 0f || d < step)) step = d;
+                }
+                if (step == 0f) step = 60f;
+                m_NavStep = step;
+                Texture2D badge = Embedded("discord_badge.png");
+                if (badge == null) return;
+
+                Transform siege = bar.Find("Icon_Siege");
+                GameObject b = UiClone.Copy(options, "Icon_Discord");
+                UiClone.Strip(b);
+                // No movement of its own (Options' tweens would move the copy away from its place).
+                foreach (MonoBehaviour m in b.GetComponentsInChildren<MonoBehaviour>(true))
+                    if (m is UITweener || m is UIButtonOffset) DestroyImmediate(m);
+                b.transform.localPosition = (siege != null ? siege.localPosition : options.transform.localPosition) - new Vector3(step, 0f, 0f);
+                UISprite sprite = b.GetComponent<UISprite>();
+                UITexture tex = NGUITools.AddWidget<UITexture>(b);
+                tex.name = "Discord";
+                tex.mainTexture = badge;
+                tex.width = Mathf.RoundToInt((sprite != null ? sprite.width : 54) * 0.75f);   // the size of the other icons' frame
+                tex.height = tex.width;
+                if (sprite != null) { tex.depth = sprite.depth + 1; sprite.enabled = false; }
+                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
+                {
+                    ub.tweenTarget = tex.gameObject;
+                    ub.defaultColor = new Color(0.85f, 0.85f, 0.85f);
+                    ub.hover = Color.white;
+                    ub.pressed = new Color(0.7f, 0.7f, 0.7f);
+                    ub.onClick.Clear();
+                }
+                // The game's tooltip, as on the other icons of the bar.
+                UITooltipSetText[] tips = b.GetComponentsInChildren<UITooltipSetText>(true);
+                if (tips.Length == 0) tips = new[] { b.AddComponent<UITooltipSetText>() };
+                foreach (UITooltipSetText tip in tips)
+                {
+                    tip.TooltipLocalizationScript = null;
+                    tip.TooltipText = Loc.Get("lobby_discord");
+                }
+                UIEventListener.Get(b).onClick = go => Open(DiscordUrl);
+                b.SetActive(true);
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] Discord icon: " + e); }
+        }
+
+        private static HarmonyLib.Traverse Traverse(object o) { return HarmonyLib.Traverse.Create(o); }
+
+        private int PanelCount() { return m_News != null ? Traverse(m_News).Field("m_PanelCount").GetValue<int>() : 0; }
+
+        /// <summary>The previous or next panel (the game's own "previous" goes back to the first one from the first).</summary>
+        private void Step(int delta)
+        {
+            int count = PanelCount();
+            if (count < 2) return;
+            int cur = Traverse(m_News).Field("m_CurrentPanel").GetValue<int>();
+            Traverse(m_News).Field("m_CurrentPanel").SetValue(((cur + delta) % count + count) % count);
+            Traverse(m_News).Method("LoadCurrentPanel").GetValue();
+            Traverse(m_News).Field("m_UpdatePanelTime").SetValue(DateTime.MaxValue);
+        }
+
+        private Rect LeftArrow()
+        {
+            float S = GameSkin.Scale, w = 36 * S, h = 56 * S;
+            return new Rect(m_NewsRect.x + 6 * S, m_NewsRect.center.y - h / 2f, w, h);
+        }
+
+        private Rect RightArrow()
+        {
+            Rect l = LeftArrow();
+            return new Rect(m_NewsRect.xMax - 6 * GameSkin.Scale - l.width, l.y, l.width, l.height);
+        }
+
+        private bool OverArrow(Vector2 mouse) { return LeftArrow().Contains(mouse) || RightArrow().Contains(mouse); }
+
+        /// <summary>An NGUI widget's area on the screen, in GUI coordinates (y from the top).</summary>
+        private static Rect ScreenRect(UIWidget w)
+        {
+            Camera cam = NGUITools.FindCameraForLayer(w.gameObject.layer);
+            if (cam == null) return new Rect();
+            Vector3[] c = w.worldCorners;
+            Vector3 a = cam.WorldToScreenPoint(c[0]), b = cam.WorldToScreenPoint(c[2]);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Screen.height - Mathf.Max(a.y, b.y), Mathf.Max(a.x, b.x), Screen.height - Mathf.Min(a.y, b.y));
         }
 
         public static void Open(string url)
@@ -146,7 +342,6 @@ namespace HexRevival
             };
             if (NewVersion != null)
                 add("update", Loc.Get("news_update_title", NewVersion), Loc.Get("news_update_text", NewVersion, Version), NewVersionUrl);
-            add("discord", Loc.Get("news_discord_title"), Loc.Get("news_discord_text"), DiscordUrl);
             add("project", Loc.Get("news_project_title", Version), Loc.Get("news_project_text"), RepoUrl);
             return sb.Append("]}").ToString();
         }
@@ -194,6 +389,24 @@ namespace HexRevival
             if (s_Pictures.TryGetValue(name, out t) && t != null)
                 Singleton<ResourceManager>.Instance.AddTexture(key.GetHashCode(), name, t, false);
             return key;
+        }
+
+        /// <summary>A picture embedded in the mod's DLL (build.sh: -resource).</summary>
+        private static Texture2D Embedded(string name)
+        {
+            try
+            {
+                using (System.IO.Stream st = typeof(Community).Assembly.GetManifestResourceStream("HexRevival." + name))
+                {
+                    if (st == null) return null;
+                    byte[] bytes = new byte[st.Length];
+                    int read = 0;
+                    while (read < bytes.Length) { int n = st.Read(bytes, read, bytes.Length - read); if (n <= 0) break; read += n; }
+                    Texture2D t = new Texture2D(2, 2, TextureFormat.ARGB32, false);
+                    return t.LoadImage(bytes) ? t : null;
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] picture " + name + ": " + e.Message); return null; }
         }
 
         /// <summary>The uv area of a texture copied into a new one (the card art without the rest of the card's picture).</summary>

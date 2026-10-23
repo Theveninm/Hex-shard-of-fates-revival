@@ -17,5 +17,6 @@ mcs -target:library -nostdlib -noconfig -langversion:7 -debug:portable -nowarn:6
  -r:"$G/mscorlib.dll" -r:"$G/System.dll" -r:"$G/System.Core.dll" -r:"$G/System.Xml.dll" \
  -r:"$G/UnityEngine.dll" -r:"$G/UnityEngine.UI.dll" -r:"$G/Assembly-CSharp.dll" -r:"$G/Assembly-CSharp-firstpass.dll" \
  -r:"$B/BepInEx.dll" -r:"$B/0Harmony.dll" \
+ -resource:mods/HexRevival/assets/discord_badge.png,HexRevival.discord_badge.png \
  mods/HexRevival.BepInEx/Plugin.cs $S/*.cs
 echo "OK -> $OUT"
