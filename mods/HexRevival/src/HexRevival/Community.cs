@@ -233,20 +233,22 @@ namespace HexRevival
                 tex.mainTexture = badge;
                 tex.width = Mathf.RoundToInt((sprite != null ? sprite.width : 54) * 0.75f);   // the size of the other icons' frame
                 tex.height = tex.width;
-                if (sprite != null) { tex.depth = sprite.depth + 1; sprite.enabled = false; }
-                foreach (UIButton ub in b.GetComponentsInChildren<UIButton>(true))
-                {
-                    ub.tweenTarget = tex.gameObject;
-                    ub.defaultColor = new Color(0.85f, 0.85f, 0.85f);
-                    ub.hover = Color.white;
-                    ub.pressed = new Color(0.7f, 0.7f, 0.7f);
-                    ub.onClick.Clear();
-                }
-                // The game's tooltip box, as on the other icons of the bar (on the object that receives the mouse).
+                if (sprite != null) tex.depth = sprite.depth + 1;
+                // The logo is what receives the mouse: NGUI ignores a collider whose widget is hidden (Options' sprite).
+                foreach (Collider c in b.GetComponents<Collider>()) DestroyImmediate(c);
+                foreach (UIButton ub in b.GetComponents<UIButton>()) DestroyImmediate(ub);
                 foreach (UITooltipSetText t in b.GetComponentsInChildren<UITooltipSetText>(true)) DestroyImmediate(t);
-                foreach (Collider c in b.GetComponentsInChildren<Collider>(true))
-                    (c.gameObject.GetComponent<Tooltip>() ?? c.gameObject.AddComponent<Tooltip>()).Key = "lobby_discord";
-                UIEventListener.Get(b).onClick = go => Open(DiscordUrl);
+                if (sprite != null) sprite.enabled = false;
+                NGUITools.AddWidgetCollider(tex.gameObject);
+                UIButton button = tex.gameObject.AddComponent<UIButton>();
+                button.tweenTarget = tex.gameObject;
+                button.defaultColor = new Color(0.85f, 0.85f, 0.85f);
+                button.hover = Color.white;
+                button.pressed = new Color(0.7f, 0.7f, 0.7f);
+                tex.color = button.defaultColor;
+                // The game's tooltip box, as on the other icons of the bar.
+                tex.gameObject.AddComponent<Tooltip>().Key = "lobby_discord";
+                UIEventListener.Get(tex.gameObject).onClick = go => Open(DiscordUrl);
                 b.SetActive(true);
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] Discord icon: " + e); }
