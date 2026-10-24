@@ -247,6 +247,15 @@ namespace HexRevival
                 harmony.Patch(m, prefix: new HarmonyMethod(typeof(Hooks), "ClientConnection_SendCommand"));
             });
 
+            // Logging out (Switch account): the game's network session, never connected offline, terminates its
+            // connector again and again (Session.onConnectorState in LOGOUT -> Connector.Terminate -> DISCONNECTED ->
+            // onConnectorState...) until a stack overflow, which left the logout half done: dim screen and an endless
+            // loading wheel. A Terminate already running is not started again.
+            apply("Connector.Terminate (logout recursion)", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Network.HConnect.Connector), "Terminate"),
+                    prefix: new HarmonyMethod(typeof(Hooks), "Connector_TerminateEnter"),
+                    finalizer: new HarmonyMethod(typeof(Hooks), "Connector_TerminateExit")));
+
             // Online: the players' names in the battle instead of their champions' (see OnlineMatch).
             apply("UIBattle.OnChampionCardPlayed", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnChampionCardPlayed"), postfix: new HarmonyMethod(typeof(Hooks), "Battle_ChampionCardPlayed")));
@@ -387,16 +396,27 @@ namespace HexRevival
         }
 
         // --- Local campaign service (see Campaign.cs) ---
-        public static bool Campaign_QueryCurrentCampaign(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryCurrentCampaign(__0, __1); return false; }
-        public static bool Campaign_GetSummary(IEnumerable<ulong> __0, ClientCampaignManager.GetSummaryCallback __1) { Campaign.GetSummary(__0, __1); return false; }
-        public static bool Campaign_GetActiveStatus(ulong __0, CampaignType __1, string __2, ClientCampaignManager.GetActiveStatusCallback __3) { Campaign.GetActiveStatus(__0, __1, __2, __3); return false; }
-        public static bool Campaign_QueryState(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.QueryState(__0, __1); return false; }
-        public static bool Campaign_Start(ulong __0, ClientCampaignManager.StateCallback __3) { Campaign.Start(__0, __3); return false; }
-        public static bool Campaign_Create(ulong __0, string __1, ClientCampaignManager.StateCallback __2) { Campaign.Create(__0, __1, __2); return false; }
-        public static bool Campaign_Forfeit(ulong __0, ClientCampaignManager.StateCallback __1) { Campaign.Forfeit(__0, __1); return false; }
-        public static bool Campaign_SendEvent(ulong __0, string __1, object[] __2, ClientCampaignManager.StateCallback __3) { Campaign.SendEvent(__0, __1, __2, __3); return false; }
-        public static bool Campaign_StartLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.StartLocation(__0, __1, __3); return false; }
-        public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { Campaign.FinishLocation(__0, __1, __3); return false; }
+        /// <summary>
+        /// Runs a campaign request locally and never lets the original (network) method run; an exception
+        /// is logged with the request's name (the client then keeps waiting for that answer).
+        /// </summary>
+        private static bool CampaignGuard(string name, Action a)
+        {
+            try { a(); }
+            catch (Exception e) { UnityEngine.Debug.LogError("[HexRevival] [Campaign] " + name + ": " + e); }
+            return false;
+        }
+
+        public static bool Campaign_QueryCurrentCampaign(ulong __0, ClientCampaignManager.StateCallback __1) { return CampaignGuard("QueryCurrentCampaign", () => Campaign.QueryCurrentCampaign(__0, __1)); }
+        public static bool Campaign_GetSummary(IEnumerable<ulong> __0, ClientCampaignManager.GetSummaryCallback __1) { return CampaignGuard("GetSummary", () => Campaign.GetSummary(__0, __1)); }
+        public static bool Campaign_GetActiveStatus(ulong __0, CampaignType __1, string __2, ClientCampaignManager.GetActiveStatusCallback __3) { return CampaignGuard("GetActiveStatus", () => Campaign.GetActiveStatus(__0, __1, __2, __3)); }
+        public static bool Campaign_QueryState(ulong __0, ClientCampaignManager.StateCallback __1) { return CampaignGuard("QueryState", () => Campaign.QueryState(__0, __1)); }
+        public static bool Campaign_Start(ulong __0, ClientCampaignManager.StateCallback __3) { return CampaignGuard("Start", () => Campaign.Start(__0, __3)); }
+        public static bool Campaign_Create(ulong __0, string __1, ClientCampaignManager.StateCallback __2) { return CampaignGuard("Create", () => Campaign.Create(__0, __1, __2)); }
+        public static bool Campaign_Forfeit(ulong __0, ClientCampaignManager.StateCallback __1) { return CampaignGuard("Forfeit", () => Campaign.Forfeit(__0, __1)); }
+        public static bool Campaign_SendEvent(ulong __0, string __1, object[] __2, ClientCampaignManager.StateCallback __3) { return CampaignGuard("SendEvent", () => Campaign.SendEvent(__0, __1, __2, __3)); }
+        public static bool Campaign_StartLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { return CampaignGuard("StartLocation", () => Campaign.StartLocation(__0, __1, __3)); }
+        public static bool Campaign_FinishLocation(ulong __0, string __1, ClientCampaignManager.StateCallback __3) { return CampaignGuard("FinishLocation", () => Campaign.FinishLocation(__0, __1, __3)); }
         public static bool Campaign_GetTemplateTypeInfo(ClientCampaignManager.GetTemplateTypeInfoCallback __0) { if (__0 != null) __0(new TemplateTypeInfo[0]); return false; }
         public static bool Store_GetStoreItems(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler __0) { Store.GetStoreItems(__0); return false; }
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
@@ -467,6 +487,22 @@ namespace HexRevival
         public static void Player_HasStop(Game.Shared.Player __instance, Game.Shared.Player __0, Game.Shared.Mechanics.ETurnPhases __1, ref bool __result) { if (!__result) __result = Tutorial.ScriptStop(__instance, __0, __1); }
         public static void Tutorial_BoardSetup(bool __result) { if (__result) Tutorial.OnBoardReset(); }
         public static void Session_EndGame(List<UID> __0) { Progression.OnMatchEnded(__0); }
+
+        [ThreadStatic] private static int s_Terminating;
+
+        public static bool Connector_TerminateEnter(ref bool __state)
+        {
+            __state = s_Terminating > 0;
+            if (__state) return false;
+            s_Terminating++;
+            return true;
+        }
+
+        public static Exception Connector_TerminateExit(bool __state, Exception __exception)
+        {
+            if (!__state) s_Terminating--;
+            return __exception;
+        }
 
         public static void Battle_ChampionCardPlayed(UIBattle __instance, ChampionCardPlayedSessionEventArgs __0) { OnlineMatch.ShowPlayerNames(__instance, __0); }
 

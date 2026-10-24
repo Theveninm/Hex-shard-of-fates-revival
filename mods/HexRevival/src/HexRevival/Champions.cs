@@ -106,6 +106,27 @@ namespace HexRevival
 
         public static object Handle(object args)
         {
+            try { return HandleRequest(args); }
+            catch (Exception e)
+            {
+                // An exception here would leave the request unanswered (the client waits forever).
+                Debug.LogError("[HexRevival] [Champions] " + (args != null ? args.GetType().Name : "null") + ": " + e);
+                return Failed(args);
+            }
+        }
+
+        /// <summary>An error answer of the response type matching the request (null if unknown).</summary>
+        private static object Failed(object args)
+        {
+            if (args is AddChampionRequestArgs) return LocalServer.Fail<AddChampionResponse>();
+            if (args is DeleteChampionRequestArgs) return LocalServer.Fail<DeleteChampionResponse>();
+            if (args is UpdateChampionTalentsRequestArgs) return LocalServer.Fail<UpdateChampionTalentsResponse>();
+            if (args is UpdateChampionDeckIDRequestArgs) return LocalServer.Fail<UpdateChampionDeckIDResponse>();
+            return null;
+        }
+
+        private static object HandleRequest(object args)
+        {
             AddChampionRequestArgs add = args as AddChampionRequestArgs;
             if (add != null)
             {
@@ -151,7 +172,7 @@ namespace HexRevival
             if (del != null)
             {
                 champion_bits c = Find(del.ChampionId);
-                if (c == null) return null;
+                if (c == null) return Failed(args);
                 s_Champions.Remove(c);
                 Save();
                 DeleteChampionResponse r = LocalServer.Ok<DeleteChampionResponse>();
@@ -162,7 +183,7 @@ namespace HexRevival
             if (tal != null)
             {
                 champion_bits c = Find(tal.ChampionId);
-                if (c == null) return null;
+                if (c == null) return Failed(args);
                 c.ChampionTalents = tal.Talents != null ? new List<ResourceId>(tal.Talents) : new List<ResourceId>();
                 Save();
                 UpdateChampionTalentsResponse r = LocalServer.Ok<UpdateChampionTalentsResponse>();
@@ -173,7 +194,7 @@ namespace HexRevival
             if (upd != null)
             {
                 champion_bits c = Find(upd.ChampionID);
-                if (c == null) return null;
+                if (c == null) return Failed(args);
                 c.LastDeckID = upd.LastDeckID;
                 c.DeckTemplateId = upd.DeckTemplateID;
                 Save();
@@ -209,8 +230,11 @@ namespace HexRevival
             created = null;
             champion_bits c = Find(championId);
             if (c == null) return 0UL;
-            if (c.LastDeckID != 0) return c.LastDeckID;
-            if (c.OwnerChampionId != 0) return 0UL;   // a sub-champion plays its deck template (see Boat)
+            if (c.OwnerChampionId != 0) return c.LastDeckID;   // a sub-champion plays its deck template (see Boat)
+            if (c.LastDeckID != 0 && Decks.Exists(c.LastDeckID)) return c.LastDeckID;
+            // No deck, or one that no longer exists (deleted, or decks.txt from another save):
+            // a champion selected with a missing deck would leave the client waiting for it.
+            if (c.LastDeckID != 0) Debug.LogWarning("[HexRevival] [Champions] champion " + c.Id + ": deck " + c.LastDeckID + " not found");
             Reckoning.Game.DeckTemplate starter = null;
             try { starter = Singleton<Reckoning.Game.TemplateManager>.Instance.GetPvEStarterDeckForRace(c.Race); } catch { }
             Collection.GrantDeck(starter);

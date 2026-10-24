@@ -55,11 +55,33 @@ namespace HexRevival
                 Debug.LogError("[HexRevival] [LocalServer] transaction " + dw.DataType + " (" + (args != null ? args.GetType().Name : "?") + ") : " + e);
             }
             if (resp == null)
+            {
+                // Goes to the (closed) official servers: the game may wait for an answer that never comes.
+                Debug.LogWarning("[HexRevival] [LocalServer] not handled: " + dw.DataType + " " + (args != null ? args.GetType().FullName : "?") + Describe(args));
                 return false;
+            }
             Debug.Log("[HexRevival] [LocalServer] " + args.GetType().Name + " -> " + resp.GetType().Name);
             lock (s_Pending)
                 s_Pending.Enqueue(new Pending { TransactionId = dw.DataType, Response = resp, Callback = callback });
             return true;
+        }
+
+        /// <summary>A custom request's message type (the generic profile request carries another request inside).</summary>
+        private static string Describe(object args)
+        {
+            try
+            {
+                if (args == null) return "";
+                Type t = args.GetType();
+                // The generic profile request: its action as JSON in the envelope.
+                FieldInfo env = t.GetField("Envelope");
+                byte[] e = env != null ? env.GetValue(args) as byte[] : null;
+                if (e != null) { string j = System.Text.Encoding.UTF8.GetString(e); return " " + (j.Length > 160 ? j.Substring(0, 160) : j); }
+                PropertyInfo msg = t.GetProperty("Message");
+                object m = msg != null ? msg.GetValue(args, null) : null;
+                return m != null ? " message " + m.GetType().FullName : "";
+            }
+            catch { return ""; }
         }
 
         private static readonly Queue<Action> s_Later = new Queue<Action>();
@@ -157,6 +179,18 @@ namespace HexRevival
             FieldInfo f = typeof(T).GetField("Error");
             if (f != null && f.FieldType.IsEnum)
                 f.SetValue(r, Enum.Parse(f.FieldType, "Ok"));
+            return r;
+        }
+
+        /// <summary>A failed response (Error = InternalServerError): the client shows an error instead of waiting.</summary>
+        public static T Fail<T>() where T : new()
+        {
+            T r = new T();
+            FieldInfo f = typeof(T).GetField("Error");
+            if (f != null && f.FieldType.IsEnum && Enum.IsDefined(f.FieldType, "InternalServerError"))
+                f.SetValue(r, Enum.Parse(f.FieldType, "InternalServerError"));
+            FieldInfo m = typeof(T).GetField("ErrorMessage");
+            if (m != null && m.FieldType == typeof(string)) m.SetValue(r, "HEX Revival: request failed (see the log)");
             return r;
         }
 
