@@ -722,11 +722,37 @@ namespace HexRevival
         /// <summary>The champion's campaign in its current zone.</summary>
         private static CampState GetChamp(ulong champ, bool create) { return Get(CurrentZone(champ).Base + champ, create); }
 
-        /// <summary>A node and its neighbours become visible (and selectable).</summary>
+        /// <summary>
+        /// A node and its neighbours become visible (and selectable). A path fork ("Fork001": a junction of the
+        /// map's paths, not a location) is passed through: the locations beyond it are neighbours too. Without
+        /// this, Razortooth Forest (Node014, the Savage Lord), reached only through Fork001 from the Zila bridge,
+        /// never appeared, and the Cross the Zila River quest could not be finished.
+        /// </summary>
         private static void Reveal(CampState st, string node)
         {
             st.Visible.Add(node);
-            foreach (string n in Neighbours(st.Z, node)) st.Visible.Add(n);
+            HashSet<string> seen = new HashSet<string> { node };
+            Queue<string> todo = new Queue<string>(Neighbours(st.Z, node));
+            while (todo.Count > 0)
+            {
+                string n = todo.Dequeue();
+                if (!seen.Add(n)) continue;
+                st.Visible.Add(n);
+                if (IsFork(st.Z, n)) foreach (string m in Neighbours(st.Z, n)) todo.Enqueue(m);
+            }
+        }
+
+        /// <summary>A point of the map's paths that is not a location (the client draws it, the state has no such node).</summary>
+        private static bool IsFork(Zone z, string id) { return FindNode(z, id) == null; }
+
+        /// <summary>
+        /// Saves made before forks were passed through: a visible fork shows what lies beyond it
+        /// (champions stuck at the Zila bridge get Razortooth Forest back).
+        /// </summary>
+        private static void RevealPastForks(CampState st)
+        {
+            foreach (string id in new List<string>(st.Visible))
+                if (IsFork(st.Z, id)) Reveal(st, id);
         }
 
         private static void Complete(CampState st, MapNode node)
@@ -786,6 +812,7 @@ namespace HexRevival
         private static GameplayState BuildState(CampState st)
         {
             BuildMap(st.Z);
+            RevealPastForks(st);
             Mercenaries.ApplyPending();
             GameplayState gs = new GameplayState();
             gs.CampID = st.CampId;
@@ -905,6 +932,24 @@ namespace HexRevival
                     ed["encscene"] = battle;
                     gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(battle, ed));
                 }
+            }
+            // Path forks: the client walks and reveals paths only through a fork it is told is visible (an empty,
+            // completed location: UIDungeonZoneViewModel.RevealPaths). The game's own server sent them the same way.
+            foreach (string id in st.Visible)
+            {
+                if (!IsFork(st.Z, id)) continue;
+                Dictionary<string, object> fd = new Dictionary<string, object>();
+                fd["name"] = id;
+                fd["node"] = id;
+                fd["type"] = "Empty";
+                fd["visible"] = true;
+                fd["enabled"] = true;
+                fd["completed"] = true;
+                gs.VisLocs.Add(new Location(fd));
+                Dictionary<string, object> fn = new Dictionary<string, object>();
+                fn["id"] = id;
+                fn["type"] = "DEFAULT";
+                gs.LocNodes.Add(new Node(id, fn));
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
             pub["CampaignGroup"] = st.Z.Key;
