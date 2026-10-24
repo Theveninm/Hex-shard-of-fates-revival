@@ -102,7 +102,9 @@ prototype; a TLS tunnel (stunnel) or a key exchange can be added later without c
 
 ## Messages
 
-Server → client on connection: `hello {v, nonce, iterations}`.
+Server → client on connection: `hello {v, nonce, iterations}`. `v` is the protocol version (2 since 1.2.1):
+the server refuses a `register` or `login` with another version (`error {code: "version"}`), and the client refuses a
+server with another version; the client then tells the player to update the mod.
 
 | client → server | effect |
 |-----------------|--------|
@@ -123,10 +125,17 @@ Lobby events: `welcome {id, name, players, games, formats}`, `joined {player}`, 
 
 ## Protections
 
-Per address: 4 connections, 5 wrong passwords per minute. Per connection: 20 messages/s (burst 60),
-256 KB/s of game data (burst 2 MB), a send queue of 512 frames (a client that does not read is dropped).
-200 connections in total. All configurable with environment variables (`HEX_PORT`, `HEX_MAX_CLIENTS`,
-`HEX_MAX_PER_IP`, `HEX_DATA`).
+Server, per address: 4 connections, 5 wrong passwords per minute, 3 new accounts per hour. Per connection:
+20 messages/s (burst 60), 256 KB/s of game data (burst 2 MB), a send queue of 512 frames and 8 MB (a client that
+does not read is dropped). 200 connections in total. All configurable with environment variables (`HEX_PORT`,
+`HEX_MAX_CLIENTS`, `HEX_MAX_PER_IP`, `HEX_MAX_REGISTER_PER_HOUR`, `HEX_DATA`).
+
+Client: the game data received from the opponent is decoded only if every type it names is one of the game's own
+data types (namespace `Game`, the game's assembly), arrays and standard collections of them, enums and plain values;
+anything else is refused before any object is built (`[Net] refused type` in the log). Messages are limited to 1 MB.
+Deck, champion and pet names received are shown as plain text (no markup).
+
+The host runs the match: a modified host can cheat in its own games. The server only relays.
 
 ## Running the server
 
