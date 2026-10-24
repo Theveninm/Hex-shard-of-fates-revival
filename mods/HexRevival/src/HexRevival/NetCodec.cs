@@ -54,9 +54,34 @@ namespace HexRevival
                 if (types == null) throw new InvalidDataException("no type table");
                 foreach (string desc in types) Resolve(desc);
                 ms.Position = 0;
-                return d.Decode(ms);
+                ObjFmt.Decoder previous = s_Untrusted;
+                s_Untrusted = d;
+                try { return d.Decode(ms); }
+                finally { s_Untrusted = previous; s_Depth = 0; }
             }
         }
+
+        // The decoder calls itself for each nested object: data nested deep enough would overflow the stack and end the
+        // game process (a StackOverflow cannot be caught). Harmony prefix + finalizer on ObjFmt.Decoder.Decode (Plugin.cs)
+        // count the depth of the opponent's data only. The game's own data is far shallower than MaxDepth.
+        private const int MaxDepth = 200;
+        [ThreadStatic] private static ObjFmt.Decoder s_Untrusted;
+        [ThreadStatic] private static int s_Depth;
+        private static int s_MaxDepthSeen;
+
+        public static void DecodeEnter(ObjFmt.Decoder decoder, ref bool counted)
+        {
+            counted = decoder != null && decoder == s_Untrusted;
+            if (!counted) return;
+            if (++s_Depth > s_MaxDepthSeen) s_MaxDepthSeen = s_Depth;
+            if (s_Depth > MaxDepth)
+            {
+                Debug.LogWarning("[HexRevival] [Net] refused data nested more than " + MaxDepth + " levels");
+                throw new InvalidDataException("data nested too deep");
+            }
+        }
+
+        public static void DecodeExit(bool counted) { if (counted && s_Depth > 0) s_Depth--; }
 
         private static Type Resolve(string desc)
         {
@@ -140,7 +165,7 @@ namespace HexRevival
 
         public static string Stats()
         {
-            return "loopback=" + Loopback + " packets " + Packets + " (" + BytesEvents + " B), transactions " + Transactions + " (" + BytesTransactions + " B)";
+            return "loopback=" + Loopback + " packets " + Packets + " (" + BytesEvents + " B), transactions " + Transactions + " (" + BytesTransactions + " B), max depth " + s_MaxDepthSeen + "/" + MaxDepth;
         }
     }
 }

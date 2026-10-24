@@ -256,6 +256,12 @@ namespace HexRevival
                     prefix: new HarmonyMethod(typeof(Hooks), "Connector_TerminateEnter"),
                     finalizer: new HarmonyMethod(typeof(Hooks), "Connector_TerminateExit")));
 
+            // Online: depth limit on the opponent's data (see NetCodec.DecodeEnter).
+            apply("ObjFmt.Decoder.Decode (depth limit)", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Network.ObjFmt.Decoder), "Decode", new[] { typeof(System.IO.Stream), typeof(object), typeof(bool), typeof(Type), typeof(object) }),
+                    prefix: new HarmonyMethod(typeof(Hooks), "Decoder_DecodeEnter"),
+                    finalizer: new HarmonyMethod(typeof(Hooks), "Decoder_DecodeExit")));
+
             // Online: the players' names in the battle instead of their champions' (see OnlineMatch).
             apply("UIBattle.OnChampionCardPlayed", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnChampionCardPlayed"), postfix: new HarmonyMethod(typeof(Hooks), "Battle_ChampionCardPlayed")));
@@ -497,6 +503,9 @@ namespace HexRevival
             s_Terminating++;
             return true;
         }
+
+        public static void Decoder_DecodeEnter(Game.Shared.Network.ObjFmt.Decoder __instance, ref bool __state) { HexRevival.NetCodec.DecodeEnter(__instance, ref __state); }
+        public static Exception Decoder_DecodeExit(bool __state, Exception __exception) { HexRevival.NetCodec.DecodeExit(__state); return __exception; }
 
         public static Exception Connector_TerminateExit(bool __state, Exception __exception)
         {
