@@ -202,7 +202,7 @@ namespace HexRevival
         private static void OnHostStarted(byte[] body)
         {
             byte[] swapped = SwapInEncoded(body);
-            s_GuestState = (SessionState)EncData.Decode(swapped);
+            s_GuestState = (SessionState)NetCodec.Decode(swapped);
             // The host accepted the deck and started: the guest enters the battle (its game then asks for the session).
             if (!s_Started) StartBattle();
             TryStartGuest();
@@ -334,7 +334,7 @@ namespace HexRevival
         /// </summary>
         private static byte[] SwapInEncoded(byte[] encoded)
         {
-            object o = EncData.Decode(encoded);
+            object o = NetCodec.Decode(encoded);
             SwapFields(o, new Dictionary<object, bool>(new ByReference()));
             return EncData.Encode(o);
         }

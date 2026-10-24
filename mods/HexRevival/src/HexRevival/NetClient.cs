@@ -17,7 +17,7 @@ namespace HexRevival
     /// </summary>
     public class NetClient
     {
-        public const int ProtocolVersion = 1;
+        public const int ProtocolVersion = 2;
         private const byte KindJson = 1, KindRelay = 2;
         private const int MaxFrame = 1024 * 1024;
 

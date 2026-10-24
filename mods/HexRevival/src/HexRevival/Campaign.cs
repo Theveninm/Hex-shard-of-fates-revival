@@ -703,6 +703,19 @@ namespace HexRevival
             return st;
         }
 
+        /// <summary>
+        /// A campaign the client asks for: created if it has no save yet (a champion whose save was
+        /// lost or copied without its campaign file), instead of leaving the request unanswered.
+        /// </summary>
+        private static CampState GetOrCreate(ulong campId)
+        {
+            CampState st = Get(campId, false);
+            if (st != null) return st;
+            st = Get(campId, true);
+            if (st != null) Debug.LogWarning("[HexRevival] [Campaign] campaign " + campId + " had no save: started anew");
+            return st;
+        }
+
         /// <summary>Zone the champion is in (AZ1 until it sails to AZ2).</summary>
         internal static Zone CurrentZone(ulong champ) { return ZoneByKey(Quests.Flag(champ, "zone") ?? AZ1.Key); }
 
@@ -937,7 +950,7 @@ namespace HexRevival
         /// <summary>Same handling as ClientCampaignManager.HandleInputResponse for a successful answer.</summary>
         private static void Answer(CampState st, ClientCampaignManager.StateCallback callback)
         {
-            if (st == null) return;
+            if (st == null) { Debug.LogWarning("[HexRevival] [Campaign] no campaign to answer (the client keeps waiting)"); return; }
             GameplayState gs = BuildState(st);
             Enqueue(() =>
             {
@@ -947,6 +960,7 @@ namespace HexRevival
                 // would look for the ship's own sub-champion and fail.
                 PlayerChampion cur = GameClient.Instance.PlayerProfile.GetCurrentChampion();
                 if (callback != null && (cur == null || cur.Id == st.ChampId)) callback(gs);
+                else if (callback != null) Debug.Log("[HexRevival] [Campaign] answer for champion " + st.ChampId + " not delivered: current champion " + cur.Id);
             });
         }
 
@@ -1243,7 +1257,7 @@ namespace HexRevival
             if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
             if (Dungeons.IsDunCamp(campId)) { Dungeons.QueryState(campId, callback); return; }
             if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
-            Answer(Get(campId, false), callback);
+            Answer(GetOrCreate(campId), callback);
         }
 
         public static void Start(ulong campId, ClientCampaignManager.StateCallback callback)
@@ -1251,7 +1265,7 @@ namespace HexRevival
             if (Quests.IsQuestCamp(campId)) { AnswerQuest(campId, callback); return; }
             if (Dungeons.IsDunCamp(campId)) { Dungeons.QueryState(campId, callback); return; }
             if (IsPanoCamp(campId)) { AnswerPano(campId - PanoBase, callback); return; }
-            CampState st = Get(campId, false);
+            CampState st = GetOrCreate(campId);
             if (st != null && !st.Started) { st.Started = true; Save(); }
             Answer(st, callback);
         }
@@ -1554,14 +1568,15 @@ namespace HexRevival
                 s_MercChoice = null;
                 ulong sub = mercDeck != 0 ? mercDeck : SubChampionDeck(champId);
                 if (sub != 0) deck = new UID(UID.Type.Deck, sub);
-                else if (ch != null && ch.LastDeckID != 0) deck = new UID(UID.Type.Deck, ch.LastDeckID);
                 else
                 {
+                    // The champion's deck, recreated from its starter deck if it no longer exists.
                     ulong id = Champions.EnsureDeck(champId);
+                    if (id == 0 && ch != null) id = ch.LastDeckID;
                     if (id != 0) deck = new UID(UID.Type.Deck, id);
                 }
             }
-            catch { }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Campaign] battle deck: " + e); }
             s_BattleChamp = champId;
             // The battle HUD reads the level from the profile's current champion.
             SetCurrentChampion(champId);

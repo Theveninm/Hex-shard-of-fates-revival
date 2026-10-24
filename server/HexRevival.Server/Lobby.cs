@@ -37,6 +37,8 @@ public sealed class Lobby
     private readonly object _lock = new();
     private readonly Dictionary<string, Connection> _online = new(StringComparer.Ordinal);
     private readonly Dictionary<IPAddress, (int Count, DateTime Since)> _failedLogins = new();
+    private readonly Dictionary<IPAddress, (int Count, DateTime Since)> _registrations = new();
+    private static readonly int MaxRegistrationsPerHour = int.TryParse(Environment.GetEnvironmentVariable("HEX_MAX_REGISTER_PER_HOUR"), out int n) ? n : 3;
     private readonly Dictionary<int, OpenGame> _games = new();
     private int _nextMatch = 1, _nextGame = 1;
 
@@ -51,6 +53,23 @@ public sealed class Lobby
     {
         lock (_lock)
             return !_failedLogins.TryGetValue(ip, out var f) || DateTime.UtcNow - f.Since > TimeSpan.FromMinutes(1) || f.Count < 5;
+    }
+
+    /// <summary>3 new accounts per address and hour (each name is reserved for good by its account).</summary>
+    public bool RegisterAllowed(IPAddress ip)
+    {
+        lock (_lock)
+            return !_registrations.TryGetValue(ip, out var r) || DateTime.UtcNow - r.Since > TimeSpan.FromHours(1) || r.Count < MaxRegistrationsPerHour;
+    }
+
+    /// <summary>Counts an account created (refused registrations, e.g. a taken name, do not count).</summary>
+    public void Registered(IPAddress ip)
+    {
+        lock (_lock)
+        {
+            var now = DateTime.UtcNow;
+            _registrations[ip] = _registrations.TryGetValue(ip, out var r) && now - r.Since <= TimeSpan.FromHours(1) ? (r.Count + 1, r.Since) : (1, now);
+        }
     }
 
     public void LoginFailed(IPAddress ip)

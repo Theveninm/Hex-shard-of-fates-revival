@@ -181,8 +181,8 @@ namespace HexRevival
             m_StatePath = Path.Combine(root, Instance.Name("HexRevival.state.log"));
             m_CmdPath = Path.Combine(root, Instance.Name("HexRevival.cmd"));
             m_RespPath = Path.Combine(root, Instance.Name("HexRevival.resp"));
-            m_AutoTest = File.Exists(Path.Combine(root, "HexRevival.autotest"));
-            m_AutoStart = File.Exists(Path.Combine(root, "HexRevival.autostart"));
+            m_AutoTest = Dev.Enabled && File.Exists(Path.Combine(root, "HexRevival.autotest"));
+            m_AutoStart = Dev.Enabled && File.Exists(Path.Combine(root, "HexRevival.autostart"));
             if (m_AutoStart)
             {
                 // Optional content "WxH": desired window size (e.g. 2240x1260).
@@ -616,7 +616,8 @@ namespace HexRevival
         {
             try
             {
-                if (string.IsNullOrEmpty(m_CmdPath) || !File.Exists(m_CmdPath))
+                // The command file (dev tools, test scripts) only works in dev mode (HexRevival.dev next to Hex.exe).
+                if (!Dev.Enabled || string.IsNullOrEmpty(m_CmdPath) || !File.Exists(m_CmdPath))
                     return;
                 string[] lines;
                 try { lines = File.ReadAllLines(m_CmdPath); }
