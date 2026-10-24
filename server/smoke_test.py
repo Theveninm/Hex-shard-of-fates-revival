@@ -56,11 +56,11 @@ class Client:
         return hashlib.pbkdf2_hmac("sha1", password.encode(), player_id.encode(), self.hello["iterations"], 32)
 
     def register(self, player_id, name, password):
-        self.msg(t="register", v=1, id=player_id, name=name, key=base64.b64encode(self.key(player_id, password)).decode())
+        self.msg(t="register", v=2, id=player_id, name=name, key=base64.b64encode(self.key(player_id, password)).decode())
 
     def login(self, player_id, password, name=None):
         proof = hmac.new(self.key(player_id, password), base64.b64decode(self.hello["nonce"]), hashlib.sha256).digest()
-        self.msg(t="login", v=1, id=player_id, name=name, proof=base64.b64encode(proof).decode())
+        self.msg(t="login", v=2, id=player_id, name=name, proof=base64.b64encode(proof).decode())
 
 
 def account():
@@ -138,4 +138,9 @@ c.sock.close()
 c = Client(); c.login(c_id, c_pw, name=b_name.lower())
 assert c.expect("notice")["code"] == "name_taken" and c.expect("welcome")["name"] == "C" + c_id[:8]
 print("names: ok")
+
+# A client of the old protocol is refused.
+o = Client(); o.msg(t="login", v=1, id=a_id, proof="")
+assert o.expect("error")["code"] == "version"
+print("old clients refused: ok")
 print("ALL OK")

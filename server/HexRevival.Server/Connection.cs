@@ -14,7 +14,14 @@ namespace HexRevival.Server;
 /// </summary>
 public sealed class Connection
 {
-    public const int ProtocolVersion = 1;
+    /// <summary>
+    /// Clients of another version are refused (2 = HEX Revival 1.2.1: the game data from the other player is checked
+    /// before it is decoded; older clients decode anything and must not play through this server).
+    /// </summary>
+    public const int ProtocolVersion = 2;
+    /// <summary>Bytes waiting to be sent to one client; past this the client is too slow (or does not read) and is dropped.</summary>
+    private const long MaxQueuedBytes = 8 * 1024 * 1024;
+    private long _queuedBytes;
     private static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan LoginTimeout = TimeSpan.FromSeconds(20);
 
@@ -118,9 +125,11 @@ public sealed class Connection
         {
             byte[] key = Convert.FromBase64String((string?)msg["key"] ?? "");
             if (key.Length != 32 || name == null) return Fail("bad_request", "Invalid registration.");
+            if (!_lobby.RegisterAllowed(Ip)) return Fail("throttled", "Too many new accounts from this address, try again later.");
             string? error = _accounts.Register(id!, name, key);
             if (error != null) return Fail(error, error == "name_taken" ? "This name is already used." : "This player id already exists.");
             account = _accounts.Find(id!)!;
+            _lobby.Registered(Ip);
             Log.Info($"new account {name} ({Ip})");
         }
         else if (type == "login")
@@ -155,7 +164,7 @@ public sealed class Connection
 
     private void Enqueue(byte[] frame)
     {
-        if (!_outbox.Writer.TryWrite(frame))
+        if (Interlocked.Add(ref _queuedBytes, frame.Length) > MaxQueuedBytes || !_outbox.Writer.TryWrite(frame))
         {
             Log.Info($"{Label}: send queue full, dropped");
             _cts.Cancel();
@@ -169,7 +178,10 @@ public sealed class Connection
         try
         {
             await foreach (var frame in _outbox.Reader.ReadAllAsync(_cts.Token))
+            {
                 await stream.WriteAsync(frame, _cts.Token);
+                Interlocked.Add(ref _queuedBytes, -frame.Length);
+            }
         }
         catch (OperationCanceledException) { }
         catch (IOException) { }

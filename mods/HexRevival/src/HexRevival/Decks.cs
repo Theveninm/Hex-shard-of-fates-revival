@@ -566,7 +566,7 @@ namespace HexRevival
         /// <summary>The deck received from the other player, playable on this PC under a fixed id (see Export).</summary>
         public static UID SetRemote(Newtonsoft.Json.Linq.JObject j)
         {
-            StoredDeck d = new StoredDeck { Id = RemoteId, Name = (string)j["name"] ?? "", Foreign = true };
+            StoredDeck d = new StoredDeck { Id = RemoteId, Name = PlainName((string)j["name"]), Foreign = true };
             d.PvpChampion = Rid((string)j["champion"] ?? "");
             d.Sleeve = Rid((string)j["sleeve"] ?? "");
             d.Cards = Split((string)j["cards"] ?? "");
@@ -575,18 +575,35 @@ namespace HexRevival
             Newtonsoft.Json.Linq.JObject pc = j["pve"] as Newtonsoft.Json.Linq.JObject;
             if (pc != null)
             {
-                champion_bits c = Champions.Make(RemoteId, (string)pc["name"]);
+                champion_bits c = Champions.Make(RemoteId, PlainName((string)pc["name"]));
                 c.Level = Math.Max(1, Math.Min(60, (int)pc["level"]));
                 try { c.ChampionClass = (EChampionClass)Enum.Parse(typeof(EChampionClass), (string)pc["class"]); } catch { }
                 try { c.Race = (ERace)Enum.Parse(typeof(ERace), (string)pc["race"]); } catch { }
                 try { c.Gender = (EGender)Enum.Parse(typeof(EGender), (string)pc["gender"]); } catch { }
                 c.ChampionTalents = Split((string)pc["talents"] ?? "");
-                c.PetName = (string)pc["pet"] ?? "";
+                c.PetName = PlainName((string)pc["pet"]);
                 d.Champion = c;
                 d.PveChampion = RemoteId;
             }
             s_Remote = d;
             return new UID(UID.Type.Deck, RemoteId);
+        }
+
+        /// <summary>
+        /// A name sent by the other player, shown by the game's labels: without their markup ([ff0000], [url=...]) and
+        /// control characters, 40 characters at most.
+        /// </summary>
+        private static string PlainName(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            foreach (char ch in s)
+            {
+                if (ch == '[' || ch == ']' || ch == '<' || ch == '>' || char.IsControl(ch)) continue;
+                sb.Append(ch);
+                if (sb.Length >= 40) break;
+            }
+            return sb.ToString().Trim();
         }
 
         /// <summary>A deck as the game's deck validator reads it, with the champion of a campaign deck.</summary>
