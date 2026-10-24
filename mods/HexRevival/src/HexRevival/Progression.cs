@@ -902,6 +902,12 @@ namespace HexRevival
                 s.AccountLevel++;
                 foreach (string code in RewardsForLevel(s.AccountLevel)) got.Add(GrantLevelReward(code));
             }
+            // Accounts past level 9 before 1.2.2 never got Sin'glar (the reward was not implemented): given now.
+            if (!s.UnlockAll && s.AccountLevel >= 9 && !s.Claims.Contains("lvlmerc"))
+            {
+                s.Claims.Add("lvlmerc");
+                if (!got.Exists(x => x != null && x.StartsWith("Sin"))) got.Add(GrantLevelReward("merc"));
+            }
             Saves.SaveCurrent();
             RefreshAccountUi();
             Notices.Show(Loc.Get("account_xp", gain));
@@ -933,7 +939,19 @@ namespace HexRevival
                 case "rarechest": return GiveGold(1000);
                 // PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead.
                 case "ticket": return GrantLevelReward("pack:cur");
-                // Not granted: cosmetic sleeves and the Sin'glar mercenary (mercenaries not implemented).
+                case "merc":
+                {
+                    // Sin'glar, the level 9 mercenary (wiki level table). He has no starter deck (Game data): the player builds one.
+                    Loot.Drop d = Loot.Resolve("Sin'glar (mercenary)", false);
+                    InventoryMercenaryData m = d != null ? Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item) as InventoryMercenaryData : null;
+                    if (m == null) return null;
+                    if (Inventory.Count(m.m_Id) == 0) GiveDrop(d);
+                    if (m.DeckTemplate != null) Collection.GrantDeck(m.DeckTemplate);
+                    Mercenaries.OnEarned(m.m_Id);
+                    Saves.Current.Claims.Add("lvlmerc");
+                    return m.m_Name;
+                }
+                // Not granted: cosmetic sleeves.
                 default: return null;
             }
         }
