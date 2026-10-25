@@ -1486,6 +1486,9 @@ namespace HexRevival
                 }
                 case "enc_cancel":
                 case "cancel":
+                    // The battle declined: its dialogue comes again next time. With the prelude still marked as seen,
+                    // the location stayed "autostart" and the battle window opened again at once after Cancel.
+                    if (active != null) Quests.SetFlag(st.ChampId, "prelude:" + active.Key, null);
                     st.ALoc = null;
                     break;
                 case "start":
