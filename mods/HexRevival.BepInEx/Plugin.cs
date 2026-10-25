@@ -212,6 +212,15 @@ namespace HexRevival
             apply("UIBattle.OnGameStarted (equipment tray)", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnGameStarted"), postfix: new HarmonyMethod(typeof(Hooks), "UIBattle_OnGameStarted")));
 
+            // Diagnostics: the Taming Sphere's rolls ("You have a 50% chance to Tame") and every Tame, so a player's
+            // report ("the creature is voided but not counted") can be checked in the log.
+            apply("AbilityVariableCondition.IsValid (taming log)", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Mechanics.Abilities.Conditions.AbilityVariableCondition), "IsValid", new[] { typeof(Game.Shared.Mechanics.Abilities.AbilityEffectInstance) }),
+                    postfix: new HarmonyMethod(typeof(Hooks), "TameRoll_IsValid")));
+            apply("TACAbilityEffectTemplate.Tame.Apply (taming log)", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Mechanics.Abilities.TACAbilityEffectTemplate.Tame), "Apply"),
+                    postfix: new HarmonyMethod(typeof(Hooks), "Tame_Apply")));
+
             // Diagnostics: every rejected transaction (except priority passes) is logged with its cards.
             apply("Transaction.Validate (log)", () =>
             {
@@ -510,6 +519,30 @@ namespace HexRevival
 
         public static void Decoder_DecodeEnter(Game.Shared.Network.ObjFmt.Decoder __instance, ref bool __state) { HexRevival.NetCodec.DecodeEnter(__instance, ref __state); }
         public static Exception Decoder_DecodeExit(bool __state, Exception __exception) { HexRevival.NetCodec.DecodeExit(__state); return __exception; }
+
+        public static void TameRoll_IsValid(Game.Shared.Mechanics.Abilities.Conditions.AbilityVariableCondition __instance, Game.Shared.Mechanics.Abilities.AbilityEffectInstance effectInstance, bool __result)
+        {
+            try
+            {
+                Game.Shared.Mechanics.Abilities.AbilityInstance ai = effectInstance != null ? effectInstance.m_AbilityInstance : null;
+                if (ai == null || ai.m_AbilityTemplate == null || __instance.m_Lhs != "RandomNumber" || ai.m_AbilityTemplate.Name.IndexOf("Tame", StringComparison.OrdinalIgnoreCase) < 0) return;
+                int v; ai.TryGetAbilityVariable("RandomNumber", out v, false);
+                UnityEngine.Debug.Log("[HexRevival] [Taming] roll " + v + " " + __instance.m_ComparisonOp + " " + __instance.m_Rhs + " -> " + (__result ? "tame" : "no tame") + " (ability " + ai.m_AbilityInstanceId + ")");
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] [Taming] roll: " + e.Message); }
+        }
+
+        public static void Tame_Apply(Game.Shared.Mechanics.Card targetCard, Game.Shared.Mechanics.Abilities.AbilityEffectInstance effectInstance)
+        {
+            try
+            {
+                Game.Shared.Player p = effectInstance != null && effectInstance.m_AbilityInstance != null ? effectInstance.m_AbilityInstance.m_ResponsiblePlayer : null;
+                Game.Shared.Mechanics.TACList l = p != null && p.m_ChampionCard != null ? p.m_ChampionCard.Get(Game.Shared.Mechanics.TACAttrs.PermanentData, Game.Shared.Mechanics.ListAttrs.TamedCards) : null;
+                UnityEngine.Debug.Log("[HexRevival] [Taming] Tame " + (targetCard != null ? targetCard.m_SessionCardId + " " + targetCard.m_CardTemplate.m_Name + " now in " + targetCard.m_CurrentCardCollection : "null")
+                    + ", tamed list " + (l != null ? l.Count : 0) + " (ability " + (effectInstance != null && effectInstance.m_AbilityInstance != null ? effectInstance.m_AbilityInstance.m_AbilityInstanceId : 0) + ")");
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] [Taming] tame: " + e.Message); }
+        }
 
         public static void UIBattle_OnGameStarted(UIBattle __instance)
         {
