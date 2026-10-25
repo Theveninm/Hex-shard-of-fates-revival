@@ -135,7 +135,7 @@ from the original:
   most recent client, except for the ship's hull (below).
 - **Not reproduced, information not found**: the optional "Challenge Completed" bonus of dungeon
   battles (+100% gold; its condition was never shown on screen), the rare extra item "Pappy Jasper's
-  Whip" after some dungeons, the Kraken's Dark Chamber (+1 charge), mercenary leveling, and sea weather
+  Whip" after some dungeons, the Kraken's Dark Chamber (+1 charge), mercenary leveling, the source of some mercenaries (not obtainable on progression accounts), and sea weather
   effects (never seen in any video).
 - **Choices made without a source**: the ship's hull is kept from battle to battle during a voyage (the
   game's own texts and client code say so, but late-2017 videos show a full hull at every sea battle);
@@ -153,6 +153,12 @@ an issue.
 
 - Coin flip animation may occasionally misbehave (no impact on the game).
 - Some rare cards may still behave imperfectly; please open an issue with the card name.
+
+## Thanks
+
+To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
+blockade, the faction locations of the campaign map, gems not saved in decks) and **InfinityAbyss** (the champion
+creation and selection hang).
 
 ## Building from source
 
