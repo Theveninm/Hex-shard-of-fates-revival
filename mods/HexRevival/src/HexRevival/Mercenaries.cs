@@ -97,6 +97,51 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>A mercenary bought or found (store packs): into the inventory, with its starter deck's cards and a party slot.</summary>
+        public static bool Grant(InventoryMercenaryData m, Game.Client.Network.Escrow.PurchaseItemResponse r)
+        {
+            if (m == null || Inventory.Count(m.m_Id) > 0) return false;
+            inventory_bits inv = Inventory.GrantSilently(m.m_Id);
+            if (inv == null) return false;
+            r.GrantedInventory.Add(inv);
+            if (m.DeckTemplate != null) Collection.GrantDeck(m.DeckTemplate);
+            OnEarned(m.m_Id);
+            Notices.Show(Loc.Get("merc_found", m.m_Name));
+            return true;
+        }
+
+        /// <summary>
+        /// PLACEHOLDER chance that an opened booster also brings a mercenary of its set. In the original, every opened
+        /// pack came with a chest, opened with gold on the Wheel of Fate (Src.Forum2017), and the set mercenaries came
+        /// from those chests and from the wheel (Src.Game: their item descriptions, "Herofall WOF", "Herofall Chest"...).
+        /// The mod has no chests: the booster itself may bring one. Odds unknown.
+        /// </summary>
+        public const double BoosterChance = 0.02;
+
+        /// <summary>The mercenaries of a card set's chests and Wheel of Fate (by their item description).</summary>
+        public static List<InventoryMercenaryData> OfSet(string setName)
+        {
+            List<InventoryMercenaryData> res = new List<InventoryMercenaryData>();
+            if (string.IsNullOrEmpty(setName)) return res;
+            foreach (InventoryMercenaryData m in Obtainable())
+            {
+                string d = (m.m_Description ?? "").Trim();
+                bool setMerc = d == setName + " WOF" || d == setName + " Chest"
+                    // Dead of Winter's chest mercenaries are described "08 Chest Merc Rare 01..03" (set 8).
+                    || (setName == "Dead of Winter" && d.StartsWith("08 Chest Merc"));
+                if (setMerc) res.Add(m);
+            }
+            return res;
+        }
+
+        /// <summary>An opened booster of this set: maybe one of its mercenaries not owned yet (see BoosterChance).</summary>
+        public static void BoosterDrop(string setName, Game.Client.Network.Escrow.PurchaseItemResponse r, System.Random rng)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll || rng.NextDouble() >= BoosterChance) return;
+            List<InventoryMercenaryData> left = OfSet(setName).FindAll(m => Inventory.Count(m.m_Id) == 0);
+            if (left.Count > 0) Grant(left[rng.Next(left.Count)], r);
+        }
+
         /// <summary>
         /// An owned mercenary with a starter deck gets it as a party deck template, if it has none: the party screen
         /// takes the mercenary's deck from the templates (PlayerProfile.FindDeckTemplateWithMerc), and without one

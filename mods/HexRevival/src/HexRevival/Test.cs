@@ -1111,6 +1111,13 @@ namespace HexRevival
                         });
                         return "tutorial: " + scene.GetType().Name;
                     }
+                case "mercsets":   // dev: the mercenaries each set's boosters may bring (Mercenaries.OfSet)
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (string set in new[] { "Shards of Fate", "Shattered Destiny", "Armies of Myth", "Primal Dawn", "Herofall", "Scars of War", "Frostheart", "Dead of Winter", "Doombringer" })
+                            sb.Append(set).Append(": ").Append(string.Join(", ", Mercenaries.OfSet(set).ConvertAll(m => m.m_Name).ToArray())).Append('\n');
+                        return sb.ToString();
+                    }
                 case "deckgems": return Decks.DevGemRoundTrip(parts.Length > 1 ? ulong.Parse(parts[1]) : Decks.FirstPvpDeck());
                 case "decknew":   // dev: "decknew <name> <game deck search>": a player deck of the account, copied from a game deck
                     {

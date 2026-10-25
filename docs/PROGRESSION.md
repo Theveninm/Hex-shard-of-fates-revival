@@ -314,7 +314,23 @@ template, and one party slot (account flag CAMP_PARTYCAP, capped by race by the 
 with the game's own party screen, is saved per champion. Choosing a mercenary on the "Prepare for Battle"
 panel makes him play the battle with his deck and his card as champion (the game's InstantiateMercenaryCard);
 the battle's rewards go to the champion (Game: the client shows them to the champion). Mercenary leveling
-(MercLeveling) is not reproduced: no source for its values.
+(MercLeveling) is not reproduced: the game data has one upgraded version of each mercenary, and a 2016 Steam
+thread gives two won "mercenary challenge" dungeon battles plus 25,000 gold per upgrade, but which battles were
+challenges and their bonus gold are unknown.
+
+Where each mercenary comes from, on progression accounts ("unlock everything" accounts own all 82 finished
+mercenaries of the game data; the four unfinished ones, build tag FutureRelease, are never given):
+
+| Mercenaries | Source in the original (Game: item descriptions) | In the mod |
+|---|---|---|
+| Augustine, Katsuhiro, Mayor Galway, Sister of the Herd | Alachian Sea campaign rewards (Video) | campaign rewards (see the AZ2 table) |
+| Sin'glar | account level 9 (wiki level table) | account level 9; accounts already past it get him after their next win |
+| Rosina Leckermaul, Angar Krad | Siege Pack | Siege Pack, 5% (PLACEHOLDER odds, see Store) |
+| The "<set> Chest" and "<set> WOF" mercenaries of Shards of Fate, Shattered Destiny, Armies of Myth, Primal Dawn, Herofall, Scars of War, Frostheart, Dead of Winter ("08 Chest Merc"), Doombringer | the set's chests and Wheel of Fate, opened with each booster (Forum2017) | PLACEHOLDER: 2% chance per store booster of that set (the mod has no chests) |
+| Clatterclank, Thokoht, G24A-19 | Alachian Sea ("Adventure Zone II"), how is unknown | not obtainable |
+| Sekki, Jusicus Elderberry, Vlastislav the Deathless | Kismet's Reserve packs (Oni, Boonberries, Vampires) | not obtainable (contents unknown, not sold) |
+| Scion of Uruunaz | Dragon's Blood deck | not obtainable (no such deck product in the game data) |
+| Kickstarter, GenCon 2013/2014, 2017 Convocation, Salty Sam (tournament reward) | out of the game | not obtainable |
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
 
@@ -515,7 +531,7 @@ What each reward becomes in the mod:
 | Rare paid spin chest | 1,000 gold | PLACEHOLDER |
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
 | Exclusive deck sleeve, alternate arts | nothing | cosmetics not implemented |
-| Sin'glar (level 9) | nothing | mercenaries not implemented |
+| Sin'glar (level 9) | the Sin'glar mercenary | — |
 
 ## Store
 
@@ -534,7 +550,7 @@ platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).
 | Bought packs | opened right away (the Open Pack screen is not wired) | mod choice |
 | Bought decks | their cards go to the collection and the deck is ready to play | Game ("Decks are automatically added to your collection") |
 | Bonus primal pack | 2% chance per bought booster: 2 legendaries + 13 rares of the same set (its legendary chest is not given) | Forum2017 |
-| Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, shard 20%, PvE card 50%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game). The second mercenary and the equipment are not named: not given |
+| Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul or Angar Krad); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, shard 20%, PvE card 50%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game). The second mercenary is Angar Krad (Game: his item description reads "Siege Pack"); the equipment is not named: not given |
 | Cosmic Coin Pack | one item: an alternate art card (at most 4 copies), nearly 1 in 3 a Doombringer booster, rarely one of the 3 sleeves marked "2018 Cosmic Coin Pack" | HexTCG2018; odds PLACEHOLDER (booster 30%, sleeve 5%) |
 | Cosmic Coins | not earned offline yet (they were a ladder prize); dev command `store cosmic <n>` | - |
 
