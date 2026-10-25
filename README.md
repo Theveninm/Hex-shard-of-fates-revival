@@ -157,7 +157,8 @@ an issue.
 ## Thanks
 
 To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
-blockade, the faction locations of the campaign map, gems not saved in decks) and **InfinityAbyss** (the champion
+blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
+taming quest, the Tranquil Dream rooms) and **InfinityAbyss** (the champion
 creation and selection hang).
 
 ## Building from source
