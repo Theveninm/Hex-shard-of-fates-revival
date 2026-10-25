@@ -643,7 +643,12 @@ namespace HexRevival
             {
                 if (combat.Attacker == null)
                     continue;
-                if (damage && (combat.Instigator != player || combat.Blockers.Count < 2))
+                // Only the combats whose order is still open and matters in this damage step: the attacker deals
+                // damage in it (first strike step: first strike or dual strike), and no order was given yet (an order
+                // given in the first strike step, or a single blocker, sets IsDamageAssigned). Without this, a combat
+                // with first strike asked its order in both steps.
+                if (damage && (combat.Instigator != player || combat.Blockers.Count < 2 || combat.IsDamageAssigned
+                    || !combat.Attacker.CaresAboutCombatPhase(phase == ETurnPhases.AssignFirstStrikeDamage ? ECombatPhase.FirstStrike : ECombatPhase.Standard)))
                     continue;
                 List<SessionCardId> blockers = new List<SessionCardId>();
                 foreach (Card b in combat.Blockers)
