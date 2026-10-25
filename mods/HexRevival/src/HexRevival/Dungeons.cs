@@ -108,6 +108,16 @@ namespace HexRevival
         private static readonly string[] Forms = { "Retribution", "Conquest", "Savagery", "Instinct", "Cunning" };
         private static readonly string[] DreamRooms = { "NodeB", "NodeC", "NodeD", "NodeE", "NodeF" };
 
+        /// <summary>The dream creature of a Tranquil Dream room (same order as Creatures), null for the other rooms.</summary>
+        private static string DreamCreature(string room)
+        {
+            int i = room != null ? Array.IndexOf(DreamRooms, room) : -1;
+            return i >= 0 ? Creatures[i] : null;
+        }
+
+        /// <summary>Dev name check (all creatures in every room, see below).</summary>
+        private static bool s_DevAllNames;
+
         private static List<Def> s_Defs;
 
         private static List<Def> Defs()
@@ -554,14 +564,9 @@ namespace HexRevival
             Run r = new Run { Champ = champ, Key = d.Key, Last = d.Start };
             if (d.Key == "tranquildream")
             {
-                // Which dream creature waits in which room, and Sister Midnight's form: drawn for each run.
-                List<string> c = new List<string>(Creatures);
-                foreach (string room in DreamRooms)
-                {
-                    int i = UnityEngine.Random.Range(0, c.Count);
-                    r.Vars["c:" + room] = c[i];
-                    c.RemoveAt(i);
-                }
+                // Each dream creature has its room (Src.Game: the dungeon template's items "004 - Dream Turtle" NodeB,
+                // Skarn NodeC, Spider NodeD, Bear NodeE, Eagle NodeF); Sister Midnight's form is drawn for each run.
+                foreach (string room in DreamRooms) r.Vars["c:" + room] = DreamCreature(room);
                 r.Vars["form"] = Forms[UnityEngine.Random.Range(0, Forms.Length)];
             }
             r.VisitedNodes.Add(d.Start);
@@ -634,7 +639,9 @@ namespace HexRevival
             string v, faction = race.GetFaction() == EFactions.Underworld ? "Underworld" : "Ardent";
             s = s.Replace("{R}", race == ERace.ShinHare ? "Shin'hare" : race.ToString());
             s = s.Replace("{F}", faction);
-            if (r.Vars.TryGetValue("c:" + node, out v)) s = s.Replace("{C}", v);
+            // Runs started before 1.2.3 drew the creatures' rooms at random: the room decides.
+            if (r.Key == "tranquildream" && DreamCreature(node) != null && !s_DevAllNames) s = s.Replace("{C}", DreamCreature(node));
+            else if (r.Vars.TryGetValue("c:" + node, out v)) s = s.Replace("{C}", v);
             if (s.Contains("{FORM}")) s = s.Replace("{FORM}", Form(r));
             if (s.Contains("{RANK}") || s.Contains("{D}"))
             {
@@ -1231,8 +1238,55 @@ namespace HexRevival
             return Singleton<TemplateManager>.Instance.CampaignScenes.TryGetValue(new ResourceId(id), out sd) ? sd.m_Name : id;
         }
 
+        /// <summary>
+        /// "dun audit": each room of each dungeon against the game's dungeon template (Src.Game m_ItemData: map node and
+        /// title) and the map prefab's nodes; each battle with its scene title. Written to HexRevivalDungeonAudit.txt.
+        /// </summary>
+        public static string Audit()
+        {
+            Index();
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            ulong champ = 0;
+            try { champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id; } catch { }
+            foreach (Def d in Defs())
+            {
+                SceneData sdata;
+                DungeonTemplate dt = tm.CampaignScenes.TryGetValue(new ResourceId(d.Id), out sdata) ? sdata as DungeonTemplate : null;
+                Dictionary<string, string> titles = new Dictionary<string, string>();
+                if (dt != null) foreach (DungeonItemData it in dt.m_ItemData) if (!string.IsNullOrEmpty(it.m_MapNodeId)) titles[it.m_MapNodeId] = (titles.ContainsKey(it.m_MapNodeId) ? titles[it.m_MapNodeId] + " + " : "") + it.m_Name;
+                HashSet<string> prefab = new HashSet<string>(Edges(d).Keys);
+                sb.Append("== ").Append(d.Name).Append(dt == null ? " (no template)" : "").Append(" prefab nodes: ").Append(string.Join(",", new List<string>(prefab).ToArray())).Append('\n');
+                foreach (string t in titles.Keys) if (!d.Rooms.ContainsKey(t)) sb.Append("   template node not in the mod: ").Append(t).Append(" ").Append(titles[t]).Append('\n');
+                Run r = new Run { Champ = champ, Key = d.Key };
+                foreach (Room room in d.Rooms.Values)
+                {
+                    string title;
+                    titles.TryGetValue(room.Id, out title);
+                    sb.Append("   ").Append(room.Id).Append(prefab.Contains(room.Id) ? "" : " (NOT IN PREFAB)").Append(" | template: ").Append(title ?? "-");
+                    foreach (Step st in room.Steps)
+                    {
+                        if (st.Enc == null) continue;
+                        string id = Enc(r, room.Id, st.Enc);
+                        SceneData sc;
+                        string scene = id != null && tm.CampaignScenes.TryGetValue(new ResourceId(id), out sc) ? sc.m_Name + " [" + ((sc as EncounterScene) != null ? ((EncounterScene)sc).m_Title : "") + "]" : "? " + st.Enc;
+                        sb.Append(" | battle: ").Append(scene);
+                    }
+                    sb.Append('\n');
+                }
+            }
+            File.WriteAllText(Path.Combine(LocalServer.Root, "HexRevivalDungeonAudit.txt"), sb.ToString());
+            return "written HexRevivalDungeonAudit.txt";
+        }
+
         /// <summary>"dun check": every name of every dungeon, for every race (missing ones listed).</summary>
         public static string Check()
+        {
+            s_DevAllNames = true;
+            try { return CheckNames(); } finally { s_DevAllNames = false; }
+        }
+
+        private static string CheckNames()
         {
             Index();
             List<string> missing = new List<string>();
@@ -1312,6 +1366,7 @@ namespace HexRevival
         {
             string sub = parts.Length > 1 ? parts[1] : "";
             if (sub == "check") return Check();
+            if (sub == "audit") return Audit();
             if (sub == "go")
             {
                 // dev: "dun go <champion id>" = play that champion, as the champion select screen does

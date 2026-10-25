@@ -377,6 +377,27 @@ namespace HexRevival
             }
         }
 
+        /// <summary>
+        /// True while a started quest still asks to tame a creature in this battle ("Tame X and win match"): the battle
+        /// must stay available until the creature is tamed (a win without taming it does not count).
+        /// </summary>
+        public static bool TamingPending(ulong champ, string sceneId)
+        {
+            if (sceneId == null) return false;
+            foreach (KeyValuePair<string, Progress> q in Of(champ))
+            {
+                if (q.Value.Finished) continue;
+                Def d = GetDef(q.Key);
+                if (d == null) continue;
+                for (int i = 0; i < d.Objectives.Count; i++)
+                {
+                    Objective o = d.Objectives[i];
+                    if (o.Taming && !q.Value.Done.Contains(i) && o.Kind == "Encounter" && (o.Encounter == sceneId || o.AltEncounters.Contains(sceneId))) return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>A dungeon was finished (its last battle won): completes the dungeon objectives naming it.</summary>
         public static void OnDungeonDone(ulong champ, string dungeonId)
         {
