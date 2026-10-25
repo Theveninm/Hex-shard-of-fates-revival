@@ -1111,6 +1111,7 @@ namespace HexRevival
                         });
                         return "tutorial: " + scene.GetType().Name;
                     }
+                case "deckgems": return Decks.DevGemRoundTrip(parts.Length > 1 ? ulong.Parse(parts[1]) : Decks.FirstPvpDeck());
                 case "decknew":   // dev: "decknew <name> <game deck search>": a player deck of the account, copied from a game deck
                     {
                         if (parts.Length < 3) return "usage: decknew <name> <game deck search>";
