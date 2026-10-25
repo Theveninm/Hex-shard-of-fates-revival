@@ -238,6 +238,36 @@ namespace HexRevival
             return ToBits(d);
         }
 
+        /// <summary>
+        /// Dev: "deckgems": saves a deck as the deck editor does, with a gem on its first card, reloads the decks
+        /// from disk and reports the gems the client would get back.
+        /// </summary>
+        public static string DevGemRoundTrip(ulong deckId)
+        {
+            StoredDeck d = Find(deckId);
+            if (d == null || d.Cards.Count == 0) return "no deck " + deckId;
+            deck_bits b = ToBits(d);
+            Dictionary<ulong, EGemTypesNew> gems = new Dictionary<ulong, EGemTypesNew>(b.ActiveGems);
+            EGemTypesNew gem = GemHelper.AddGemToGem((EGemTypesNew)1UL, 0);
+            gems[b.CardsInDeck[0].Id] = gem;
+            UpdateDeckRequestArgs upd = new UpdateDeckRequestArgs
+            {
+                DeckID = new UID(UID.Type.Deck, d.Id), DeckName = d.Name, PvEChampionId = new UID(UID.Type.Champion, d.PveChampion),
+                PvPChampionId = d.PvpChampion, DeckCardIDs = Ids(b.CardsInDeck), SideboardCardIDs = Ids(b.CardsInSideboard),
+                EquipmentIDs = new List<ResourceId>(d.Equipment), TalentIDs = new List<ResourceId>(d.Talents), ActiveGems = gems,
+                DeckSleeveId = d.Sleeve, GameboardId = d.Gameboard, CoinId = d.Coin
+            };
+            Handle(0, upd);
+            string file = File.ReadAllText(FilePath);
+            int at = file.IndexOf("DECK|" + d.Id + "|");
+            int g = at >= 0 ? file.IndexOf("GEMS|", at) : -1;
+            deck_bits again = ToBits(Find(deckId));
+            EGemTypesNew back;
+            again.ActiveGems.TryGetValue(again.CardsInDeck[0].Id, out back);
+            return "sent " + (ulong)gem + " on " + b.CardsInDeck[0].TemplateID + "; saved line: " + (g >= 0 ? file.Substring(g, Math.Min(40, file.Length - g)).Split('\n')[0] : "none")
+                + "; given back: " + (ulong)back + " (" + again.ActiveGems.Count + " gem(s) in the deck)";
+        }
+
         /// <summary>The first of the player's own (non-campaign) decks, 0 if none (dev commands).</summary>
         public static ulong FirstPvpDeck()
         {
