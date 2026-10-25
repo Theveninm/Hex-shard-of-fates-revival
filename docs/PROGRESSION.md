@@ -124,6 +124,10 @@ conversation and encounter names (Game) and the videos. Rules:
   Adam) opens once the three are taken.
 - Taming battles ("Tame X and win match", the Tamed quest): won without taming the creature (the Taming
   Sphere's 2-mana ability only has a 50% chance, Game), the battle stays available to fight again.
+- The Usurper: Verrev is fought in Last Rites, after its dialogue (Video: MyHotStream Ardent 2017-03-22). The
+  game data's node events are shifted by one node in the Usurper, the Tranquil Dream and Fort Romor (each node
+  fires the previous node's battle), so they are not used to place battles; the node titles, the conversation
+  owners and the videos are. The Banshee (NodeG) has no conversation or encounter in the game data.
 - The Usurper: Shepherd's Rest battle by who is dead (Ghuuhg in the Hall of Vermin, Mistsim in the
   Chamber of Awakening, or both); one of the two halls is enough to go on.
 - Finishing a dungeon completes the quest objectives naming it (the Usurper quest's objective names

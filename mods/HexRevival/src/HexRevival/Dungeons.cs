@@ -172,9 +172,12 @@ namespace HexRevival
                 .Add("NodeC", Fight(us, "Hall of Vermin", "Usurper Hall of Vermin", "usurper/NodeC"))
                 .Add("NodeD", Fight(us, "Chamber of Awakening", "Usurper Chamber of Awakening", "usurper/NodeD"))
                 .Add("NodeE", new Step { Conv = us + "Shepherd's Rest", Enc = "Usurper Shepherd's Rest {SHEP} Dead", Success = us + "Shepherd's Rest Success", Fail = us + "Shepherd's Rest Fail", Reward = "usurper/NodeE", Requires = new[] { "NodeC", "NodeD" }, RequireAny = true })
-                .Add("NodeF", Talk(us + "Last Rites"))
-                .Add("NodeG", new Step { Conv = "758dce7e-3575-4109-9f58-9331b6e26cb5", Enc = "Usurper Last Rites", Success = us + "Last Rites Success", Fail = us + "Last Rites Fail", Reward = "usurper/NodeG" })
-                .Final("NodeG"));
+                // Verrev is fought in Last Rites, right after its dialogue (Src.Video: MyHotStream Ardent 2017-03-22, the
+                // "Last Rites" room's window stays open behind the Prepare for Battle screen). The template's node
+                // events are shifted by one node there (NodeG "The Banshee" fires the Last Rites battle, NodeF the
+                // Shepherd's Rest one); The Banshee's own conversation and encounter are not in the game data.
+                .Add("NodeF", new Step { Conv = us + "Last Rites", Enc = "Usurper Last Rites", Success = us + "Last Rites Success", Fail = us + "Last Rites Fail", Reward = "usurper/NodeF" })
+                .Final("NodeF"));
 
             // The Smoldering Dead (Node 24): King Edmund III's burial vault (entrance battle by faction).
             const string sd = "The Smoldering Dead - ";
@@ -529,6 +532,14 @@ namespace HexRevival
                     foreach (string s in List(p[8])) { int i = s.IndexOf('='); if (i > 0) r.Vars[s.Substring(0, i)] = s.Substring(i + 1); }
                     r.VisitedNodes.AddRange(List(p[9]));
                     r.VisitedPaths.AddRange(List(p[10]));
+                    // Runs from before 1.2.3: Last Rites was a dialogue only (the battle was in The Banshee). Not won yet:
+                    // Last Rites is played again, battle included.
+                    if (r.Key == "usurper" && !r.Vars.ContainsKey("lastrites"))
+                    {
+                        r.Vars["lastrites"] = "1";
+                        if (!r.Steps.ContainsKey("NodeG")) { r.Steps.Remove("NodeF"); r.Seen.Remove("NodeF:0"); }
+                        r.Steps.Remove("NodeG");
+                    }
                     s_Runs[r.Champ] = r;
                 }
             }
@@ -569,6 +580,7 @@ namespace HexRevival
                 foreach (string room in DreamRooms) r.Vars["c:" + room] = DreamCreature(room);
                 r.Vars["form"] = Forms[UnityEngine.Random.Range(0, Forms.Length)];
             }
+            if (d.Key == "usurper") r.Vars["lastrites"] = "1";   // new layout (see Load)
             r.VisitedNodes.Add(d.Start);
             s_Runs[champ] = r;
             Save();
@@ -1257,6 +1269,14 @@ namespace HexRevival
                 if (dt != null) foreach (DungeonItemData it in dt.m_ItemData) if (!string.IsNullOrEmpty(it.m_MapNodeId)) titles[it.m_MapNodeId] = (titles.ContainsKey(it.m_MapNodeId) ? titles[it.m_MapNodeId] + " + " : "") + it.m_Name;
                 HashSet<string> prefab = new HashSet<string>(Edges(d).Keys);
                 sb.Append("== ").Append(d.Name).Append(dt == null ? " (no template)" : "").Append(" prefab nodes: ").Append(string.Join(",", new List<string>(prefab).ToArray())).Append('\n');
+                try
+                {
+                    GameObject pf = Resources.Load(d.NodesPrefab) as GameObject;
+                    if (pf != null)
+                        foreach (Transform t in pf.GetComponentsInChildren<Transform>(true))
+                            if (t.GetComponent<UIDungeonMapNodeData>() != null) sb.Append("   pos ").Append(t.name).Append(' ').Append(t.localPosition).Append('\n');
+                }
+                catch { }
                 foreach (string t in titles.Keys) if (!d.Rooms.ContainsKey(t)) sb.Append("   template node not in the mod: ").Append(t).Append(" ").Append(titles[t]).Append('\n');
                 Run r = new Run { Champ = champ, Key = d.Key };
                 foreach (Room room in d.Rooms.Values)
