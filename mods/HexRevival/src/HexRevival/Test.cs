@@ -1204,6 +1204,21 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "mercequip":   // dev: "mercequip <deck template id> <equipment name>" = equips a party deck template (as the party screen does)
+                    {
+                        ulong tid;
+                        if (parts.Length < 3 || !ulong.TryParse(parts[1], out tid)) return "usage: mercequip <template id> <equipment name>";
+                        Game.Shared.Profile.ProfileDeckTemplate t = DeckTemplates.Get(tid);
+                        if (t == null) return "no template " + tid;
+                        string name = string.Join(" ", parts, 2, parts.Length - 2);
+                        InventoryEquipmentData eq = null;
+                        foreach (InventoryItemData it in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                            if (it is InventoryEquipmentData && string.Equals(it.m_Name, name, StringComparison.OrdinalIgnoreCase)) { eq = (InventoryEquipmentData)it; break; }
+                        if (eq == null) return "no equipment " + name;
+                        t.Equip[eq.m_EquipmentType] = eq.m_Id;
+                        DeckTemplates.Put(t, tid);
+                        return "template " + tid + " '" + t.Name + "': " + eq.m_EquipmentType + " = " + eq.m_Name;
+                    }
                 case "tameroll":   // dev: "tameroll [n]" = runs the Taming Sphere's 2-mana roll n times with the game's own effect and condition
                     {
                         StandaloneSession ss = Server.CurrentSession;

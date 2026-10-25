@@ -124,6 +124,9 @@ conversation and encounter names (Game) and the videos. Rules:
   Adam) opens once the three are taken.
 - Taming battles ("Tame X and win match", the Tamed quest): won without taming the creature (the Taming
   Sphere's 2-mana ability only has a 50% chance, Game), the battle stays available to fight again.
+- Taming objectives count in the battles whose encounter mods hold the "Taming X" card (Src.Game: EncounterScene
+  m_Mods), not the encounter named by the quest template: "Tame Bubblebee" names Foul Fae (Node 32), the Bubblebee is
+  tamed against the Water Elemental (Node 31). A creature already tamed by the champion (reward claim) counts.
 - The Usurper: Verrev is fought in Last Rites, after its dialogue (Video: MyHotStream Ardent 2017-03-22). The
   game data's node events are shifted by one node in the Usurper, the Tranquil Dream and Fort Romor (each node
   fires the previous node's battle), so they are not used to place battles; the node titles, the conversation

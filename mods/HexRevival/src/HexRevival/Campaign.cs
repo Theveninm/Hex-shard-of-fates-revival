@@ -256,6 +256,7 @@ namespace HexRevival
         /// <summary>Saves made before 1.2.3: a taming battle won without the creature was closed for good; it opens again.</summary>
         private static void ReopenTamingBattles(CampState st)
         {
+            Quests.SyncTamed(st.ChampId);
             foreach (MapNode n in st.Z.Nodes)
                 if (st.Completed.Contains(n.Id) && Quests.TamingPending(st.ChampId, EncOf(st.ChampId, n))) st.Completed.Remove(n.Id);
         }
@@ -1897,7 +1898,8 @@ namespace HexRevival
                 string enc = n != null ? n.Encounter ?? n.FightEncounter : null;
                 if (st == null || enc == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
                 st.ALoc = n.Name;
-                LastEvent = parts.Length > 3 ? parts[3] : "start";
+                LastEvent = parts.Length > 3 && !parts[3].StartsWith("merc=") ? parts[3] : "start";
+                foreach (string a in parts) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);   // "merc=<mercenary item id>": played by that party member
                 int diff;
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
                 StartBattle(st, n, enc);
