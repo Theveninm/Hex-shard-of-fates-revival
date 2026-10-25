@@ -52,6 +52,7 @@ namespace HexRevival
             public HashSet<string> NodeNumbers;                        // numbers of the template's nodes ("19", "19B")
             public Dictionary<string, string> NumberAlias;             // node -> number in its names
             public Dictionary<string, EFactions> HubFaction;           // hubs whose quest givers serve one faction
+            public Dictionary<string, EFactions> NodeFaction;          // locations that only one faction sees
             public Dictionary<string, string> TitleNode;               // node title (upper case, no spaces) -> node
             /// <summary>
             /// AZ2 names a node's faction variants with a letter ("NODE 6A ... (vs Ardent)", "Node 6B ... -
@@ -72,6 +73,14 @@ namespace HexRevival
         {
             Key = "AZ1", Prefix = "AZ1-NODE", TemplateId = new ResourceId(new Guid("742c6fc1-77e5-4029-bf9e-4e8af387857a")),
             NodesPrefab = "campaign/az01/nodes", StartNode = "Node001", Base = 0,
+            // Each faction has its own hub and its own dungeon (Src.Game quests "az01_ar_find_ambling_mesa" /
+            // "az01_uw_find_cave_in", "az01_q_usurper" / "az01_q_fort_romor"; Src.Video: the Underworld run went to
+            // Cave-In and Fort Romor, the Ardent run to Ambling Mesa and the Usurper). All four are dead ends.
+            NodeFaction = new Dictionary<string, EFactions>
+            {
+                { "Node034", EFactions.Aria }, { "Node008", EFactions.Aria },
+                { "Node017", EFactions.Underworld }, { "Node011", EFactions.Underworld },
+            },
             // Panorama level of each hub (Src.HexServer, read from the client's asset bundles).
             Panoramas = new Dictionary<string, string[]>
             {
@@ -242,6 +251,15 @@ namespace HexRevival
             if (Quests.Flag(champ, "dungeon:a8d2ad0e-306e-4d07-9cd1-e4d7c82cdf1c") == null || Quests.Flag(champ, "won:Node019B") != null) return null;
             MapNode b = FindNode(AZ1, "Node019B");
             return b != null ? b.Encounter : null;
+        }
+
+        /// <summary>A location of the other faction's (its hub, its dungeon): hidden from this champion.</summary>
+        private static bool OtherFactions(ulong champ, MapNode n)
+        {
+            EFactions f;
+            if (n.Z.NodeFaction == null || !n.Z.NodeFaction.TryGetValue(n.Id, out f)) return false;
+            champion_bits c = Champions.Get(champ);
+            return c != null && c.Race.GetFaction() != f;
         }
 
         /// <summary>The node's battle for this champion (faction, dialogue choice).</summary>
@@ -830,7 +848,7 @@ namespace HexRevival
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
             foreach (MapNode n in st.Z.Nodes)
             {
-                bool visible = st.Visible.Contains(n.Id);
+                bool visible = st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n);
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["name"] = n.Name;
                 d["node"] = n.Id;
