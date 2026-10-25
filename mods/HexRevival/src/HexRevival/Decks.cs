@@ -205,6 +205,14 @@ namespace HexRevival
             d.Gems.Clear();
             d.SideGems.Clear();
             AddCards(d, t);
+            // The equipment equipped on the template (a mercenary's party deck) is played too, in slot order.
+            d.Equipment.Clear();
+            if (t.Equip != null)
+                foreach (Reckoning.Game.EEquipmentType slot in new[] { Reckoning.Game.EEquipmentType.Head, Reckoning.Game.EEquipmentType.Chest, Reckoning.Game.EEquipmentType.Gloves, Reckoning.Game.EEquipmentType.Feet, Reckoning.Game.EEquipmentType.Weapon, Reckoning.Game.EEquipmentType.Trinket })
+                {
+                    ResourceId e;
+                    if (t.Equip.TryGetValue(slot, out e) && e.IsValid) d.Equipment.Add(e);
+                }
             Save();
             return d.Id;
         }
