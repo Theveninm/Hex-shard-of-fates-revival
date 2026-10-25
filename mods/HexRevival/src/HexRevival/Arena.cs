@@ -235,8 +235,9 @@ namespace HexRevival
             {
                 int tier = i / PerTier + 1, slot = i % PerTier;
                 bool boss = slot == PerTier - 1;
-                int elites = tier == 1 ? 0 : tier == 2 ? 1 : 2;
-                bool elite = !boss && slot >= PerTier - 1 - elites;
+                // Elite fights (Src.HexCompendium, Src.Video, hka/hex-server): fight 9 in tier 2, fights 12 and 14 in
+                // tier 3, 17 and 19 in tier 4, i.e. the 4th fight of tier 2 and the 2nd and 4th of tiers 3 and 4.
+                bool elite = !boss && (tier == 2 ? slot == 3 : tier >= 3 && (slot == 1 || slot == 3));
                 // The fight's role (boss, elite, common), then any deck of the tier. Uruunaz and Zakiir are common decks
                 // with a low frequency (see AiConfig).
                 Opponents.Opponent o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(x.Name));
