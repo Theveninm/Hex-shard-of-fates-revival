@@ -219,6 +219,8 @@ namespace HexRevival
             return true;
         }
 
+        private static readonly System.Random s_Rng = new System.Random();
+
         /// <summary>One bought product, into the response (opened packs as granted cards: the loot window).</summary>
         private static void Deliver(InventoryItemData item, PurchaseItemResponse r)
         {
@@ -238,6 +240,7 @@ namespace HexRevival
                 CardSetTemplate set = tm.CardSets[pack.m_SetId];
                 if (pack.m_CardPackType == ECardPackType.PrimalPack) { GrantPrimal(set, r.GrantedCards); return; }
                 foreach (CardTemplate t in Progression.OpenPack(set)) r.GrantedCards.AddRange(Collection.GrantSilently(t.m_Id, 1));
+                Mercenaries.BoosterDrop(set.m_Name, r, s_Rng);
                 if (UnityEngine.Random.value < PrimalChance)
                 {
                     GrantPrimal(set, r.GrantedCards);

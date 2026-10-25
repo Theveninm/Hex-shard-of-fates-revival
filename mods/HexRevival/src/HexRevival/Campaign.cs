@@ -52,6 +52,7 @@ namespace HexRevival
             public HashSet<string> NodeNumbers;                        // numbers of the template's nodes ("19", "19B")
             public Dictionary<string, string> NumberAlias;             // node -> number in its names
             public Dictionary<string, EFactions> HubFaction;           // hubs whose quest givers serve one faction
+            public Dictionary<string, EFactions> NodeFaction;          // locations that only one faction sees
             public Dictionary<string, string> TitleNode;               // node title (upper case, no spaces) -> node
             /// <summary>
             /// AZ2 names a node's faction variants with a letter ("NODE 6A ... (vs Ardent)", "Node 6B ... -
@@ -72,6 +73,14 @@ namespace HexRevival
         {
             Key = "AZ1", Prefix = "AZ1-NODE", TemplateId = new ResourceId(new Guid("742c6fc1-77e5-4029-bf9e-4e8af387857a")),
             NodesPrefab = "campaign/az01/nodes", StartNode = "Node001", Base = 0,
+            // Each faction has its own hub and its own dungeon (Src.Game quests "az01_ar_find_ambling_mesa" /
+            // "az01_uw_find_cave_in", "az01_q_usurper" / "az01_q_fort_romor"; Src.Video: the Underworld run went to
+            // Cave-In and Fort Romor, the Ardent run to Ambling Mesa and the Usurper). All four are dead ends.
+            NodeFaction = new Dictionary<string, EFactions>
+            {
+                { "Node034", EFactions.Aria }, { "Node008", EFactions.Aria },
+                { "Node017", EFactions.Underworld }, { "Node011", EFactions.Underworld },
+            },
             // Panorama level of each hub (Src.HexServer, read from the client's asset bundles).
             Panoramas = new Dictionary<string, string[]>
             {
@@ -242,6 +251,15 @@ namespace HexRevival
             if (Quests.Flag(champ, "dungeon:a8d2ad0e-306e-4d07-9cd1-e4d7c82cdf1c") == null || Quests.Flag(champ, "won:Node019B") != null) return null;
             MapNode b = FindNode(AZ1, "Node019B");
             return b != null ? b.Encounter : null;
+        }
+
+        /// <summary>A location of the other faction's (its hub, its dungeon): hidden from this champion.</summary>
+        private static bool OtherFactions(ulong champ, MapNode n)
+        {
+            EFactions f;
+            if (n.Z.NodeFaction == null || !n.Z.NodeFaction.TryGetValue(n.Id, out f)) return false;
+            champion_bits c = Champions.Get(champ);
+            return c != null && c.Race.GetFaction() != f;
         }
 
         /// <summary>The node's battle for this champion (faction, dialogue choice).</summary>
@@ -722,11 +740,37 @@ namespace HexRevival
         /// <summary>The champion's campaign in its current zone.</summary>
         private static CampState GetChamp(ulong champ, bool create) { return Get(CurrentZone(champ).Base + champ, create); }
 
-        /// <summary>A node and its neighbours become visible (and selectable).</summary>
+        /// <summary>
+        /// A node and its neighbours become visible (and selectable). A path fork ("Fork001": a junction of the
+        /// map's paths, not a location) is passed through: the locations beyond it are neighbours too. Without
+        /// this, Razortooth Forest (Node014, the Savage Lord), reached only through Fork001 from the Zila bridge,
+        /// never appeared, and the Cross the Zila River quest could not be finished.
+        /// </summary>
         private static void Reveal(CampState st, string node)
         {
             st.Visible.Add(node);
-            foreach (string n in Neighbours(st.Z, node)) st.Visible.Add(n);
+            HashSet<string> seen = new HashSet<string> { node };
+            Queue<string> todo = new Queue<string>(Neighbours(st.Z, node));
+            while (todo.Count > 0)
+            {
+                string n = todo.Dequeue();
+                if (!seen.Add(n)) continue;
+                st.Visible.Add(n);
+                if (IsFork(st.Z, n)) foreach (string m in Neighbours(st.Z, n)) todo.Enqueue(m);
+            }
+        }
+
+        /// <summary>A point of the map's paths that is not a location (the client draws it, the state has no such node).</summary>
+        private static bool IsFork(Zone z, string id) { return FindNode(z, id) == null; }
+
+        /// <summary>
+        /// Saves made before forks were passed through: a visible fork shows what lies beyond it
+        /// (champions stuck at the Zila bridge get Razortooth Forest back).
+        /// </summary>
+        private static void RevealPastForks(CampState st)
+        {
+            foreach (string id in new List<string>(st.Visible))
+                if (IsFork(st.Z, id)) Reveal(st, id);
         }
 
         private static void Complete(CampState st, MapNode node)
@@ -786,6 +830,7 @@ namespace HexRevival
         private static GameplayState BuildState(CampState st)
         {
             BuildMap(st.Z);
+            RevealPastForks(st);
             Mercenaries.ApplyPending();
             GameplayState gs = new GameplayState();
             gs.CampID = st.CampId;
@@ -803,7 +848,7 @@ namespace HexRevival
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
             foreach (MapNode n in st.Z.Nodes)
             {
-                bool visible = st.Visible.Contains(n.Id);
+                bool visible = st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n);
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["name"] = n.Name;
                 d["node"] = n.Id;
@@ -905,6 +950,24 @@ namespace HexRevival
                     ed["encscene"] = battle;
                     gs.Encounters.Add(new Game.Shared.Eval.Data.Encounter(battle, ed));
                 }
+            }
+            // Path forks: the client walks and reveals paths only through a fork it is told is visible (an empty,
+            // completed location: UIDungeonZoneViewModel.RevealPaths). The game's own server sent them the same way.
+            foreach (string id in st.Visible)
+            {
+                if (!IsFork(st.Z, id)) continue;
+                Dictionary<string, object> fd = new Dictionary<string, object>();
+                fd["name"] = id;
+                fd["node"] = id;
+                fd["type"] = "Empty";
+                fd["visible"] = true;
+                fd["enabled"] = true;
+                fd["completed"] = true;
+                gs.VisLocs.Add(new Location(fd));
+                Dictionary<string, object> fn = new Dictionary<string, object>();
+                fn["id"] = id;
+                fn["type"] = "DEFAULT";
+                gs.LocNodes.Add(new Node(id, fn));
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
             pub["CampaignGroup"] = st.Z.Key;
