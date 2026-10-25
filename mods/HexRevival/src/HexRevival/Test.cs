@@ -1192,9 +1192,10 @@ namespace HexRevival
                     return Loot.Check();
                 case "unclaim":   // dev: forget a one-time reward ("unclaim 1:aom6"; no argument: list)
                     if (parts.Length < 2) return string.Join(",", new List<string>(Saves.Current.Claims).ToArray());
-                    bool removed = Saves.Current.Claims.Remove(parts[1]);
+                    string claim = string.Join(" ", parts, 1, parts.Length - 1);   // keys can hold spaces ("3:tamed:Dire Toad")
+                    bool removed = Saves.Current.Claims.Remove(claim);
                     Saves.SaveCurrent();
-                    return removed ? "removed " + parts[1] : "not found";
+                    return removed ? "removed " + claim : "not found";
                 case "winbattle":   // dev: win the current battle
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAsWin(Server.CurrentSession);
@@ -1203,6 +1204,55 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "tameroll":   // dev: "tameroll [n]" = runs the Taming Sphere's 2-mana roll n times with the game's own effect and condition
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null) return "no game";
+                        Player human = null;
+                        foreach (Player p in ss.GetAllPlayers()) if (p != null && !p.IsAI()) human = p;
+                        if (human == null || human.m_ChampionCard == null) return "no human player";
+                        int n = 200;
+                        if (parts.Length > 1) int.TryParse(parts[1], out n);
+                        Game.Shared.Mechanics.Abilities.AbilityActivationData data = new Game.Shared.Mechanics.Abilities.AbilityActivationData();
+                        data.AbilityTemplateId = new ResourceId("5cd9dfa2-cb88-915a-3c06-8ef0bf6d8672");
+                        data.SourceCardId = human.m_ChampionCard.m_SessionCardId;
+                        Game.Shared.Mechanics.Abilities.AbilityEffectConditionTemplate cond = Singleton<TemplateManager>.Instance.GetAbilityEffectConditionTemplate(new ResourceId("6048ec17-555a-a1a9-b5e0-fcbc0312814c"));
+                        if (cond == null) return "condition not found";
+                        int tame = 0, min = int.MaxValue, max = int.MinValue;
+                        for (int i = 0; i < n; i++)
+                        {
+                            Game.Shared.Mechanics.Abilities.AbilityInstance ai = new Game.Shared.Mechanics.Abilities.AbilityInstance(-1000 - i, data, human, ss);
+                            Game.Shared.Mechanics.Abilities.AbilityEffectInstance roll = ai.m_AbilityEffectInstanceMap[0];
+                            roll.AbilityEffectTemplate.Apply(roll);
+                            int v; ai.TryGetAbilityVariable("RandomNumber", out v, false);
+                            min = Math.Min(min, v); max = Math.Max(max, v);
+                            if (cond.m_Condition.IsValid(ai.m_AbilityEffectInstanceMap[1])) tame++;
+                        }
+                        return "tameroll " + n + ": tame " + tame + " (" + (100 * tame / Math.Max(1, n)) + "%), rolls " + min + ".." + max;
+                    }
+                case "tametest":   // dev: "tametest [5]" = the human activates the Taming Sphere's 2-mana (or 5-mana) ability on an opposing Untamed troop
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null || ReferenceEquals(gc.Player, null)) return "no game";
+                        Player human = null, ai = null;
+                        foreach (Player p in ss.GetAllPlayers()) if (p != null) { if (p.IsAI()) ai = p; else human = p; }
+                        if (human == null || ai == null) return "players not found";
+                        Card sphere = null, target = null;
+                        foreach (Card c in human.m_Warzone) if (c != null && c.m_CardTemplate != null && c.m_CardTemplate.m_Name == "Taming Sphere") sphere = c;
+                        foreach (Card c in ai.m_Warzone) if (c != null && c.IsTroop() && (c.Get(IntAttrs.Untamed) >= 1 || c.GetCardContext().Get(IntAttrs.Untamed) >= 1)) target = c;
+                        if (sphere == null) return "no Taming Sphere";
+                        if (target == null) return "no Untamed troop";
+                        Game.Shared.Mechanics.Abilities.AbilityActivationData data = new Game.Shared.Mechanics.Abilities.AbilityActivationData();
+                        data.AbilityTemplateId = new ResourceId(parts.Length > 1 && parts[1] == "5" ? "153271a7-9117-301f-e4bb-625d53064bfc" : "5cd9dfa2-cb88-915a-3c06-8ef0bf6d8672");
+                        data.SourceCardId = sphere.m_SessionCardId;
+                        data.TargetMap = new Dictionary<int, Game.Shared.Mechanics.Abilities.TargetTemplates.AbilityTargetInstance>();
+                        Game.Shared.Mechanics.Abilities.TargetTemplates.AbilityTargetInstance ti = new Game.Shared.Mechanics.Abilities.TargetTemplates.AbilityTargetInstance();
+                        ti.m_TargetTemplateId = new ResourceId("b71b0113-0f8f-9d9c-bf8a-1517143f3cab");
+                        ti.m_SessionCardIds.Add(target.m_SessionCardId);
+                        data.TargetMap[1] = ti;
+                        gc.Player.ActivateAbility(data);
+                        return "activated on " + target.m_SessionCardId + " " + target.m_CardTemplate.m_Name;
+                    }
                 case "res":   // dev: resource pools of both players
                     {
                         if (Server.CurrentSession == null) return "no game";
@@ -1239,6 +1289,38 @@ namespace HexRevival
                         if (go == null) return "not found";
                         go.SendMessage("OnHover", true, SendMessageOptions.DontRequireReceiver);
                         return "hover " + go.name;
+                    }
+                case "equiphud":   // dev: the battle HUDs' equipment (and "equiphud open" = show the trays)
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (GoHUDPlayer h in UnityEngine.Object.FindObjectsOfType<GoHUDPlayer>())
+                        {
+                            ResourceId[] act = (ResourceId[])typeof(GoHUDPlayer).GetField("m_ActiveEquipment", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(h);
+                            Game.Shared.Player p = h.m_Player != null && UIBattle.Instance != null ? UIBattle.Instance.GetPlayer(h.m_Player.PlayerId) : null;
+                            sb.Append(h.name).Append(" player=").Append(p != null ? p.m_PlayerId.ToString() : "?").Append(" equip=").Append(p != null && p.m_Equipment != null ? p.m_Equipment.Count : -1)
+                              .Append(" pve=").Append(h.Context.IsPvEMatch).Append(" shown=").Append(h.Context.ShowEquipment).Append(" active=");
+                            foreach (ResourceId r in act) sb.Append(r.IsValid ? "x" : ".");
+                            sb.Append('\n');
+                            if (parts.Length > 1 && parts[1] == "open" && p != null) { h.SetActiveEquipmentForPlayer(p); h.OpenEquipmentTray(); }
+                        }
+                        return sb.ToString();
+                    }
+                case "sprites":   // dev: "sprites <MonoBehaviour type>" = the NGUI sprites and labels under every object of that type (inactive too)
+                    {
+                        Type t = parts.Length > 1 ? typeof(UIBattle).Assembly.GetType(parts[1]) : null;
+                        if (t == null) return "no type";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (UnityEngine.Object o in Resources.FindObjectsOfTypeAll(t))
+                        {
+                            Component c = o as Component;
+                            if (c == null) continue;
+                            foreach (UISprite sp in c.GetComponentsInChildren<UISprite>(true))
+                                sb.Append(sp.name).Append(" atlas=").Append(sp.atlas != null ? sp.atlas.name : "?").Append(" sprite=").Append(sp.spriteName)
+                                  .Append(" size=").Append(sp.width).Append('x').Append(sp.height).Append(" type=").Append(sp.type).Append('\n');
+                            foreach (UILabel l in c.GetComponentsInChildren<UILabel>(true))
+                                sb.Append("  label ").Append(l.name).Append(" '").Append(l.text).Append("' font=").Append(l.bitmapFont != null ? l.bitmapFont.name : l.trueTypeFont != null ? l.trueTypeFont.name : "?").Append(" size=").Append(l.fontSize).Append('\n');
+                        }
+                        return sb.Length > 0 ? sb.ToString() : "none";
                     }
                 case "comps":   // dev: "comps <GameObject path>" = the components of that object and its children
                     {

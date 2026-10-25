@@ -132,7 +132,14 @@ namespace HexRevival
             Rect inner = new Rect(win.x + 40 * S, win.y + 64 * S, win.width - 80 * S, win.height - 100 * S);
             switch (m_Screen)
             {
-                case Screen.List: DrawList(inner); break;
+                case Screen.List:
+                {
+                    // Exit Game: the options menu's red button (99_Button_ExitGame, Generic_Button_Decorated_Red_*), smaller.
+                    float bh = 52 * S;
+                    DrawList(new Rect(inner.x, inner.y, inner.width, inner.height - bh - 14 * S));
+                    if (GameSkin.RedButton(new Rect(inner.center.x - 120 * S, inner.yMax - bh, 240 * S, bh), Loc.Get("exit_game"))) Application.Quit();
+                    break;
+                }
                 case Screen.Create: DrawCreate(inner); break;
                 default: DrawOnline(inner); break;
             }
