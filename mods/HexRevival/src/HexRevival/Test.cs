@@ -1240,6 +1240,23 @@ namespace HexRevival
                         go.SendMessage("OnHover", true, SendMessageOptions.DontRequireReceiver);
                         return "hover " + go.name;
                     }
+                case "sprites":   // dev: "sprites <MonoBehaviour type>" = the NGUI sprites and labels under every object of that type (inactive too)
+                    {
+                        Type t = parts.Length > 1 ? typeof(UIBattle).Assembly.GetType(parts[1]) : null;
+                        if (t == null) return "no type";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (UnityEngine.Object o in Resources.FindObjectsOfTypeAll(t))
+                        {
+                            Component c = o as Component;
+                            if (c == null) continue;
+                            foreach (UISprite sp in c.GetComponentsInChildren<UISprite>(true))
+                                sb.Append(sp.name).Append(" atlas=").Append(sp.atlas != null ? sp.atlas.name : "?").Append(" sprite=").Append(sp.spriteName)
+                                  .Append(" size=").Append(sp.width).Append('x').Append(sp.height).Append(" type=").Append(sp.type).Append('\n');
+                            foreach (UILabel l in c.GetComponentsInChildren<UILabel>(true))
+                                sb.Append("  label ").Append(l.name).Append(" '").Append(l.text).Append("' font=").Append(l.bitmapFont != null ? l.bitmapFont.name : l.trueTypeFont != null ? l.trueTypeFont.name : "?").Append(" size=").Append(l.fontSize).Append('\n');
+                        }
+                        return sb.Length > 0 ? sb.ToString() : "none";
+                    }
                 case "comps":   // dev: "comps <GameObject path>" = the components of that object and its children
                     {
                         GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
