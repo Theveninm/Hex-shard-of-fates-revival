@@ -107,8 +107,10 @@ conversation and encounter names (Game) and the videos. Rules:
 - Dialogue choices (Game: the answers' events): the Thorn Knight's crypt can be left alone, the
   Minstrel's Gallery tripwires disabled (no battle), the Oratory's battle is the burning zombies
   (ruby pried out, "Devonshire Keep H2") or the dead knight ("H1").
-- The Tranquil Dream: the creature of each room is drawn per run (Video: it changed between
-  champions); its strength follows the fight's rank (Video: 12, 12, 18, 18, 24 health, i.e. Easy,
+- The Tranquil Dream: each dream creature has its own room, the one named after it (Game: the dungeon
+  template's items, Dream Turtle NodeB, Skarn NodeC, Spider NodeD, Bear NodeE, Eagle NodeF). The videos
+  show different fight orders, which are the players' choices of room, not creatures moving between
+  rooms (the mod drew them at random until 1.2.3); its strength follows the fight's rank (Video: 12, 12, 18, 18, 24 health, i.e. Easy,
   Easy, Medium, Medium, Hard, in runs with different orders and answers), as do the rewards.
   Sister Midnight's form ("an echo of your will", Game) comes from the total of the five tales'
   answers (Game: one/two/three_point_answer). Video (MyHotStream, answers read from the dialogue
@@ -120,6 +122,12 @@ conversation and encounter names (Game) and the videos. Rules:
   each room's foe is its conversation's speaker: Stables → Legionnaire of Gawaine, Barracks →
   Rhonwen, Command Post → Commander Hawthorne; the Defense (3 battles: Lords Benjamin, Alexander,
   Adam) opens once the three are taken.
+- Taming battles ("Tame X and win match", the Tamed quest): won without taming the creature (the Taming
+  Sphere's 2-mana ability only has a 50% chance, Game), the battle stays available to fight again.
+- The Usurper: Verrev is fought in Last Rites, after its dialogue (Video: MyHotStream Ardent 2017-03-22). The
+  game data's node events are shifted by one node in the Usurper, the Tranquil Dream and Fort Romor (each node
+  fires the previous node's battle), so they are not used to place battles; the node titles, the conversation
+  owners and the videos are. The Banshee (NodeG) has no conversation or encounter in the game data.
 - The Usurper: Shepherd's Rest battle by who is dead (Ghuuhg in the Hall of Vermin, Mistsim in the
   Chamber of Awakening, or both); one of the two halls is enough to go on.
 - Finishing a dungeon completes the quest objectives naming it (the Usurper quest's objective names

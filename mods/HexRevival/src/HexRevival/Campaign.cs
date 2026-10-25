@@ -253,6 +253,13 @@ namespace HexRevival
             return b != null ? b.Encounter : null;
         }
 
+        /// <summary>Saves made before 1.2.3: a taming battle won without the creature was closed for good; it opens again.</summary>
+        private static void ReopenTamingBattles(CampState st)
+        {
+            foreach (MapNode n in st.Z.Nodes)
+                if (st.Completed.Contains(n.Id) && Quests.TamingPending(st.ChampId, EncOf(st.ChampId, n))) st.Completed.Remove(n.Id);
+        }
+
         /// <summary>A location of the other faction's (its hub, its dungeon): hidden from this champion.</summary>
         private static bool OtherFactions(ulong champ, MapNode n)
         {
@@ -831,6 +838,7 @@ namespace HexRevival
         {
             BuildMap(st.Z);
             RevealPastForks(st);
+            ReopenTamingBattles(st);
             Mercenaries.ApplyPending();
             GameplayState gs = new GameplayState();
             gs.CampID = st.CampId;
@@ -1486,6 +1494,9 @@ namespace HexRevival
                 }
                 case "enc_cancel":
                 case "cancel":
+                    // The battle declined: its dialogue comes again next time. With the prelude still marked as seen,
+                    // the location stayed "autostart" and the battle window opened again at once after Cancel.
+                    if (active != null) Quests.SetFlag(st.ChampId, "prelude:" + active.Key, null);
                     st.ALoc = null;
                     break;
                 case "start":
@@ -1665,7 +1676,6 @@ namespace HexRevival
             if (node != null && IsSea(node)) ShipBattleEnded(st.ChampId, won);
             if (won && node != null) Complete(st, node);
             st.ALoc = null;
-            Save();
             Debug.Log("[HexRevival] [Campaign] battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost") + ", difficulty " + BattleDifficulty);
             QuestSim.Note("  battle " + (node != null ? node.Name : "?") + (won ? " won" : " lost"));
             string enc = s_BattleEnc ?? (node != null ? node.Encounter : null);
@@ -1676,7 +1686,15 @@ namespace HexRevival
                 Quests.SetFlag(st.ChampId, "won:" + node.Key, "1");
                 if (node.Z == AZ1 && node.Id == "Node014") Quests.CompleteLoc(st.ChampId, "az01_q_cross_the_river", "Step1");
                 Quests.OnEncounterWon(st.ChampId, enc, Progression.AnyTamed());
+                // A taming battle won without taming its creature: it can be fought again (otherwise "Tamed" could
+                // never be finished). The 2-mana ability of the Taming Sphere only has a 50% chance (Src.Game).
+                if (Quests.TamingPending(st.ChampId, enc))
+                {
+                    st.Completed.Remove(node.Id);
+                    Debug.Log("[HexRevival] [Campaign] " + node.Name + ": creature not tamed, the battle stays available");
+                }
             }
+            Save();
             if (node != null)
             {
                 Quests.SetFlag(st.ChampId, "prelude:" + node.Key, null);

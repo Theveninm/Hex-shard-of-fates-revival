@@ -170,7 +170,7 @@ namespace HexRevival
             { "usurper/NodeC", R(250, 200) },
             { "usurper/NodeD", R(300, 225) },
             { "usurper/NodeE", new Reward { Gold = 300, Xp = 225, Source = Src.Placeholder } },   // Finanif: not read
-            { "usurper/NodeG", new Reward { Gold = 500, Xp = 450, Packs = 1, PackName = "The Usurper", Source = Src.Video } },
+            { "usurper/NodeF", new Reward { Gold = 500, Xp = 450, Packs = 1, PackName = "The Usurper", Source = Src.Video } },
             // The Smoldering Dead
             { "smoldering/NodeA", R(150, 125) },
             { "smoldering/NodeB", R(200, 150) },
