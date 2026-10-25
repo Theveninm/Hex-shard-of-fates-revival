@@ -1240,6 +1240,21 @@ namespace HexRevival
                         go.SendMessage("OnHover", true, SendMessageOptions.DontRequireReceiver);
                         return "hover " + go.name;
                     }
+                case "equiphud":   // dev: the battle HUDs' equipment (and "equiphud open" = show the trays)
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (GoHUDPlayer h in UnityEngine.Object.FindObjectsOfType<GoHUDPlayer>())
+                        {
+                            ResourceId[] act = (ResourceId[])typeof(GoHUDPlayer).GetField("m_ActiveEquipment", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(h);
+                            Game.Shared.Player p = h.m_Player != null && UIBattle.Instance != null ? UIBattle.Instance.GetPlayer(h.m_Player.PlayerId) : null;
+                            sb.Append(h.name).Append(" player=").Append(p != null ? p.m_PlayerId.ToString() : "?").Append(" equip=").Append(p != null && p.m_Equipment != null ? p.m_Equipment.Count : -1)
+                              .Append(" pve=").Append(h.Context.IsPvEMatch).Append(" shown=").Append(h.Context.ShowEquipment).Append(" active=");
+                            foreach (ResourceId r in act) sb.Append(r.IsValid ? "x" : ".");
+                            sb.Append('\n');
+                            if (parts.Length > 1 && parts[1] == "open" && p != null) { h.SetActiveEquipmentForPlayer(p); h.OpenEquipmentTray(); }
+                        }
+                        return sb.ToString();
+                    }
                 case "sprites":   // dev: "sprites <MonoBehaviour type>" = the NGUI sprites and labels under every object of that type (inactive too)
                     {
                         Type t = parts.Length > 1 ? typeof(UIBattle).Assembly.GetType(parts[1]) : null;

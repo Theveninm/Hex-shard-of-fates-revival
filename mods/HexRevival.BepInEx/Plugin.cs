@@ -207,6 +207,10 @@ namespace HexRevival
             // Known UI NREs: the exception is swallowed (replaces WrapVoidInTryCatch).
             apply("GoChampionAbilityButton.SetStateFromAbilityTemplate", () => Finalizer(harmony, typeof(GoChampionAbilityButton), "SetStateFromAbilityTemplate"));
             apply("GoHUDPlayer.UpdateAbilityButtons", () => Finalizer(harmony, typeof(GoHUDPlayer), "UpdateAbilityButtons"));
+            // Equipment tray of the battle HUD: the session sets the equipment while it loads the decks, before the battle
+            // screen listens to EquipmentSet, so the tray stayed closed (the equipment itself works). Shown at game start.
+            apply("UIBattle.OnGameStarted (equipment tray)", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnGameStarted"), postfix: new HarmonyMethod(typeof(Hooks), "UIBattle_OnGameStarted")));
 
             // Diagnostics: every rejected transaction (except priority passes) is logged with its cards.
             apply("Transaction.Validate (log)", () =>
@@ -506,6 +510,22 @@ namespace HexRevival
 
         public static void Decoder_DecodeEnter(Game.Shared.Network.ObjFmt.Decoder __instance, ref bool __state) { HexRevival.NetCodec.DecodeEnter(__instance, ref __state); }
         public static Exception Decoder_DecodeExit(bool __state, Exception __exception) { HexRevival.NetCodec.DecodeExit(__state); return __exception; }
+
+        public static void UIBattle_OnGameStarted(UIBattle __instance)
+        {
+            try
+            {
+                UnityEngine.Debug.Log("[HexRevival] equipment tray: game started, " + (__instance.Players != null ? __instance.Players.Length : 0) + " player(s)");
+                if (__instance.Players == null) return;
+                foreach (Game.Shared.Player p in __instance.Players)
+                {
+                    if (p == null || p.m_Equipment == null || p.m_Equipment.Count == 0) continue;
+                    BattleScenePlayerObjects o = __instance.GetPlayerSceneObjects(p);
+                    if (o != null && o.PlayerHUD != null) o.PlayerHUD.SetActiveEquipmentForPlayer(p);
+                }
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment tray: " + e.Message); }
+        }
 
         public static Exception Connector_TerminateExit(bool __state, Exception __exception)
         {
