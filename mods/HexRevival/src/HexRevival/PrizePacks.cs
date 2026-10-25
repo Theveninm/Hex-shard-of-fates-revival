@@ -27,8 +27,9 @@ namespace HexRevival
             "Eternal Seeker Sleeve", "Refuel Sleeve", "Siege Golem Sleeve", "Songstring Warden Sleeve"
         };
         private static readonly string[] CosmicSleeves = { "Doombringer Kha Sleeve", "Soaring Cataclyst Sleeve", "Twilight Justice Sleeve" };
-        /// <summary>One of the "pair of new mercenaries" (Src.HexTCG2018: Leckermaul); the other is not named.</summary>
-        private static readonly string[] SiegeMercenaries = { "Rosina Leckermaul" };
+        /// <summary>The "pair of new mercenaries" (Src.HexTCG2018: Leckermaul; Src.Game: the item descriptions of Rosina
+        /// Leckermaul and Angar Krad read "Siege Pack").</summary>
+        private static readonly string[] SiegeMercenaries = { "Rosina Leckermaul", "Angar Krad" };
 
         /// <summary>PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary>
         private const string PvESet = "Set09_PvE_Promo", AltSet = "Set09_PvP_alternates", LatestBooster = "Doombringer Booster Pack";
@@ -90,18 +91,13 @@ namespace HexRevival
 
         private static bool Mercenary(string[] names, PurchaseItemResponse r)
         {
+            List<InventoryMercenaryData> left = new List<InventoryMercenaryData>();
             foreach (string n in names)
             {
                 InventoryMercenaryData m = Find(n) as InventoryMercenaryData;
-                if (m == null || Inventory.Count(m.m_Id) > 0) continue;
-                inventory_bits inv = Inventory.GrantSilently(m.m_Id);
-                if (inv == null) continue;
-                r.GrantedInventory.Add(inv);
-                Collection.GrantDeck(m.DeckTemplate);
-                Mercenaries.OnEarned(m.m_Id);
-                return true;
+                if (m != null && Inventory.Count(m.m_Id) == 0) left.Add(m);
             }
-            return false;
+            return left.Count > 0 && Mercenaries.Grant(left[rng.Next(left.Count)], r);
         }
 
         private static bool Card(List<CardTemplate> pool, System.Random rng, int maxCopies, PurchaseItemResponse r)

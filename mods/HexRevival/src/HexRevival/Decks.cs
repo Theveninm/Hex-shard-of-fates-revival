@@ -39,6 +39,8 @@ namespace HexRevival
             public List<ResourceId> Side = new List<ResourceId>();
             public List<ResourceId> Equipment = new List<ResourceId>();
             public List<ResourceId> Talents = new List<ResourceId>();
+            /// <summary>Socketed gems by position in Cards / Side (EGemTypesNew, several gems packed in one value).</summary>
+            public Dictionary<int, ulong> Gems = new Dictionary<int, ulong>(), SideGems = new Dictionary<int, ulong>();
             /// <summary>The account that created it (see OwnerHere); "" for the decks made before owners were kept.</summary>
             public string Owner = "";
             /// <summary>Kept in decks_common.txt: a deck made for the AI, shared by every account.</summary>
@@ -54,6 +56,7 @@ namespace HexRevival
                 c.Id = id;
                 c.Cards = new List<ResourceId>(Cards); c.Side = new List<ResourceId>(Side);
                 c.Equipment = new List<ResourceId>(Equipment); c.Talents = new List<ResourceId>(Talents);
+                c.Gems = new Dictionary<int, ulong>(Gems); c.SideGems = new Dictionary<int, ulong>(SideGems);
                 return c;
             }
         }
@@ -95,8 +98,7 @@ namespace HexRevival
         public static UID SetTemporary(Game.Shared.Profile.ProfileDeckTemplate t)
         {
             StoredDeck d = new StoredDeck { Id = TemporaryId, Name = t.Name ?? "", PvpChampion = t.Champ, Sleeve = t.Sleeve, Persona = (int)t.GetPersonality() };
-            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
-                for (int i = 0; i < c.Count; i++) (c.Res ? d.Side : d.Cards).Add(c.Temp);
+            AddCards(d, t);
             s_Temporary = d;
             return new UID(UID.Type.Deck, d.Id);
         }
@@ -179,8 +181,7 @@ namespace HexRevival
         {
             StoredDeck d = new StoredDeck { Id = NewId(false), Name = name ?? "", PveChampion = championId };
             if (starter != null)
-                foreach (Reckoning.Game.TemplateCardStack st in starter.m_DeckResources)
-                    for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
+                foreach (Reckoning.Game.TemplateCardStack st in starter.m_DeckResources) AddStack(d, st);
             s_Decks[d.Id] = d;
             Save();
             return ToBits(d);
@@ -201,8 +202,9 @@ namespace HexRevival
             d.Sleeve = t.Sleeve;
             d.Cards.Clear();
             d.Side.Clear();
-            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
-                for (int i = 0; i < c.Count; i++) (c.Res ? d.Side : d.Cards).Add(c.Temp);
+            d.Gems.Clear();
+            d.SideGems.Clear();
+            AddCards(d, t);
             Save();
             return d.Id;
         }
@@ -229,12 +231,41 @@ namespace HexRevival
         {
             StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId, Owner = OwnerHere };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
-            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
-                for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
+            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources) AddStack(d, st);
             foreach (ResourceId e in t.m_EquipmentIDs) if (e.IsValid) d.Equipment.Add(e);
             s_Decks[d.Id] = d;
             Save();
             return ToBits(d);
+        }
+
+        /// <summary>
+        /// Dev: "deckgems": saves a deck as the deck editor does, with a gem on its first card, reloads the decks
+        /// from disk and reports the gems the client would get back.
+        /// </summary>
+        public static string DevGemRoundTrip(ulong deckId)
+        {
+            StoredDeck d = Find(deckId);
+            if (d == null || d.Cards.Count == 0) return "no deck " + deckId;
+            deck_bits b = ToBits(d);
+            Dictionary<ulong, EGemTypesNew> gems = new Dictionary<ulong, EGemTypesNew>(b.ActiveGems);
+            EGemTypesNew gem = GemHelper.AddGemToGem((EGemTypesNew)1UL, 0);
+            gems[b.CardsInDeck[0].Id] = gem;
+            UpdateDeckRequestArgs upd = new UpdateDeckRequestArgs
+            {
+                DeckID = new UID(UID.Type.Deck, d.Id), DeckName = d.Name, PvEChampionId = new UID(UID.Type.Champion, d.PveChampion),
+                PvPChampionId = d.PvpChampion, DeckCardIDs = Ids(b.CardsInDeck), SideboardCardIDs = Ids(b.CardsInSideboard),
+                EquipmentIDs = new List<ResourceId>(d.Equipment), TalentIDs = new List<ResourceId>(d.Talents), ActiveGems = gems,
+                DeckSleeveId = d.Sleeve, GameboardId = d.Gameboard, CoinId = d.Coin
+            };
+            Handle(0, upd);
+            string file = File.ReadAllText(FilePath);
+            int at = file.IndexOf("DECK|" + d.Id + "|");
+            int g = at >= 0 ? file.IndexOf("GEMS|", at) : -1;
+            deck_bits again = ToBits(Find(deckId));
+            EGemTypesNew back;
+            again.ActiveGems.TryGetValue(again.CardsInDeck[0].Id, out back);
+            return "sent " + (ulong)gem + " on " + b.CardsInDeck[0].TemplateID + "; saved line: " + (g >= 0 ? file.Substring(g, Math.Min(40, file.Length - g)).Split('\n')[0] : "none")
+                + "; given back: " + (ulong)back + " (" + again.ActiveGems.Count + " gem(s) in the deck)";
         }
 
         /// <summary>The first of the player's own (non-campaign) decks, 0 if none (dev commands).</summary>
@@ -369,8 +400,7 @@ namespace HexRevival
             // An encounter's deck may have no champion of its own (the encounter's champion plays it).
             StoredDeck d = new StoredDeck { Id = NewId(true), Name = name ?? t.m_DeckName ?? "", PvpChampion = t.m_ChampionId.IsValid || !champion.IsValid ? t.m_ChampionId : champion, Owner = OwnerHere };
             if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
-            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources)
-                for (int i = 0; i < st.m_Count; i++) d.Cards.Add(st.m_idTemplate);
+            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources) AddStack(d, st);
             foreach (ResourceId e in t.m_EquipmentIDs) if (e.IsValid) d.Equipment.Add(e);
             AiStore[d.Id] = ai ?? new AiSettings { ForAI = true };
             SaveAi();
@@ -552,6 +582,8 @@ namespace HexRevival
             j["cards"] = Join(d.Cards);
             j["side"] = Join(d.Side);
             j["equipment"] = Join(d.Equipment);
+            j["gems"] = JoinGems(d.Gems);
+            j["sidegems"] = JoinGems(d.SideGems);
             champion_bits c = d.Foreign ? d.Champion : IsCampaign(d) ? Champions.Get(d.PveChampion) : null;
             if (c != null)
             {
@@ -572,6 +604,8 @@ namespace HexRevival
             d.Cards = Split((string)j["cards"] ?? "");
             d.Side = Split((string)j["side"] ?? "");
             d.Equipment = Split((string)j["equipment"] ?? "");
+            d.Gems = SplitGems((string)j["gems"] ?? "");
+            d.SideGems = SplitGems((string)j["sidegems"] ?? "");
             Newtonsoft.Json.Linq.JObject pc = j["pve"] as Newtonsoft.Json.Linq.JObject;
             if (pc != null)
             {
@@ -689,7 +723,7 @@ namespace HexRevival
             if (add != null)
             {
                 StoredDeck d = new StoredDeck { Id = NewId(add.PvEChampionId.GetInstanceId() == 0), Owner = OwnerHere };
-                Fill(d, add.DeckName, add.PvEChampionId, add.PvPChampionId, add.DeckCardIDs, add.SideboardCardIDs, add.EquipmentIDs, add.TalentIDs, add.DeckSleeveId, add.GameboardId, add.CoinId, (int)add.Persona);
+                Fill(d, add.DeckName, add.PvEChampionId, add.PvPChampionId, add.DeckCardIDs, add.SideboardCardIDs, add.EquipmentIDs, add.TalentIDs, add.DeckSleeveId, add.GameboardId, add.CoinId, (int)add.Persona, add.ActiveGems);
                 s_Decks[d.Id] = d;
                 LastDeck = new UID(UID.Type.Deck, d.Id);
                 Save();
@@ -713,7 +747,7 @@ namespace HexRevival
                 StoredDeck d;
                 ulong id = upd.DeckID.GetInstanceId();
                 if (!s_Decks.TryGetValue(id, out d)) { d = new StoredDeck { Id = id }; s_Decks[id] = d; Bump(id); }
-                Fill(d, upd.DeckName, upd.PvEChampionId, upd.PvPChampionId, upd.DeckCardIDs, upd.SideboardCardIDs, upd.EquipmentIDs, upd.TalentIDs, upd.DeckSleeveId, upd.GameboardId, upd.CoinId, (int)upd.Persona);
+                Fill(d, upd.DeckName, upd.PvEChampionId, upd.PvPChampionId, upd.DeckCardIDs, upd.SideboardCardIDs, upd.EquipmentIDs, upd.TalentIDs, upd.DeckSleeveId, upd.GameboardId, upd.CoinId, (int)upd.Persona, upd.ActiveGems);
                 LastDeck = upd.DeckID;
                 Save();
                 UpdateDeckResponse r = LocalServer.Ok<UpdateDeckResponse>();
@@ -781,7 +815,7 @@ namespace HexRevival
                 r.DeckSleeveId = d.Sleeve;
                 r.GameboardId = d.Gameboard;
                 r.CoinId = d.Coin;
-                r.ActiveGems = new Dictionary<ulong, EGemTypesNew>();
+                r.ActiveGems = new Dictionary<ulong, EGemTypesNew>(b.ActiveGems);
                 r.Persona = (EDeckPersonality)d.Persona;
                 return r;
             }
@@ -801,8 +835,11 @@ namespace HexRevival
         }
 
         private static void Fill(StoredDeck d, string name, UID pve, ResourceId pvp, List<ulong> cards, List<ulong> side,
-            List<ResourceId> equip, List<ResourceId> talents, ResourceId sleeve, ResourceId board, ResourceId coin, int persona)
+            List<ResourceId> equip, List<ResourceId> talents, ResourceId sleeve, ResourceId board, ResourceId coin, int persona,
+            Dictionary<ulong, EGemTypesNew> gems)
         {
+            d.Gems = GemsByPosition(cards, gems);
+            d.SideGems = GemsByPosition(side, gems);
             d.Name = name ?? "";
             d.PveChampion = pve.GetInstanceId();
             d.PvpChampion = pvp;
@@ -811,6 +848,86 @@ namespace HexRevival
             d.Side = Templates(side);
             d.Equipment = equip != null ? new List<ResourceId>(equip) : new List<ResourceId>();
             d.Talents = talents != null ? new List<ResourceId>(talents) : new List<ResourceId>();
+        }
+
+        /// <summary>The gems the client sent (by card instance), by position in the list of cards.</summary>
+        private static Dictionary<int, ulong> GemsByPosition(List<ulong> ids, Dictionary<ulong, EGemTypesNew> gems)
+        {
+            Dictionary<int, ulong> res = new Dictionary<int, ulong>();
+            if (ids == null || gems == null) return res;
+            int pos = 0;
+            foreach (ulong id in ids)
+            {
+                // Same filter as Templates: only the cards that are kept count for the positions.
+                if (!(id != 0 && s_Collection.ContainsKey(id)) && !s_Virtual.ContainsKey(id)) continue;
+                EGemTypesNew g;
+                if (gems.TryGetValue(id, out g) && g != 0) res[pos] = (ulong)g;
+                pos++;
+            }
+            return res;
+        }
+
+        /// <summary>A game deck's stack of copies, each with its own gems (TemplateCardStack.m_GemTypesNewList).</summary>
+        private static void AddStack(StoredDeck d, Reckoning.Game.TemplateCardStack st)
+        {
+            for (int i = 0; i < st.m_Count; i++)
+            {
+                ulong g = 0;
+                if (st.m_GemTypesNewList != null && i < st.m_GemTypesNewList.Count && st.m_GemTypesNewList[i] != null)
+                    foreach (EGemTypesNew x in st.m_GemTypesNewList[i]) g = (ulong)GemHelper.AddGemToGem(x, (EGemTypesNew)g);
+                if (g != 0) d.Gems[d.Cards.Count] = g;
+                d.Cards.Add(st.m_idTemplate);
+            }
+        }
+
+        /// <summary>A profile deck template's cards (a mercenary's, the ship's, a Siege defense), with their gems.</summary>
+        private static void AddCards(StoredDeck d, Game.Shared.Profile.ProfileDeckTemplate t)
+        {
+            foreach (Game.Shared.Profile.ProfileDeckTemplate.CardDescriptor c in t.CardDesc)
+            {
+                ulong g = 0;
+                if (c.Gems != null) foreach (ulong x in c.Gems) g = (ulong)GemHelper.AddGemToGem((EGemTypesNew)x, (EGemTypesNew)g);
+                for (int i = 0; i < c.Count; i++)
+                {
+                    List<ResourceId> list = c.Res ? d.Side : d.Cards;
+                    if (g != 0) (c.Res ? d.SideGems : d.Gems)[list.Count] = g;
+                    list.Add(c.Temp);
+                }
+            }
+        }
+
+        /// <summary>"pos:gems,..." (gem values checked: an unknown gem would break the game's deck screens).</summary>
+        private static string JoinGems(Dictionary<int, ulong> gems)
+        {
+            List<string> parts = new List<string>();
+            foreach (KeyValuePair<int, ulong> g in gems) parts.Add(g.Key + ":" + g.Value);
+            return string.Join(",", parts.ToArray());
+        }
+
+        private static Dictionary<int, ulong> SplitGems(string s)
+        {
+            Dictionary<int, ulong> res = new Dictionary<int, ulong>();
+            if (string.IsNullOrEmpty(s)) return res;
+            foreach (string part in s.Split(','))
+            {
+                string[] kv = part.Split(':');
+                int pos; ulong g;
+                if (kv.Length == 2 && int.TryParse(kv[0], out pos) && pos >= 0 && pos < 1000 && ulong.TryParse(kv[1], out g) && ValidGems(g)) res[pos] = g;
+            }
+            return res;
+        }
+
+        /// <summary>Every 10-bit slot of the packed value is empty or a gem the game knows.</summary>
+        private static bool ValidGems(ulong g)
+        {
+            if (g == 0) return false;
+            g &= ~(ulong)EGemTypesNew.GemFormatBit;   // marks the packed format (GemHelper.IsNewGemFormat)
+            for (int i = 0; i < 6; i++)
+            {
+                ulong one = (g >> (10 * i)) & 1023UL;
+                if (one != 0 && !Enum.IsDefined(typeof(EGemTypesNew), one)) return false;
+            }
+            return (g >> 60) == 0;
         }
 
         private static List<ResourceId> Templates(List<ulong> ids)
@@ -870,6 +987,9 @@ namespace HexRevival
             Dictionary<ResourceId, int> used = new Dictionary<ResourceId, int>();
             b.CardsInDeck = Instances(d.Cards, used);
             b.CardsInSideboard = Instances(d.Side, used);
+            // Gems belong to a card's place in the deck: given to the instance now standing there.
+            foreach (KeyValuePair<int, ulong> g in d.Gems) if (g.Key < b.CardsInDeck.Count) b.ActiveGems[b.CardsInDeck[g.Key].Id] = (EGemTypesNew)g.Value;
+            foreach (KeyValuePair<int, ulong> g in d.SideGems) if (g.Key < b.CardsInSideboard.Count) b.ActiveGems[b.CardsInSideboard[g.Key].Id] = (EGemTypesNew)g.Value;
             ResourceId[] eq = new ResourceId[6];
             for (int i = 0; i < 6; i++) eq[i] = i < d.Equipment.Count ? d.Equipment[i] : ResourceId.Invalid;
             b.equipment_1 = eq[0]; b.equipment_2 = eq[1]; b.equipment_3 = eq[2]; b.equipment_4 = eq[3]; b.equipment_5 = eq[4]; b.equipment_6 = eq[5];
@@ -932,6 +1052,8 @@ namespace HexRevival
                     sb.Append("SIDE|").Append(Join(d.Side)).Append('\n');
                     sb.Append("EQUIP|").Append(Join(d.Equipment)).Append('\n');
                     sb.Append("TALENT|").Append(Join(d.Talents)).Append('\n');
+                    if (d.Gems.Count > 0) sb.Append("GEMS|").Append(JoinGems(d.Gems)).Append('\n');
+                    if (d.SideGems.Count > 0) sb.Append("SIDEGEMS|").Append(JoinGems(d.SideGems)).Append('\n');
                 }
                 return sb.ToString();
         }
@@ -1013,6 +1135,8 @@ namespace HexRevival
                     case "SIDE": if (cur != null) cur.Side = Split(p[1]); break;
                     case "EQUIP": if (cur != null) cur.Equipment = Split(p[1]); break;
                     case "TALENT": if (cur != null) cur.Talents = Split(p[1]); break;
+                    case "GEMS": if (cur != null) cur.Gems = SplitGems(p[1]); break;
+                    case "SIDEGEMS": if (cur != null) cur.SideGems = SplitGems(p[1]); break;
                 }
             }
             return res;

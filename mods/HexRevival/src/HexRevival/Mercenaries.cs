@@ -13,7 +13,8 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Campaign mercenaries (AZ2 rewards: Augustine, Katsuhiro, Mayor Galway, Sister of the Herd). A mercenary is
+    /// Campaign mercenaries (AZ2 rewards: Augustine, Katsuhiro, Mayor Galway, Sister of the Herd; Sin'glar at account
+    /// level 9; Rosina Leckermaul in Siege Packs; all of them on "unlock everything" saves). A mercenary is
     /// an inventory item (InventoryMercenaryData); the reward window's "MERCPAC" line makes the client put it in
     /// the champion's party with its starter deck, saved as a profile deck template (see DeckTemplates). The party
     /// (ClientCampaignManager.SaveChampionParty, a server request) is saved here in parties.txt. A battle launched
@@ -74,7 +75,97 @@ namespace HexRevival
                 foreach (CampSysGeneral.Party.ChampionParty.ChampionPartyMember m in party.Members)
                     if (Saves.Current != null) Saves.Current.Claims.Add("merc:" + m.Mercenary);
             RefreshPartyCap(profile);
-            s_Pending = All.Count > 0;
+            s_Pending = true;
+        }
+
+        /// <summary>
+        /// The mercenaries a player can own: every mercenary item of the game data with its template, except the
+        /// unfinished ones (build tag FutureRelease: "08 Kismet Merc A", Soul Broker Nicholas...). Only Augustine and
+        /// Katsuhiro come with a starter deck (Game data); the others play a deck the player builds for them.
+        /// The original gave them through campaign rewards, set chests, the Wheel of Fortune, the Kickstarter and
+        /// events; "unlock everything" saves own them all (Inventory.Build).
+        /// </summary>
+        public static List<InventoryMercenaryData> Obtainable()
+        {
+            List<InventoryMercenaryData> res = new List<InventoryMercenaryData>();
+            foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                InventoryMercenaryData m = item as InventoryMercenaryData;
+                if (m == null || m.m_BuildTag == "FutureRelease" || m.MercenaryTemplate == null) continue;
+                res.Add(m);
+            }
+            return res;
+        }
+
+        /// <summary>A mercenary bought or found (store packs): into the inventory, with its starter deck's cards and a party slot.</summary>
+        public static bool Grant(InventoryMercenaryData m, Game.Client.Network.Escrow.PurchaseItemResponse r)
+        {
+            if (m == null || Inventory.Count(m.m_Id) > 0) return false;
+            inventory_bits inv = Inventory.GrantSilently(m.m_Id);
+            if (inv == null) return false;
+            r.GrantedInventory.Add(inv);
+            if (m.DeckTemplate != null) Collection.GrantDeck(m.DeckTemplate);
+            OnEarned(m.m_Id);
+            Notices.Show(Loc.Get("merc_found", m.m_Name));
+            return true;
+        }
+
+        /// <summary>
+        /// PLACEHOLDER chance that an opened booster also brings a mercenary of its set. In the original, every opened
+        /// pack came with a chest, opened with gold on the Wheel of Fate (Src.Forum2017), and the set mercenaries came
+        /// from those chests and from the wheel (Src.Game: their item descriptions, "Herofall WOF", "Herofall Chest"...).
+        /// The mod has no chests: the booster itself may bring one. Odds unknown.
+        /// </summary>
+        public const double BoosterChance = 0.02;
+
+        /// <summary>The mercenaries of a card set's chests and Wheel of Fate (by their item description).</summary>
+        public static List<InventoryMercenaryData> OfSet(string setName)
+        {
+            List<InventoryMercenaryData> res = new List<InventoryMercenaryData>();
+            if (string.IsNullOrEmpty(setName)) return res;
+            foreach (InventoryMercenaryData m in Obtainable())
+            {
+                string d = (m.m_Description ?? "").Trim();
+                bool setMerc = d == setName + " WOF" || d == setName + " Chest"
+                    // Dead of Winter's chest mercenaries are described "08 Chest Merc Rare 01..03" (set 8).
+                    || (setName == "Dead of Winter" && d.StartsWith("08 Chest Merc"));
+                if (setMerc) res.Add(m);
+            }
+            return res;
+        }
+
+        /// <summary>An opened booster of this set: maybe one of its mercenaries not owned yet (see BoosterChance).</summary>
+        public static void BoosterDrop(string setName, Game.Client.Network.Escrow.PurchaseItemResponse r, System.Random rng)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll || rng.NextDouble() >= BoosterChance) return;
+            List<InventoryMercenaryData> left = OfSet(setName).FindAll(m => Inventory.Count(m.m_Id) == 0);
+            if (left.Count > 0) Grant(left[rng.Next(left.Count)], r);
+        }
+
+        /// <summary>
+        /// An owned mercenary with a starter deck gets it as a party deck template, if it has none: the party screen
+        /// takes the mercenary's deck from the templates (PlayerProfile.FindDeckTemplateWithMerc), and without one
+        /// the mercenary joins the party without a playable deck. (Campaign rewards get theirs from the client.)
+        /// </summary>
+        private static void EnsureStarterDecks(PlayerProfile profile)
+        {
+            HashSet<ResourceId> withDeck = new HashSet<ResourceId>();
+            foreach (Game.Shared.Profile.ProfileDeckTemplate t in profile.DeckTemplateList.Values) withDeck.Add(t.Champ);
+            int created = 0;
+            foreach (InventoryMercenaryData m in Obtainable())
+            {
+                if (m.DeckTemplate == null || Inventory.Count(m.m_Id) == 0 || withDeck.Contains(m.MercenaryTemplate.m_Id)) continue;
+                Game.Shared.Profile.ProfileDeckTemplate t = new Game.Shared.Profile.ProfileDeckTemplate();
+                t.Name = m.m_Name;
+                t.Champ = m.MercenaryTemplate.m_Id;
+                t.Sleeve = m.DeckTemplate.m_DeckSleeve;
+                foreach (TemplateCardStack c in m.DeckTemplate.m_DeckResources)
+                    t.AddCard(c.m_idTemplate, new List<Game.Shared.Mechanics.EGemTypesNew>(), c.m_Count);
+                DeckTemplates.Put(t, 0);
+                withDeck.Add(t.Champ);
+                created++;
+            }
+            if (created > 0) Debug.Log("[HexRevival] [Mercenaries] " + created + " starter deck(s) created");
         }
 
         /// <summary>Gives the client the saved parties, once per login (called when a campaign state is built).</summary>
@@ -84,6 +175,8 @@ namespace HexRevival
             PlayerProfile profile = GameClient.Instance.PlayerProfile;
             if (profile == null) return;
             s_Pending = false;
+            try { EnsureStarterDecks(profile); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] starter decks: " + e); }
             foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
             {
                 try { profile.SavedChampionParty(kv.Key, kv.Value); }
@@ -108,6 +201,7 @@ namespace HexRevival
             if (Saves.Current == null || profile == null) return;
             int n = 0;
             foreach (string c in Saves.Current.Claims) if (c.StartsWith("merc:")) n++;
+            if (Saves.Current.UnlockAll) n = 4;   // every mercenary owned: every slot (the client caps them by race)
             if (n > 0) profile.UpdateSingleUserFlag(new Reckoning.Profile.Messages.FlagData { Name = "CAMP_PARTYCAP", Progress = n, Maximum = 4 });
         }
 
