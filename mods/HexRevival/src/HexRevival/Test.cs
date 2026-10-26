@@ -1229,6 +1229,21 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "deckeq":   // dev: "deckeq <deck id>" = the equipment of a stored deck, as sent to the client and to a match
+                    {
+                        ulong did;
+                        if (parts.Length < 2 || !ulong.TryParse(parts[1], out did)) return "usage: deckeq <deck id>";
+                        Game.Shared.Domain.deck_bits db = Decks.Bits(did);
+                        if (db == null) return "no deck " + did;
+                        List<string> o = new List<string>();
+                        foreach (ResourceId e in new[] { db.equipment_1, db.equipment_2, db.equipment_3, db.equipment_4, db.equipment_5, db.equipment_6 })
+                        {
+                            if (!e.IsValid) continue;
+                            InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e);
+                            o.Add((it != null ? it.m_Name : e.ToString()) + " owned=" + Inventory.Count(e));
+                        }
+                        return "deck " + did + " '" + db.DeckName + "': " + (o.Count == 0 ? "no equipment" : string.Join(", ", o.ToArray()));
+                    }
                 case "giveitem":   // dev: "giveitem <item name>" = the account owns one more of that inventory item (equipment...), client included
                     {
                         string name = string.Join(" ", parts, 1, parts.Length - 1);
@@ -1247,6 +1262,7 @@ namespace HexRevival
                         if (parts.Length < 3 || !ulong.TryParse(parts[1], out tid)) return "usage: mercequip <template id> <equipment name>";
                         Game.Shared.Profile.ProfileDeckTemplate t = DeckTemplates.Get(tid);
                         if (t == null) return "no template " + tid;
+                        if (parts[2] == "clear") { t.Equip.Clear(); DeckTemplates.Put(t, tid); return "template " + tid + ": equipment removed"; }
                         string name = string.Join(" ", parts, 2, parts.Length - 2);
                         InventoryEquipmentData eq = null;
                         foreach (InventoryItemData it in Singleton<TemplateManager>.Instance.InventoryItems.Values)
