@@ -216,6 +216,17 @@ namespace HexRevival
             apply("DeckValidator.RunValidation (ownership)", () =>
                 harmony.Patch(AccessTools.Method(typeof(Game.Shared.Mechanics.DeckValidator), "RunValidation"), postfix: new HarmonyMethod(typeof(Hooks), "DeckValidator_Ownership")));
 
+            // Battle: the developer ability the game gives every human player at the start of a battle when
+            // GameConfig.ConnDevMode is on (Session.RunScenarioSetup), which the mod turns on for its local engine:
+            // "You can see the cards in each opposing champion's hand". Not given.
+            apply("AuthoritativeSessionBase.ActivateAbilityForPlayer (dev mode ability)", () =>
+                harmony.Patch(AccessTools.Method(typeof(AuthoritativeSessionBase), "ActivateAbilityForPlayer"), prefix: new HarmonyMethod(typeof(Hooks), "Session_ActivateAbilityForPlayer")));
+
+            // Battle: a reveal window closed: the cards it showed from a deck go back to face down.
+            apply("BattleStateCoverflow.OnHide (deck reveals)", () =>
+                harmony.Patch(AccessTools.Method(typeof(BattleStateCoverflow), "OnHide"),
+                    prefix: new HarmonyMethod(typeof(Hooks), "Coverflow_OnHidePre"), postfix: new HarmonyMethod(typeof(Hooks), "Coverflow_OnHidePost")));
+
             // Campaign map: the location window of the faction nodes (Node023 Saramago Crater, Node026 Johannes Bog).
             apply("UIDungeonZoneViewModel.CollectItemData (faction nodes)", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIDungeonZoneViewModel), "CollectItemData"), postfix: new HarmonyMethod(typeof(Hooks), "Zone_CollectItemData")));
@@ -539,6 +550,38 @@ namespace HexRevival
                 AccessTools.Field(typeof(Game.Shared.Mechanics.DeckValidator), "m_IsValid").SetValue(__instance, false);
             }
             catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] deck ownership: " + e.Message); }
+        }
+
+        private static readonly ResourceId s_DevSeeHandAbility = new ResourceId("9642c879-a112-adae-1c2c-66aa9fcc63dc");
+
+        public static bool Session_ActivateAbilityForPlayer(ResourceId ability)
+        {
+            return ability != s_DevSeeHandAbility;
+        }
+
+        public static void Coverflow_OnHidePre(BattleStateCoverflow __instance, ref System.Collections.Generic.List<Game.Shared.SessionCardId> __state)
+        {
+            try
+            {
+                if ((bool)AccessTools.Field(typeof(BattleStateCoverflow), "m_UserInitiated").GetValue(__instance)) return;
+                System.Collections.Generic.List<GoCardView> views = AccessTools.Field(typeof(BattleStateCoverflow), "m_CardViews").GetValue(__instance) as System.Collections.Generic.List<GoCardView>;
+                if (views == null) return;
+                __state = new System.Collections.Generic.List<Game.Shared.SessionCardId>();
+                foreach (GoCardView v in views)
+                    if (v != null && v.Card != null) __state.Add(v.Card.SessionId);
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] reveal window: " + e.Message); }
+        }
+
+        public static void Coverflow_OnHidePost(System.Collections.Generic.List<Game.Shared.SessionCardId> __state)
+        {
+            try
+            {
+                if (__state == null || __state.Count == 0 || UIBattle.Instance == null || UIBattle.Instance.Player == null) return;
+                if (HexRevival.OnlineMatch.IsGuest) HexRevival.OnlineMatch.SendRevealClosed(__state);
+                else HexRevival.Server.RevealWindowClosed(__state, UIBattle.Instance.Player.m_PlayerId);
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] reveal window: " + e.Message); }
         }
 
         public static void Zone_CollectItemData(UIDungeonZoneViewModel __instance)

@@ -194,7 +194,8 @@ namespace HexRevival
                 if (t == null || t.m_Name == null || t.CardRarity <= ERarity.Land || seen.Contains(t.m_Name)) continue;
                 if (!CardText(t).ToLower().Contains(text)) continue;
                 seen.Add(t.m_Name);
-                res.Add(t.m_Name + " [" + t.m_CardType + ", " + t.m_ResourceCost + "]");
+                string txt = CardText(t).Replace("\n", " ");
+                res.Add(t.m_Name + " [" + t.m_CardType + ", " + t.m_ResourceCost + "] " + (txt.Length > 160 ? txt.Substring(0, 160) + "..." : txt));
                 if (res.Count >= 40) break;
             }
             return res.Count + " card(s)\n" + string.Join("\n", res.ToArray());
