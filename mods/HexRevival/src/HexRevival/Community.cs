@@ -17,7 +17,7 @@ namespace HexRevival
     public class Community : MonoBehaviour
     {
         /// <summary>The mod's version (also the BepInEx plugin's version). Release tags on GitHub are the same "x.y.z".</summary>
-        public const string Version = "1.2.4";
+        public const string Version = "1.2.5";
 
         public const string RepoUrl = "https://github.com/Theveninm/Hex-shard-of-fates-revival";
         public const string DiscordUrl = "https://discord.gg/4TWeErkhe";

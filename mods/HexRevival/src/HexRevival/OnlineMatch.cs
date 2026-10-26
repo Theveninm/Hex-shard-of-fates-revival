@@ -29,7 +29,7 @@ namespace HexRevival
         public enum Role { None, Host, Guest }
 
         // Relayed message kinds (first byte of the relayed data).
-        private const byte MsgDeck = 1, MsgStart = 2, MsgEvents = 3, MsgTransaction = 4, MsgReject = 5;
+        private const byte MsgDeck = 1, MsgStart = 2, MsgEvents = 3, MsgTransaction = 4, MsgReject = 5, MsgRevealClosed = 6;
 
         public static readonly UID LocalId = new UID(UID.Type.ServicePlayer, 0x1001UL);
         public static readonly UID RemoteId = new UID(UID.Type.ServicePlayer, 0x1002UL);
@@ -129,6 +129,7 @@ namespace HexRevival
                     case MsgStart: if (IsGuest) OnHostStarted(body); break;
                     case MsgEvents: if (IsGuest) s_GuestEvents.Enqueue(DecodeEvents(body)); break;
                     case MsgTransaction: if (IsHost) OnGuestTransaction(body); break;
+                    case MsgRevealClosed: if (IsHost) Server.RevealWindowClosed(ReadCardIds(body), RemoteId); break;
                 }
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Online] message " + data[0] + ": " + e); }
@@ -279,6 +280,25 @@ namespace HexRevival
         {
             if (Server.TraceEvents) Debug.Log("[HexRevival] [Online] >> " + tx.GetType().Name);
             SendRelay(MsgTransaction, SwapInEncoded(NetCodec.EncodeTransaction(tx)));
+        }
+
+        /// <summary>
+        /// Guest: a reveal window was closed; the host turns the cards it showed from a deck face down again for the
+        /// guest (Server.RevealWindowClosed). Ignored by a host older than 1.2.5 (unknown message): the old behaviour.
+        /// </summary>
+        public static void SendRevealClosed(List<SessionCardId> cards)
+        {
+            if (!IsGuest || cards == null || cards.Count == 0) return;
+            byte[] body = new byte[cards.Count * 8];
+            for (int i = 0; i < cards.Count; i++) Buffer.BlockCopy(BitConverter.GetBytes(cards[i].UID.m_UID64), 0, body, i * 8, 8);
+            SendRelay(MsgRevealClosed, body);
+        }
+
+        private static List<SessionCardId> ReadCardIds(byte[] body)
+        {
+            List<SessionCardId> ids = new List<SessionCardId>();
+            for (int i = 0; i + 8 <= body.Length && ids.Count < 256; i += 8) ids.Add(new SessionCardId(new UID(BitConverter.ToUInt64(body, i))));
+            return ids;
         }
 
         private static void OnGuestTransaction(byte[] body)

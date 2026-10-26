@@ -1204,6 +1204,69 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "decktop":   // dev: each player's top deck card: what the game's rule (CanPlayerSeeCard) and the mod show, and whether it can be played
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null) return "no game";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Player owner in ss.GetAllPlayers())
+                        {
+                            if (owner == null) continue;
+                            Card top = owner.GetCardCollection(ECardCollections.Deck).GetCardAtLocation(ECardLocations.Top);
+                            if (top == null) continue;
+                            sb.Append(owner.IsAI() ? "AI" : "you").Append(" top=").Append(top.m_CardTemplate.m_Name).Append(" (").Append(top.m_SessionCardId).Append(")");
+                            foreach (Player viewer in ss.GetAllPlayers())
+                            {
+                                if (viewer == null) continue;
+                                sb.Append(" | to ").Append(viewer.IsAI() ? "AI" : "you").Append(": game=").Append(top.CanPlayerSeeCard(viewer)).Append(" mod=").Append(Server.IsVisibleTo(top, viewer)).Append(" canPlay=").Append(ss.CanPlayCard(top, viewer));
+                            }
+                            sb.Append('\n');
+                            sb.Append("  flags: seeOppHand=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeOpponentsHand))
+                              .Append(" seeTop=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeTopOfDeck))
+                              .Append(" seeUnder=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeUndergroundTroops)).Append('\n');
+                            try
+                            {
+                                sb.Append("  affecting champion:");
+                                foreach (Card a in ss.GetListOfCardsAffectingTarget(owner.m_ChampionCard)) sb.Append(' ').Append(a.m_CardTemplate.m_Name).Append('/').Append(a.m_CurrentCardCollection);
+                                sb.Append('\n');
+                                foreach (Game.Shared.Mechanics.Abilities.AbilityEffectInstance ei in (System.Collections.Generic.IEnumerable<Game.Shared.Mechanics.Abilities.AbilityEffectInstance>)typeof(AbilityManager).GetField("m_EffectInstanceList", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).GetValue(ss.AbilityManager))
+                                {
+                                    if (ei == null || ei.TargetInstance == null || !ei.TargetInstance.m_SessionCardIds.Contains(owner.m_ChampionCard.m_SessionCardId)) continue;
+                                    sb.Append("  effect ").Append(ei.AbilityEffectTemplate != null ? ei.AbilityEffectTemplate.GetType().Name : "?").Append(" from ").Append(ei.SourceCard != null ? ei.SourceCard.m_CardTemplate.m_Name : "?")
+                                      .Append(" ability=").Append(ei.m_AbilityInstance != null && ei.m_AbilityInstance.m_AbilityTemplate != null ? ei.m_AbilityInstance.m_AbilityTemplate.m_Name + " " + (ei.m_AbilityInstance.m_AbilityTemplate.m_GameText ?? "").Replace("\n", " ") : "?").Append('\n');
+                                }
+                            }
+                            catch (Exception ex) { sb.Append(" diag error " + ex.Message + '\n'); }
+                            foreach (Card h in owner.GetAllCards())
+                            {
+                                if (h == null || h.m_CurrentCardCollection != ECardCollections.Hand) continue;
+                                foreach (Player viewer in ss.GetAllPlayers())
+                                {
+                                    if (viewer == null || viewer == owner) continue;
+                                    CardCollection col = h.GetCardCollection();
+                                    sb.Append("  hand ").Append(h.m_CardTemplate.m_Name).Append(" col=").Append(col != null ? col.CollectionType.ToString() : "null")
+                                      .Append(" faceDown=").Append(h.IsCardCollectionFaceDown(viewer)).Append(" onChain=").Append(h.IsOnChain())
+                                      .Append(" game=").Append(h.CanPlayerSeeCard(viewer)).Append(" mod=").Append(Server.IsVisibleTo(h, viewer)).Append('\n');
+                                }
+                            }
+                        }
+                        return sb.ToString();
+                    }
+                case "pick":   // dev: "pick <n>" = selects the n-th card (from 0) of the open card window, as a click on it would (no OS mouse)
+                    {
+                        FieldInfo sf = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
+                        Stack<BattleStateBase> stack = sf == null || UIBattle.Instance == null ? null : sf.GetValue(UIBattle.Instance) as Stack<BattleStateBase>;
+                        BattleStateBase top = stack != null && stack.Count > 0 ? stack.Peek() : null;
+                        if (top == null || top.Cards == null) return "no card window";
+                        int n = 0;
+                        if (parts.Length > 1) int.TryParse(parts[1], out n);
+                        if (n < 0 || n >= top.Cards.Count) return "index out of range (" + top.Cards.Count + ")";
+                        top.OnClick(top.Cards[n]);
+                        return "picked " + (top.Cards[n].Card != null ? top.Cards[n].Card.SessionId.ToString() : "?") + " in " + top.GetType().Name;
+                    }
+                case "revealfix":   // dev: "revealfix on|off" = cards revealed from a deck go back face down when the reveal window closes (off = old behaviour)
+                    Server.DeckRevealFix = parts.Length < 2 || parts[1] != "off";
+                    return "revealfix " + (Server.DeckRevealFix ? "on" : "off");
                 case "cardtext":   // dev: "cardtext <card name>" = the human player's cards of that name: abilities and whether their condition holds
                     {
                         StandaloneSession ss = Server.CurrentSession;
