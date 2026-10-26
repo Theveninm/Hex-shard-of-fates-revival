@@ -1229,6 +1229,18 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "giveitem":   // dev: "giveitem <item name>" = the account owns one more of that inventory item (equipment...), client included
+                    {
+                        string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        InventoryItemData item = null;
+                        foreach (InventoryItemData it in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                            if (string.Equals(it.m_Name, name, StringComparison.OrdinalIgnoreCase)) { item = it; break; }
+                        if (item == null) return "no item " + name;
+                        Game.Shared.Domain.inventory_bits b = Inventory.GrantSilently(item.m_Id);
+                        if (b == null) return "not granted (unlock-everything account owns it already?)";
+                        GameClient.Instance.PlayerProfile.SetInventoryItem(new UID(UID.Type.InventoryItem, b.Id), item.m_Id, 1);
+                        return "gave " + item.m_Name + ", now " + Inventory.Count(item.m_Id);
+                    }
                 case "mercequip":   // dev: "mercequip <deck template id> <equipment name>" = equips a party deck template (as the party screen does)
                     {
                         ulong tid;
