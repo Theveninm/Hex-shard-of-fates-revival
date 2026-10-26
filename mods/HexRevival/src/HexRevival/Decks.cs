@@ -780,7 +780,7 @@ namespace HexRevival
                 }
                 if ((d = Find(det.DeckID.GetInstanceId())) == null) return null;
                 deck_bits b = ToBits(d);
-                if (!d.Foreign) DropUnownedEquipment(b, d.Name);   // the player's own match deck (the AI gets ToTemplate)
+                if (!d.Foreign) { DropUnownedEquipment(b, d.Name); DropUnownedCards(b, d.Name); }   // the player's own match deck (the AI gets ToTemplate)
                 if (!b.PVPChampionId.IsValid)
                     b.PVPChampionId = new ResourceId(GameConfig.DefaultChampionTemplateId);
                 GetDeckDetailsResponse r = LocalServer.Ok<GetDeckDetailsResponse>();
@@ -981,6 +981,60 @@ namespace HexRevival
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] encounter deck: " + e.Message); }
             return false;
+        }
+
+        /// <summary>
+        /// Same rule for cards: a card the account does not own (a copy of its own, see Instances) stays in the deck
+        /// for the deck builder but is not played. Only shared decks made for the AI hold such cards (dev deckown).
+        /// </summary>
+        private static void DropUnownedCards(deck_bits b, string name)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll) return;
+            Dictionary<string, int> dropped = new Dictionary<string, int>();
+            foreach (List<card_instance_bits> list in new[] { b.CardsInDeck, b.CardsInSideboard })
+            {
+                if (list == null) continue;
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    if (!s_Virtual.ContainsKey(list[i].Id)) continue;
+                    Reckoning.Game.CardTemplate ct = Singleton<Reckoning.Game.TemplateManager>.Instance.GetCardTemplate(list[i].TemplateID);
+                    string n = ct != null ? ct.m_Name : list[i].TemplateID.ToString();
+                    int k; dropped.TryGetValue(n, out k); dropped[n] = k + 1;
+                    if (b.ActiveGems != null) b.ActiveGems.Remove(list[i].Id);
+                    list.RemoveAt(i);
+                }
+            }
+            if (dropped.Count == 0) return;
+            List<string> l = new List<string>();
+            foreach (KeyValuePair<string, int> kv in dropped) l.Add(kv.Value + "x " + kv.Key);
+            Debug.Log("[HexRevival] [Decks] '" + name + "': cards not owned, not played: " + string.Join(", ", l.ToArray()));
+        }
+
+        /// <summary>Dev: every stored deck with the cards and equipment the current account does not own.</summary>
+        public static string OwnershipReport()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (StoredDeck d in new List<StoredDeck>(s_Decks.Values))
+            {
+                deck_bits b = ToBits(d);
+                Dictionary<string, int> cards = new Dictionary<string, int>();
+                foreach (card_instance_bits c in b.CardsInDeck)
+                    if (s_Virtual.ContainsKey(c.Id))
+                    {
+                        Reckoning.Game.CardTemplate ct = Singleton<Reckoning.Game.TemplateManager>.Instance.GetCardTemplate(c.TemplateID);
+                        string n = ct != null ? ct.m_Name : c.TemplateID.ToString();
+                        int k; cards.TryGetValue(n, out k); cards[n] = k + 1;
+                    }
+                int eq = 0;
+                foreach (ResourceId e in d.Equipment) if (e.IsValid && Inventory.Count(e) == 0) eq++;
+                if (cards.Count == 0 && eq == 0) continue;
+                List<string> l = new List<string>();
+                foreach (KeyValuePair<string, int> kv in cards) l.Add(kv.Value + "x " + kv.Key);
+                sb.Append(d.Id).Append(" '").Append(d.Name).Append("'").Append(d.Common ? " [AI, shared]" : "").Append(d.Foreign ? " [other account]" : "")
+                  .Append(IsCampaign(d) ? " [campaign]" : "").Append(" pve=").Append(d.PveChampion).Append(": ").Append(b.CardsInDeck.Count).Append(" cards, not owned: ")
+                  .Append(string.Join(", ", l.ToArray())).Append(eq > 0 ? " | equipment not owned: " + eq : "").Append('\n');
+            }
+            return sb.Length == 0 ? "every deck is owned" : sb.ToString();
         }
 
         /// <summary>

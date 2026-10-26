@@ -113,6 +113,14 @@ namespace HexRevival
                 for (int i = 0; i < found.Count && i < 40; i++) sb.Append(i).Append(": ").Append(found[i].Label).Append(" | ").Append(found[i].Detail).Append('\n');
                 return sb.ToString();
             }
+            if (sub == "use")
+            {
+                // dev: "menu use mine <text>" = picks that deck as yours (its first match among your decks)
+                Entry e = m.m_MyDecks.Find(x => !x.Header && (q.Length == 0 || x.Search.IndexOf(q, StringComparison.Ordinal) >= 0));
+                if (e == null) return "no deck matching '" + q + "'";
+                m.m_SelMine = e;
+                return "my deck = " + e.Label;
+            }
             if (sub == "fight")
             {
                 if (idx < 0 || idx >= found.Count) return "index out of range (" + found.Count + ")";

@@ -1229,6 +1229,12 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "deckown":   // dev: decks holding cards or equipment the account does not own
+                    {
+                        string rep = Decks.OwnershipReport();
+                        File.WriteAllText(Path.Combine(LocalServer.Root, "HexRevivalDeckOwnership.txt"), rep);
+                        return rep;
+                    }
                 case "deckeq":   // dev: "deckeq <deck id>" = the equipment of a stored deck, as sent to the client and to a match
                     {
                         ulong did;
