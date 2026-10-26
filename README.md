@@ -158,8 +158,9 @@ an issue.
 
 To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
 blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
-taming quest, the Tranquil Dream rooms) and **InfinityAbyss** (the champion
-creation and selection hang).
+taming quest, the Tranquil Dream rooms, mercenary equipment), **KrystoferRobin** (the mercenary slots of the battle
+panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
+champion creation and selection hang).
 
 ## Building from source
 
