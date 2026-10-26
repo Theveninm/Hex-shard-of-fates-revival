@@ -325,6 +325,14 @@ namespace HexRevival
         {
             try
             {
+                // A deck holding cards or equipment the account does not own cannot be played (see Decks.NotOwned).
+                List<string> missing = Decks.NotOwned(playerDeck);
+                if (missing.Count > 0)
+                {
+                    Debug.Log("[HexRevival] [Menu] match refused, deck not owned: " + string.Join(", ", missing.ToArray()));
+                    UISystem.DisplayAlert(Loc.Get("deck_not_owned", string.Join(", ", missing.ToArray())), Loc.Get("deck_not_owned_title"), null);
+                    return;
+                }
                 s_PendingAIDeck = aiDeck;
                 s_PendingAIPersonality = aiPersonality;
                 Decks.LastDeck = playerDeck;
