@@ -780,6 +780,7 @@ namespace HexRevival
                 }
                 if ((d = Find(det.DeckID.GetInstanceId())) == null) return null;
                 deck_bits b = ToBits(d);
+                if (!d.Foreign) DropUnownedEquipment(b, d.Name);   // the player's own match deck (the AI gets ToTemplate)
                 if (!b.PVPChampionId.IsValid)
                     b.PVPChampionId = new ResourceId(GameConfig.DefaultChampionTemplateId);
                 GetDeckDetailsResponse r = LocalServer.Ok<GetDeckDetailsResponse>();
@@ -980,6 +981,28 @@ namespace HexRevival
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] encounter deck: " + e.Message); }
             return false;
+        }
+
+        /// <summary>
+        /// A deck the player takes into battle plays only the equipment the account owns. A deck can hold pieces the
+        /// account does not own (a deck made for the AI, shared by every account, or a test), and the deck editor only
+        /// warns about them; the engine applied them anyway. The AI's decks are not concerned (ToTemplate).
+        /// </summary>
+        private static void DropUnownedEquipment(deck_bits b, string name)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll) return;
+            ResourceId[] eq = { b.equipment_1, b.equipment_2, b.equipment_3, b.equipment_4, b.equipment_5, b.equipment_6 };
+            List<string> dropped = new List<string>();
+            for (int i = 0; i < eq.Length; i++)
+            {
+                if (!eq[i].IsValid || Inventory.Count(eq[i]) > 0) continue;
+                Reckoning.Game.InventoryItemData it = Singleton<Reckoning.Game.TemplateManager>.Instance.GetInventoryItem(eq[i]);
+                dropped.Add(it != null ? it.m_Name : eq[i].ToString());
+                eq[i] = ResourceId.Invalid;
+            }
+            if (dropped.Count == 0) return;
+            b.equipment_1 = eq[0]; b.equipment_2 = eq[1]; b.equipment_3 = eq[2]; b.equipment_4 = eq[3]; b.equipment_5 = eq[4]; b.equipment_6 = eq[5];
+            Debug.Log("[HexRevival] [Decks] '" + name + "': equipment not owned, not played: " + string.Join(", ", dropped.ToArray()));
         }
 
         private static deck_bits ToBits(StoredDeck d)
