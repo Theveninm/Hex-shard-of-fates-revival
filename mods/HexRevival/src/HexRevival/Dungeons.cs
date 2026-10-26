@@ -1277,6 +1277,23 @@ namespace HexRevival
                             if (t.GetComponent<UIDungeonMapNodeData>() != null) sb.Append("   pos ").Append(t.name).Append(' ').Append(t.localPosition).Append('\n');
                 }
                 catch { }
+                // What the location window shows for each map node (title, text, picture), after the mod's aliases.
+                if (dt != null)
+                {
+                    Dictionary<string, DungeonItemData> items = new Dictionary<string, DungeonItemData>();
+                    foreach (DungeonItemData it in dt.m_ItemData) if (!string.IsNullOrEmpty(it.m_MapNodeId)) items[it.m_MapNodeId] = it;
+                    Campaign.FactionItemData(items);
+                    GameObject pf2 = Resources.Load(d.NodesPrefab) as GameObject;
+                    if (pf2 != null)
+                        foreach (UIDungeonMapNodeData nd in pf2.GetComponentsInChildren<UIDungeonMapNodeData>(true))
+                        {
+                            if (nd.IsPathFork) continue;
+                            DungeonItemData it;
+                            if (!items.TryGetValue(nd.name, out it)) { sb.Append("   window ").Append(nd.name).Append(": EMPTY (no item data)").Append(d.Rooms.ContainsKey(nd.name) ? " MOD ROOM" : "").Append('\n'); continue; }
+                            sb.Append("   window ").Append(nd.name).Append(": '").Append(it.Title).Append("' texts=").Append(it.Descriptions != null ? it.Descriptions.Count : 0)
+                              .Append(" picture=").Append(string.IsNullOrEmpty(it.m_NodeScapeArtNumber) ? "-" : it.m_NodeScapeArtNumber).Append('\n');
+                        }
+                }
                 foreach (string t in titles.Keys) if (!d.Rooms.ContainsKey(t)) sb.Append("   template node not in the mod: ").Append(t).Append(" ").Append(titles[t]).Append('\n');
                 Run r = new Run { Champ = champ, Key = d.Key };
                 foreach (Room room in d.Rooms.Values)
