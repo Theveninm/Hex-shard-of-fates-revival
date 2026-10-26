@@ -1204,6 +1204,9 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "revealfix":   // dev: "revealfix on|off" = cards revealed from a deck go back face down when the reveal window closes (off = old behaviour)
+                    Server.DeckRevealFix = parts.Length < 2 || parts[1] != "off";
+                    return "revealfix " + (Server.DeckRevealFix ? "on" : "off");
                 case "cardtext":   // dev: "cardtext <card name>" = the human player's cards of that name: abilities and whether their condition holds
                     {
                         StandaloneSession ss = Server.CurrentSession;

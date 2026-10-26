@@ -974,9 +974,49 @@ namespace HexRevival
             {
                 Card card = self.ResourceCache.GetCard(id);
                 if (card != null)
+                {
                     s_Revealed[id + "|" + player.m_PlayerId] = card.m_CurrentCardCollection;
+                    if ((card.m_CurrentCardCollection & ECardCollections.Deck) != 0)
+                        Debug.Log("[HexRevival] [Reveal] " + card.m_CardTemplate.m_Name + " (" + id + ") revealed from a deck to " + player.m_PlayerId);
+                }
             }
             return true;
+        }
+
+        /// <summary>
+        /// The human closed a reveal window (BattleStateCoverflow.OnHide). Cards revealed while in a deck
+        /// go back to face down: the client draws any known deck card face up on top of the deck
+        /// (BattleAnimationUpdateDeckView), so a card revealed then left in the deck (put back, shuffled,
+        /// sent to the bottom) stayed shown on top of the deck for the rest of the game.
+        /// </summary>
+        /// <summary>dev "revealfix off": the old behaviour (deck reveals kept), to compare.</summary>
+        public static bool DeckRevealFix = true;
+
+        public static void RevealWindowClosed(List<SessionCardId> cards)
+        {
+            StandaloneSession ss = CurrentSession;
+            if (ss == null || cards == null || cards.Count == 0 || !DeckRevealFix)
+                return;
+            bool changed = false;
+            foreach (SessionCardId id in cards)
+                foreach (Player p in ss.GetAllPlayers())
+                {
+                    if (ReferenceEquals(p, null)) continue;
+                    string key = id + "|" + p.m_PlayerId;
+                    ECardCollections zone;
+                    if (s_Revealed.TryGetValue(key, out zone) && (zone & ECardCollections.Deck) != 0)
+                    {
+                        s_Revealed.Remove(key);
+                        changed = true;
+                        Debug.Log("[HexRevival] [Reveal] window closed: " + id + " face down again for " + p.m_PlayerId);
+                    }
+                }
+            if (changed && !s_InDispatch)
+            {
+                s_InDispatch = true;
+                try { BroadcastState(ss); }
+                finally { s_InDispatch = false; }
+            }
         }
 
         /// <summary>
