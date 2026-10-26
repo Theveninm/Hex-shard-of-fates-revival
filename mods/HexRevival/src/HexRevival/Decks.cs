@@ -205,6 +205,14 @@ namespace HexRevival
             d.Gems.Clear();
             d.SideGems.Clear();
             AddCards(d, t);
+            // The equipment equipped on the template (a mercenary's party deck) is played too, in slot order.
+            d.Equipment.Clear();
+            if (t.Equip != null)
+                foreach (Reckoning.Game.EEquipmentType slot in new[] { Reckoning.Game.EEquipmentType.Head, Reckoning.Game.EEquipmentType.Chest, Reckoning.Game.EEquipmentType.Gloves, Reckoning.Game.EEquipmentType.Feet, Reckoning.Game.EEquipmentType.Weapon, Reckoning.Game.EEquipmentType.Trinket })
+                {
+                    ResourceId e;
+                    if (t.Equip.TryGetValue(slot, out e) && e.IsValid) d.Equipment.Add(e);
+                }
             Save();
             return d.Id;
         }
@@ -972,6 +980,72 @@ namespace HexRevival
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Decks] encounter deck: " + e.Message); }
             return false;
+        }
+
+        /// <summary>
+        /// The cards and equipment of a deck the account does not own ("2x Gust Mage", "Spider Crown"), empty when it
+        /// owns everything. Such a deck is invalid (deck editor, deck choice, mercenary party) and cannot be played: the
+        /// original server refused it; the game's own validator does not check ownership (its card check is never
+        /// called and its equipment check skips PvE decks). Nothing is removed from the deck. Not checked: "unlock
+        /// everything" accounts (they own everything), the online account, decks made for the AI and other accounts' decks.
+        /// </summary>
+        public static List<string> NotOwned(deck_bits b)
+        {
+            List<string> res = new List<string>();
+            if (b == null || Saves.Current == null || Saves.Current.UnlockAll || Saves.IsOnline) return res;
+            StoredDeck d;
+            if (b.Id != 0 && s_Decks.TryGetValue(b.Id, out d) && (d.Common || d.Foreign || IsForAI(d))) return res;
+            Dictionary<ResourceId, int> need = new Dictionary<ResourceId, int>();
+            foreach (List<card_instance_bits> list in new[] { b.CardsInDeck, b.CardsInSideboard })
+                if (list != null) foreach (card_instance_bits c in list) { int n; need.TryGetValue(c.TemplateID, out n); need[c.TemplateID] = n + 1; }
+            foreach (KeyValuePair<ResourceId, int> kv in need)
+            {
+                int missing = kv.Value - Collection.Count(kv.Key);
+                if (missing <= 0) continue;
+                Reckoning.Game.CardTemplate ct = Singleton<Reckoning.Game.TemplateManager>.Instance.GetCardTemplate(kv.Key);
+                res.Add(missing + "x " + (ct != null ? ct.m_Name : kv.Key.ToString()));
+            }
+            foreach (ResourceId e in new[] { b.equipment_1, b.equipment_2, b.equipment_3, b.equipment_4, b.equipment_5, b.equipment_6 })
+            {
+                if (!e.IsValid || Inventory.Count(e) > 0) continue;
+                Reckoning.Game.InventoryItemData it = Singleton<Reckoning.Game.TemplateManager>.Instance.GetInventoryItem(e);
+                res.Add(it != null ? it.m_Name : e.ToString());
+            }
+            return res;
+        }
+
+        /// <summary>NotOwned for a stored deck (empty if unknown).</summary>
+        public static List<string> NotOwned(UID deck)
+        {
+            StoredDeck d = Find(deck.GetInstanceId());
+            return d != null ? NotOwned(ToBits(d)) : new List<string>();
+        }
+
+        /// <summary>Dev: every stored deck with the cards and equipment the current account does not own.</summary>
+        public static string OwnershipReport()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (StoredDeck d in new List<StoredDeck>(s_Decks.Values))
+            {
+                deck_bits b = ToBits(d);
+                Dictionary<string, int> cards = new Dictionary<string, int>();
+                foreach (card_instance_bits c in b.CardsInDeck)
+                    if (s_Virtual.ContainsKey(c.Id))
+                    {
+                        Reckoning.Game.CardTemplate ct = Singleton<Reckoning.Game.TemplateManager>.Instance.GetCardTemplate(c.TemplateID);
+                        string n = ct != null ? ct.m_Name : c.TemplateID.ToString();
+                        int k; cards.TryGetValue(n, out k); cards[n] = k + 1;
+                    }
+                int eq = 0;
+                foreach (ResourceId e in d.Equipment) if (e.IsValid && Inventory.Count(e) == 0) eq++;
+                if (cards.Count == 0 && eq == 0) continue;
+                List<string> l = new List<string>();
+                foreach (KeyValuePair<string, int> kv in cards) l.Add(kv.Value + "x " + kv.Key);
+                sb.Append(d.Id).Append(" '").Append(d.Name).Append("'").Append(d.Common ? " [AI, shared]" : "").Append(d.Foreign ? " [other account]" : "")
+                  .Append(IsCampaign(d) ? " [campaign]" : "").Append(" pve=").Append(d.PveChampion).Append(": ").Append(b.CardsInDeck.Count).Append(" cards, not owned: ")
+                  .Append(string.Join(", ", l.ToArray())).Append(eq > 0 ? " | equipment not owned: " + eq : "").Append('\n');
+            }
+            return sb.Length == 0 ? "every deck is owned" : sb.ToString();
         }
 
         private static deck_bits ToBits(StoredDeck d)

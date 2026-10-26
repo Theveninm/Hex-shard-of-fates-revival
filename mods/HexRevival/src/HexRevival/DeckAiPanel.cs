@@ -55,7 +55,10 @@ namespace HexRevival
                 if (!m_Vm.m_ChampionVM.Context.ShowPersonalityButton) m_Vm.m_ChampionVM.Context.ShowPersonalityButton = true;
                 EnsureButton();
 
-                Game.Shared.Mechanics.DeckCache working = m_Vm.DeckEditorViewModel != null ? m_Vm.DeckEditorViewModel.GetWorkingDeck() : null;
+                // No deck loaded yet (campaign party screen before a deck is picked): GetWorkingDeck throws.
+                Game.Shared.Mechanics.DeckCache working = null;
+                try { working = m_Vm.DeckEditorViewModel != null ? m_Vm.DeckEditorViewModel.GetWorkingDeck() : null; }
+                catch (NullReferenceException) { }
                 ulong id = working != null && working.m_DeckId.IsValid() ? working.m_DeckId.GetInstanceId() : 0;
                 if (id != m_DeckId)
                 {

@@ -212,6 +212,14 @@ namespace HexRevival
             apply("UIBattle.OnGameStarted (equipment tray)", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnGameStarted"), postfix: new HarmonyMethod(typeof(Hooks), "UIBattle_OnGameStarted")));
 
+            // Decks: a deck holding cards or equipment the account does not own is invalid (the original server's rule).
+            apply("DeckValidator.RunValidation (ownership)", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Mechanics.DeckValidator), "RunValidation"), postfix: new HarmonyMethod(typeof(Hooks), "DeckValidator_Ownership")));
+
+            // Campaign map: the location window of the faction nodes (Node023 Saramago Crater, Node026 Johannes Bog).
+            apply("UIDungeonZoneViewModel.CollectItemData (faction nodes)", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIDungeonZoneViewModel), "CollectItemData"), postfix: new HarmonyMethod(typeof(Hooks), "Zone_CollectItemData")));
+
             // Diagnostics: the Taming Sphere's rolls ("You have a 50% chance to Tame") and every Tame, so a player's
             // report ("the creature is voided but not counted") can be checked in the log.
             apply("AbilityVariableCondition.IsValid (taming log)", () =>
@@ -519,6 +527,29 @@ namespace HexRevival
 
         public static void Decoder_DecodeEnter(Game.Shared.Network.ObjFmt.Decoder __instance, ref bool __state) { HexRevival.NetCodec.DecodeEnter(__instance, ref __state); }
         public static Exception Decoder_DecodeExit(bool __state, Exception __exception) { HexRevival.NetCodec.DecodeExit(__state); return __exception; }
+
+        public static void DeckValidator_Ownership(Game.Shared.Mechanics.DeckValidator __instance)
+        {
+            try
+            {
+                Game.Shared.Domain.deck_bits deck = AccessTools.Field(typeof(Game.Shared.Mechanics.DeckValidator), "m_Deck").GetValue(__instance) as Game.Shared.Domain.deck_bits;
+                System.Collections.Generic.List<string> missing = HexRevival.Decks.NotOwned(deck);
+                if (missing.Count == 0) return;
+                AccessTools.Method(typeof(Game.Shared.Mechanics.DeckValidator), "AddError").Invoke(__instance, new object[] { HexRevival.Loc.Get("deck_not_owned", string.Join(", ", missing.ToArray())), null, false });
+                AccessTools.Field(typeof(Game.Shared.Mechanics.DeckValidator), "m_IsValid").SetValue(__instance, false);
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] deck ownership: " + e.Message); }
+        }
+
+        public static void Zone_CollectItemData(UIDungeonZoneViewModel __instance)
+        {
+            try
+            {
+                FieldInfo f = AccessTools.Field(typeof(UIDungeonZoneViewModel), "m_CampaignItemData");
+                HexRevival.Campaign.FactionItemData(f != null ? f.GetValue(__instance) as System.Collections.Generic.Dictionary<string, Reckoning.Game.DungeonItemData> : null);
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] faction nodes: " + e.Message); }
+        }
 
         public static void TameRoll_IsValid(Game.Shared.Mechanics.Abilities.Conditions.AbilityVariableCondition __instance, Game.Shared.Mechanics.Abilities.AbilityEffectInstance effectInstance, bool __result)
         {
