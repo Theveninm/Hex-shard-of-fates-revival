@@ -25,8 +25,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("HEX Revival")]
 [assembly: AssemblyProduct("HEX Revival")]
-[assembly: AssemblyVersion("1.2.3.0")]
-[assembly: AssemblyFileVersion("1.2.3.0")]
+[assembly: AssemblyVersion("1.2.4.0")]
+[assembly: AssemblyFileVersion("1.2.4.0")]
 
 namespace HexRevivalLauncher
 {
@@ -35,7 +35,7 @@ namespace HexRevivalLauncher
         private const string AppId = "410380";
         private const string ExeName = "Hex.exe";
         private const string DefaultInstallDir = "HEX SHARDS OF FATE";
-        private const string Version = "1.2.3";
+        private const string Version = "1.2.4";
         private const string Title = "HEX Revival";
 
         // ------------------------------------------------------------------
