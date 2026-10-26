@@ -1221,6 +1221,34 @@ namespace HexRevival
                                 sb.Append(" | to ").Append(viewer.IsAI() ? "AI" : "you").Append(": game=").Append(top.CanPlayerSeeCard(viewer)).Append(" mod=").Append(Server.IsVisibleTo(top, viewer)).Append(" canPlay=").Append(ss.CanPlayCard(top, viewer));
                             }
                             sb.Append('\n');
+                            sb.Append("  flags: seeOppHand=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeOpponentsHand))
+                              .Append(" seeTop=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeTopOfDeck))
+                              .Append(" seeUnder=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeUndergroundTroops)).Append('\n');
+                            try
+                            {
+                                sb.Append("  affecting champion:");
+                                foreach (Card a in ss.GetListOfCardsAffectingTarget(owner.m_ChampionCard)) sb.Append(' ').Append(a.m_CardTemplate.m_Name).Append('/').Append(a.m_CurrentCardCollection);
+                                sb.Append('\n');
+                                foreach (Game.Shared.Mechanics.Abilities.AbilityEffectInstance ei in (System.Collections.Generic.IEnumerable<Game.Shared.Mechanics.Abilities.AbilityEffectInstance>)typeof(AbilityManager).GetField("m_EffectInstanceList", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).GetValue(ss.AbilityManager))
+                                {
+                                    if (ei == null || ei.TargetInstance == null || !ei.TargetInstance.m_SessionCardIds.Contains(owner.m_ChampionCard.m_SessionCardId)) continue;
+                                    sb.Append("  effect ").Append(ei.AbilityEffectTemplate != null ? ei.AbilityEffectTemplate.GetType().Name : "?").Append(" from ").Append(ei.SourceCard != null ? ei.SourceCard.m_CardTemplate.m_Name : "?")
+                                      .Append(" ability=").Append(ei.m_AbilityInstance != null && ei.m_AbilityInstance.m_AbilityTemplate != null ? ei.m_AbilityInstance.m_AbilityTemplate.m_Name + " " + (ei.m_AbilityInstance.m_AbilityTemplate.m_GameText ?? "").Replace("\n", " ") : "?").Append('\n');
+                                }
+                            }
+                            catch (Exception ex) { sb.Append(" diag error " + ex.Message + '\n'); }
+                            foreach (Card h in owner.GetAllCards())
+                            {
+                                if (h == null || h.m_CurrentCardCollection != ECardCollections.Hand) continue;
+                                foreach (Player viewer in ss.GetAllPlayers())
+                                {
+                                    if (viewer == null || viewer == owner) continue;
+                                    CardCollection col = h.GetCardCollection();
+                                    sb.Append("  hand ").Append(h.m_CardTemplate.m_Name).Append(" col=").Append(col != null ? col.CollectionType.ToString() : "null")
+                                      .Append(" faceDown=").Append(h.IsCardCollectionFaceDown(viewer)).Append(" onChain=").Append(h.IsOnChain())
+                                      .Append(" game=").Append(h.CanPlayerSeeCard(viewer)).Append(" mod=").Append(Server.IsVisibleTo(h, viewer)).Append('\n');
+                                }
+                            }
                         }
                         return sb.ToString();
                     }

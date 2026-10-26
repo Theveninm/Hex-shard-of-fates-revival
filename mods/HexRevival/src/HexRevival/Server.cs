@@ -22,12 +22,16 @@ namespace HexRevival
         private static readonly Dictionary<string, string> s_CardSig = new Dictionary<string, string>();
         /// <summary>Cards revealed to a player (SendRevealedCards): key (card|player) -> zone at reveal time.</summary>
         private static readonly Dictionary<string, ECardCollections> s_Revealed = new Dictionary<string, ECardCollections>();
+        /// <summary>Phase count at a deck reveal (key card|player): the AI, which has no window to close, forgets it at the next phase.</summary>
+        private static readonly Dictionary<string, int> s_RevealPhase = new Dictionary<string, int>();
+        private static int s_PhaseCount;
         private static readonly Dictionary<UID, string> s_PlayerSig = new Dictionary<UID, string>();
 
         public static void ResetCache()
         {
             s_CardSig.Clear();
             s_Revealed.Clear();
+            s_RevealPhase.Clear();
             s_PlayerSig.Clear();
             s_Dirty = true;
             s_LastOptionsSig = null;
@@ -97,7 +101,15 @@ namespace HexRevival
         private static string PlayerSig(Player p)
         {
             int hp = (p.m_ChampionCard != null) ? p.m_ChampionCard.CurrentDefenseValue : 0;
-            return string.Concat(hp, "|", p.m_ChargePoints, "|", p.m_CurrentResourcePool, "|", p.m_TotalResourcePool, "|", p.m_SpellPoints, "|", p.m_ResourceThresholds.Count, "|", TurnsTaken(p));
+            return string.Concat(hp, "|", p.m_ChargePoints, "|", p.m_CurrentResourcePool, "|", p.m_TotalResourcePool, "|", p.m_SpellPoints, "|", p.m_ResourceThresholds.Count, "|", TurnsTaken(p),
+                "|", ChampionFlag(p, IntAttrs.CanSeeOpponentsHand), "|", ChampionFlag(p, IntAttrs.CanSeeUndergroundTroops));
+        }
+
+        /// <summary>A "you can see ..." flag on the player's champion (where the game's CanPlayerSeeCard reads it).</summary>
+        private static bool ChampionFlag(Player p, IntAttrs flag)
+        {
+            try { return p.m_ChampionCard != null && p.m_ChampionCard.GetCardContext() != null && p.m_ChampionCard.GetCardContext().GetBool(flag); }
+            catch (Exception) { return false; }
         }
 
         /// <summary>
@@ -957,6 +969,7 @@ namespace HexRevival
 
         public static bool Server_SendPlayerInformationUpdates(StandaloneSession self, ETurnPhases phase)
         {
+            s_PhaseCount++;
             BroadcastState(self);
             return true;
         }
@@ -976,6 +989,7 @@ namespace HexRevival
                 if (card != null)
                 {
                     s_Revealed[id + "|" + player.m_PlayerId] = card.m_CurrentCardCollection;
+                    s_RevealPhase[id + "|" + player.m_PlayerId] = s_PhaseCount;
                     if ((card.m_CurrentCardCollection & ECardCollections.Deck) != 0)
                         Debug.Log("[HexRevival] [Reveal] " + card.m_CardTemplate.m_Name + " (" + id + ") revealed from a deck to " + player.m_PlayerId);
                 }
@@ -983,34 +997,34 @@ namespace HexRevival
             return true;
         }
 
-        /// <summary>
-        /// The human closed a reveal window (BattleStateCoverflow.OnHide). Cards revealed while in a deck
-        /// go back to face down: the client draws any known deck card face up on top of the deck
-        /// (BattleAnimationUpdateDeckView), so a card revealed then left in the deck (put back, shuffled,
-        /// sent to the bottom) stayed shown on top of the deck for the rest of the game.
-        /// </summary>
         /// <summary>dev "revealfix off": the old behaviour (deck reveals kept), to compare.</summary>
         public static bool DeckRevealFix = true;
 
-        public static void RevealWindowClosed(List<SessionCardId> cards)
+        /// <summary>
+        /// A player closed a reveal window (BattleStateCoverflow.OnHide, on their own client; the online guest's
+        /// comes through OnlineMatch). The cards it showed that were revealed while in a deck go back to face down
+        /// for that player only: the client draws any known deck card face up on top of the deck
+        /// (BattleAnimationUpdateDeckView), so a card revealed then left in the deck (put back, shuffled, sent to
+        /// the bottom: Hero of Adamanth, Oakhenge Ceremony...) stayed shown on top of the deck for the rest of the
+        /// game. Not earlier: the client applies card updates at once, the open window would show card backs.
+        /// </summary>
+        public static void RevealWindowClosed(List<SessionCardId> cards, UID viewer)
         {
             StandaloneSession ss = CurrentSession;
             if (ss == null || cards == null || cards.Count == 0 || !DeckRevealFix)
                 return;
             bool changed = false;
             foreach (SessionCardId id in cards)
-                foreach (Player p in ss.GetAllPlayers())
+            {
+                string key = id + "|" + viewer;
+                ECardCollections zone;
+                if (s_Revealed.TryGetValue(key, out zone) && (zone & ECardCollections.Deck) != 0)
                 {
-                    if (ReferenceEquals(p, null)) continue;
-                    string key = id + "|" + p.m_PlayerId;
-                    ECardCollections zone;
-                    if (s_Revealed.TryGetValue(key, out zone) && (zone & ECardCollections.Deck) != 0)
-                    {
-                        s_Revealed.Remove(key);
-                        changed = true;
-                        Debug.Log("[HexRevival] [Reveal] window closed: " + id + " face down again for " + p.m_PlayerId);
-                    }
+                    s_Revealed.Remove(key);
+                    s_RevealPhase.Remove(key);
+                    changed = true;
                 }
+            }
             if (changed && !s_InDispatch)
             {
                 s_InDispatch = true;
@@ -1031,10 +1045,19 @@ namespace HexRevival
             ECardCollections revealedIn;
             if (s_Revealed.TryGetValue(key, out revealedIn))
             {
-                if (revealedIn == card.m_CurrentCardCollection)
+                int at;
+                bool aiForgets = (revealedIn & ECardCollections.Deck) != 0 && viewer.IsAI() && DeckRevealFix
+                    && s_RevealPhase.TryGetValue(key, out at) && s_PhaseCount > at;
+                if (revealedIn == card.m_CurrentCardCollection && !aiForgets)
                     return true;
                 s_Revealed.Remove(key);
+                s_RevealPhase.Remove(key);
             }
+            // The game's own rule (the original server's): also lets a player see their top card ("You can see the
+            // top card of your deck": Augur of Sirion...), the opponent's top card, hand or underground troops
+            // when an effect allows it, and a face-down card while it is on the chain.
+            try { return card.CanPlayerSeeCard(viewer); }
+            catch (Exception) { }
             bool mine = card.m_ControllingPlayer != null && card.m_ControllingPlayer.m_PlayerId == viewer.m_PlayerId;
             ECardCollections c = card.m_CurrentCardCollection;
             if ((c & ECardCollections.Deck) != 0)
@@ -1111,8 +1134,8 @@ namespace HexRevival
             e.RemainingTime = TimeSpan.FromMinutes(10.0);
             e.DeckSleeveId = player.m_DeckSleeveId;
             e.MaxHandSize = player.CalculateMaximumHandSize();
-            e.CanSeeEnemyHand = false;
-            e.CanSeeEnemyUnderground = false;
+            e.CanSeeEnemyHand = ChampionFlag(player, IntAttrs.CanSeeOpponentsHand);
+            e.CanSeeEnemyUnderground = ChampionFlag(player, IntAttrs.CanSeeUndergroundTroops);
             e.ChampionId = (player.m_ChampionCard != null) ? player.m_ChampionCard.m_SessionCardId : SessionCardId.Invalid;
             e.Thresholds = new List<ECardShards>(player.m_ResourceThresholds.Keys);
             e.ThresholdValues = new List<int>(player.m_ResourceThresholds.Values);
