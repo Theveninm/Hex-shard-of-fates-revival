@@ -1204,6 +1204,31 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "cardtext":   // dev: "cardtext <card name>" = the human player's cards of that name: abilities and whether their condition holds
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null) return "no game";
+                        string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Player p in ss.GetAllPlayers())
+                        {
+                            if (p == null || p.IsAI()) continue;
+                            sb.Append("equipment: ").Append(string.Join(", ", p.m_Equipment.ConvertAll(e => { InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e); return it != null ? it.m_Name : e.ToString(); }).ToArray())).Append(" slots=").Append(p.m_EquipmentSlotsEnabled).Append('\n');
+                            foreach (Card c in p.GetAllCards())
+                            {
+                                if (c == null || c.m_CardTemplate == null || !string.Equals(c.m_CardTemplate.m_Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                                sb.Append(c.m_SessionCardId).Append(" in ").Append(c.m_CurrentCardCollection).Append(" template ").Append(c.m_CardTemplate.m_Id).Append(" eqmod=").Append(c.m_CardTemplate.m_EquipmentModifiedCard).Append('\n');
+                                foreach (ResourceId a in c.CurrentAbilities)
+                                {
+                                    AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a);
+                                    if (at == null) continue;
+                                    bool ok = at.m_AbilityCondition == null || at.m_AbilityCondition.IsValid(c, ss);
+                                    sb.Append("   ").Append(ok ? "[on]  " : "[off] ").Append((at.m_GameText ?? "").Replace("\n", " ")).Append('\n');
+                                }
+                            }
+                        }
+                        return sb.ToString();
+                    }
                 case "mercequip":   // dev: "mercequip <deck template id> <equipment name>" = equips a party deck template (as the party screen does)
                     {
                         ulong tid;

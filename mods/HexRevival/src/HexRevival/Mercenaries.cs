@@ -201,7 +201,10 @@ namespace HexRevival
             if (Saves.Current == null || profile == null) return;
             int n = 0;
             foreach (string c in Saves.Current.Claims) if (c.StartsWith("merc:")) n++;
-            if (Saves.Current.UnlockAll) n = 4;   // every mercenary owned: every slot (the client caps them by race)
+            // One slot per mercenary earned, 4 at most (the flag's maximum). The client adds a free slot for every point of
+            // CAMP_PARTYCAP without capping it (UIPartyMercenarySelector.LoadPartyMembers): an account with 50 mercenaries
+            // showed 50 slots on the battle panel.
+            if (Saves.Current.UnlockAll || n > 4) n = 4;
             if (n > 0) profile.UpdateSingleUserFlag(new Reckoning.Profile.Messages.FlagData { Name = "CAMP_PARTYCAP", Progress = n, Maximum = 4 });
         }
 

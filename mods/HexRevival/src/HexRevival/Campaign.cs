@@ -216,6 +216,24 @@ namespace HexRevival
             { "Node026", new[] { "Node026A", "UW", "AZ 1 - NODE 26 - WAYWARD ORCS", "AR", "AZ 1 - NODE 26B - WAYWARD VENNEN" } },
         };
 
+        /// <summary>
+        /// The location window (UIDungeonZoneViewModel.CollectItemData, Harmony postfix) finds a node's title, text and
+        /// picture by its map name: "Node023" / "Node026" only exist in the template as faction variants, so the window
+        /// stayed empty ("NODE023"). The variant of the champion's faction stands for them (A Underworld, B Ardent).
+        /// </summary>
+        public static void FactionItemData(Dictionary<string, DungeonItemData> items)
+        {
+            if (items == null) return;
+            champion_bits c = null;
+            try { c = Champions.Get(GameClient.Instance.PlayerProfile.GetCurrentChampion().Id); } catch { }
+            string suffix = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "A" : "B";
+            foreach (string key in FactionNodes.Keys)
+            {
+                DungeonItemData v;
+                if (!items.ContainsKey(key) && items.TryGetValue(key + suffix, out v)) items[key] = v;
+            }
+        }
+
         private static void AddFactionNodes(Zone z, TemplateManager tm)
         {
             Dictionary<string, string> scenes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -1911,6 +1929,16 @@ namespace HexRevival
                 ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
                 Fortunes.Buy(champ);
                 return "fortune " + Quests.Flag(champ, "fortune");
+            }
+            if (sub == "item" && parts.Length > 2)
+            {
+                // dev: "camp item Node023" = what the open map's location window shows for that node (its item data)
+                UIDungeonZoneViewModel vm = UnityEngine.Object.FindObjectOfType<UIDungeonZoneViewModel>();
+                if (vm == null) return "campaign map not open";
+                Dictionary<string, DungeonItemData> items = typeof(UIDungeonZoneViewModel).GetField("m_CampaignItemData", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(vm) as Dictionary<string, DungeonItemData>;
+                DungeonItemData it;
+                if (items == null || !items.TryGetValue(parts[2], out it)) return parts[2] + ": no item data (empty window)";
+                return parts[2] + ": '" + it.Title + "' (" + it.m_MapNodeId + ") descriptions=" + (it.Descriptions != null ? it.Descriptions.Count : 0) + " scape=" + it.m_NodeScapeArtNumber;
             }
             if (sub == "goto" && parts.Length > 2)
             {

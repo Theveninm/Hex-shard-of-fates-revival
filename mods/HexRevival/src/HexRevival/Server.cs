@@ -1130,6 +1130,9 @@ namespace HexRevival
             e.CounterTemplates = new List<ResourceId>();
             e.CounterCounts = new List<int>();
             e.RelatedCards = new List<SessionCardId>();
+            // A choice card ("choose Putrid Bark or Putrid Bite") with no art of its own: the client draws it with the
+            // art of its first related card (GoCardBuilder), the card whose ability made the choice.
+            if (card.IsChoice() && card.ParentLink != null) e.RelatedCards.Add(card.ParentLink.m_SessionCardId);
             e.AffectingAbilities = new List<ResourceId>();
             e.ThresholdList = new List<ECardShards>();
             e.Nulling = false;
