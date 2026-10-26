@@ -1252,6 +1252,18 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "pick":   // dev: "pick <n>" = selects the n-th card (from 0) of the open card window, as a click on it would (no OS mouse)
+                    {
+                        FieldInfo sf = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic);
+                        Stack<BattleStateBase> stack = sf == null || UIBattle.Instance == null ? null : sf.GetValue(UIBattle.Instance) as Stack<BattleStateBase>;
+                        BattleStateBase top = stack != null && stack.Count > 0 ? stack.Peek() : null;
+                        if (top == null || top.Cards == null) return "no card window";
+                        int n = 0;
+                        if (parts.Length > 1) int.TryParse(parts[1], out n);
+                        if (n < 0 || n >= top.Cards.Count) return "index out of range (" + top.Cards.Count + ")";
+                        top.OnClick(top.Cards[n]);
+                        return "picked " + (top.Cards[n].Card != null ? top.Cards[n].Card.SessionId.ToString() : "?") + " in " + top.GetType().Name;
+                    }
                 case "revealfix":   // dev: "revealfix on|off" = cards revealed from a deck go back face down when the reveal window closes (off = old behaviour)
                     Server.DeckRevealFix = parts.Length < 2 || parts[1] != "off";
                     return "revealfix " + (Server.DeckRevealFix ? "on" : "off");
