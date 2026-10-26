@@ -40,6 +40,7 @@ namespace HexRevival
             public string Dungeon;        // dungeon id (Dungeon)
             public List<string> Conversations = new List<string>(); // completing conversations (Conversation)
             public bool Taming;           // "Tame X and win match": needs a captured creature
+            public string Creature;       // X of a taming objective ("Bubblebee")
             public string Title;          // objective text shown by the journal (English)
         }
 
@@ -134,7 +135,11 @@ namespace HexRevival
                     QuestObjectiveEncounter enc = o as QuestObjectiveEncounter;
                     QuestObjectiveDungeon dun = o as QuestObjectiveDungeon;
                     QuestObjectiveConversation conv = o as QuestObjectiveConversation;
-                    if (enc != null) { ob.Kind = "Encounter"; ob.Encounter = enc.m_EncounterId.ToString(); ob.Taming = title.StartsWith("Tame "); }
+                    if (enc != null)
+                    {
+                        ob.Kind = "Encounter"; ob.Encounter = enc.m_EncounterId.ToString(); ob.Taming = title.StartsWith("Tame ");
+                        if (ob.Taming) TamingScenes(ob, title);
+                    }
                     else if (dun != null) { ob.Kind = "Dungeon"; ob.Dungeon = dun.m_DungeonId.ToString(); }
                     else if (conv != null)
                     {
@@ -157,6 +162,52 @@ namespace HexRevival
                     d.Objectives.Add(ob);
                 }
                 s_Defs[d.Script] = d;
+            }
+        }
+
+        /// <summary>
+        /// A taming objective is done in the battles where the creature can be tamed: the scenes whose mods hold the
+        /// card "Taming X" (Src.Game: EncounterScene.m_Mods). The quest template does not always point there: "Tame
+        /// Bubblebee" names Foul Fae (Node 32), while the Bubblebee is tamed against the Water Elemental (Node 31, 33).
+        /// </summary>
+        private static void TamingScenes(Objective ob, string title)
+        {
+            int end = title.IndexOf(" and win", StringComparison.Ordinal);
+            ob.Creature = end > 5 ? title.Substring(5, end - 5).Trim() : null;
+            if (ob.Creature == null) return;
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<string> found = new List<string>();
+            foreach (SceneData sc in tm.CampaignScenes.Values)
+            {
+                EncounterScene es = sc as EncounterScene;
+                if (es == null || es.m_Mods == null) continue;
+                foreach (EncounterSceneMod m in es.m_Mods)
+                    if (m != null && m.m_Mods != null && m.m_Mods.Exists(id => { CardTemplate ct = tm.GetCardTemplate(id); return ct != null && ct.m_Name == "Taming " + ob.Creature; }))
+                        { if (!found.Contains(es.m_Id.ToString())) found.Add(es.m_Id.ToString()); break; }
+            }
+            if (found.Count == 0) return;
+            if (!found.Contains(ob.Encounter)) Debug.Log("[HexRevival] [Quests] taming " + ob.Creature + ": battles " + string.Join(", ", found.ToArray()) + " (template said " + ob.Encounter + ")");
+            ob.Encounter = found[0];
+            ob.AltEncounters = found.GetRange(1, found.Count - 1);
+        }
+
+        /// <summary>Taming objectives of a creature this champion already tamed (reward claim "champ:tamed:X") are done.</summary>
+        public static void SyncTamed(ulong champ)
+        {
+            if (Saves.Current == null) return;
+            foreach (KeyValuePair<string, Progress> q in new List<KeyValuePair<string, Progress>>(Of(champ)))
+            {
+                if (q.Value.Finished) continue;
+                Def d = GetDef(q.Key);
+                if (d == null) continue;
+                for (int i = 0; i < d.Objectives.Count; i++)
+                {
+                    Objective o = d.Objectives[i];
+                    if (!o.Taming || o.Creature == null || q.Value.Done.Contains(i) || !Saves.Current.Claims.Contains(champ + ":tamed:" + o.Creature)) continue;
+                    Log(champ + " " + d.Script + ": " + o.Creature + " already tamed");
+                    Complete(champ, d, q.Value, i);
+                    Save();
+                }
             }
         }
 

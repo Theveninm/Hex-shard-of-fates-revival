@@ -1204,6 +1204,80 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "cardtext":   // dev: "cardtext <card name>" = the human player's cards of that name: abilities and whether their condition holds
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null) return "no game";
+                        string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Player p in ss.GetAllPlayers())
+                        {
+                            if (p == null || p.IsAI()) continue;
+                            sb.Append("equipment: ").Append(string.Join(", ", p.m_Equipment.ConvertAll(e => { InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e); return it != null ? it.m_Name : e.ToString(); }).ToArray())).Append(" slots=").Append(p.m_EquipmentSlotsEnabled).Append('\n');
+                            foreach (Card c in p.GetAllCards())
+                            {
+                                if (c == null || c.m_CardTemplate == null || !string.Equals(c.m_CardTemplate.m_Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                                sb.Append(c.m_SessionCardId).Append(" in ").Append(c.m_CurrentCardCollection).Append(" template ").Append(c.m_CardTemplate.m_Id).Append(" eqmod=").Append(c.m_CardTemplate.m_EquipmentModifiedCard).Append('\n');
+                                foreach (ResourceId a in c.CurrentAbilities)
+                                {
+                                    AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a);
+                                    if (at == null) continue;
+                                    bool ok = at.m_AbilityCondition == null || at.m_AbilityCondition.IsValid(c, ss);
+                                    sb.Append("   ").Append(ok ? "[on]  " : "[off] ").Append((at.m_GameText ?? "").Replace("\n", " ")).Append('\n');
+                                }
+                            }
+                        }
+                        return sb.ToString();
+                    }
+                case "deckown":   // dev: decks holding cards or equipment the account does not own
+                    {
+                        string rep = Decks.OwnershipReport();
+                        File.WriteAllText(Path.Combine(LocalServer.Root, "HexRevivalDeckOwnership.txt"), rep);
+                        return rep;
+                    }
+                case "deckeq":   // dev: "deckeq <deck id>" = the equipment of a stored deck, as sent to the client and to a match
+                    {
+                        ulong did;
+                        if (parts.Length < 2 || !ulong.TryParse(parts[1], out did)) return "usage: deckeq <deck id>";
+                        Game.Shared.Domain.deck_bits db = Decks.Bits(did);
+                        if (db == null) return "no deck " + did;
+                        List<string> o = new List<string>();
+                        foreach (ResourceId e in new[] { db.equipment_1, db.equipment_2, db.equipment_3, db.equipment_4, db.equipment_5, db.equipment_6 })
+                        {
+                            if (!e.IsValid) continue;
+                            InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e);
+                            o.Add((it != null ? it.m_Name : e.ToString()) + " owned=" + Inventory.Count(e));
+                        }
+                        return "deck " + did + " '" + db.DeckName + "': " + (o.Count == 0 ? "no equipment" : string.Join(", ", o.ToArray()));
+                    }
+                case "giveitem":   // dev: "giveitem <item name>" = the account owns one more of that inventory item (equipment...), client included
+                    {
+                        string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        InventoryItemData item = null;
+                        foreach (InventoryItemData it in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                            if (string.Equals(it.m_Name, name, StringComparison.OrdinalIgnoreCase)) { item = it; break; }
+                        if (item == null) return "no item " + name;
+                        Game.Shared.Domain.inventory_bits b = Inventory.GrantSilently(item.m_Id);
+                        if (b == null) return "not granted (unlock-everything account owns it already?)";
+                        GameClient.Instance.PlayerProfile.SetInventoryItem(new UID(UID.Type.InventoryItem, b.Id), item.m_Id, 1);
+                        return "gave " + item.m_Name + ", now " + Inventory.Count(item.m_Id);
+                    }
+                case "mercequip":   // dev: "mercequip <deck template id> <equipment name>" = equips a party deck template (as the party screen does)
+                    {
+                        ulong tid;
+                        if (parts.Length < 3 || !ulong.TryParse(parts[1], out tid)) return "usage: mercequip <template id> <equipment name>";
+                        Game.Shared.Profile.ProfileDeckTemplate t = DeckTemplates.Get(tid);
+                        if (t == null) return "no template " + tid;
+                        if (parts[2] == "clear") { t.Equip.Clear(); DeckTemplates.Put(t, tid); return "template " + tid + ": equipment removed"; }
+                        string name = string.Join(" ", parts, 2, parts.Length - 2);
+                        InventoryEquipmentData eq = null;
+                        foreach (InventoryItemData it in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                            if (it is InventoryEquipmentData && string.Equals(it.m_Name, name, StringComparison.OrdinalIgnoreCase)) { eq = (InventoryEquipmentData)it; break; }
+                        if (eq == null) return "no equipment " + name;
+                        t.Equip[eq.m_EquipmentType] = eq.m_Id;
+                        DeckTemplates.Put(t, tid);
+                        return "template " + tid + " '" + t.Name + "': " + eq.m_EquipmentType + " = " + eq.m_Name;
+                    }
                 case "tameroll":   // dev: "tameroll [n]" = runs the Taming Sphere's 2-mana roll n times with the game's own effect and condition
                     {
                         StandaloneSession ss = Server.CurrentSession;

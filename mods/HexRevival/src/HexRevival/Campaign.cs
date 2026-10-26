@@ -216,6 +216,39 @@ namespace HexRevival
             { "Node026", new[] { "Node026A", "UW", "AZ 1 - NODE 26 - WAYWARD ORCS", "AR", "AZ 1 - NODE 26B - WAYWARD VENNEN" } },
         };
 
+        /// <summary>
+        /// The location window (UIDungeonZoneViewModel.CollectItemData, Harmony postfix) finds a node's title, text and
+        /// picture by its map name. AZ1 "Node023" / "Node026" only exist in the template as faction variants, so the
+        /// window stayed empty ("NODE023"): the variant of the champion's faction stands for them (A Underworld, B
+        /// Ardent). Fort Romor's rooms have other names in its template than on its map (see FortRomorRooms).
+        /// </summary>
+        public static void FactionItemData(Dictionary<string, DungeonItemData> items)
+        {
+            if (items == null) return;
+            champion_bits c = null;
+            try { c = Champions.Get(GameClient.Instance.PlayerProfile.GetCurrentChampion().Id); } catch { }
+            string suffix = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "A" : "B";
+            foreach (string key in FactionNodes.Keys)
+            {
+                DungeonItemData v;
+                if (!items.ContainsKey(key) && items.TryGetValue(key + suffix, out v)) items[key] = v;
+            }
+            // Fort Romor: the template names its rooms, the map prefab letters them (Src.Game: battles; Src.Video: the
+            // "The Stables" window behind Legionnaire of Gawaine, "The Barracks" before Rhonwen).
+            if (items.ContainsKey("Stables") && items.ContainsKey("CmdPost"))
+                foreach (string[] a in FortRomorRooms)
+                {
+                    DungeonItemData v;
+                    if (!items.ContainsKey(a[0]) && items.TryGetValue(a[1], out v)) items[a[0]] = v;
+                }
+        }
+
+        private static readonly string[][] FortRomorRooms =
+        {
+            new[] { "Node001", "Entrance" }, new[] { "NodeB", "Stables" }, new[] { "NodeC", "Barracks" },
+            new[] { "NodeD", "CmdPost" }, new[] { "NodeE", "Defense" },
+        };
+
         private static void AddFactionNodes(Zone z, TemplateManager tm)
         {
             Dictionary<string, string> scenes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -256,6 +289,7 @@ namespace HexRevival
         /// <summary>Saves made before 1.2.3: a taming battle won without the creature was closed for good; it opens again.</summary>
         private static void ReopenTamingBattles(CampState st)
         {
+            Quests.SyncTamed(st.ChampId);
             foreach (MapNode n in st.Z.Nodes)
                 if (st.Completed.Contains(n.Id) && Quests.TamingPending(st.ChampId, EncOf(st.ChampId, n))) st.Completed.Remove(n.Id);
         }
@@ -1897,7 +1931,8 @@ namespace HexRevival
                 string enc = n != null ? n.Encounter ?? n.FightEncounter : null;
                 if (st == null || enc == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
                 st.ALoc = n.Name;
-                LastEvent = parts.Length > 3 ? parts[3] : "start";
+                LastEvent = parts.Length > 3 && !parts[3].StartsWith("merc=") ? parts[3] : "start";
+                foreach (string a in parts) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);   // "merc=<mercenary item id>": played by that party member
                 int diff;
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
                 StartBattle(st, n, enc);
@@ -1909,6 +1944,57 @@ namespace HexRevival
                 ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
                 Fortunes.Buy(champ);
                 return "fortune " + Quests.Flag(champ, "fortune");
+            }
+            if (sub == "nodeaudit")
+            {
+                // dev: every node of the AZ1 / AZ2 map prefabs: does the location window find a title, a text and a picture?
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                StringBuilder sb = new StringBuilder();
+                foreach (Zone z in new[] { AZ1, AZ2 })
+                {
+                    BuildMap(z);
+                    SceneData sd;
+                    DungeonTemplate dt = tm.CampaignScenes.TryGetValue(z.TemplateId, out sd) ? sd as DungeonTemplate : null;
+                    if (dt == null) { sb.AppendLine(z.Key + ": no template"); continue; }
+                    Dictionary<string, DungeonItemData> items = new Dictionary<string, DungeonItemData>();
+                    foreach (DungeonItemData it in dt.m_ItemData) if (!string.IsNullOrEmpty(it.m_MapNodeId)) items[it.m_MapNodeId] = it;
+                    if (z == AZ1) FactionItemData(items);
+                    GameObject prefab = Resources.Load(z.NodesPrefab) as GameObject;
+                    if (prefab == null) { sb.AppendLine(z.Key + ": no prefab"); continue; }
+                    int ok = 0;
+                    foreach (UIDungeonMapNodeData nd in prefab.GetComponentsInChildren<UIDungeonMapNodeData>(true))
+                    {
+                        if (nd.IsPathFork) continue;
+                        string id = nd.name;
+                        DungeonItemData it;
+                        MapNode mn = z.Nodes.Find(x => x.Id == id);
+                        string mod = mn == null ? "not a mod node" : "mod name '" + mn.Name + "' type " + mn.Type;
+                        if (!items.TryGetValue(id, out it)) { sb.AppendLine(z.Key + " " + id + ": NO ITEM DATA (" + mod + ")"); continue; }
+                        List<string> miss = new List<string>();
+                        if (string.IsNullOrEmpty(it.Title)) miss.Add("title");
+                        if (it.Descriptions == null || it.Descriptions.Count == 0) miss.Add("text");
+                        if (string.IsNullOrEmpty(it.m_NodeScapeArtNumber)) miss.Add("picture");
+                        if (miss.Count > 0) sb.AppendLine(z.Key + " " + id + " '" + it.Title + "': no " + string.Join(", ", miss.ToArray()) + " (" + mod + ")");
+                        else ok++;
+                        if (mn != null && mn.Name == mn.Id) sb.AppendLine(z.Key + " " + id + ": mod name is the node id");
+                    }
+                    foreach (MapNode mn in z.Nodes)
+                        if (prefab.GetComponentsInChildren<UIDungeonMapNodeData>(true).Length > 0 && Array.Find(prefab.GetComponentsInChildren<UIDungeonMapNodeData>(true), x => x.name == mn.Id) == null)
+                            sb.AppendLine(z.Key + " " + mn.Id + " '" + mn.Name + "': mod node not on the map prefab");
+                    sb.AppendLine(z.Key + ": " + ok + " complete nodes");
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalNodeAudit.txt"), sb.ToString());
+                return sb.ToString();
+            }
+            if (sub == "item" && parts.Length > 2)
+            {
+                // dev: "camp item Node023" = what the open map's location window shows for that node (its item data)
+                UIDungeonZoneViewModel vm = UnityEngine.Object.FindObjectOfType<UIDungeonZoneViewModel>();
+                if (vm == null) return "campaign map not open";
+                Dictionary<string, DungeonItemData> items = typeof(UIDungeonZoneViewModel).GetField("m_CampaignItemData", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(vm) as Dictionary<string, DungeonItemData>;
+                DungeonItemData it;
+                if (items == null || !items.TryGetValue(parts[2], out it)) return parts[2] + ": no item data (empty window)";
+                return parts[2] + ": '" + it.Title + "' (" + it.m_MapNodeId + ") descriptions=" + (it.Descriptions != null ? it.Descriptions.Count : 0) + " scape=" + it.m_NodeScapeArtNumber;
             }
             if (sub == "goto" && parts.Length > 2)
             {
