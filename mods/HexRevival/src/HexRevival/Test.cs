@@ -1204,6 +1204,26 @@ namespace HexRevival
                     if (Server.CurrentSession == null) return "no game";
                     CheatMenu.EndAs(Server.CurrentSession, false);
                     return "lost";
+                case "decktop":   // dev: each player's top deck card: what the game's rule (CanPlayerSeeCard) and the mod show, and whether it can be played
+                    {
+                        StandaloneSession ss = Server.CurrentSession;
+                        if (ss == null) return "no game";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (Player owner in ss.GetAllPlayers())
+                        {
+                            if (owner == null) continue;
+                            Card top = owner.GetCardCollection(ECardCollections.Deck).GetCardAtLocation(ECardLocations.Top);
+                            if (top == null) continue;
+                            sb.Append(owner.IsAI() ? "AI" : "you").Append(" top=").Append(top.m_CardTemplate.m_Name).Append(" (").Append(top.m_SessionCardId).Append(")");
+                            foreach (Player viewer in ss.GetAllPlayers())
+                            {
+                                if (viewer == null) continue;
+                                sb.Append(" | to ").Append(viewer.IsAI() ? "AI" : "you").Append(": game=").Append(top.CanPlayerSeeCard(viewer)).Append(" mod=").Append(Server.IsVisibleTo(top, viewer)).Append(" canPlay=").Append(ss.CanPlayCard(top, viewer));
+                            }
+                            sb.Append('\n');
+                        }
+                        return sb.ToString();
+                    }
                 case "revealfix":   // dev: "revealfix on|off" = cards revealed from a deck go back face down when the reveal window closes (off = old behaviour)
                     Server.DeckRevealFix = parts.Length < 2 || parts[1] != "off";
                     return "revealfix " + (Server.DeckRevealFix ? "on" : "off");

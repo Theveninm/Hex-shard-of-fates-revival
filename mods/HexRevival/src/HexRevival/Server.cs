@@ -1025,7 +1025,7 @@ namespace HexRevival
         /// opponent's underworld... A non-null deck card is displayed FACE UP on the deck
         /// (BattleAnimationUpdateDeckView): that was the visible card on top of the decks.
         /// </summary>
-        private static bool IsVisibleTo(Card card, Player viewer)
+        internal static bool IsVisibleTo(Card card, Player viewer)
         {
             string key = card.m_SessionCardId + "|" + viewer.m_PlayerId;
             ECardCollections revealedIn;
