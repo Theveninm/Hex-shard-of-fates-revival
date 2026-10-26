@@ -216,6 +216,11 @@ namespace HexRevival
             apply("DeckValidator.RunValidation (ownership)", () =>
                 harmony.Patch(AccessTools.Method(typeof(Game.Shared.Mechanics.DeckValidator), "RunValidation"), postfix: new HarmonyMethod(typeof(Hooks), "DeckValidator_Ownership")));
 
+            // Battle: a reveal window closed: the cards it showed from a deck go back to face down.
+            apply("BattleStateCoverflow.OnHide (deck reveals)", () =>
+                harmony.Patch(AccessTools.Method(typeof(BattleStateCoverflow), "OnHide"),
+                    prefix: new HarmonyMethod(typeof(Hooks), "Coverflow_OnHidePre"), postfix: new HarmonyMethod(typeof(Hooks), "Coverflow_OnHidePost")));
+
             // Campaign map: the location window of the faction nodes (Node023 Saramago Crater, Node026 Johannes Bog).
             apply("UIDungeonZoneViewModel.CollectItemData (faction nodes)", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIDungeonZoneViewModel), "CollectItemData"), postfix: new HarmonyMethod(typeof(Hooks), "Zone_CollectItemData")));
@@ -539,6 +544,26 @@ namespace HexRevival
                 AccessTools.Field(typeof(Game.Shared.Mechanics.DeckValidator), "m_IsValid").SetValue(__instance, false);
             }
             catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] deck ownership: " + e.Message); }
+        }
+
+        public static void Coverflow_OnHidePre(BattleStateCoverflow __instance, ref System.Collections.Generic.List<Game.Shared.SessionCardId> __state)
+        {
+            try
+            {
+                if ((bool)AccessTools.Field(typeof(BattleStateCoverflow), "m_UserInitiated").GetValue(__instance)) return;
+                System.Collections.Generic.List<GoCardView> views = AccessTools.Field(typeof(BattleStateCoverflow), "m_CardViews").GetValue(__instance) as System.Collections.Generic.List<GoCardView>;
+                if (views == null) return;
+                __state = new System.Collections.Generic.List<Game.Shared.SessionCardId>();
+                foreach (GoCardView v in views)
+                    if (v != null && v.Card != null) __state.Add(v.Card.SessionId);
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] reveal window: " + e.Message); }
+        }
+
+        public static void Coverflow_OnHidePost(System.Collections.Generic.List<Game.Shared.SessionCardId> __state)
+        {
+            try { HexRevival.Server.RevealWindowClosed(__state); }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] reveal window: " + e.Message); }
         }
 
         public static void Zone_CollectItemData(UIDungeonZoneViewModel __instance)
