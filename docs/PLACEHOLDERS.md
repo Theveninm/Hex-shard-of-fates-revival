@@ -1,4 +1,4 @@
-# Placeholder register (2026-10-28)
+# Placeholder register (updated for 1.2.6, 2026-10-28)
 
 Every value or behaviour in the mod that is not backed by a source is tagged `PLACEHOLDER` in the code
 (or `Source = Src.Placeholder` in the reward tables). This file lists them so that, when a new source turns
@@ -31,6 +31,7 @@ Vandersveldt part N + time. Dialogue lines come from the dialogue pass (`_tools/
 | Kukatan Blind Hollow | placeholder | dialogue only | KVC part 4 48:51, part 9 48:58 |
 | Brutecrown H-1/2/3 | placeholder | Vargar / Burgg / Zagg | Src.Game: AI decks D / B / C |
 | Gaal fortune duration | placeholder | next battle | MHS UW 2017-01-25 [W__kpqC147U] 0:51 |
+| Graveyard robot in battle | placeholder | every battle once assembled | KVC part 3 (Mega-Bot card in every battle after the repair) |
 
 Inferred from the game data only (no video shows them; check if a source turns up): White Hawk Step 2 after the
 Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta turn-in).
@@ -42,7 +43,6 @@ Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta t
 | CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage" |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video |
-| Dungeons.cs (Graveyard robot) | joins every battle once assembled | not readable on the boards filmed (KVC part 10) |
 | Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen |
 | Fortunes.cs | which fortune is drawn | random in the runs |
 | Progression.cs TalentPointsPerLevel | 1 | the reward window only says "Leveled Up!" (Vandersveldt part 79 4:54) |
@@ -79,7 +79,6 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Dungeons.cs:386 | "alert_gnolls", "Great Machine Graveyard F 2 - Roundabout (AI goes first)");   // PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:705 | return Quests.Flag(r.Champ, "brutecrown:ally") ?? Gnolls[0];   // Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
 | Dungeons.cs:728 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
-| Dungeons.cs:1110 | Cannon ... / Maxed), Mega-Bot 1000 to 8000. Which battles the robot joined: PLACEHOLDER, every battle once |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Loot.cs:67 | the weights are a PLACEHOLDER. |
 | Loot.cs:77 | equipment are drawn from the game's own AZ2 set (cards and equipment items), by rarity (PLACEHOLDER weights: |
