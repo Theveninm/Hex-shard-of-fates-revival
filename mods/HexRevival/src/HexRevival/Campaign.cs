@@ -283,8 +283,9 @@ namespace HexRevival
         /// matcher reads "45A" as another node's number, so these nodes were plain dialogues that paid and closed
         /// without a fight (mornox, 1.2.5). The faction of each variant: Src.Game, the node's dialogues ("Node 75 -
         /// Ardent battle (Elimination Specialist)", the scene's AI champion; "Node 45 - Burk heart - Ardent player
-        /// success": "the shin'hare leader") and Src.Video (Ardent runs fought Necrophage Sensei at 45A and
-        /// Elimination Specialist at 75A, Underworld runs Ashwood Maestro at 45B and Earthcaller at 75B).
+        /// success": "the shin'hare leader") and Src.Video: Necrophage Sensei at 45A (MHS Ardent 2017-01-25 [a3X1p9SvKf4]
+        /// 1:42), Elimination Specialist at 75A (MHS Ardent 2017-03-29 [ytaen0OMjSE]), Ashwood Maestro at 45B (MHS UW
+        /// 2016-10-23 [6L52zeXgbNs]; Vandersveldt part 37 1:00), Earthcaller at 75B (MHS UW 2017-01-18 [fDrPyIMTtfI]).
         /// Dev "camp battleaudit" lists any numbered battle scene the map does not use.
         /// </summary>
         private static readonly Dictionary<string, string[]> FactionBattles = new Dictionary<string, string[]>
@@ -315,14 +316,18 @@ namespace HexRevival
 
         /// <summary>
         /// Zombie blockade at Brink Ridge (Src.Video: the Ardent champion fought a Barricade Zombie there after
-        /// the Smoldering Dead; Src.Game: scenes "NODE 19B - ZOMBIE BLOCKADE", variants B1-B3 unused:
-        /// PLACEHOLDER). Its encounter while it is to be fought, else null.
+        /// the Smoldering Dead, MHS Ardent 2017-05-16 [FoOAf3QKgC4] 0:25). Src.Game: scenes "NODE 19B" (Forest board)
+        /// and "19B1" to "19B3" (CastleExterior board), the same deck and "Vigor Mortis" challenge. The video's board is
+        /// the castle one (the board of the Charred Zombies, MHS Ardent 2017-05-24 [xfp7pFEOm8c]), not the forest of the
+        /// Human Guard at the same node (MHS Ardent 2017-04-14 [at8xqeXz7zI]): 19B1. Before 1.2.6: 19B.
+        /// Its encounter while it is to be fought, else null.
         /// </summary>
+        private const string ZombieBlockadeScene = "751ca760-fcf7-42ca-8d6f-e3d169abb8f0";   // AZ 1 - NODE 19B1 - ZOMBIE BLOCKADE
+
         private static string ZombieBlockade(ulong champ)
         {
             if (Quests.Flag(champ, "dungeon:a8d2ad0e-306e-4d07-9cd1-e4d7c82cdf1c") == null || Quests.Flag(champ, "won:Node019B") != null) return null;
-            MapNode b = FindNode(AZ1, "Node019B");
-            return b != null ? b.Encounter : null;
+            return ZombieBlockadeScene;
         }
 
         /// <summary>Saves made before 1.2.3: a taming battle won without the creature was closed for good; it opens again.</summary>
@@ -349,6 +354,8 @@ namespace HexRevival
             string f = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
             // The desert's wormoids attack only gnomes in tow (and stay as one-time battles once all are home), see Gnomes.
             if (n.Z == AZ1 && !Gnomes.IsFight(champ, n.Id)) return null;
+            // Scylla and Charybdis only lurk ("Pre-Scylla") until a sea quest is done, see CampaignBoat.SeaMonstersAwake.
+            if (n.Z == AZ2 && (n.Id == "NodeB04" || n.Id == "NodeB10") && !SeaMonstersAwake(champ)) return null;
             return EncFor(n, f, Quests.Flag(champ, "choice:" + n.Key));
         }
 
@@ -508,7 +515,8 @@ namespace HexRevival
         /// turn-in when ready, the quest start, the "repeating until ..." / "not complete" one while the quest runs, then
         /// after it the repeat or the end. Src.Game: "Node 57A - ... Quest Start", "Node 57A - ... repeating until dungeon
         /// complete", "Node 57B - ... Quest End". Before 1.2.6 the map always showed "Quest Start" (lowest rank), so the
-        /// quest could not be turned in. open: the node stays repeatable (quest to start, running or to turn in).
+        /// quest could not be turned in. Not seen on video (no run filmed McGinty Coast); the hubs' order is Src.Game logic.
+        /// open: the node stays repeatable (quest to start, running or to turn in).
         /// </summary>
         private static string MapGiver(ulong champ, MapNode n, out bool open)
         {

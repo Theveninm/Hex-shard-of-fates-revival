@@ -94,10 +94,13 @@ namespace HexRevival
             { "q_brutecrown_bluff|Step1", new[] { "dungeon:b730906f-a446-4fe0-869a-147857e4396e" } },
             { "q_great_machine_graveyard|Kill_Boss", new[] { "dungeon:c875a374-7871-4a51-bb2e-cca8d5061ae2" } },
             { "q_kraken|Step1", new[] { "dungeon:6b73c598-3b92-46ea-bd57-62ca564b2e57" } },
-            // Ardent: Eurig the Robomancer (Mithral Falls); Underworld: Constantina (Mithral River) - PLACEHOLDER pairing
+            // Ardent: Eurig the Robomancer (Mithral Falls); Underworld: Constantina (Mithral River). Src.Game: only the
+            // Ardent Eurig and the Underworld Constantina conversations have Success / Fail ones; Src.Video: MHS Ardent
+            // 2018-03-02 [1J8Yu111AQU] fights Eurig.
             { "q_the_mithral_river|Fight1", new[] { "AZ 2 - NODE 48 - Mithral Falls - Eurig the Robomancer", "AZ 2 - NODE 46 - Mithral River - Constantina" } },
             { "q_petulent_picaroons|Fight1", new[] { "AZ 2 - NODE 11 - Smuggler's Cove - Hired Horn Picaroon" } },
-            // the raiders: James River Road, Xentoth's Zealot (Ardent) / Lazghar Chul (Underworld) - PLACEHOLDER
+            // the raiders: James River Road, Xentoth's Zealot (Ardent) / Lazghar Chul (Underworld). Src.Video: MHS Ardent
+            // 2017-08-22 [Q0Kh6nUMBfM], MHS UW 2017-04-07 [RV7q95W1fK4].
             { "q_redhand_raiders|Fight1", new[] { "AZ 2 - NODE 21A - James River Road - Xentoth's Zealot (vs. Ardent)", "AZ 2 - NODE 21B - James River Road - Lazghar Chul (vs. Underworld)" } },
             { "q_ruins_of_kukatan|Step1", new[] { "dungeon:d7dc66e5-a3e4-4713-92c9-68717ae87442" } },
             { "q_uw_victorias_secret|Fight1", new[] { "AZ 2 - NODE 14B - Peterson Woods - Princess Victoria (vs. Underworld)" } },

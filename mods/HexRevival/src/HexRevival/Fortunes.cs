@@ -13,7 +13,9 @@ namespace HexRevival
     /// effect cards (set PvE_AZ1_Created_Effects, Src.Game). The champion holds one fortune at a time
     /// (the gaals have an "already has fortune" dialogue); its abilities are activated for the
     /// champion at the start of the next campaign battle, which uses it up.
-    /// PLACEHOLDER: which fortune is drawn (random here) and how long it lasts (one battle here).
+    /// Duration, Src.Video: the window reads "Gaal Camp - Your fortune for the next battle" (MHS UW 2017-01-25
+    /// [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show
+    /// different fortunes at different visits, no pattern known).
     /// </summary>
     public static class Fortunes
     {

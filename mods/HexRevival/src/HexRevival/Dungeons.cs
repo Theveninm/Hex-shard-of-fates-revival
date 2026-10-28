@@ -229,7 +229,9 @@ namespace HexRevival
                 .Add("NodeE", Shed("NodeE", "Vargar", "Vargar's Shed", "NodeD"))
                 .Add("NodeF", Shed("NodeF", "Burgg", "Burgg's Shanty", "NodeB"))
                 .Add("NodeG", Shed("NodeG", "Zagg", "Zagg's Tent", "NodeC"))
-                // H-1/2/3: the ally's battle, numbered as the "J-n (Helping <ally>)" scenes (PLACEHOLDER: H's are not labelled).
+                // H-1/2/3: the ally's battle, numbered as the "J-n (Helping <ally>)" scenes. Src.Game: H-1 plays the AI deck
+                // "Brutecrown Bluff D" (Pebble Hollow, next to Vargar's Shed), H-2 deck "B" (Burgg's Shanty), H-3 deck "C"
+                // (Zagg's Tent): the same order as J-1 Vargar, J-2 Burgg, J-3 Zagg.
                 .Add("NodeH", new Step { Conv = bb + "Lair of Nogg Nogg", Enc = "Brutecrown Bluff H-{ALLYN} - Lair of the Beast", Success = bb + "Lair of Nogg Nogg - Success - {ALLY}", Fail = bb + "Lair of Nogg Nogg - Fail", Reward = "brutecrown/NodeH",
                     Requires = Sheds, RequireAny = true })
                 // Both spurned sisters speak at the gates (Src.Video, KVC: ally Zagg -> Vargar, then Burgg).
@@ -274,7 +276,8 @@ namespace HexRevival
             const string kr = "Kraken - ";
             s_Defs.Add(new Def { Key = "kraken", Id = "6b73c598-3b92-46ea-bd57-62ca564b2e57", Name = "The Kraken", Folder = "kraken", Zone = "AZ2", AZ1Node = "Node019", Start = "Node000" }
                 .Add("Node000", Talk(kr + "Start"))
-                // "Mayor Died" follows Mayor Galway's death in the battle (an event of the battle, unknown): PLACEHOLDER, he lives.
+                // "Mayor Died" follows Mayor Galway's death in the battle (an event of the battle, unknown). Src.Video: he lives
+                // in both runs (MHS UW 2017-05-25 [Q__u5q_9YV8] 10:32, MHS Ardent 2017-09-11 [sKtSmw8IfiA] 9:15): he lives here.
                 .Add("NodeA", new Step { Conv = kr + "Mind Controlled Village", Enc = "Kraken's Gold A - Portsmere|Kraken's Gold - Portsmere", Success = kr + "Mind Controlled Village Success - Mayor Lived", Fail = kr + "Mind Controlled Village Fail", Reward = "kraken/NodeA" })
                 .Add("NodeB", Talk(kr + "Town Square - {F}"))
                 .Add("NodeD", Talk(kr + "Docks"))
@@ -307,7 +310,9 @@ namespace HexRevival
                 .Add("NodeC", Fight(rk, "Kukatan River", "Ruins of Kukatan C - Kuroko River", "kukatan/NodeC"))
                 .Add("NodeD", Talk(rk + "The Ruins"))
                 .Add("NodeE", Talk(rk + "Dark Corridor - Player " + journal + " Journal"))
-                // Explorers of the other faction: shin'hare for the Ardent, coyotle for the Underworld (F 01 = Ardent: PLACEHOLDER).
+                // Explorers of the other faction. Src.Video: KVC part 9 (Vennen, Underworld) fights "Coyotle Explorers" (scene
+                // F 01) at 39:35 then "Tomb of Lingerers - Underworld Success" 43:53; KVC part 4 (Ardent) "Tomb of Lingerers -
+                // Ardent Success" 45:46: F 02 for the Ardent.
                 .Add("NodeF", Fight(rk, "Tomb of Lingerers - {F}", "Ruins of Kukatan F {?Ardent:02:01} - Tomb of Lingerers", "kukatan/NodeF"))
                 .Add("NodeG", Talk(rk + "Dead End"))
                 .Add("NodeH", new Step { Conv = rk + "Mausoleum - Player " + journal + " Journal", Sets = "journalH={?NodeT:1:0}" })
@@ -317,7 +322,8 @@ namespace HexRevival
                 .Add("NodeJ", new Step { Conv = rk + "Etchings of the Lost Ones - Player " + journal + " Journal",
                     Enc = "{?NodeT:Ruins of Kukatan J-2 Etchings of the Lost Ones (Memory:Ruins of Kukatan J - Etchings of the Lost Ones}",
                     Success = rk + "Etchings of the Lost Ones - {?NodeT:Mini-game:Trap} Success", Fail = rk + "Etchings of the Lost Ones - {?NodeT:Mini-game:Trap} Fail", Reward = "kukatan/NodeJ" })
-                // A conversation room in the template, no K scene: its "Success" / "Fail" conversations are left out (PLACEHOLDER).
+                // A conversation room in the template, no K scene: its "Success" / "Fail" conversations are left out. Src.Video:
+                // KVC part 4 48:51 and part 9 48:58 show "Blind Hollow" and go straight on to the Black Hall.
                 .Add("NodeK", Talk(rk + "Blind Hollow"))
                 .Add("NodeO", Fight(rk, "The Overgrowth", "Ruins of Kukatan O - The Overgrowth", "kukatan/NodeO"))
                 .Add("NodeR", Fight(rk, "Lumbering Copse", "Ruins of Kukatan R - Lumbering Copse", "kukatan/NodeR"))
