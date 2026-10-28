@@ -361,9 +361,12 @@ namespace HexRevival
                   // Clicked, the panel opens in large with its text and the address its "Go" button opens.
                   .Append(",\"UseDetailText\":true,\"DetailTitleText\":").Append(Json(title)).Append(",\"DetailContentText\":").Append(Json(text + "\n\n" + url)).Append('}');
             };
+            // One announcement, the latest: a newer version when there is one, else this version's panel (the user, 1.2.5:
+            // both the 1.2.4 and the 1.2.5 panels were shown).
             if (NewVersion != null)
                 add("update", Loc.Get("news_update_title", NewVersion), Loc.Get("news_update_text", NewVersion, Version), NewVersionUrl);
-            add("project", Loc.Get("news_project_title", Version), Loc.Get("news_project_text"), RepoUrl);
+            else
+                add("project", Loc.Get("news_project_title", Version), Loc.Get("news_project_text"), RepoUrl);
             return sb.Append("]}").ToString();
         }
 

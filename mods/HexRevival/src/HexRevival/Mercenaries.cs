@@ -238,6 +238,33 @@ namespace HexRevival
             return Decks.FromTemplate(champ, t);
         }
 
+        /// <summary>
+        /// MercenaryTemplate ids of a champion's party (each at its upgrade level), for the party passives. The game adds
+        /// every party member's "Party:" abilities to the fighter's simulacrum card (AuthoritativeSessionBase.
+        /// InstantiateChampionCard / InstantiateMercenaryCard, partyMembers), a list the campaign server sent with the
+        /// battle; the local session loads the deck without it (StandaloneSession.HasDeckAndChampInfo returns false),
+        /// so no party passive was ever applied. Null if the champion has no party.
+        /// </summary>
+        public static List<ResourceId> PartyTemplateIds(ulong champ)
+        {
+            CampSysGeneral.Party.ChampionParty party;
+            if (!All.TryGetValue(champ, out party) || party.Members.Count == 0) return null;
+            List<ResourceId> res = new List<ResourceId>();
+            foreach (CampSysGeneral.Party.ChampionParty.ChampionPartyMember m in party.Members)
+            {
+                InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(m.Mercenary) as InventoryMercenaryData;
+                MercenaryTemplate t = data != null ? data.MercenaryTemplate : null;
+                for (int i = 0; t != null && i < m.Upgrade; i++)
+                {
+                    MercenaryTemplate up = MercenaryTemplate.GetUpgradeTemplate(t);
+                    if (up == null) break;
+                    t = up;
+                }
+                if (t != null) res.Add(t.Id);
+            }
+            return res.Count > 0 ? res : null;
+        }
+
         /// <summary>True for a mercenary's template (a deck whose champion is a mercenary is played by it).</summary>
         public static bool IsMercenary(ResourceId template)
         {
