@@ -19,7 +19,6 @@ namespace HexRevival
         private const string Cross = "az01_q_cross_the_river";
         private const string Cross2 = "az01_q_cross_the_river_part2";
         private const string Braves = "az01_three_braves";
-        private const string KrakenDungeon = "6b73c598-3b92-46ea-bd57-62ca564b2e57";   // Dungeons: "The Kraken"
 
         private static bool S(ulong c, string q) { return Quests.IsStarted(c, q); }
         private static bool F(ulong c, string q) { return Quests.IsFinished(c, q); }
@@ -101,7 +100,7 @@ namespace HexRevival
                 R("Masked Army - Step 2", c => S(c, "az01_q_usurper") || S(c, "az01_q_fort_romor")),
                 R("Masked Army - Step 1", c => true) } },
             // Dusk Hollow: White Hawk asks "Did you find what you were seeking?" once the Killipede is beaten in its lair
-            // (Src.Game dialogues; before 1.2.6 Step 1 every time).
+            // (Src.Game dialogues; before 1.2.6 Step 1 every time). Not seen on video: the trigger is inferred from the text.
             { "Node074", new[] {
                 R("White Hawk - Step 2", c => Quests.Flag(c, "won:Node078") != null),
                 R("White Hawk - Step 1", c => true) } },
@@ -111,19 +110,23 @@ namespace HexRevival
             { "Node006", new[] { R("Node 6 - Hag", c => true) } },
             // AZ2 (before 1.2.6 these nodes showed whichever dialogue came first, see the comments).
             // Milosh at the Road of Acorns: first meeting, then the repeat by fortune (was the first meeting every time).
+            // Src.Game names, as the AZ1 gaals; not seen on video.
             { "AZ2/Node012", new[] {
                 R("First encounter", c => Quests.Flag(c, "visited:AZ2/Node012") == null),
                 R("Repeat encounter (player already has fortune)", c => Fortunes.Has(c)),
                 R("Repeat encounter (no fortune)", c => true) } },
-            // Bleakwind Highlands: the mad villagers' corpses, gone once the Kraken is beaten (its dungeon done).
-            { "AZ2/Node016", new[] {
-                R("post-Kraken defeated", c => Quests.Flag(c, "dungeon:" + KrakenDungeon) != null),
-                R("Bleakwind Highlands", c => true) } },
-            // Scylla and Charybdis: Src.Video (MyHotStream Underworld 111th battle) shows "A horrid hydra lunges up from
-            // the waves..." before the battle, not the "Pre-" lines (both names ranked the same before 1.2.6).
-            { "AZ2/NodeB04", new[] { R("- Scylla", c => true) } },
-            { "AZ2/NodeB10", new[] { R("- Charybdis", c => true) } },
-            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open).
+            // Bleakwind Highlands: the mad villagers' corpses. Src.Video: shown before the Kraken (KVC part 1 1:55:47, MHS UW
+            // 2017-04-21 [CE1XOa4TyVw] 7:11) and still after it (MHS UW 2017-08-16 [H_u0T4fd7eE] 0:25; the Kraken died on
+            // 2017-06-16 [gqA50QebO1w]). "post-Kraken defeated" is in no run: not used (what armed it is unknown).
+            { "AZ2/Node016", new[] { R("Bleakwind Highlands", c => true) } },
+            // Scylla and Charybdis: the "Pre-" line and no battle until a sea quest is done, then the attack and the battle
+            // (sources: CampaignBoat.SeaMonstersAwake). Before 1.2.6 either line could be picked and the battle was always on.
+            { "AZ2/NodeB04", new[] { R("Pre-Scylla", c => !Campaign.SeaMonstersAwake(c)), R("- Scylla", c => true) } },
+            { "AZ2/NodeB10", new[] { R("Pre-Charybdis", c => !Campaign.SeaMonstersAwake(c)), R("- Charybdis", c => true) } },
+            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw
+            // it locked; "Step 2 - Player has Sapphire Key" at the first visit in MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26 and MHS
+            // Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt part 63 already past it. Every run had finished Gnomes Come
+            // Home before (Vincent: "Here, take this with you"), so the key may be that reward: not enough to lock the gate.
             { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {

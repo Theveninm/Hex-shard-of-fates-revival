@@ -148,8 +148,9 @@ namespace HexRevival
             { "crayburn/CastleGate", R(50, 100) },
             { "crayburn/TowerGate", R(50, 100) },
             { "crayburn/PenworthTower", R(0, 0) },
-            // The Tranquil Dream: by the fight's rank, not the creature (1st fight not read: PLACEHOLDER 125 / 125)
-            { "tranquildream/rank1", new Reward { Gold = 125, Xp = 125, Source = Src.Placeholder } },
+            // The Tranquil Dream: by the fight's rank, not the creature. 1st fight: Vandersveldt part 20 10:39 (Dream Eagle
+            // first, 75 gold, 100 XP + 10%); his later ranks match the table below (part 21: 150 XP, part 24: 125 / 200).
+            { "tranquildream/rank1", R(75, 100) },
             { "tranquildream/rank2", R(125, 150) },
             { "tranquildream/rank3", R(250, 175) },
             { "tranquildream/rank4", R(250, 200) },
@@ -178,17 +179,18 @@ namespace HexRevival
             { "smoldering/NodeD", R(350, 200) },
             { "smoldering/NodeF", R(450, 250) },
             { "smoldering/NodeG", new Reward { Gold = 650, Xp = 500, Packs = 1, PackName = "Smoldering Dead", Source = Src.Video } },
-            // Devonshire Keep: read for A, C, D, K, L; the others are PLACEHOLDER (between their neighbours)
+            // Devonshire Keep: A, C, D, K, L read earlier; E to J read on the reward windows in 1.2.6 (base values: the
+            // early runs add +10% XP, the Ardent run +25% gold, as separate lines). MHS = MyHotStream, UW = Underworld run.
             { "devonshire/NodeA", R(150, 125) },
             { "devonshire/NodeC", new Reward { Gold = 75, Xp = 200, Source = Src.Video } },
             { "devonshire/NodeD", R(400, 250) },
-            { "devonshire/NodeE", new Reward { Gold = 250, Xp = 225, Source = Src.Placeholder } },
-            { "devonshire/NodeF", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder } },
-            { "devonshire/NodeG", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder, Note = "XP 250: Src.Video" } },
-            { "devonshire/NodeH/1", new Reward { Gold = 250, Xp = 225, Source = Src.Placeholder } },
-            { "devonshire/NodeH/2", new Reward { Gold = 300, Xp = 250, Source = Src.Placeholder } },
-            { "devonshire/NodeI", new Reward { Gold = 350, Xp = 275, Source = Src.Placeholder } },
-            { "devonshire/NodeJ", new Reward { Gold = 400, Xp = 300, Source = Src.Placeholder } },
+            { "devonshire/NodeE", R(200, 200) },   // MHS UW 2017-02-03 [kUhRFXTLjCA] ~14:20; MHS Ardent 2017-05-30 [nlp0XWAQX4E] ~5:31
+            { "devonshire/NodeF", R(400, 250) },   // MHS UW 2017-02-15 [i66X6Mh3DF8] ~9:20; MHS Ardent 2017-06-06 [VkFfzk5QRIY] ~6:04
+            { "devonshire/NodeG", R(250, 250) },   // MHS UW 2017-02-03 [uRrIM_GMcbk] ~8:33; MHS Ardent 2017-06-06 [J9ZfbrBU8j8] ~5:46
+            { "devonshire/NodeH/1", R(500, 300) }, // MHS UW 2017-02-24 [1lT_emkLSD8] ~8:08; MHS Ardent 2017-06-06 [gSvm971vlL8] ~7:27
+            { "devonshire/NodeH/2", R(500, 300) }, // MHS UW 2017-02-24 [_X8hDS_BYl8] ~10:01
+            { "devonshire/NodeI", R(400, 300) },   // MHS UW 2017-02-24 [q82AYn1zoN0] ~11:13; MHS Ardent 2017-06-06 [1mv0S3pkJCk] ~7:52
+            { "devonshire/NodeJ", R(450, 350) },   // MHS Ardent 2017-06-13 [e38uMMZlwyc] ~6:37
             { "devonshire/NodeK", R(550, 400) },
             { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
 
@@ -502,7 +504,7 @@ namespace HexRevival
             // Dungeon quests: the dungeon packs are given once the dungeons are implemented (see docs/PROGRESSION.md)
             { "q_tranquil_dream", new Reward { Xp = 700, Packs = 1, PackName = "Tranquil Dream", Source = Src.Video } },
             { "az01_q_fort_romor", new Reward { Xp = 900, Packs = 1, PackName = "Fort Romor", Source = Src.Video, Note = "early 2016: also 1000 gold" } },
-            { "az01_q_usurper", new Reward { Xp = 900, Packs = 1, PackName = "The Usurper", Source = Src.Placeholder, Note = "not seen: as Fort Romor, the other faction's quest" } },
+            { "az01_q_usurper", new Reward { Gold = 375, Xp = 1000, Packs = 1, PackName = "The Usurper", Source = Src.Video, Note = "MHS Ardent 2017-03-22 [QPx3__eedOE] 13:20, turn-in to Sagebrush" } },
             { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
             // AZ2 (Src.Video, Underworld run): the Alachian Sea (Takumi; its card not identified), Petulant Picaroons
             // (Bonewalker), Brutecrown Bluff, the Kraken (Renner)

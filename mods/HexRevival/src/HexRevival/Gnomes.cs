@@ -13,6 +13,8 @@ namespace HexRevival
     ///   dialogue, a "Select Number of Gnomes" window ("Add any number of Lost Gnomes to your deck to help them cross the
     ///   desert. For every 3 Lost Gnomes you add to your deck, you will also automatically add 2 Primal Shards. If you add 0
     ///   Lost Gnomes to your deck, you can cross the desert without being attacked."), the client's CountPicker location.
+    /// - MHS UW 2016-10-30 [kuNNfgNZiN4]: 2:20 the map shows only the middle path, 2:40-5:00 Herbert's dialogue then the
+    ///   picker (0 to 20), 7:00 with 5 gnomes the routes appear with red battle nodes, 7:25 "Northwest Desert" dialogue.
     /// - With gnomes in tow, the desert's east and west routes appear and their wormoid nodes are battles (red, "blocked"),
     ///   fought again on every trip; the gnomes are cards of the deck. Without gnomes, those routes are not on the map:
     ///   only the middle path (Southern Stretch, Deep Desert, Northern Stretch) and its dialogues.
