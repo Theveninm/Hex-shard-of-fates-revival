@@ -42,6 +42,7 @@ namespace HexRevival
             public bool Taming;           // "Tame X and win match": needs a captured creature
             public string Creature;       // X of a taming objective ("Bubblebee")
             public string Title;          // objective text shown by the journal (English)
+            public string ScriptVar;      // Collect: the public variable the quest panel shows ("Current gnomes:N")
         }
 
         public class Def
@@ -147,7 +148,12 @@ namespace HexRevival
                         if (conv.m_ConversationIdOld.IsValid) ob.Conversations.Add(conv.m_ConversationIdOld.ToString());
                         if (conv.m_ConversationIdList != null) foreach (ResourceId c in conv.m_ConversationIdList) if (c.IsValid) ob.Conversations.Add(c.ToString());
                     }
-                    else ob.Kind = "Collect";
+                    else
+                    {
+                        ob.Kind = "Collect";
+                        QuestObjectiveCollect col = o as QuestObjectiveCollect;
+                        if (col != null) ob.ScriptVar = col.m_PublicScriptVar;
+                    }
                     string[] fix;
                     if (AZ2Objectives.TryGetValue(q.m_ScriptName + "|" + ob.LocId, out fix))
                         foreach (string name in fix)
@@ -329,6 +335,16 @@ namespace HexRevival
             if (d == null || p == null || p.Finished) return;
             for (int i = 0; i < d.Objectives.Count; i++)
                 if (d.Objectives[i].LocId == locId && !p.Done.Contains(i)) { Complete(champ, d, p, i); break; }
+        }
+
+        /// <summary>Sends an active quest's state again (its panel counters changed).</summary>
+        public static void Refresh(ulong champ, string script)
+        {
+            Def d = GetDef(script);
+            Progress p = Get(champ, script);
+            if (d == null || p == null || p.Finished) return;
+            try { NotifyUpdated(champ, d); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Quests] refresh " + script + ": " + e.Message); }
         }
 
         /// <summary>Index of the first objective not done (Objectives.Count when all are done).</summary>
@@ -571,7 +587,8 @@ namespace HexRevival
             {
                 if (i > last && !p.Done.Contains(i)) continue;
                 Objective o = d.Objectives[i];
-                if (o.LocId.EndsWith("_INFO")) continue; // counters (number of gnomes) are not tracked
+                // Counters ("Current gnomes:N") only for the quests that track them (Gnomes Come Home).
+                if (o.LocId.EndsWith("_INFO") && d.Script != Gnomes) continue;
                 Dictionary<string, object> l = new Dictionary<string, object>();
                 l["name"] = o.LocId;
                 l["node"] = o.LocId;
@@ -583,7 +600,11 @@ namespace HexRevival
                 gs.LocNodes.Add(new Node(o.LocId, new Dictionary<string, object> { { "id", o.LocId }, { "type", "DEFAULT" } }));
             }
             // The map's quest tracker only lists the quests of its own zone.
-            gs.PublicState = new QueryState(new Dictionary<string, object> { { "CampaignGroup", Array.IndexOf(AZ2Scripts, d.Script) >= 0 ? "AZ2" : "AZ1" } });
+            Dictionary<string, object> pub = new Dictionary<string, object> { { "CampaignGroup", Array.IndexOf(AZ2Scripts, d.Script) >= 0 ? "AZ2" : "AZ1" } };
+            if (d.Script == Gnomes)
+                foreach (Objective o in d.Objectives)
+                    if (o.Kind == "Collect" && !string.IsNullOrEmpty(o.ScriptVar)) pub[o.ScriptVar] = (long)HexRevival.Gnomes.Counter(champ, o.LocId);
+            gs.PublicState = new QueryState(pub);
             return gs;
         }
 
@@ -636,8 +657,6 @@ namespace HexRevival
 
         public const string Gnomes = "q_gnomes_come_home";
 
-        /// <summary>Gnomes Come Home: Herbert's team found and not yet back at the camp (they travel with the champion).</summary>
-        public static bool EscortingGnomes(ulong champ) { return DoneLoc(champ, Gnomes, "Step1") && !DoneLoc(champ, Gnomes, "Step2"); }
 
         public enum Role { None, Start, NotComplete, End, Repeat }
 
@@ -715,8 +734,8 @@ namespace HexRevival
             if (u.Contains("WINSTON - STEP 1")) Start(champ, "az01_q_cross_the_river");
             if (u.Contains("WALLACE - STEP 1")) Start(champ, "az01_q_cross_the_river_part2");
             if (u.Contains("ROBOT - STEP 1")) Start(champ, "az01_three_braves");
-            // Gnomes Come Home: Herbert's team brought back to the abandoned camp.
-            if (u.Contains("ABANDONED CAMP - STEP 4")) { CompleteLoc(champ, Gnomes, "Step2_INFO"); CompleteLoc(champ, Gnomes, "Step2"); }
+            // Gnomes Come Home: the gnomes in tow are home (all of them: Step 4).
+            if (u.Contains("ABANDONED CAMP - STEP 3") || u.Contains("ABANDONED CAMP - STEP 4")) HexRevival.Gnomes.Deliver(champ);
             if (u.Contains("WARREN - STEP 1A")) CompleteLoc(champ, "az01_q_cross_the_river_part2", "Step3");
             if (u.Contains("ROBOT - STEP 2 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step1B");
             if (u.Contains("ROBOT - STEP 3 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step2B");
@@ -739,6 +758,8 @@ namespace HexRevival
         {
             ulong champ = parts.Length > 2 && parts[1] == "of" ? ulong.Parse(parts[2]) : GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
             if (parts.Length > 2 && parts[1] == "start") { Start(champ, parts[2]); return "started " + parts[2]; }
+            // dev: "quest loc q_brutecrown_bluff Step1" completes one objective
+            if (parts.Length > 3 && parts[1] == "loc") { CompleteLoc(champ, parts[2], parts[3]); return parts[2] + " " + parts[3] + " done=" + DoneLoc(champ, parts[2], parts[3]); }
             if (parts.Length > 2 && parts[1] == "reset") { Of(champ).Remove(parts[2]); Save(); return "reset " + parts[2]; }
             // dev: "quest flag boat:points 3" sets a champion flag ("-" clears it)
             if (parts.Length > 3 && parts[1] == "flag") { SetFlag(champ, parts[2], parts[3] == "-" ? null : parts[3]); return parts[2] + " = " + Flag(champ, parts[2]); }

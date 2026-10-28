@@ -222,6 +222,19 @@ namespace HexRevival
             apply("AuthoritativeSessionBase.ActivateAbilityForPlayer (dev mode ability)", () =>
                 harmony.Patch(AccessTools.Method(typeof(AuthoritativeSessionBase), "ActivateAbilityForPlayer"), prefix: new HarmonyMethod(typeof(Hooks), "Session_ActivateAbilityForPlayer")));
 
+            // Campaign battles: the champion's party passives (the party list the campaign server gave the session).
+            apply("AuthoritativeSessionBase.InstantiateChampionCard / InstantiateMercenaryCard (party passives)", () =>
+            {
+                Type[] sig = { typeof(Game.Shared.Domain.champion_bits), typeof(Dictionary<string, int>), typeof(List<ResourceId>), typeof(Game.Shared.Player) };
+                harmony.Patch(AccessTools.Method(typeof(AuthoritativeSessionBase), "InstantiateChampionCard", sig), prefix: new HarmonyMethod(typeof(Hooks), "Session_PartyMembers"));
+                harmony.Patch(AccessTools.Method(typeof(AuthoritativeSessionBase), "InstantiateMercenaryCard", sig), prefix: new HarmonyMethod(typeof(Hooks), "Session_PartyMembers"));
+            });
+
+            // Campaign battles: cards added to the champion's deck (the gnomes in tow in the desert).
+            apply("AuthoritativeSessionBase.InstantiateDeck (campaign deck cards)", () =>
+                harmony.Patch(AccessTools.Method(typeof(AuthoritativeSessionBase), "InstantiateDeck", new[] { typeof(Game.Shared.Domain.deck_bits), typeof(Game.Shared.Player) }),
+                    postfix: new HarmonyMethod(typeof(Hooks), "Session_DeckExtras")));
+
             // Battle: a reveal window closed: the cards it showed from a deck go back to face down.
             apply("BattleStateCoverflow.OnHide (deck reveals)", () =>
                 harmony.Patch(AccessTools.Method(typeof(BattleStateCoverflow), "OnHide"),
@@ -553,6 +566,36 @@ namespace HexRevival
         }
 
         private static readonly ResourceId s_DevSeeHandAbility = new ResourceId("9642c879-a112-adae-1c2c-66aa9fcc63dc");
+
+        public static void Session_PartyMembers(Game.Shared.Domain.champion_bits championBits, ref List<ResourceId> partyMembers, Game.Shared.Player player)
+        {
+            try
+            {
+                if (partyMembers != null || championBits == null || player == null || player.IsAI()) return;
+                if (HexRevival.Campaign.BattleChampion == 0 || HexRevival.Campaign.BattleChampion != championBits.Id) return;
+                partyMembers = HexRevival.Mercenaries.PartyTemplateIds(championBits.Id);
+                if (partyMembers != null) UnityEngine.Debug.Log("[HexRevival] [Mercenaries] party passives of " + partyMembers.Count + " member(s)");
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] party passives: " + e.Message); }
+        }
+
+        public static void Session_DeckExtras(AuthoritativeSessionBase __instance, Game.Shared.Player player, List<Game.Shared.Mechanics.Card> __result)
+        {
+            try
+            {
+                if (__result == null || player == null || player.IsAI() || HexRevival.Campaign.BattleChampion == 0) return;
+                List<string> extras = HexRevival.Campaign.TakeDeckExtras();
+                foreach (string name in extras)
+                {
+                    Reckoning.Game.CardTemplate t = HexRevival.Opponents.CardByName(name);
+                    Game.Shared.Mechanics.Card c = t != null ? __instance.InternalCreateCard(t, false, player) : null;
+                    if (c != null) __result.Add(c);
+                    else UnityEngine.Debug.LogWarning("[HexRevival] campaign deck card not created: " + name);
+                }
+                if (extras.Count > 0) UnityEngine.Debug.Log("[HexRevival] [Campaign] " + extras.Count + " card(s) added to the deck");
+            }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] campaign deck cards: " + e.Message); }
+        }
 
         public static bool Session_ActivateAbilityForPlayer(ResourceId ability)
         {
