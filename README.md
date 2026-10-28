@@ -119,35 +119,42 @@ A Steam "Verify integrity of game files" does not remove the mod files, they are
 
 ## How faithful is the campaign?
 
-The original campaign ran on the game's servers, which are gone: the client files hold the maps,
-dialogues, encounters and quest templates, but not what the server decided (rewards, dungeon rules,
-some story branches). HEX Revival rebuilds these from the game's own data first, then from gameplay
-videos of 2016-2018 and community guides of the time. Every value and its source is listed in
-[docs/PROGRESSION.md](docs/PROGRESSION.md), where values chosen without a source are marked
-**PLACEHOLDER** and information that could not be found is marked as such. In short, what may differ
-from the original:
+The original campaign ran on the game's servers, which are gone: the client files hold the maps, dialogues,
+encounters and quest templates, but not what the server decided (rewards, which dialogue or battle a node shows
+at a given point of a quest, dungeon rules, some story branches). HEX Revival rebuilds these, in this order of
+trust:
 
-- **Rewards**: most gold, XP and item rewards were read on reward windows of videos; the rest are
-  estimates (PLACEHOLDER). The contents of campaign packs are drawn at random from the right card set,
-  with estimated rarity weights (AZ1 packs follow a community loot table of 2016). The starting gold and
-  the starter collection of a new account are estimates.
-- **The original changed over time** (2016-2018 patches): where videos disagree, the mod follows the
-  most recent client, except for the ship's hull (below).
-- **Not reproduced, information not found**: the optional "Challenge Completed" bonus of dungeon
-  battles (+100% gold; its condition was never shown on screen), the rare extra item "Pappy Jasper's
-  Whip" after some dungeons, the Kraken's Dark Chamber (+1 charge), mercenary leveling, the source of some mercenaries (not obtainable on progression accounts), and sea weather
-  effects (never seen in any video).
-- **Choices made without a source**: the ship's hull is kept from battle to battle during a voyage (the
-  game's own texts and client code say so, but late-2017 videos show a full hull at every sea battle);
-  dungeon bonus gold (25% from a run's second win until its first defeat) was deduced from videos;
-  some story branches never seen on video (the Great Machine Graveyard when Brutecrown Bluff was not
-  played, the Kraken's "Mayor Died" branch, Kukatan's Tomb of Omens) and the Sister Midnight form
-  thresholds for Cunning and Instinct are estimates.
-- **Dungeon boons** (Kraken library and armory, Kukatan coins and berries, the Graveyard's Mega-Bot)
-  use the game's own effect cards, but how and when the server added them is reconstructed.
+1. **The game's own data** (maps, conversations, encounters, quest templates, cards, effect cards).
+2. **Gameplay videos of 2016-2018**, five channels and seven runs of different champions (Vandersveldt,
+   MyHotStream's Underworld and Ardent runs, KVC, JBStevenson, Amaz): reward windows, battles, dialogues and map
+   screens. They were indexed, their dialogue boxes read and matched to the game's conversations, and each battle
+   tied to its node and opponent, so a behaviour can be checked against what the original server actually did.
+3. **Community guides and wikis of the time.**
 
-Corrections backed by a source (a video, a screenshot, a guide of the time) are welcome: please open
-an issue.
+What is left is marked **PLACEHOLDER** (a value or behaviour chosen without a source). In short:
+
+- **From the videos (sourced)**: almost every campaign and dungeon battle's gold, XP and item reward, the quest
+  rewards, which battle each node gives for each faction, the gnome escort of the Howling Plains desert, the
+  Scylla and Charybdis encounters, the Tranquil Dream rooms and Sister Midnight's forms seen, the dungeon bonus
+  gold, the mercenaries' rewards, the sea voyages and ship talent points. Each decision names its video
+  (run, date, time) in [docs/PLACEHOLDERS.md](docs/PLACEHOLDERS.md) and in the code.
+- **Inferred from the game data only** (never filmed): White Hawk's second dialogue, Milosh's repeat visits on
+  the Road of Acorns, the order of the Brutecrown Delta quest giver's dialogues.
+- **Still PLACEHOLDER**:
+  - **Campaign:** the Sapphire Gate key (the gate is open), when exactly Scylla and Charybdis start attacking,
+    two battle rewards never seen on video (Finanif, the Tomb of Omens), Sister Midnight's two unseen forms,
+    which gaal fortune is drawn, talent points per level, the AZ2 map battles without a reward on video.
+  - **Account and loot:** the starting gold and collection of a new account, and the rarity weights of campaign
+    packs (AZ1 packs follow a community loot table of 2016).
+- **Not reproduced (information not found)**: the dungeons' optional "Challenge Completed" bonus, the rare "Pappy
+  Jasper's Whip", the Kraken's Dark Chamber (+1 charge), mercenary leveling, the source of some mercenaries, sea
+  weather effects.
+- **The original changed over time** (2016-2018 patches): where videos disagree, the mod follows the most recent
+  client, except for the ship's hull (kept from battle to battle during a voyage, as the game's texts say).
+
+Every value and its source: [docs/PROGRESSION.md](docs/PROGRESSION.md); every placeholder, what settled the others
+and what each open point is waiting for: [docs/PLACEHOLDERS.md](docs/PLACEHOLDERS.md). Corrections backed by a
+source (a video, a screenshot, a guide of the time) are welcome: please open an issue.
 
 ## Known limitations
 
@@ -158,7 +165,7 @@ an issue.
 
 To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
 blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
-taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck), **KrystoferRobin** (the mercenary slots of the battle
+taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns), **KrystoferRobin** (the mercenary slots of the battle
 panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
 champion creation and selection hang).
 
