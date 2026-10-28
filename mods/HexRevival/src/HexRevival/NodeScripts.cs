@@ -83,19 +83,50 @@ namespace HexRevival
             { "Node057", new[] {
                 R("Lost Gnomes - Step 1", c => S(c, Quests.Gnomes) && !D(c, Quests.Gnomes, "Step1")),
                 R("Lost Gnomes - Step 2", c => true) } },
+            // South camp: Herbert thanks for the last gnomes (Step 4) or waits for the others (Step 3), see Gnomes.
             { "Node053", new[] {
-                R("Abandoned Camp - Step 4", c => Quests.EscortingGnomes(c)),
+                R("Abandoned Camp - Step 4", c => Gnomes.Carried(c) > 0 && Gnomes.Delivered(c) + Gnomes.Carried(c) >= Gnomes.Total),
+                R("Abandoned Camp - Step 3", c => Gnomes.Carried(c) > 0),
                 R("Abandoned Camp - Step 2", c => Quests.Flag(c, "visited:Node053") != null),
                 R("Abandoned Camp - Step 1", c => true) } },
+            // Deep Desert: the Wormoid Queen fights gnomes in tow; once all are home she stays a one-time battle.
             { "Node055", new[] {
-                R("Gnomes In Deck (Fight)", c => Quests.EscortingGnomes(c)),
+                R("Gnomes In Deck (Fight)", c => Gnomes.Carried(c) > 0),
+                R("Wormoid Queen Surfaces", c => Gnomes.AllHome(c)),
                 R("No Gnomes In Deck", c => true) } },
             // Masked Army at the Vale of Oberon: the way south needs the faction's quest (Usurper / Fort Romor).
             { "Node00R", new[] {
                 R("Masked Army - Step 3", c => F(c, "az01_q_usurper") || F(c, "az01_q_fort_romor")),
                 R("Masked Army - Step 2", c => S(c, "az01_q_usurper") || S(c, "az01_q_fort_romor")),
                 R("Masked Army - Step 1", c => true) } },
-            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open).
+            // Dusk Hollow: White Hawk asks "Did you find what you were seeking?" once the Killipede is beaten in its lair
+            // (Src.Game dialogues; before 1.2.6 Step 1 every time). Not seen on video: the trigger is inferred from the text.
+            { "Node074", new[] {
+                R("White Hawk - Step 2", c => Quests.Flag(c, "won:Node078") != null),
+                R("White Hawk - Step 1", c => true) } },
+            // Horwich Sea: the hag's opening lines. Src.Video: every fight seen (Vandersveldt parts 18, 19, 29, 30; MHS
+            // Ardent 2017-02-07) opens with "Hag" and plays "Daphne in Distress"; "Princess Revert" and the "No Frog" scene
+            // appear in no run. Before 1.2.6 either opening could be picked (both names rank the same).
+            { "Node006", new[] { R("Node 6 - Hag", c => true) } },
+            // AZ2 (before 1.2.6 these nodes showed whichever dialogue came first, see the comments).
+            // Milosh at the Road of Acorns: first meeting, then the repeat by fortune (was the first meeting every time).
+            // Src.Game names, as the AZ1 gaals; not seen on video.
+            { "AZ2/Node012", new[] {
+                R("First encounter", c => Quests.Flag(c, "visited:AZ2/Node012") == null),
+                R("Repeat encounter (player already has fortune)", c => Fortunes.Has(c)),
+                R("Repeat encounter (no fortune)", c => true) } },
+            // Bleakwind Highlands: the mad villagers' corpses. Src.Video: shown before the Kraken (KVC part 1 1:55:47, MHS UW
+            // 2017-04-21 [CE1XOa4TyVw] 7:11) and still after it (MHS UW 2017-08-16 [H_u0T4fd7eE] 0:25; the Kraken died on
+            // 2017-06-16 [gqA50QebO1w]). "post-Kraken defeated" is in no run: not used (what armed it is unknown).
+            { "AZ2/Node016", new[] { R("Bleakwind Highlands", c => true) } },
+            // Scylla and Charybdis: the "Pre-" line and no battle until a sea quest is done, then the attack and the battle
+            // (sources: CampaignBoat.SeaMonstersAwake). Before 1.2.6 either line could be picked and the battle was always on.
+            { "AZ2/NodeB04", new[] { R("Pre-Scylla", c => !Campaign.SeaMonstersAwake(c)), R("- Scylla", c => true) } },
+            { "AZ2/NodeB10", new[] { R("Pre-Charybdis", c => !Campaign.SeaMonstersAwake(c)), R("- Charybdis", c => true) } },
+            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw
+            // it locked; "Step 2 - Player has Sapphire Key" at the first visit in MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26 and MHS
+            // Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt part 63 already past it. Every run had finished Gnomes Come
+            // Home before (Vincent: "Here, take this with you"), so the key may be that reward: not enough to lock the gate.
             { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {

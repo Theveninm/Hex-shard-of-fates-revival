@@ -113,6 +113,20 @@ namespace HexRevival
                     && Quests.DoneLoc(st.ChampId, q, "Fight2") && Quests.DoneLoc(st.ChampId, q, "Fight3");
         }
 
+        /// <summary>
+        /// Scylla (NodeB04) and Charybdis (NodeB10) attack once one of the harbor master's sea quests is done; before, their
+        /// node only shows the "Pre-" line ("you feel a disturbing presence from beneath your ship") and no battle.
+        /// Src.Video: KVC part 14: Pre-Scylla 6:36 (1st voyage), Pre-Charybdis 32:51 and Pre-Scylla 34:54 (2nd voyage),
+        /// the pirates quest turned in at the port 35:11, then Scylla attacks 35:27 and Charybdis 45:55; MHS Ardent
+        /// 2017-10-31 [gxLgn727nbo] 0:31 Pre-Scylla on its first sea battles; MHS UW attacked 2017-08-18 [PMOIGQyKfLo] and
+        /// 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage".
+        /// </summary>
+        internal static bool SeaMonstersAwake(ulong champ)
+        {
+            foreach (string q in SeaQuests) if (Quests.IsFinished(champ, q)) return true;
+            return false;
+        }
+
         /// <summary>Location of a harbor or sea node (d: the location being built).</summary>
         private static void ShipLocation(CampState st, MapNode n, Dictionary<string, object> d)
         {

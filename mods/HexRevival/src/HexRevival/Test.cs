@@ -1224,6 +1224,17 @@ namespace HexRevival
                             sb.Append("  flags: seeOppHand=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeOpponentsHand))
                               .Append(" seeTop=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeTopOfDeck))
                               .Append(" seeUnder=").Append(owner.m_ChampionCard.GetCardContext().GetBool(IntAttrs.CanSeeUndergroundTroops)).Append('\n');
+                            if (owner.m_SimulacrumCard != null)
+                            {
+                                sb.Append("  simulacrum (party passives) in ").Append(owner.m_SimulacrumCard.m_CurrentCardCollection).Append(':');
+                                foreach (ResourceId a in owner.m_SimulacrumCard.CurrentAbilities)
+                                {
+                                    AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a);
+                                    sb.Append(" [").Append(at != null ? (at.m_GameText ?? at.m_Name).Replace("\n", " ") : a.ToString()).Append(']');
+                                }
+                                sb.Append('\n');
+                            }
+                            else sb.Append("  no simulacrum card\n");
                             try
                             {
                                 sb.Append("  affecting champion:");
