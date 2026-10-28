@@ -1107,8 +1107,8 @@ namespace HexRevival
         /// <summary>
         /// Effect cards for the run's next battle: its boons, and in the Great Machine Graveyard the repaired robot
         /// ("assistance subroutines", Src.Game) with the weapons installed: Robot Helper (Basic / Shield / Bopper /
-        /// Cannon ... / Maxed), Mega-Bot 1000 to 8000. Which battles the robot joined: PLACEHOLDER, every battle once
-        /// it is assembled (Assembly Yard).
+        /// Cannon ... / Maxed), Mega-Bot 1000 to 8000. The robot joins every battle once it is assembled (Assembly Yard):
+        /// Src.Video, KVC part 3, the Mega-Bot 1000, then 3000, 5000, 8000 card in every battle after the repair and each weapon.
         /// </summary>
         private static List<string> Effects(Run r)
         {
