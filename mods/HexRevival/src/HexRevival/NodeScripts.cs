@@ -105,8 +105,9 @@ namespace HexRevival
             { "Node074", new[] {
                 R("White Hawk - Step 2", c => Quests.Flag(c, "won:Node078") != null),
                 R("White Hawk - Step 1", c => true) } },
-            // Horwich Sea: the hag's opening lines; "Princess Revert" goes with the "No Frog" rematch, which the mod does
-            // not use (open point), so it must not be picked by chance (both names rank the same).
+            // Horwich Sea: the hag's opening lines. Src.Video: every fight seen (Vandersveldt parts 18, 19, 29, 30; MHS
+            // Ardent 2017-02-07) opens with "Hag" and plays "Daphne in Distress"; "Princess Revert" and the "No Frog" scene
+            // appear in no run. Before 1.2.6 either opening could be picked (both names rank the same).
             { "Node006", new[] { R("Node 6 - Hag", c => true) } },
             // AZ2 (before 1.2.6 these nodes showed whichever dialogue came first, see the comments).
             // Milosh at the Road of Acorns: first meeting, then the repeat by fortune (was the first meeting every time).
