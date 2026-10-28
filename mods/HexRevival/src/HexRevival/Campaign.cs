@@ -100,6 +100,10 @@ namespace HexRevival
             NumberAlias = new Dictionary<string, string> { { "Node00Z", "99B" }, { "Node00B", "BA" }, { "NodeB0X", "B0XA" } },
             // Wakuna's givers are the Ardent's (Belarius, Blue Sparrow...), Naagaan's the Underworld's (Takumi, Renner...).
             HubFaction = new Dictionary<string, EFactions> { { "Node007", EFactions.Aria }, { "Node027", EFactions.Underworld } },
+            // The other faction's town is not on the map (mornox, 1.2.5: an Underworld champion could enter Wakuna). Src.Game:
+            // every conversation of Wakuna is an Ardent giver's, every one of Naagaan an Underworld giver's; Src.Video: no run
+            // entered the other faction's town (the Underworld runs stopped at Wakuna Ridge, the Ardent ones at the Deathless Path).
+            NodeFaction = new Dictionary<string, EFactions> { { "Node007", EFactions.Aria }, { "Node027", EFactions.Underworld } },
             // Hubs: Wakuna (coyotle) and Naagaan (necrotic), the client's AZ2 panorama bundles.
             Panoramas = new Dictionary<string, string[]>
             {
@@ -184,7 +188,7 @@ namespace HexRevival
                 if (n.Dungeon != null) { n.Type = "Dungeon"; n.Encounter = null; n.Conversation = null; n.RepeatConversation = null; }
                 z.Nodes.Add(n);
             }
-            if (z == AZ1) AddFactionNodes(z, tm);
+            if (z == AZ1) { AddFactionNodes(z, tm); AddFactionBattles(z, tm); }
 
             // Paths: the map prefab holds one object per path, named "Path_NodeA_NodeB".
             try
@@ -275,15 +279,55 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Zombie blockade at Brink Ridge (Src.Video: the Ardent champion fought a Barricade Zombie there after
-        /// the Smoldering Dead; Src.Game: scenes "NODE 19B - ZOMBIE BLOCKADE", variants B1-B3 unused:
-        /// PLACEHOLDER). Its encounter while it is to be fought, else null.
+        /// AZ1 map nodes whose battle is a faction variant lettered in its scene name ("NODE 45A", "NODE 75 A"): the node
+        /// matcher reads "45A" as another node's number, so these nodes were plain dialogues that paid and closed
+        /// without a fight (mornox, 1.2.5). The faction of each variant: Src.Game, the node's dialogues ("Node 75 -
+        /// Ardent battle (Elimination Specialist)", the scene's AI champion; "Node 45 - Burk heart - Ardent player
+        /// success": "the shin'hare leader") and Src.Video: Necrophage Sensei at 45A (MHS Ardent 2017-01-25 [a3X1p9SvKf4]
+        /// 1:42), Elimination Specialist at 75A (MHS Ardent 2017-03-29 [ytaen0OMjSE]), Ashwood Maestro at 45B (MHS UW
+        /// 2016-10-23 [6L52zeXgbNs]; Vandersveldt part 37 1:00), Earthcaller at 75B (MHS UW 2017-01-18 [fDrPyIMTtfI]).
+        /// Dev "camp battleaudit" lists any numbered battle scene the map does not use.
         /// </summary>
+        private static readonly Dictionary<string, string[]> FactionBattles = new Dictionary<string, string[]>
+        {
+            { "Node045", new[] { "AR", "AZ 1 - NODE 45A - WOUNDED PETAL SHIN", "UW", "AZ 1 - NODE 45B - ELVES" } },
+            { "Node075", new[] { "AR", "AZ 1 - NODE 75 A - DWARVEN DIGGERS", "UW", "AZ 1 - NODE 75 B - COYOTLE DIGGERS" } },
+        };
+
+        private static void AddFactionBattles(Zone z, TemplateManager tm)
+        {
+            foreach (KeyValuePair<string, string[]> kv in FactionBattles)
+            {
+                MapNode n = z.Nodes.Find(x => x.Id == kv.Key);
+                if (n == null) continue;
+                n.Variants = new Dictionary<string, string>();
+                for (int i = 0; i + 1 < kv.Value.Length; i += 2)
+                {
+                    SceneData sd = null;
+                    foreach (SceneData sc in tm.CampaignScenes.Values)
+                        if (sc is EncounterScene && sc.m_Name != null && string.Equals(sc.m_Name.Trim(), kv.Value[i + 1], StringComparison.OrdinalIgnoreCase)) { sd = sc; break; }
+                    if (sd == null) { Debug.LogError("[HexRevival] [Campaign] " + kv.Key + ": no scene " + kv.Value[i + 1]); continue; }
+                    n.Variants[kv.Value[i]] = sd.m_Id.ToString();
+                    if (n.Encounter == null) n.Encounter = sd.m_Id.ToString();
+                }
+                if (n.Encounter != null) { n.Type = "Encounter"; n.Conversation = null; }
+            }
+        }
+
+        /// <summary>
+        /// Zombie blockade at Brink Ridge (Src.Video: the Ardent champion fought a Barricade Zombie there after
+        /// the Smoldering Dead, MHS Ardent 2017-05-16 [FoOAf3QKgC4] 0:25). Src.Game: scenes "NODE 19B" (Forest board)
+        /// and "19B1" to "19B3" (CastleExterior board), the same deck and "Vigor Mortis" challenge. The video's board is
+        /// the castle one (the board of the Charred Zombies, MHS Ardent 2017-05-24 [xfp7pFEOm8c]), not the forest of the
+        /// Human Guard at the same node (MHS Ardent 2017-04-14 [at8xqeXz7zI]): 19B1. Before 1.2.6: 19B.
+        /// Its encounter while it is to be fought, else null.
+        /// </summary>
+        private const string ZombieBlockadeScene = "751ca760-fcf7-42ca-8d6f-e3d169abb8f0";   // AZ 1 - NODE 19B1 - ZOMBIE BLOCKADE
+
         private static string ZombieBlockade(ulong champ)
         {
             if (Quests.Flag(champ, "dungeon:a8d2ad0e-306e-4d07-9cd1-e4d7c82cdf1c") == null || Quests.Flag(champ, "won:Node019B") != null) return null;
-            MapNode b = FindNode(AZ1, "Node019B");
-            return b != null ? b.Encounter : null;
+            return ZombieBlockadeScene;
         }
 
         /// <summary>Saves made before 1.2.3: a taming battle won without the creature was closed for good; it opens again.</summary>
@@ -308,9 +352,19 @@ namespace HexRevival
         {
             champion_bits c = Champions.Get(champ);
             string f = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
+            // The desert's wormoids attack only gnomes in tow (and stay as one-time battles once all are home), see Gnomes.
+            if (n.Z == AZ1 && !Gnomes.IsFight(champ, n.Id)) return null;
+            // Scylla and Charybdis only lurk ("Pre-Scylla") until a sea quest is done, see CampaignBoat.SeaMonstersAwake.
+            if (n.Z == AZ2 && (n.Id == "NodeB04" || n.Id == "NodeB10") && !SeaMonstersAwake(champ)) return null;
+            return EncFor(n, f, Quests.Flag(champ, "choice:" + n.Key));
+        }
+
+        /// <summary>The node's battle for a faction ("UW" / "AR") and the dialogue event chosen there (null if none).</summary>
+        private static string EncFor(MapNode n, string f, string evt)
+        {
             if (n.FactionOnly != null && n.FactionOnly != f) return null;
             if (n.Variants == null) return n.Encounter;
-            string v, evt = Quests.Flag(champ, "choice:" + n.Key);
+            string v;
             if (evt != null && n.Variants.TryGetValue(evt, out v)) return v;   // a dialogue event (Mancubus / Succubus)
             string choice = evt == "choice_NoHelp" ? "nohelp" : "help";
             return n.Variants.TryGetValue(f + ":" + choice, out v) || n.Variants.TryGetValue(f, out v) ? v : n.Encounter;
@@ -447,10 +501,46 @@ namespace HexRevival
                 if (Quests.MatchesChampion(c.m_Name, champ)) convs.Add(new KeyValuePair<string, string>(c.m_Name, c.m_Id.ToString()));
             string picked = NodeScripts.Pick(champ, n.Key, convs);
             if (picked != null) return picked;
+            bool open;
+            picked = MapGiver(champ, n, out open);
+            if (picked != null) return picked;
             ConversationTemplate best = null;
             foreach (ConversationTemplate c in NodeConvs(n))
                 if (Quests.MatchesChampion(c.m_Name, champ) && !IsOutcome(c.m_Name) && (best == null || ConversationRank(c.m_Name) < ConversationRank(best.m_Name))) best = c;
             return best == null ? n.Conversation : best.m_Id.ToString();
+        }
+
+        /// <summary>
+        /// AZ2 quest givers on the map (Brutecrown Delta: Belarius / Takumi at McGinty Coast), in the hubs' order: the
+        /// turn-in when ready, the quest start, the "repeating until ..." / "not complete" one while the quest runs, then
+        /// after it the repeat or the end. Src.Game: "Node 57A - ... Quest Start", "Node 57A - ... repeating until dungeon
+        /// complete", "Node 57B - ... Quest End". Before 1.2.6 the map always showed "Quest Start" (lowest rank), so the
+        /// quest could not be turned in. Not seen on video (no run filmed McGinty Coast); the hubs' order is Src.Game logic.
+        /// open: the node stays repeatable (quest to start, running or to turn in).
+        /// </summary>
+        private static string MapGiver(ulong champ, MapNode n, out bool open)
+        {
+            open = false;
+            if (n.Z == AZ1) return null;   // AZ1's map givers have NodeScripts rules
+            ConversationTemplate pick = null; int rank = 99;
+            foreach (ConversationTemplate c in NodeConvs(n))
+            {
+                if (!Quests.MatchesChampion(c.m_Name, champ)) continue;
+                string q = Quests.QuestOf(c.m_Name);
+                Quests.Role r = Quests.RoleOf(c.m_Name);
+                if (q == null || r == Quests.Role.None) continue;
+                bool started = Quests.IsStarted(champ, q), finished = Quests.IsFinished(champ, q);
+                bool until = c.m_Name.ToUpperInvariant().Contains("REPEATING UNTIL");
+                int cr = 99;
+                if (r == Quests.Role.End && Quests.TurnInReady(champ, q, c.m_Id.ToString())) cr = 0;
+                else if (r == Quests.Role.Start && !started && Quests.CanStart(champ, q)) cr = 1;
+                else if ((r == Quests.Role.NotComplete || until) && started && !finished) cr = 2;
+                else if (r == Quests.Role.Repeat && !until && finished) cr = 3;
+                else if (r == Quests.Role.End && finished) cr = 4;
+                if (cr < rank) { rank = cr; pick = c; }
+            }
+            open = rank <= 2;
+            return pick != null ? pick.m_Id.ToString() : null;
         }
 
         /// <summary>
@@ -890,7 +980,7 @@ namespace HexRevival
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
             foreach (MapNode n in st.Z.Nodes)
             {
-                bool visible = st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n);
+                bool visible = st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n) && !(n.Z == AZ1 && Gnomes.Hidden(st.ChampId, n.Id));
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["name"] = n.Name;
                 d["node"] = n.Id;
@@ -932,7 +1022,9 @@ namespace HexRevival
                     {
                         string conv = NodeConversation(st.ChampId, n);
                         if (conv != null) d["conversationId"] = conv;
-                        if (NodeScripts.HasRules(n.Key) && st.Completed.Contains(n.Id))
+                        bool giverOpen;
+                        MapGiver(st.ChampId, n, out giverOpen);
+                        if ((NodeScripts.HasRules(n.Key) || giverOpen) && st.Completed.Contains(n.Id))
                         {
                             d["completed"] = false;
                             d["repeatable"] = true;
@@ -980,6 +1072,18 @@ namespace HexRevival
                     d["selection-type"] = "Shroomkin_Haus";
                     d["selection-desc"] = "Shroomkin_Instructions";
                 }
+                if (n.Z == AZ1 && n.Id == "Node057" && st.ALoc == n.Name && Quests.Flag(st.ChampId, "gnomes:pick") != null)
+                {
+                    // Herbert's dialogue done: the game's "Select Number of Gnomes" window (location type CountPicker, its
+                    // bounds read from the public state).
+                    d["type"] = "CountPicker";
+                    d.Remove("conversationId");
+                    d["completed"] = false;
+                    d["autostart"] = true;
+                    d["min_var"] = "/GnomesMin";
+                    d["max_var"] = "/GnomesMax";
+                    d["count_var"] = "/GnomesCount";
+                }
                 ShipLocation(st, n, d);
                 gs.VisLocs.Add(new Location(d));
                 Dictionary<string, object> nd = new Dictionary<string, object>();
@@ -1016,6 +1120,12 @@ namespace HexRevival
             pub["visited_nodes"] = new List<object>(st.VisitedNodes.ToArray());
             pub["visited_paths"] = new List<object>(st.VisitedPaths.ToArray());
             pub["quest_nodes"] = new List<object>();
+            if (st.Z == AZ1)
+            {
+                pub["GnomesMin"] = 0L;
+                pub["GnomesMax"] = (long)Gnomes.Waiting(st.ChampId);
+                pub["GnomesCount"] = (long)Gnomes.Waiting(st.ChampId);
+            }
             AddShipState(st, gs, pub);
             gs.PublicState = new QueryState(pub);
             return gs;
@@ -1461,8 +1571,6 @@ namespace HexRevival
                     if (active != null && EncOf(st.ChampId, active) != null && !st.Completed.Contains(active.Id)
                         && Prelude(st.ChampId, active) != null && Quests.Flag(st.ChampId, "prelude:" + active.Key) == null)
                     {
-                        // Without Herbert's gnomes the wormoid queen stays underground: nothing to fight (Src.Game dialogue).
-                        if (ConvName(Prelude(st.ChampId, active)).ToUpperInvariant().Contains("NO GNOMES IN DECK")) { st.ALoc = null; break; }
                         // Prelude seen: the battle comes next, unless the player avoided it (sneak past, bribe).
                         Quests.SetFlag(st.ChampId, "prelude:" + active.Key, "1");
                         string choice = Quests.Flag(st.ChampId, "choice:" + active.Key);
@@ -1485,9 +1593,21 @@ namespace HexRevival
                         st.ALoc = null;
                     }
                     break;
+                case "count_choice":
+                    if (active != null && active.Z == AZ1 && active.Id == "Node057" && Quests.Flag(st.ChampId, "gnomes:pick") != null)
+                    {
+                        // Number of gnomes chosen: they travel with the champion; the wormoid battles are armed for the trip.
+                        int count;
+                        if (!int.TryParse(arg0, out count)) count = 0;
+                        foreach (string w in Gnomes.Pick(st.ChampId, count)) st.Completed.Remove(w);
+                        Quests.SetFlag(st.ChampId, "gnomes:pick", null);
+                        Complete(st, active);
+                        st.ALoc = null;
+                        break;
+                    }
+                    goto case "empty_done";
                 case "empty_done":
                 case "display_done":
-                case "count_choice":
                 case "accept":
                 {
                     // Conversation just shown (computed before the node is completed: the rules depend on it).
@@ -1522,6 +1642,12 @@ namespace HexRevival
                             Quests.OnAreaConversationDone(st.ChampId, active.Key, ct.m_Name);
                             // AZ2 turn-ins on the map (Brutecrown Delta's "Quest End"): the quest named
                             Quests.OnConversationDone(st.ChampId, convId, st.Z != AZ1 && Quests.RoleOf(ct.m_Name) == Quests.Role.End ? Quests.QuestOf(ct.m_Name) : null);
+                        }
+                        if (active.Z == AZ1 && active.Id == "Node057" && Gnomes.PickerDue(st.ChampId))
+                        {
+                            // Herbert's camp: the number of gnomes to take comes next (the location stays active).
+                            Quests.SetFlag(st.ChampId, "gnomes:pick", "1");
+                            st.ALoc = active.Name;
                         }
                     }
                     break;
@@ -1604,8 +1730,20 @@ namespace HexRevival
         /// <summary>Encounter of the battle in progress (the node's own, a variant, or a dialogue's fight).</summary>
         private static string s_BattleEnc;
 
+        /// <summary>Cards added to the human's deck in the next campaign battle (the gnomes in tow), taken once by the session.</summary>
+        private static readonly List<string> s_DeckExtras = new List<string>();
+
+        public static List<string> TakeDeckExtras()
+        {
+            List<string> res = new List<string>(s_DeckExtras);
+            s_DeckExtras.Clear();
+            return res;
+        }
+
         private static void StartBattle(CampState st, MapNode node, string encounter)
         {
+            s_DeckExtras.Clear();
+            if (node.Z == AZ1) s_DeckExtras.AddRange(Gnomes.DeckCards(st.ChampId, node.Id));
             BattleDifficulty = s_Difficulty;
             s_BattleNode = node.Id;
             s_BattleEnc = encounter;
@@ -1944,6 +2082,54 @@ namespace HexRevival
                 ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
                 Fortunes.Buy(champ);
                 return "fortune " + Quests.Flag(champ, "fortune");
+            }
+            if (sub == "battleaudit")
+            {
+                // dev: per map node, the battle the mod gives each faction, and every battle scene of the game data whose
+                // name carries the node's number (with or without a variant letter): an unused one is a battle the mod misses.
+                TemplateManager tm = Singleton<TemplateManager>.Instance;
+                StringBuilder sb = new StringBuilder();
+                Func<string, string> sceneName = id =>
+                {
+                    if (id == null) return "-";
+                    SceneData sd;
+                    return tm.CampaignScenes.TryGetValue(new ResourceId(id), out sd) && sd != null ? sd.m_Name : id;
+                };
+                foreach (Zone z in new[] { AZ1, AZ2 })
+                {
+                    BuildMap(z);
+                    foreach (MapNode n in z.Nodes)
+                    {
+                        string number = NumberOf(n);
+                        HashSet<string> used = new HashSet<string>();
+                        List<string> modLines = new List<string>();
+                        foreach (string f in new[] { "UW", "AR" })
+                            foreach (string evt in new[] { null, "choice_NoHelp" })
+                            {
+                                string e = EncFor(n, f, evt);
+                                if (e != null) used.Add(e);
+                                if (evt == null || (n.Variants != null && e != EncFor(n, f, null))) modLines.Add(f + (evt != null ? "/nohelp" : "") + "=" + sceneName(e));
+                            }
+                        if (n.Variants != null) foreach (string v in n.Variants.Values) used.Add(v);
+                        if (n.FightEncounter != null) used.Add(n.FightEncounter);
+                        List<string> cand = new List<string>();
+                        if (number != null)
+                            foreach (SceneData sd in tm.CampaignScenes.Values)
+                            {
+                                EncounterScene es = sd as EncounterScene;
+                                if (es == null || !OfflineMenu.IsBattle(es, tm)) continue;
+                                string nn = NameNumber(es.m_Name, z.Prefix);
+                                bool mine = SceneBelongs(n, es, number) || (nn != null && nn.Length == number.Length + 1 && nn.StartsWith(number)
+                                    && char.IsLetter(nn[nn.Length - 1]) && !z.NodeNumbers.Contains(nn));
+                                if (!mine) continue;
+                                cand.Add((used.Contains(es.m_Id.ToString()) ? "used   " : "UNUSED ") + es.m_Name);
+                            }
+                        sb.AppendLine(z.Key + " " + n.Id + " '" + n.Name + "' " + n.Type + (n.Dungeon != null ? " dungeon" : "") + " | " + string.Join(" ; ", modLines.ToArray()));
+                        foreach (string c in cand) sb.AppendLine("    " + c);
+                    }
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalBattleAudit.txt"), sb.ToString());
+                return "written HexRevivalBattleAudit.txt";
             }
             if (sub == "nodeaudit")
             {
@@ -2336,6 +2522,24 @@ namespace HexRevival
                     InventoryCardPack p = it as InventoryCardPack;
                     if (p != null) sb.AppendLine("pack " + p.m_Id + " " + p.m_CardPackType + " '" + p.m_Name + "' set=" + p.m_SetId);
                 }
+                return sb.ToString();
+            }
+            if (sub == "convpick")
+            {
+                // dev: per node, the conversations it has and the one shown now to the current champion (prelude for a
+                // battle), to spot state-dependent dialogues with no rule ("camp convpick AZ2")
+                BuildMap(cz);
+                ulong me = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
+                StringBuilder sb = new StringBuilder();
+                foreach (MapNode n in cz.Nodes)
+                {
+                    List<ConversationTemplate> l = NodeConvs(n);
+                    if (l.Count < 2) continue;
+                    string shown = EncOf(me, n) != null ? Prelude(me, n) : NodeConversation(me, n);
+                    sb.AppendLine(n.Key + " '" + n.Name + "' " + (EncOf(me, n) != null ? "battle" : "convo") + (NodeScripts.HasRules(n.Key) ? " RULES" : "") + " -> " + ConvName(shown));
+                    foreach (ConversationTemplate c in l) sb.AppendLine("    " + (Quests.MatchesChampion(c.m_Name, me) ? "" : "(other) ") + c.m_Name);
+                }
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalConvPick.txt"), sb.ToString());
                 return sb.ToString();
             }
             if (sub == "map")
