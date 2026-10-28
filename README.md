@@ -172,7 +172,7 @@ champion creation and selection hang).
 ## Building from source
 
 - Launcher: `tools/launcher/build.sh` (Mono `mcs`) or the GitHub Actions workflow, which builds
-  `HexRevival.exe` from source on GitHub's servers for every release.
+  `HexRevival.exe` from source on GitHub's servers whenever the launcher changes.
 - Plugin: compiled against the game's own assemblies, which cannot be redistributed. With the game
   installed, see `build.sh`.
 - Release archive: `tools/package.sh <version> <HexRevival.dll> <HexRevival.exe>` downloads the official
