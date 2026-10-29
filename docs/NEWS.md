@@ -15,8 +15,9 @@ new version of the mod.
 
 ## Editing the news on the VPS
 
+On the server (the commands assume the default container name):
+
 ```sh
-ssh root@141.11.103.34
 docker exec -it hexrevival-server sh -c 'cat /data/news.json'          # see the current file
 docker cp hexrevival-server:/data/news.json /tmp/news.json             # copy it out, edit /tmp/news.json, then:
 docker cp /tmp/news.json hexrevival-server:/data/news.json
