@@ -1011,6 +1011,8 @@ namespace HexRevival
                                 foreach (SessionCardId id in ub.State.GetCardsInCollection(ECardCollections.Warzone, ub.Player.m_PlayerId))
                                     if (ub.State.HasUsage(id, ECardUsage.Attack) && wanted.Remove(ub.State.Cards[id].TemplateId)) attackers.Add(id);
                                 SessionCardId target = SessionCardId.Invalid;
+                                if (attackers.Count == 0 && ++m_TutorialWaits < 8) return "waiting for attackers";   // usages not received yet
+                                m_TutorialWaits = 0;
                                 foreach (KeyValuePair<UID, PlayerRepresentation> pr in ub.State.Players) if (pr.Key != ub.Player.m_PlayerId) target = pr.Value.ChampionSessionCardId;
                                 ub.Player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration> { new CommitTroopsToAttackTransaction.AttackDeclaration(target, attackers) });
                                 ub.TutorialManager.PlayerActionWasPerformed(a);
@@ -1089,6 +1091,7 @@ namespace HexRevival
                             if (m == null) return "no menu";
                             return "exitTutorial enabled=" + m.Context.IsExitTutorialEnabled + " shown=" + (m.MenuButtons.ExitTutorial != null && m.MenuButtons.ExitTutorial.gameObject.activeInHierarchy);
                         }
+                        if (parts.Length > 2 && parts[1] == "skipfix") { Tutorial.SkipFix = parts[2] != "off"; return "skipfix " + Tutorial.SkipFix; }
                         if (parts.Length > 1 && parts[1] == "auto")
                         {
                             m_TutorialAutoNext = Time.realtimeSinceStartup + 1.5f;
