@@ -879,6 +879,10 @@ namespace HexRevival
                     if (parts.Length > 1 && parts[1].StartsWith("d")) player.ChooseDrawFirst(); else player.ChoosePlayFirst();
                     return "choose sent";
                 case "attack": if (player != null) player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration>()); return "attack none";
+                case "discard":   // dev: discards the first card of the hand (discard phase)
+                    if (player == null || session == null) return "noplayer";
+                    foreach (SessionCardId id in session.Cache.GetCardsInCollection(ECardCollections.Hand, player.m_PlayerId)) { player.Discard(id); return "discard " + id; }
+                    return "empty hand";
                 case "block": if (player != null) player.DeclareDefense(new List<CommitTroopsToDefenseTransaction.DefenseDeclaration>()); return "block none";
                 case "assign": if (player != null) player.AssignDamageOrder(new List<AssignDamageOrderTransaction.DamageAssignment>()); return "assign none";
                 case "playable":
@@ -1091,6 +1095,8 @@ namespace HexRevival
                             if (m == null) return "no menu";
                             return "exitTutorial enabled=" + m.Context.IsExitTutorialEnabled + " shown=" + (m.MenuButtons.ExitTutorial != null && m.MenuButtons.ExitTutorial.gameObject.activeInHierarchy);
                         }
+                        if (parts.Length > 2 && parts[1] == "tracepass") { Tutorial.TracePass = parts[2] != "off"; return "tracepass " + Tutorial.TracePass; }
+                        if (parts.Length > 1 && parts[1] == "stallai") { Tutorial.DevStallAI = true; return "the AI's next update does nothing"; }
                         if (parts.Length > 2 && parts[1] == "skipfix") { Tutorial.SkipFix = parts[2] != "off"; return "skipfix " + Tutorial.SkipFix; }
                         if (parts.Length > 1 && parts[1] == "auto")
                         {
