@@ -1179,7 +1179,8 @@ namespace HexRevival
                         return "boosters=" + (bp != null ? bp.Count : -1) + " catalog=" + c.Catalog.Count + " tab=" + c.VisibleTab + " boosterTabVisible=" + c.BoosterPackTabVisible
                             + " curTab=" + typeof(UIPremiumStoreViewModel).GetField("m_CurrentTab", bf).GetValue(vm) + " dirty=" + typeof(UIPremiumStoreViewModel).GetField("m_CatalogDirty", bf).GetValue(vm) + " waiting=" + c.Waiting;
                     }
-                case "zymmer": return Zymmer.Command(parts);   // dev: Zymmer's pools, "zymmer chest 9 Rare", "zymmer kismet <pack>", "zymmer pack <pack>"
+                case "zymmer": return Zymmer.Command(parts);
+                case "news": return Community.Describe();   // dev: Featured Content source and the panels given to the game   // dev: Zymmer's pools, "zymmer chest 9 Rare", "zymmer kismet <pack>", "zymmer pack <pack>"
                 case "loot":   // dev: "loot check" (names not found), "loot open [pack]" (draw without granting)
                     if (parts.Length > 1 && parts[1] == "open")
                     {
