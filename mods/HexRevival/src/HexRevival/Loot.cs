@@ -52,9 +52,41 @@ namespace HexRevival
                     l.Add(new Entry { Name = p[i + 1], Pct = pct });
                 }
                 s_Packs[p[0]] = t;
+                AddOwnEquipment(p[0], t);
             }
             return s_Packs;
         }
+
+        /// <summary>
+        /// A dungeon pack's own equipment (Src.Zymmer: 9 pieces listed under each dungeon's pack) that the 2016 loot table
+        /// does not hold: Fort Romor and Devonshire Keep have none of theirs in the spreadsheet, The Usurper misses one.
+        /// Weights: where the table has some of the pack's own pieces, a missing one gets their mean %; where it has none,
+        /// the 9 pieces share 30% of the equipment draws, the share of their own pieces in the Tranquil Dream and Smoldering
+        /// Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs
+        /// gave Hellshot Vest and Hasty Summoners (Vandersveldt parts 69-70), pieces of this list.
+        /// </summary>
+        private static void AddOwnEquipment(string pack, PackTable t)
+        {
+            List<Zymmer.Entry> own = Zymmer.Source(pack + " Pack").FindAll(e => e.Kind == 'e');
+            List<Entry> eq;
+            if (own.Count == 0 || !t.Cat.TryGetValue('e', out eq) || eq.Count == 0) return;
+            HashSet<string> have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Entry e in eq) have.Add(e.Name.Trim());
+            float total = 0, ownTotal = 0;
+            int ownCount = 0;
+            foreach (Entry e in eq)
+            {
+                total += e.Pct;
+                if (own.Exists(o => string.Equals(o.Name, e.Name.Trim(), StringComparison.OrdinalIgnoreCase))) { ownTotal += e.Pct; ownCount++; }
+            }
+            List<Zymmer.Entry> missing = own.FindAll(o => !have.Contains(o.Name));
+            if (missing.Count == 0) return;
+            float each = ownCount > 0 ? ownTotal / ownCount : total * (OwnEquipmentShare / (1f - OwnEquipmentShare)) / missing.Count;
+            foreach (Zymmer.Entry m in missing) eq.Add(new Entry { Name = m.Name, Pct = each });
+        }
+
+        /// <summary>Share of a dungeon pack's equipment draws that are its own pieces (Src.LootTables2016: 0.30 in Tranquil Dream and Smoldering Dead).</summary>
+        private const float OwnEquipmentShare = 0.30f;
 
         /// <summary>PvP sets of the 2 commons of a campaign pack (Src.Video).</summary>
         private static readonly string[] CommonSets = { "Shards of Fate", "Shattered Destiny", "Armies of Myth" };
@@ -73,30 +105,44 @@ namespace HexRevival
         };
 
         /// <summary>
-        /// AZ2 packs (the zone's and its dungeons'): no drop table of them has been found, so their card and
-        /// equipment are drawn from the game's own AZ2 set (cards and equipment items), by rarity (PLACEHOLDER weights:
-        /// uncommon 10, rare 3, legendary 1), with the AZ1 pack layout.
+        /// AZ2 packs (the zone's and its dungeons'), with the AZ1 pack layout. No drop table of them has been found; what
+        /// each holds comes from Zymmer's notes (Src.Zymmer): the Alachian Sea Pack's 37 cards and 156 equipment, and each
+        /// dungeon pack's own 6-7 cards and 9 equipment. The card is one of the pack's list; a dungeon pack's equipment is
+        /// one of its own pieces 30% of the time (as the AZ1 dungeon packs, Src.LootTables2016), otherwise one of the
+        /// Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack).
+        /// The packs' mercenaries (Alachian Sea Pack: G24A-19, Sister of the Herd; Great Machine Graveyard Pack:
+        /// Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds.
+        /// When a list resolves to nothing, the game's own AZ2 set is used (uncommon 10, rare 3, legendary 1).
         /// </summary>
         public const string AZ2Pack = "Adventure Zone 2";
-        private static readonly HashSet<string> AZ2Packs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { AZ2Pack, "Brutecrown Bluff", "Great Machine Graveyard", "The Kraken", "Ruins of Kukatan", "Kraken's Cove" };
+        private static readonly Dictionary<string, string> AZ2Packs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { AZ2Pack, "Alachian Sea Pack" }, { "Alachian Sea", "Alachian Sea Pack" },
+            { "Brutecrown Bluff", "Brutecrown Bluff Pack" }, { "Great Machine Graveyard", "Great Machine Graveyard Pack" },
+            { "The Kraken", "Kraken's Cove Pack" }, { "Kraken's Cove", "Kraken's Cove Pack" }, { "Ruins of Kukatan", "Ruins of Kukatan Pack" },
+        };
+        private const string AlachianSeaPack = "Alachian Sea Pack";
+        private const float PackMercenaryChance = 0.01f;
 
         /// <summary>Opens a pack of the table (e.g. AZ1Pack) or an AZ2 pack; unknown names are skipped (see the "loot check" command).</summary>
         public static List<Drop> Open(string pack)
         {
             List<Drop> res = new List<Drop>();
             PackTable t;
-            if (!Packs().TryGetValue(pack, out t) && !AZ2Packs.Contains(pack)) return res;
+            string az2;
+            if (!Packs().TryGetValue(pack, out t) && !AZ2Packs.TryGetValue(pack, out az2)) return res;
+            AZ2Packs.TryGetValue(pack, out az2);
             foreach (string setName in new[] { RandomOf(CommonSets), RandomOf(CommonSets) })
             {
                 CardTemplate c = Progression.RandomCard(SetByName(setName), Game.Shared.Mechanics.ERarity.Common, null);
                 if (c != null) res.Add(new Drop { Card = c });
             }
-            AddTo(res, t != null ? Pick(t, 'c', true) : AZ2Card());
-            AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment());
+            AddTo(res, t != null ? Pick(t, 'c', true) : AZ2Card(az2));
+            AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment(az2));
             if (UnityEngine.Random.value < StardustChance) AddTo(res, Resolve(PickStardust(), false));
-            else AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment());
+            else AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment(az2));
             if (t != null && UnityEngine.Random.value < 0.01f) AddTo(res, Pick(t, 'u', false));
+            if (az2 != null && UnityEngine.Random.value < PackMercenaryChance) AddTo(res, Zymmer.NewMercenary(az2));
             return res;
         }
 
@@ -105,7 +151,8 @@ namespace HexRevival
         {
             PackTable t;
             if (Packs().TryGetValue(pack, out t)) return Pick(t, 'e', false);
-            return AZ2Packs.Contains(pack) ? AZ2Equipment() : null;
+            string az2;
+            return AZ2Packs.TryGetValue(pack, out az2) ? AZ2Equipment(az2) : null;
         }
 
         private static void AddTo(List<Drop> res, Drop d) { if (d != null) res.Add(d); }
@@ -116,15 +163,27 @@ namespace HexRevival
             return v < 10f ? Game.Shared.Mechanics.ERarity.Uncommon : v < 13f ? Game.Shared.Mechanics.ERarity.Rare : Game.Shared.Mechanics.ERarity.Legendary;
         }
 
-        private static Drop AZ2Card()
+        /// <summary>The card of an AZ2 pack: one of its list (Src.Zymmer), else a card of the AZ2 set.</summary>
+        private static Drop AZ2Card(string source)
         {
+            Drop d = source != null ? Zymmer.RandomCard(source) : null;
+            if (d != null) return d;
             CardTemplate c = Progression.RandomCard(SetByName("AZ2"), AZ2Rarity(), null);
             return c != null ? new Drop { Card = c } : null;
         }
 
+        /// <summary>An equipment of an AZ2 pack: a dungeon pack's own piece 30% of the time, else the Alachian Sea Pack's (Src.Zymmer).</summary>
+        private static Drop AZ2Equipment(string source)
+        {
+            Drop d = null;
+            if (source != null && source != AlachianSeaPack && UnityEngine.Random.value < OwnEquipmentShare) d = Zymmer.RandomEquipment(source);
+            if (d == null) d = Zymmer.RandomEquipment(AlachianSeaPack);
+            return d ?? AZ2Equipment();
+        }
+
         private static Dictionary<Game.Shared.Mechanics.ERarity, List<ResourceId>> s_AZ2Equipment;
 
-        /// <summary>An equipment item of the AZ2 set (InventoryEquipmentData.m_SetId; the "AZ2 Equipment" card set only holds their pictures).</summary>
+        /// <summary>Fallback: an equipment item of the AZ2 set (InventoryEquipmentData.m_SetId; the "AZ2 Equipment" card set only holds their pictures).</summary>
         private static Drop AZ2Equipment()
         {
             if (s_AZ2Equipment == null)

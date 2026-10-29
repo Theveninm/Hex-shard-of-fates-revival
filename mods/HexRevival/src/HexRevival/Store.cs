@@ -62,12 +62,14 @@ namespace HexRevival
 
         /// <summary>PLACEHOLDER gold prices of products without a known price.</summary>
         private const int CollectorDeckGold = 25000, OtherDeckGold = 10000, PrimalPackGold = 30000, BattleboardGold = 10000;
+        /// <summary>PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary>
+        private const int KismetPackGold = 20000;
 
         /// <summary>
         /// Catalog, by tab (the client sorts products into tabs by their type, or by StoreTab):
         /// Booster Packs: every booster pack of a set with cards; Decks: the game's deck products
         /// (InventoryStarterPack: starter, signature, collector's and Dueling Pit decks); Prize Exchange: the Siege
-        /// Sack and Cosmic Coin products; Special: primal packs and battleboards.
+        /// Sack and Cosmic Coin products; Special: primal packs, battleboards and the Kismet's Reserve packs.
         /// </summary>
         private static List<StoreItem> Items()
         {
@@ -133,6 +135,7 @@ namespace HexRevival
                 return null;
             }
             if (item is InventoryGameboardData && !item.m_Name.StartsWith("Basic")) return new Product { Item = item, Price = BattleboardGold, Tab = "special" };
+            if (Zymmer.IsKismetPack(item) && Zymmer.KismetBundle(item.m_Name).Count > 0) return new Product { Item = item, Price = KismetPackGold, Tab = "special" };
             return null;
         }
 
@@ -248,11 +251,36 @@ namespace HexRevival
                 }
                 return;
             }
+            if (Zymmer.IsKismetPack(item)) { DeliverKismet(item, r); return; }
             if (item.m_Name == "Siege Pack") { PrizePacks.OpenSiegePack(r); return; }
             if (item.m_Name == "Cosmic Coin Pack") { PrizePacks.OpenCosmicPack(r); return; }
             // Battleboards and coins: kept in the inventory.
             inventory_bits inv = Inventory.GrantSilently(item.m_Id);
             if (inv != null) r.PurchasedInventory.Add(inv);
+        }
+
+        /// <summary>Dev: "store products [text]" = the catalog's products (name, tab, price, currency) whose name holds the text.</summary>
+        public static string Products(string text)
+        {
+            Items();
+            List<string> o = new List<string>();
+            foreach (KeyValuePair<ulong, Product> kv in s_Products)
+                if (string.IsNullOrEmpty(text) || kv.Value.Item.m_Name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
+                    o.Add(kv.Key + " " + kv.Value.Item.m_Name.Trim() + " [" + kv.Value.Tab + "] " + kv.Value.Price + " " + kv.Value.Currency);
+            return o.Count + " product(s)" + (o.Count > 0 ? ":\n" + string.Join("\n", o.ToArray()) : "");
+        }
+
+        /// <summary>A Kismet's Reserve pack: its theme's cards, equipment and mercenary (Src.Zymmer + Src.Game, see Zymmer.KismetBundle).</summary>
+        private static void DeliverKismet(InventoryItemData item, PurchaseItemResponse r)
+        {
+            foreach (Loot.Drop d in Zymmer.KismetBundle(item.m_Name))
+            {
+                if (d.Card != null) { r.GrantedCards.AddRange(Collection.GrantSilently(d.Card.m_Id, 1)); continue; }
+                InventoryMercenaryData m = Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item) as InventoryMercenaryData;
+                if (m != null) { Mercenaries.Grant(m, r); continue; }
+                inventory_bits inv = Inventory.GrantSilently(d.Item);
+                if (inv != null) r.GrantedInventory.Add(inv);
+            }
         }
 
         /// <summary>Primal pack: 2 legendaries and 13 rares of the set (Src.Forum2017; its legendary chest is not given).</summary>
