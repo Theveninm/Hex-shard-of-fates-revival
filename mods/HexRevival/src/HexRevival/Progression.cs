@@ -36,6 +36,7 @@ namespace HexRevival
             LootTables2016,// community spreadsheet "AZ1 Loot Tables", 2016 (data/az1_pack_loot_tables.csv)
             SteamGuide2016,// "HexTCG Comprehensive New Player Guide", Steam, 2016
             Video,         // reward windows read on gameplay videos (2016-2018), see docs/PROGRESSION.md
+            Zymmer,        // "Zymmer's notes": a player's catalogue of every card, equipment and mercenary with where it was obtained (see Zymmer.cs)
             Placeholder,   // no source: chosen for the mod
         }
 
@@ -710,10 +711,32 @@ namespace HexRevival
         {
             if (d == null) return;
             if (d.Card != null) { Collection.Grant(d.Card.m_Id, 1); return; }
+            InventoryMercenaryData merc = Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item) as InventoryMercenaryData;
+            if (merc != null && Inventory.Count(merc.m_Id) > 0) return;
             inventory_bits it = Inventory.GrantSilently(d.Item);
             if (it == null) return;
             try { GameClient.Instance.PlayerProfile.AddInventoryItem(it); }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Progression] AddInventoryItem: " + e.Message); }
+            if (merc != null)
+            {
+                if (merc.DeckTemplate != null) Collection.GrantDeck(merc.DeckTemplate);
+                Mercenaries.OnEarned(merc.m_Id);
+            }
+        }
+
+        /// <summary>A chest of the current set opened (Src.Zymmer pools, Zymmer.OpenChest); returns its description.</summary>
+        private static string GiveChest(ERarity rarity)
+        {
+            int set = Zymmer.SetNumber(CurrentSet());
+            List<Loot.Drop> drops = Zymmer.OpenChest(set, rarity);
+            if (drops.Count == 0) return GiveGold(rarity >= ERarity.Rare ? 1000 : 500);   // no list for that set: the old PLACEHOLDER gold
+            List<string> names = new List<string>();
+            foreach (Loot.Drop d in drops)
+            {
+                GiveDrop(d);
+                names.Add((d.Card != null ? d.Card.m_Name : Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item).m_Name).Trim());
+            }
+            return string.Join(", ", names.ToArray());
         }
 
         private static void AddCard(CardTemplate t, List<card_instance_bits> cards, List<EscrowAction> shown)
@@ -935,10 +958,12 @@ namespace HexRevival
                 }
                 case "commons": GiveRandom(CurrentSet(), ERarity.Common, n); return Loc.Get("reward_cards", n);
                 case "cards": GiveRandom(CurrentSet(), (ERarity)0, n); return Loc.Get("reward_cards", n);
-                // PLACEHOLDERS: stardust and chest spins need systems the mod does not have yet.
+                // PLACEHOLDER: stardust needs a system the mod does not have yet.
                 case "stardust": return GiveGold(300);
-                case "chests": return GiveGold(500);
-                case "rarechest": return GiveGold(1000);
+                // A chest of the current set, opened at once (the original needed a paid Wheel of Fate spin): its
+                // contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER).
+                case "chests": return GiveChest(ERarity.Common);
+                case "rarechest": return GiveChest(ERarity.Rare);
                 // PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead.
                 case "ticket": return GrantLevelReward("pack:cur");
                 case "merc":

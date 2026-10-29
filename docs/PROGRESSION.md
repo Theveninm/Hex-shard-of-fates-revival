@@ -33,6 +33,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | HexCompendium | Hex Compendium wiki, "Frost Ring Arena" (hexcompendium.com) |
 | SteamGuide2016 | "HexTCG Comprehensive New Player Guide", Steam, 2016 |
 | HexTCG2018 | official article "Introducing Cosmic Coins and Siege Sacks", hextcg.com, May 10 2018 (archived copy) |
+| Zymmer | "Zymmer's notes": a player's hand-made catalogue of HEX (cards, equipment, mercenaries, champions), each entry with where it was obtained (a pack, a set's chest or Wheel of Fate, the Frost Ring Arena, a quest, an event...). Only those "where obtained" lines are used, matched to the game's ids by `tools/gen_zymmer.py` into `data/zymmer_sources.tsv`. They say which items a source held, never how often |
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
 
 ## New account
@@ -368,11 +369,13 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 | Augustine, Katsuhiro, Mayor Galway, Sister of the Herd | Alachian Sea campaign rewards (Video) | campaign rewards (see the AZ2 table) |
 | Sin'glar | account level 9 (wiki level table) | account level 9; accounts already past it get him after their next win |
 | Rosina Leckermaul, Angar Krad | Siege Pack | Siege Pack, 5% (PLACEHOLDER odds, see Store) |
-| The "<set> Chest" and "<set> WOF" mercenaries of Shards of Fate, Shattered Destiny, Armies of Myth, Primal Dawn, Herofall, Scars of War, Frostheart, Dead of Winter ("08 Chest Merc"), Doombringer | the set's chests and Wheel of Fate, opened with each booster (Forum2017) | PLACEHOLDER: 2% chance per store booster of that set (the mod has no chests) |
-| Clatterclank, Thokoht, G24A-19 | Alachian Sea ("Adventure Zone II"), how is unknown | not obtainable |
-| Sekki, Jusicus Elderberry, Vlastislav the Deathless | Kismet's Reserve packs (Oni, Boonberries, Vampires) | not obtainable (contents unknown, not sold) |
+| The "<set> Chest" and "<set> WOF" mercenaries of Shards of Fate, Shattered Destiny, Armies of Myth, Primal Dawn, Herofall, Scars of War, Frostheart, Dead of Winter ("08 Chest Merc"), Doombringer | the set's chests and Wheel of Fate, opened with each booster (Forum2017); Zymmer lists the same 54 | PLACEHOLDER: 2% chance per store booster of that set; the chest ones also from the account level chests (5% of a rare chest) |
+| G24A-19, Sister of the Herd | Alachian Sea Pack (Zymmer) | 1 time in 100 in an Alachian Sea pack (PLACEHOLDER odds); Sister of the Herd is also a campaign reward |
+| Clatterclank | Great Machine Graveyard Pack (Zymmer) | 1 time in 100 in a Great Machine Graveyard pack (PLACEHOLDER odds) |
+| Thokoht | Alachian Sea ("Adventure Zone II"), how is unknown (not in Zymmer's notes) | not obtainable |
+| Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing | Kismet's Reserve packs (Zymmer; themes Oni, Boonberries, Vampires, 2017 Convocation: Game) | the store's Kismet packs (see Store) |
 | Scion of Uruunaz | Dragon's Blood deck | not obtainable (no such deck product in the game data) |
-| Kickstarter, GenCon 2013/2014, 2017 Convocation, Salty Sam (tournament reward) | out of the game | not obtainable |
+| Kickstarter, GenCon 2013/2014, Salty Sam (tournament reward) | out of the game | not obtainable |
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
 
@@ -493,7 +496,7 @@ the end, and single fights).
 | Which boss in which tier | tiers 2-3 share the 30-health bosses, tier 4 takes their elite versions and Hogarth (seen: Lanupaw tier 2, Uzume tier 3, Princess Cory Elite and Doombringer Kha Elite tier 4) | PLACEHOLDER, Video |
 | Gold | one gold pouch per win, paid when the rewards are claimed: 400 (standard), 500 (elite), 600 (boss) | Video (a run of 18 wins paid 8,400 gold, pouches of unequal value); split PLACEHOLDER |
 | Chests | only with a boss win: "Boss Win" 1 (tier 1) or 2, "Perfect Tier Bonus" for a tier without a loss, "Bonus" for a tier whose challenge was won | Video (the counts); the Bonus cause PLACEHOLDER |
-| Chest contents | a card (half of the arena's set Set01_PvE_Arena, half of the booster sets), Common Stardust or Rare Stardust (20%), an arena equipment (5%) | Video (cards and stardust seen, no equipment in 10 chests); odds PLACEHOLDER |
+| Chest contents | a card (half of them one of the 67 arena reward cards, half of the booster sets), Common Stardust or Rare Stardust (20%), an arena equipment (5%, one of 436 pieces) | Video (cards and stardust seen, no equipment in 10 chests); which cards and equipment: Zymmer ("Frost Ring Arena Rewards"; the arena's card set Set01_PvE_Arena also holds Wheel, event and Kickstarter cards); odds PLACEHOLDER |
 | Uruunaz | 100,000 gold | Steam2016-b (forum, April 2016) |
 | Sleeves | Frost Ring Arena Sleeve (run completed: seen), Perfect Sleeve (no loss), Hogarth, Uruunaz, Matriarch of Flames (Zakiir): each once | Game (their "Earned by ..." texts), Video |
 
@@ -569,8 +572,14 @@ What each reward becomes in the mod:
 | 6 fixed commons | 6 random commons of the current set | PLACEHOLDER |
 | 3 random cards | 3 random cards of the current set (common/uncommon/rare weighted 10/3/1) | weights PLACEHOLDER |
 | Stardust | 300 gold | PLACEHOLDER (no stardust yet) |
-| Common and uncommon free spin chests | 500 gold | PLACEHOLDER (no chest wheel yet) |
-| Rare paid spin chest | 1,000 gold | PLACEHOLDER |
+| Common and uncommon free spin chests | a common chest of the current set, opened at once | contents Zymmer ("Set 9 Chest Loot": the set's chest equipment, PvE cards and 3 mercenaries); what one chest holds PLACEHOLDER (see below) |
+| Rare paid spin chest | a rare chest of the current set, opened at once | same |
+
+A chest (Zymmer pools, PLACEHOLDER rules): 1 item (2 for a legendary chest); a mercenary not owned yet 5% of the
+time from a rare or better chest, a PvE card 15%, otherwise an equipment of the chest's rarity (common chest:
+common 70% / uncommon 30%; rare chest: rare 75% / legendary 25%), never twice the same piece in one chest. The
+original opened chests with a paid spin of the Wheel of Fate, not reproduced (Zymmer's notes list each set's
+12 Wheel of Fate items too: data ready in `data/zymmer_sources.tsv`).
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
 | Exclusive deck sleeve, alternate arts | nothing | cosmetics not implemented |
 | Sin'glar (level 9) | the Sin'glar mercenary | — |
@@ -585,18 +594,19 @@ platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).
 | Booster Packs | every booster pack of a set with cards (sets 1 to 9) | 2,000 gold | PLACEHOLDER: 200 platinum (Forum2017, also the boosters' base price in Game) × 10 |
 | Decks | the game's 28 deck products for sale: starter, signature and collector's decks (contents: Game deck templates) | base price × 10 gold (1,000 platinum → 10,000; 2018 signature decks 2,500 → 25,000); collector's decks 25,000, others without a price 10,000 | Game base price; PLACEHOLDER ratio and missing prices |
 | Prize Exchange | Siege Pack 100 sacks, Molten Coin 1,200 sacks, Sisters of Suffering battleboard 5,000 sacks; Cosmic Coin Pack 100 coins, Great Machine Graveyard battleboard 5,000 coins, alternate art shard coins (Blood, Diamond, Ruby, Sapphire, Wild) 1,200 coins each | as listed | HexTCG2018 |
-| Special | primal packs (sets with legendaries), battleboards | 30,000 / 10,000 gold | PLACEHOLDER |
+| Special | primal packs (sets with legendaries), battleboards, the four Kismet's Reserve packs | 30,000 / 10,000 / 20,000 gold | PLACEHOLDER |
 
 | What | Value | Source |
 |---|---|---|
 | Bought packs | opened right away (the Open Pack screen is not wired) | mod choice |
 | Bought decks | their cards go to the collection and the deck is ready to play | Game ("Decks are automatically added to your collection") |
 | Bonus primal pack | 2% chance per bought booster: 2 legendaries + 13 rares of the same set (its legendary chest is not given) | Forum2017 |
-| Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul or Angar Krad); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, shard 20%, PvE card 50%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game). The second mercenary is Angar Krad (Game: his item description reads "Siege Pack"); the equipment is not named: not given |
+| Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul or Angar Krad); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, equipment 10%, shard 20%, PvE card 40%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game), the 5 equipment pieces Zymmer lists under "Siege Pack" (once each). The second mercenary is Angar Krad (Game: his item description reads "Siege Pack") |
+| Kismet's Reserve packs | Oni, Boonberries, Vampire and the plain Kismet's Reserve Pack (Game items): each gives its theme, 2 PvE cards, the 4 equipment that equip them and a mercenary (Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing) | which items: Zymmer (all under "Kismet's Reserve Pack"), split by theme with the equipment's design notes and the mercenaries' descriptions (Game); the plain pack = the 2017 Convocation theme: inferred; the whole theme in one pack and the price: PLACEHOLDER |
 | Cosmic Coin Pack | one item: an alternate art card (at most 4 copies), nearly 1 in 3 a Doombringer booster, rarely one of the 3 sleeves marked "2018 Cosmic Coin Pack" | HexTCG2018; odds PLACEHOLDER (booster 30%, sleeve 5%) |
 | Cosmic Coins | not earned offline yet (they were a ladder prize); dev command `store cosmic <n>` | - |
 
-Full sets, chests and VIP are not sold.
+Full sets, the set chests and VIP are not sold.
 
 ## Packs
 
@@ -605,6 +615,11 @@ opened on screen): 2 commons of the first PvP sets (Shards of Fate, Shattered De
 1 card of the pack's own list (every pack), 1 equipment, then a 2nd equipment or, about 1 time in 3, a
 stardust (Common, Uncommon, Rare; Legendary seen once; weights PLACEHOLDER). Which card and equipment:
 LootTables2016 (1,162 AZ1 packs), each picked weighted by its %; the unique equipment 1 time in 100.
+A dungeon pack's own 9 equipment pieces (Zymmer) missing from the sheet are added: all 9 for Fort Romor and
+Devonshire Keep (the sheet has none of theirs; Video agrees: Fort Romor packs gave Hellshot Vest and Hasty
+Summoners, Vandersveldt parts 69-70), Fresh Fire Stoker for The Usurper. Their weight: the mean % of the pack's own
+pieces in the sheet, or, when it has none, 30% of the equipment draws shared equally (the own pieces' share in the
+Tranquil Dream and Smoldering Dead packs, LootTables2016): PLACEHOLDER by analogy.
 The sheet's "cards 50%" only counted the zone cards and is not used as a per-pack chance any more.
 
 **Boosters** (store, current set): 17 cards per pack (Forum2017: 3 packs = 51 cards). Rarity split
@@ -612,8 +627,17 @@ PLACEHOLDER: 1 top card (legendary 1 time in 8, otherwise epic 1 time in 5 in th
 epics, otherwise rare), 3 uncommons, 13 commons, no basic shards.
 
 **Alachian Sea packs** (AZ2 campaign and dungeon packs): no drop table found. The campaign pack layout
-above, with the card and the equipment drawn from the game's AZ2 set (cards and equipment items) by
-rarity: uncommon 10, rare 3, legendary 1 (PLACEHOLDER).
+above; which card and equipment: Zymmer. The Alachian Sea Pack: one of its 37 cards and 156 equipment pieces;
+a dungeon pack (Brutecrown Bluff, Great Machine Graveyard, Kraken's Cove, Ruins of Kukatan): one of its own 6-7
+cards, and its own 9 equipment pieces 30% of the time, otherwise the Alachian Sea Pack's (as the AZ1 dungeon
+packs). Weights by rarity, per item: the mean % of one item of that rarity in the AZ1 pack (LootTables2016:
+cards uncommon 1.70, rare 2.81, legendary 0.51; equipment common 1.56, uncommon 1.54, rare 0.97, legendary 0.45):
+PLACEHOLDER by analogy. Mercenaries: G24A-19 or Sister of the Herd (Alachian Sea Pack), Clatterclank (Great Machine
+Graveyard Pack), 1 time in 100 when not owned (PLACEHOLDER odds, as the AZ1 unique equipment).
+
+**Checked against Zymmer's notes, unchanged:** the AZ1 race quest rewards (both race equipment of all eight races
+and the race cards, LootTables2016), the Crayburn Castle packs, the AZ1 pack and dungeon pack cards, the set chest
+and Wheel of Fate mercenaries (Game item descriptions).
 
 ## Matches outside the campaign
 

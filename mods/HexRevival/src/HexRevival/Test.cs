@@ -913,13 +913,14 @@ namespace HexRevival
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
+                    if (parts.Length > 1 && parts[1] == "products") return Store.Products(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : "");
                     if (parts.Length > 2 && parts[1] == "cosmic" && Saves.Current != null)
                     {
                         Saves.Current.CosmicCoins = int.Parse(parts[2]);
                         Saves.SaveCurrent();
                         return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
                     }
-                    return "usage: store pools | store cosmic <n>";
+                    return "usage: store pools | store products [text] | store cosmic <n>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
@@ -1178,6 +1179,7 @@ namespace HexRevival
                         return "boosters=" + (bp != null ? bp.Count : -1) + " catalog=" + c.Catalog.Count + " tab=" + c.VisibleTab + " boosterTabVisible=" + c.BoosterPackTabVisible
                             + " curTab=" + typeof(UIPremiumStoreViewModel).GetField("m_CurrentTab", bf).GetValue(vm) + " dirty=" + typeof(UIPremiumStoreViewModel).GetField("m_CatalogDirty", bf).GetValue(vm) + " waiting=" + c.Waiting;
                     }
+                case "zymmer": return Zymmer.Command(parts);   // dev: Zymmer's pools, "zymmer chest 9 Rare", "zymmer kismet <pack>", "zymmer pack <pack>"
                 case "loot":   // dev: "loot check" (names not found), "loot open [pack]" (draw without granting)
                     if (parts.Length > 1 && parts[1] == "open")
                     {

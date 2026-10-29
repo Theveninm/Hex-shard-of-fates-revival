@@ -14,7 +14,7 @@ namespace HexRevival
     /// The Prize Exchange packs, one item each (Src.HexTCG2018: "Introducing Cosmic Coins and Siege Sacks", May 2018):
     /// - Cosmic Coin Pack: most often an alternate art card (6 of them), nearly 1 in 3 a booster of the latest set,
     ///   rarely 1 of 3 sleeves (never twice).
-    /// - Siege Pack: PvE cards (at most 4 copies each) and equipment (once each), alternate art cards less often than
+    /// - Siege Pack: PvE cards (at most 4 copies each) and equipment (once each; which pieces: Src.Zymmer), alternate art cards less often than
     ///   in Cosmic Coin Packs, animated alternate art shards (no limit), sleeves, two mercenaries.
     /// The pack contents were drawn by the server: which cards, equipment and shards they held, and the odds, are
     /// PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack").
@@ -40,11 +40,12 @@ namespace HexRevival
         public static void OpenSiegePack(PurchaseItemResponse r)
         {
             double x = rng.NextDouble();
-            // PLACEHOLDER odds: PvE card 50%, alternate art shard 20%, sleeve 15%, alternate art card 10%, mercenary 5%.
+            // PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%.
             if (x < 0.05 && Mercenary(SiegeMercenaries, r)) return;
             if (x < 0.20 && Sleeve(SiegeSleeves, rng, r)) return;
             if (x < 0.30 && Card(AltCards(false), rng, 4, r)) return;
-            if (x < 0.50 && Card(AltCards(true), rng, int.MaxValue, r)) return;
+            if (x < 0.40 && SiegeEquipment(rng, r)) return;
+            if (x < 0.60 && Card(AltCards(true), rng, int.MaxValue, r)) return;
             if (Card(SetCards(PvESet), rng, 4, r)) return;
             // Everything else owned (the game data has no alternate art shard in the 2018 set): an alternate art card.
             if (!Card(AltCards(true), rng, int.MaxValue, r)) Card(AltCards(false), rng, int.MaxValue, r);
@@ -83,6 +84,16 @@ namespace HexRevival
                 InventoryItemData s = Find(n);
                 if (s != null && Inventory.Count(s.m_Id) == 0) left.Add(s);   // a sleeve never comes twice
             }
+            if (left.Count == 0) return false;
+            inventory_bits inv = Inventory.GrantSilently(left[rng.Next(left.Count)].m_Id);
+            if (inv != null) r.GrantedInventory.Add(inv);
+            return inv != null;
+        }
+
+        /// <summary>The Siege Pack's equipment, once each: the 5 pieces Zymmer's notes list under "Siege Pack" (Src.Zymmer).</summary>
+        private static bool SiegeEquipment(System.Random rng, PurchaseItemResponse r)
+        {
+            List<InventoryItemData> left = Zymmer.Equipment("Siege Pack").FindAll(i => Inventory.Count(i.m_Id) == 0);
             if (left.Count == 0) return false;
             inventory_bits inv = Inventory.GrantSilently(left[rng.Next(left.Count)].m_Id);
             if (inv != null) r.GrantedInventory.Add(inv);
@@ -136,7 +147,7 @@ namespace HexRevival
         {
             return "PvE cards " + SetCards(PvESet).Count + ", alternate art cards " + AltCards(false).Count + ", alternate art shards " + AltCards(true).Count
                 + ", siege sleeves " + Array.FindAll(SiegeSleeves, n => Find(n) != null).Length + ", cosmic sleeves " + Array.FindAll(CosmicSleeves, n => Find(n) != null).Length
-                + ", mercenaries " + Array.FindAll(SiegeMercenaries, n => Find(n) != null).Length;
+                + ", mercenaries " + Array.FindAll(SiegeMercenaries, n => Find(n) != null).Length + ", equipment " + Zymmer.Equipment("Siege Pack").Count;
         }
     }
 }

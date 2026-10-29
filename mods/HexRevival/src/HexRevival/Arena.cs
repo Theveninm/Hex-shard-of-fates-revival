@@ -466,9 +466,9 @@ namespace HexRevival
             }
 
             /// <summary>
-            /// A chest: a card (Src.Video: most chests; cards of the arena's set and of other sets: half each, PLACEHOLDER),
-            /// sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; 20% PLACEHOLDER), rarely an arena
-            /// equipment (not seen in 10 chests; 5% PLACEHOLDER).
+            /// A chest: a card (Src.Video: most chests; the arena's reward cards (Src.Zymmer, see ArenaCards) and cards of
+            /// other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust";
+            /// 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER).
             /// </summary>
             private static ArenaReward Chest(Run r, ArenaFight f, string reason)
             {
@@ -597,22 +597,33 @@ namespace HexRevival
         private static List<CardTemplate> s_Cards;
         private static List<InventoryItemData> s_Equipment;
 
-        /// <summary>The arena's card set (Src.Game: Set01_PvE_Arena), without its shards.</summary>
+        /// <summary>
+        /// The arena's reward cards: the 67 cards Zymmer's notes list as "Frost Ring Arena Rewards" (Src.Zymmer). The
+        /// arena's card set (Set01_PvE_Arena) also holds Wheel of Fate, Kickstarter and event cards, so it is only the
+        /// fallback (without its shards).
+        /// </summary>
         private static List<CardTemplate> ArenaCards()
         {
             if (s_Cards != null) return s_Cards;
-            s_Cards = new List<CardTemplate>();
+            s_Cards = Zymmer.Cards(ZymmerArena).FindAll(c => (c.m_CardType & ECardTypes.Resource) == 0);
+            if (s_Cards.Count > 0) return s_Cards;
             ResourceId set = Game.Shared.Resources.BuiltInResources.Set1PvEArena;
             foreach (CardTemplate c in Singleton<TemplateManager>.Instance.Cards.Values)
                 if (c != null && c.m_SetId == set && (c.m_CardType & ECardTypes.Resource) == 0) s_Cards.Add(c);
             return s_Cards;
         }
 
-        /// <summary>The arena's equipment (Src.Game: the items noted "Arena" by the designers).</summary>
+        private const string ZymmerArena = "Frost Ring Arena Rewards";
+
+        /// <summary>
+        /// The arena's equipment: the 436 pieces Zymmer's notes list as "Frost Ring Arena Rewards" (Src.Zymmer; the game
+        /// data notes them "Arena" or "FRA"). Fallback: the items noted "Arena" by the designers (Src.Game).
+        /// </summary>
         private static List<InventoryItemData> ArenaEquipment()
         {
             if (s_Equipment != null) return s_Equipment;
-            s_Equipment = new List<InventoryItemData>();
+            s_Equipment = Zymmer.Equipment(ZymmerArena);
+            if (s_Equipment.Count > 0) return s_Equipment;
             foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
                 if (i is InventoryEquipmentData && i.m_DesignNotes != null && i.m_DesignNotes.Trim() == "Arena") s_Equipment.Add(i);
             return s_Equipment;
