@@ -879,6 +879,10 @@ namespace HexRevival
                     if (parts.Length > 1 && parts[1].StartsWith("d")) player.ChooseDrawFirst(); else player.ChoosePlayFirst();
                     return "choose sent";
                 case "attack": if (player != null) player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration>()); return "attack none";
+                case "discard":   // dev: discards the first card of the hand (discard phase)
+                    if (player == null || session == null) return "noplayer";
+                    foreach (SessionCardId id in session.Cache.GetCardsInCollection(ECardCollections.Hand, player.m_PlayerId)) { player.Discard(id); return "discard " + id; }
+                    return "empty hand";
                 case "block": if (player != null) player.DeclareDefense(new List<CommitTroopsToDefenseTransaction.DefenseDeclaration>()); return "block none";
                 case "assign": if (player != null) player.AssignDamageOrder(new List<AssignDamageOrderTransaction.DamageAssignment>()); return "assign none";
                 case "playable":
@@ -1011,6 +1015,8 @@ namespace HexRevival
                                 foreach (SessionCardId id in ub.State.GetCardsInCollection(ECardCollections.Warzone, ub.Player.m_PlayerId))
                                     if (ub.State.HasUsage(id, ECardUsage.Attack) && wanted.Remove(ub.State.Cards[id].TemplateId)) attackers.Add(id);
                                 SessionCardId target = SessionCardId.Invalid;
+                                if (attackers.Count == 0 && ++m_TutorialWaits < 8) return "waiting for attackers";   // usages not received yet
+                                m_TutorialWaits = 0;
                                 foreach (KeyValuePair<UID, PlayerRepresentation> pr in ub.State.Players) if (pr.Key != ub.Player.m_PlayerId) target = pr.Value.ChampionSessionCardId;
                                 ub.Player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration> { new CommitTroopsToAttackTransaction.AttackDeclaration(target, attackers) });
                                 ub.TutorialManager.PlayerActionWasPerformed(a);
@@ -1089,6 +1095,9 @@ namespace HexRevival
                             if (m == null) return "no menu";
                             return "exitTutorial enabled=" + m.Context.IsExitTutorialEnabled + " shown=" + (m.MenuButtons.ExitTutorial != null && m.MenuButtons.ExitTutorial.gameObject.activeInHierarchy);
                         }
+                        if (parts.Length > 2 && parts[1] == "tracepass") { Tutorial.TracePass = parts[2] != "off"; return "tracepass " + Tutorial.TracePass; }
+                        if (parts.Length > 1 && parts[1] == "stallai") { Tutorial.DevStallAI = true; return "the AI's next update does nothing"; }
+                        if (parts.Length > 2 && parts[1] == "skipfix") { Tutorial.SkipFix = parts[2] != "off"; return "skipfix " + Tutorial.SkipFix; }
                         if (parts.Length > 1 && parts[1] == "auto")
                         {
                             m_TutorialAutoNext = Time.realtimeSinceStartup + 1.5f;
