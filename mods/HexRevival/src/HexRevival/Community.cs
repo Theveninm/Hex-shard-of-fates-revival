@@ -65,7 +65,8 @@ namespace HexRevival
                 if (System.IO.File.Exists(NewsCacheFile))
                 {
                     s_NewsItems = ParseNews(System.IO.File.ReadAllText(NewsCacheFile));
-                    fresh = DateTime.UtcNow - System.IO.File.GetLastWriteTimeUtc(NewsCacheFile) < NewsCacheTime;
+                    fresh = s_NewsItems != null && DateTime.UtcNow - System.IO.File.GetLastWriteTimeUtc(NewsCacheFile) < NewsCacheTime;
+                    Debug.Log("[HexRevival] news: " + (s_NewsItems != null ? s_NewsItems.Count : 0) + " cached panel(s)" + (fresh ? "" : ", asking the server"));
                 }
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] news cache: " + e.Message); }
@@ -129,7 +130,16 @@ namespace HexRevival
                 JArray items = o["items"] as JArray;
                 return items != null && items.Count > 0 ? items : null;
             }
-            catch { return null; }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] news: unreadable file: " + e.Message); return null; }
+        }
+
+        /// <summary>Dev "news": where the panels come from.</summary>
+        public static string Describe()
+        {
+            bool cache = System.IO.File.Exists(NewsCacheFile);
+            return "panels " + (s_NewsItems != null ? s_NewsItems.Count + " from the server/cache" : "built-in") + ", checked " + NewsChecked
+                + ", cache " + (cache ? System.IO.File.GetLastWriteTime(NewsCacheFile).ToString("HH:mm") : "none") + ", pictures " + s_Pictures.Count + ", url " + NewsUrl
+                + "\n" + NewsJson();
         }
 
         private static string PictureFileName(string image)
