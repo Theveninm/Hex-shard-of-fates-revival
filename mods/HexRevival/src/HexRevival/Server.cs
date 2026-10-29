@@ -234,6 +234,9 @@ namespace HexRevival
         private static bool s_SuppressNextGreenLight;
         private static string s_LastGreenLightSig;
         private static EPriorityContext s_LastGreenLightContext;
+        /// <summary>Since when the AI has held priority with nothing happening (-1: not idle). See Server_SendPlayerOptions.</summary>
+        private static float s_AIIdleSince = -1f;
+        private const float AIIdleSeconds = 4f;
 
         /// <summary>Forces options + greenlight to be sent again on the next tick (e.g. transaction received).</summary>
         public static void MarkDirty()
@@ -498,9 +501,26 @@ namespace HexRevival
                 bool stateChanged = BroadcastState(self);
                 if (!s_Dirty && !stateChanged)
                 {
-                    s_SuppressNextGreenLight = true;
-                    return true;
+                    // The AI acts once per green light. If that action sent nothing (a tutorial script step it
+                    // cannot carry out, a refused transaction), nothing changes and it never gets another one:
+                    // the game waited forever on the AI's turn (Zymmer, last tutorial battle). After a few idle
+                    // seconds the AI gets its options and green light again, as for a new priority window.
+                    float now = UnityEngine.Time.realtimeSinceStartup;
+                    if (!IsAIId(player.m_PlayerId) || s_Pending.Count > 0) s_AIIdleSince = -1f;
+                    else if (s_AIIdleSince < 0f) s_AIIdleSince = now;
+                    else if (now - s_AIIdleSince > AIIdleSeconds)
+                    {
+                        Debug.Log("[HexRevival] [Server] AI idle " + AIIdleSeconds + " s with priority: green light sent again");
+                        s_AIIdleSince = -1f;
+                        s_Dirty = true;
+                    }
+                    if (!s_Dirty)
+                    {
+                        s_SuppressNextGreenLight = true;
+                        return true;
+                    }
                 }
+                s_AIIdleSince = -1f;
 
                 List<SessionEventArgs> options = new List<SessionEventArgs>();
                 foreach (Card card in player.GetAllCards())

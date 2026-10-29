@@ -230,6 +230,68 @@ namespace HexRevival
         // The step is then simply done and the AI passes.
         private static FieldInfo s_AIScript;
 
+        // The AI's script plays its cards by name (TurnPhaseActionPlayCard): when the card is not in the AI's hand, or
+        // cannot be played (not enough resources), the action sends nothing, yet the script counts it as done and the
+        // AI waits for an answer that never comes: its turn never ends (Zymmer, 1.2.7, last round). It happens once the
+        // player is free (the last round: "Remove Reins from Player") and the battle no longer follows the script, e.g.
+        // the AI's own logic already played that card. Such an action is skipped and the AI plays as usual.
+        private static FieldInfo s_AIPlayer, s_AISession;
+        public static bool SkipFix = true;   // dev "tutorial skipfix off": the game's behaviour, to reproduce the stall
+        /// <summary>Dev ("tutorial stallai"): the AI's next update acts as if it had sent something and sends nothing.</summary>
+        public static bool DevStallAI;
+
+        /// <summary>Before the AI's update: skips the scripted card plays the AI cannot make now.</summary>
+        public static void SkipImpossiblePlays(Game.Shared.AI.AITactical ai)
+        {
+            try
+            {
+                if (!SkipFix || ai == null || !ai.IsOnReins) return;
+                BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+                if (s_AIScript == null) s_AIScript = typeof(Game.Shared.AI.AITactical).GetField("m_TutorialManager", bf);
+                if (s_AIPlayer == null) s_AIPlayer = typeof(Game.Shared.AI.AITactical).GetField("m_Player", bf);
+                if (s_AISession == null) s_AISession = typeof(Game.Shared.AI.AITactical).GetField("m_Session", bf);
+                TutorialManager tm = s_AIScript.GetValue(ai) as TutorialManager;
+                LocalPlayer p = s_AIPlayer.GetValue(ai) as LocalPlayer;
+                ClientSessionBase cs = s_AISession.GetValue(ai) as ClientSessionBase;
+                if (tm == null || p == null || cs == null || cs.Cache == null) return;
+                for (int guard = 0; guard < 20; guard++)
+                {
+                    TurnPhaseActionPlayCard play = tm.CurrentAction as TurnPhaseActionPlayCard;
+                    if (play == null || CanPlay(cs, p, play.m_CardTemplateId)) return;
+                    Debug.Log("[HexRevival] [Tutorial] AI script: " + play.BuildActionName() + " (turn " + play.m_Turn + ") cannot be played now, skipped");
+                    tm.AdvanceTutorial();
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Tutorial] AI script: " + e.Message); }
+        }
+
+        private static bool CanPlay(ClientSessionBase cs, LocalPlayer p, ResourceId template)
+        {
+            foreach (SessionCardId id in cs.Cache.GetCardsInCollection(ECardCollections.Hand, p.m_PlayerId))
+            {
+                CardRepresentation c;
+                if (cs.Cache.Cards.TryGetValue(id, out c) && c.TemplateId == template && cs.Cache.HasUsage(id, ECardUsage.Play)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Dev "tutorial tracepass": logs who passes priority for the human (stack) to HexRevival.tracepass.log.</summary>
+        public static bool TracePass;
+
+        public static void OnPass(string what, object player)
+        {
+            if (!TracePass) return;
+            try
+            {
+                string phase = "";
+                ClientSessionBase cs = Singleton<Main>.Instance.m_GameClient.Session as ClientSessionBase;
+                if (cs != null) phase = cs.CurrentPhase.ToString();
+                System.IO.File.AppendAllText(System.IO.Path.Combine(LocalServer.Root, "HexRevival.tracepass.log"),
+                    DateTime.Now.ToString("HH:mm:ss.fff") + " " + what + " " + player + " clientphase=" + phase + "\n" + Environment.StackTrace + "\n\n");
+            }
+            catch { }
+        }
+
         /// <summary>True if the AI's update was done here (tutorial: block of a single troop).</summary>
         public static bool AIDamageOrder(Game.Shared.AI.AITactical ai, ETurnPhases phase, ref bool result)
         {

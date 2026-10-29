@@ -24,7 +24,18 @@ namespace HexRevival
 
         public static byte[] EncodeTransaction(Transaction tx) { return EncData.Encode(tx); }
 
-        public static Transaction DecodeTransaction(byte[] bytes) { return (Transaction)Decode(bytes); }
+        /// <summary>
+        /// A transaction from its bytes. Its requirements (e.g. a pass is only for the phase it was sent in, by the
+        /// player holding priority) are not part of the data: they are built again, as when it was created. Without
+        /// them a pass sent twice by the client passed the next phase too (a tutorial's attack phase, through the
+        /// loopback test; online, a guest's double pass).
+        /// </summary>
+        public static Transaction DecodeTransaction(byte[] bytes)
+        {
+            Transaction tx = (Transaction)Decode(bytes);
+            if (tx != null) tx.Initialize();
+            return tx;
+        }
 
         // ---- Decoding what the opponent sent ----
         //
