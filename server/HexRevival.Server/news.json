@@ -8,36 +8,36 @@
       "url": "{latestUrl}"
     },
     {
-      "id": "release-1.2.7",
+      "id": "release-1.2.8",
       "when": "noupdate",
       "image": "card:Phoenix Guard Messenger",
       "title": {
-        "en": "HEX Revival 1.2.7: new loot",
-        "fr": "HEX Revival 1.2.7 : nouveau butin",
-        "de": "HEX Revival 1.2.7: neue Beute",
-        "es": "HEX Revival 1.2.7: nuevo botín",
-        "it": "HEX Revival 1.2.7: nuovo bottino",
-        "pt": "HEX Revival 1.2.7: novos espólios",
-        "pl": "HEX Revival 1.2.7: nowe łupy",
-        "ru": "HEX Revival 1.2.7: новая добыча",
-        "tr": "HEX Revival 1.2.7: yeni ganimetler",
-        "ja": "HEX Revival 1.2.7：新しい戦利品",
-        "zh": "HEX Revival 1.2.7：新的战利品"
+        "en": "HEX Revival 1.2.8",
+        "fr": "HEX Revival 1.2.8",
+        "de": "HEX Revival 1.2.8",
+        "es": "HEX Revival 1.2.8",
+        "it": "HEX Revival 1.2.8",
+        "pt": "HEX Revival 1.2.8",
+        "pl": "HEX Revival 1.2.8",
+        "ru": "HEX Revival 1.2.8",
+        "tr": "HEX Revival 1.2.8",
+        "ja": "HEX Revival 1.2.8",
+        "zh": "HEX Revival 1.2.8"
       },
       "text": {
-        "en": "Alachian Sea packs with their own cards, Kismet's Reserve packs in the store, new mercenaries to find and real chests at account levels. Thanks to Zymmer's notes.",
-        "fr": "Des paquets de la mer d'Alachia avec leurs propres cartes, les paquets Kismet's Reserve en boutique, de nouveaux mercenaires à trouver et de vrais coffres aux niveaux de compte. Merci aux notes de Zymmer.",
-        "de": "Alachische-See-Packs mit eigenen Karten, Kismet's-Reserve-Packs im Shop, neue Söldner und echte Truhen bei Kontostufen. Dank an Zymmers Notizen.",
-        "es": "Sobres del mar de Alachia con sus propias cartas, sobres Kismet's Reserve en la tienda, nuevos mercenarios y cofres de verdad en los niveles de cuenta. Gracias a las notas de Zymmer.",
-        "it": "Buste del Mare di Alachia con le loro carte, buste Kismet's Reserve nel negozio, nuovi mercenari da trovare e veri forzieri ai livelli dell'account. Grazie agli appunti di Zymmer.",
-        "pt": "Pacotes do Mar de Alachia com suas próprias cartas, pacotes Kismet's Reserve na loja, novos mercenários e baús de verdade nos níveis de conta. Graças às notas de Zymmer.",
-        "pl": "Paczki Morza Alachijskiego z własnymi kartami, paczki Kismet's Reserve w sklepie, nowi najemnicy i prawdziwe skrzynie na poziomach konta. Dzięki notatkom Zymmera.",
-        "ru": "Наборы Алахийского моря со своими картами, наборы Kismet's Reserve в магазине, новые наёмники и настоящие сундуки за уровни аккаунта. Спасибо заметкам Zymmer.",
-        "tr": "Kendi kartlarıyla Alachia Denizi paketleri, mağazada Kismet's Reserve paketleri, bulunacak yeni paralı askerler ve hesap seviyelerinde gerçek sandıklar. Zymmer'in notlarına teşekkürler.",
-        "ja": "独自のカードを含むアラキア海パック、ストアのKismet's Reserveパック、新しい傭兵、アカウントレベル報酬の本物の宝箱。Zymmerのメモに感謝します。",
-        "zh": "阿拉基亚海卡包拥有自己的卡牌，商店新增 Kismet's Reserve 卡包，还有新的佣兵可以获得，账号等级奖励改为真正的宝箱。感谢 Zymmer 的笔记。"
+        "en": "The tutorial's last battle no longer freezes (thanks to Zymmer for the report), and this news now comes from the project's server.",
+        "fr": "La dernière bataille du tutoriel ne se bloque plus (merci à Zymmer pour le signalement), et ces nouvelles viennent désormais du serveur du projet.",
+        "de": "Der letzte Kampf des Tutorials friert nicht mehr ein (danke an Zymmer für die Meldung), und diese Neuigkeiten kommen jetzt vom Server des Projekts.",
+        "es": "La última batalla del tutorial ya no se bloquea (gracias a Zymmer por el aviso), y estas noticias llegan ahora desde el servidor del proyecto.",
+        "it": "L'ultima battaglia del tutorial non si blocca più (grazie a Zymmer per la segnalazione), e queste notizie arrivano ora dal server del progetto.",
+        "pt": "A última batalha do tutorial não trava mais (obrigado ao Zymmer pelo aviso), e estas notícias agora vêm do servidor do projeto.",
+        "pl": "Ostatnia bitwa samouczka już się nie zawiesza (dzięki Zymmerowi za zgłoszenie), a te wiadomości pochodzą teraz z serwera projektu.",
+        "ru": "Последний бой обучения больше не зависает (спасибо Zymmer за сообщение), а эти новости теперь приходят с сервера проекта.",
+        "tr": "Eğitimin son savaşı artık donmuyor (bildirdiği için Zymmer'e teşekkürler) ve bu haberler artık projenin sunucusundan geliyor.",
+        "ja": "チュートリアル最後の戦闘で止まらなくなりました（報告してくれたZymmerに感謝）。このニュースはプロジェクトのサーバーから配信されるようになりました。",
+        "zh": "教程的最后一战不再卡住（感谢 Zymmer 的报告），这些新闻现在来自项目的服务器。"
       },
-      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.7"
+      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.8"
     },
     {
       "id": "discord",
