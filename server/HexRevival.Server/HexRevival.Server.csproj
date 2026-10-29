@@ -7,4 +7,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>HexRevival.Server</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Default Featured Content, copied to the data volume when it has none (News.cs). -->
+    <None Include="news.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
