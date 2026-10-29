@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Reckoning.Game;
 using UnityEngine;
 
@@ -11,7 +12,8 @@ namespace HexRevival
     /// <summary>
     /// The mod's links to its community: the check for a newer release on GitHub, and the panels of the main menu's
     /// "Featured Content" (the game's news carousel, UINewsEventsViewModel, which downloaded its panels from the HEX
-    /// website): a new version when there is one, the project page; a Discord button in the top bar, right of Options.
+    /// website): read from the project's server (news.json, see docs/NEWS.md) and cached, with built-in panels when it
+    /// was never reached (a new version when there is one, else the project page); a Discord button in the top bar.
     /// The online lobby shows the Discord server and the new version in a banner (OnlineLobby).
     /// </summary>
     public class Community : MonoBehaviour
@@ -28,14 +30,162 @@ namespace HexRevival
         public static string NewVersionUrl { get; private set; }
         public static bool Checked { get; private set; }
 
-        /// <summary>The panels' pictures: card illustrations of the game, cropped to their art.</summary>
-        private static readonly string[][] PanelArt =
-        {
-            new[] { "update", "Phoenix Guard Messenger" },
-            new[] { "project", "Argus, Herald of Doom" },
-        };
-
+        /// <summary>Pictures of the panels, by their "image" value ("card:<name>", a file of the server's news folder or an address).</summary>
         private static readonly Dictionary<string, Texture2D> s_Pictures = new Dictionary<string, Texture2D>();
+
+        // ---- Featured Content from the server ----
+
+        /// <summary>The news service of the project's server (HTTP: the game's Unity has no TLS of its own for an address without a certificate).</summary>
+        private const int NewsPort = 7780;
+        private static string NewsUrl
+        {
+            get
+            {
+                string s = OnlineProfile.DefaultServer;
+                int colon = s.LastIndexOf(':');
+                return "http://" + (colon > 0 ? s.Substring(0, colon) : s) + ":" + NewsPort + "/";
+            }
+        }
+        private static string SavesDir { get { return System.IO.Path.Combine(LocalServer.Root, "HexRevivalSaves"); } }
+        private static string NewsCacheFile { get { return System.IO.Path.Combine(SavesDir, "news_cache.json"); } }
+        private static string NewsPicturesDir { get { return System.IO.Path.Combine(SavesDir, "news_pictures"); } }
+        /// <summary>A cached news file younger than this is used without asking the server.</summary>
+        private static readonly TimeSpan NewsCacheTime = TimeSpan.FromMinutes(30);
+
+        /// <summary>The panels (news.json "items"), from the server or its cache; null: the built-in panels.</summary>
+        private static JArray s_NewsItems;
+        public static bool NewsChecked { get; private set; }
+
+        /// <summary>The cached panels at once, then the server's when the cache is old (its pictures downloaded too).</summary>
+        private IEnumerator FetchNews()
+        {
+            bool fresh = false;
+            try
+            {
+                if (System.IO.File.Exists(NewsCacheFile))
+                {
+                    s_NewsItems = ParseNews(System.IO.File.ReadAllText(NewsCacheFile));
+                    fresh = DateTime.UtcNow - System.IO.File.GetLastWriteTimeUtc(NewsCacheFile) < NewsCacheTime;
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] news cache: " + e.Message); }
+            if (!fresh)
+            {
+                WWW www = new WWW(NewsUrl + "news.json");
+                float until = Time.realtimeSinceStartup + 10f;
+                while (!www.isDone && Time.realtimeSinceStartup < until) yield return null;
+                try
+                {
+                    JArray items = www.isDone && string.IsNullOrEmpty(www.error) ? ParseNews(www.text) : null;
+                    if (items != null)
+                    {
+                        s_NewsItems = items;
+                        System.IO.Directory.CreateDirectory(SavesDir);
+                        System.IO.File.WriteAllText(NewsCacheFile, www.text);
+                        fresh = true;
+                        Debug.Log("[HexRevival] news: " + items.Count + " panel(s) from the server");
+                    }
+                    else Debug.LogWarning("[HexRevival] news: " + (!www.isDone ? "no answer" : !string.IsNullOrEmpty(www.error) ? www.error : "unreadable") + (s_NewsItems != null ? ", cached panels kept" : ", built-in panels"));
+                }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] news: " + e.Message); }
+                finally { www.Dispose(); }
+            }
+            // Pictures that are files: downloaded again with fresh news, else taken from the disk.
+            if (s_NewsItems != null)
+                foreach (JToken item in s_NewsItems)
+                {
+                    string image = Str(item, "image");
+                    if (string.IsNullOrEmpty(image) || image.StartsWith("card:") || s_Pictures.ContainsKey(image)) continue;
+                    string local = System.IO.Path.Combine(NewsPicturesDir, PictureFileName(image));
+                    byte[] bytes = null;
+                    if (!fresh && System.IO.File.Exists(local)) { try { bytes = System.IO.File.ReadAllBytes(local); } catch { } }
+                    if (bytes == null)
+                    {
+                        string url = image.StartsWith("http://") || image.StartsWith("https://") ? image : NewsUrl + "news/" + image;
+                        WWW w = new WWW(url);
+                        float until = Time.realtimeSinceStartup + 10f;
+                        while (!w.isDone && Time.realtimeSinceStartup < until) yield return null;
+                        if (w.isDone && string.IsNullOrEmpty(w.error) && w.bytes != null && w.bytes.Length > 0)
+                        {
+                            bytes = w.bytes;
+                            try { System.IO.Directory.CreateDirectory(NewsPicturesDir); System.IO.File.WriteAllBytes(local, bytes); } catch { }
+                        }
+                        else if (System.IO.File.Exists(local)) { try { bytes = System.IO.File.ReadAllBytes(local); } catch { } }
+                        w.Dispose();
+                    }
+                    if (bytes == null) continue;
+                    Texture2D t = new Texture2D(2, 2, TextureFormat.ARGB32, false);
+                    if (t.LoadImage(bytes)) { t.name = "HexRevivalNews"; s_Pictures[image] = t; }
+                }
+            NewsChecked = true;
+        }
+
+        /// <summary>The "items" of a news file, or null when it is not one.</summary>
+        private static JArray ParseNews(string text)
+        {
+            try
+            {
+                JObject o = JObject.Parse(text);
+                JArray items = o["items"] as JArray;
+                return items != null && items.Count > 0 ? items : null;
+            }
+            catch { return null; }
+        }
+
+        private static string PictureFileName(string image)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in image) sb.Append(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_' ? c : '_');
+            string n = sb.ToString();
+            return n.Length > 80 ? n.Substring(n.Length - 80) : n;
+        }
+
+        private static string Str(JToken t, string key)
+        {
+            JToken v = t is JObject ? t[key] : null;
+            return v != null && v.Type == JTokenType.String ? (string)v : null;
+        }
+
+        /// <summary>A text of a panel in the game's language: a string, or {"en": ..., "fr": ...} (English, then the first one, when the language is missing).</summary>
+        private static string Text(JToken item, string key)
+        {
+            JToken v = item[key];
+            if (v == null) return "";
+            if (v.Type == JTokenType.String) return (string)v;
+            JObject o = v as JObject;
+            if (o == null) return "";
+            JToken l = o[Loc.Lang] ?? o["en"];
+            if (l == null) foreach (JProperty p in o.Properties()) { l = p.Value; break; }
+            return l != null ? (string)l : "";
+        }
+
+        private static string Fill(string s)
+        {
+            return (s ?? "").Replace("{version}", Version).Replace("{latest}", NewVersion ?? Version)
+                .Replace("{latestUrl}", NewVersionUrl ?? RepoUrl + "/releases/latest").Replace("{repo}", RepoUrl).Replace("{discord}", DiscordUrl);
+        }
+
+        /// <summary>The built-in panels, used until the server was reached once: a new version when there is one, else the project page.</summary>
+        private static JArray DefaultNews()
+        {
+            return new JArray(
+                new JObject { { "when", "update" }, { "image", "card:Phoenix Guard Messenger" }, { "loc", "update" }, { "url", "{latestUrl}" } },
+                new JObject { { "when", "noupdate" }, { "image", "card:Argus, Herald of Doom" }, { "loc", "project" }, { "url", "{repo}" } });
+        }
+
+        private static JArray CurrentNews() { return s_NewsItems ?? DefaultNews(); }
+
+        /// <summary>Whether a panel is shown: "when" (update / noupdate) and "minVersion" / "maxVersion" (this version of the mod).</summary>
+        private static bool Shown(JToken item)
+        {
+            string when = Str(item, "when");
+            if (when == "update" && NewVersion == null) return false;
+            if (when == "noupdate" && NewVersion != null) return false;
+            string min = Str(item, "minVersion"), max = Str(item, "maxVersion");
+            if (!string.IsNullOrEmpty(min) && IsNewer(min, Version)) return false;
+            if (!string.IsNullOrEmpty(max) && IsNewer(Version, max)) return false;
+            return true;
+        }
 
         /// <summary>
         /// The last answer, kept 6 hours (HexRevivalSaves/update_check.txt: time, latest release, its page), so that
@@ -70,6 +220,7 @@ namespace HexRevival
 
         private IEnumerator Start()
         {
+            StartCoroutine(FetchNews());
             if (FromCache()) { Checked = true; yield break; }
             // The game's Unity (5.6) asks Windows to download (WinINet), which handles GitHub's TLS.
             Dictionary<string, string> headers = new Dictionary<string, string>();
@@ -336,7 +487,7 @@ namespace HexRevival
         private static IEnumerator FillNewsWhenReady(UINewsEventsViewModel vm)
         {
             float until = Time.realtimeSinceStartup + 8f;
-            while (Time.realtimeSinceStartup < until && (!Checked || !PicturesReady())) yield return null;
+            while (Time.realtimeSinceStartup < until && (!Checked || !NewsChecked || !PicturesReady())) yield return null;
             if (vm == null) yield break;
             try
             {
@@ -349,9 +500,16 @@ namespace HexRevival
         {
             StringBuilder sb = new StringBuilder("{\"NewsItemList\":[");
             bool first = true;
-            Action<string, string, string, string> add = (picture, title, text, url) =>
+            foreach (JToken item in CurrentNews())
             {
-                string key = Picture(picture);
+                if (!(item is JObject) || !Shown(item)) continue;
+                string title, text;
+                string loc = Str(item, "loc");
+                if (loc == "update") { title = Loc.Get("news_update_title", NewVersion ?? Version); text = Loc.Get("news_update_text", NewVersion ?? Version, Version); }
+                else if (loc == "project") { title = Loc.Get("news_project_title", Version); text = Loc.Get("news_project_text"); }
+                else { title = Fill(Text(item, "title")); text = Fill(Text(item, "text")); }
+                string url = Fill(Str(item, "url"));
+                string key = Picture(Str(item, "image"));
                 if (!first) sb.Append(',');
                 first = false;
                 sb.Append('{')
@@ -359,14 +517,8 @@ namespace HexRevival
                   .Append(",\"TitleText\":").Append(Json(title)).Append(",\"ContentText\":").Append(Json(text))
                   .Append(",\"LinkUrl\":").Append(Json(url)).Append(",\"ShowDuration\":8")
                   // Clicked, the panel opens in large with its text and the address its "Go" button opens.
-                  .Append(",\"UseDetailText\":true,\"DetailTitleText\":").Append(Json(title)).Append(",\"DetailContentText\":").Append(Json(text + "\n\n" + url)).Append('}');
-            };
-            // One announcement, the latest: a newer version when there is one, else this version's panel (the user, 1.2.5:
-            // both the 1.2.4 and the 1.2.5 panels were shown).
-            if (NewVersion != null)
-                add("update", Loc.Get("news_update_title", NewVersion), Loc.Get("news_update_text", NewVersion, Version), NewVersionUrl);
-            else
-                add("project", Loc.Get("news_project_title", Version), Loc.Get("news_project_text"), RepoUrl);
+                  .Append(",\"UseDetailText\":true,\"DetailTitleText\":").Append(Json(title)).Append(",\"DetailContentText\":").Append(Json(string.IsNullOrEmpty(url) ? text : text + "\n\n" + url)).Append('}');
+            }
             return sb.Append("]}").ToString();
         }
 
@@ -383,35 +535,41 @@ namespace HexRevival
             return sb.Append('"').ToString();
         }
 
-        /// <summary>Asks for the card illustrations (loaded in the background) and crops those that arrived.</summary>
+        /// <summary>Panel pictures that are card illustrations ("card:<name>"): asked for (loaded in the background), cropped once arrived.</summary>
         private static bool PicturesReady()
         {
             bool ready = true;
-            foreach (string[] p in PanelArt)
+            List<string> specs = new List<string> { FallbackPicture };
+            foreach (JToken item in CurrentNews()) { string i = Str(item, "image"); if (i != null && i.StartsWith("card:")) specs.Add(i); }
+            foreach (string spec in specs)
             {
                 Texture2D done;
-                if (s_Pictures.TryGetValue(p[0], out done) && done != null) continue;
-                CardTemplate c = Opponents.CardByName(p[1]);
+                if (s_Pictures.TryGetValue(spec, out done) && done != null) continue;
+                CardTemplate c = Opponents.CardByName(spec.Substring(5));
                 if (c == null) continue;
                 Rect uv;
                 Texture2D art = CardArt.Get(c, out uv);
                 if (art == null) { ready = false; continue; }
-                s_Pictures[p[0]] = Crop(art, uv);
+                s_Pictures[spec] = Crop(art, uv);
             }
             return ready;
         }
+
+        /// <summary>The picture of a panel without one, or whose picture could not be loaded.</summary>
+        private const string FallbackPicture = "card:Argus, Herald of Doom";
 
         /// <summary>
         /// The picture's key for the carousel: the texture is put in the game's texture cache under that key, where the
         /// carousel's texture loader (ResourceManager.GetTextureAsync) looks first. Put again each time, the cache may
         /// have dropped it.
         /// </summary>
-        private static string Picture(string name)
+        private static string Picture(string spec)
         {
-            string key = "hexrevival/news/" + name;
             Texture2D t;
-            if (s_Pictures.TryGetValue(name, out t) && t != null)
-                Singleton<ResourceManager>.Instance.AddTexture(key.GetHashCode(), name, t, false);
+            if (string.IsNullOrEmpty(spec) || !s_Pictures.TryGetValue(spec, out t) || t == null) spec = FallbackPicture;
+            string key = "hexrevival/news/" + PictureFileName(spec);
+            if (s_Pictures.TryGetValue(spec, out t) && t != null)
+                Singleton<ResourceManager>.Instance.AddTexture(key.GetHashCode(), spec, t, false);
             return key;
         }
 
