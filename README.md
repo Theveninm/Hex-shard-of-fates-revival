@@ -129,7 +129,9 @@ trust:
    MyHotStream's Underworld and Ardent runs, KVC, JBStevenson, Amaz): reward windows, battles, dialogues and map
    screens. They were indexed, their dialogue boxes read and matched to the game's conversations, and each battle
    tied to its node and opponent, so a behaviour can be checked against what the original server actually did.
-3. **Community guides and wikis of the time.**
+3. **Community guides and wikis of the time**, and **Zymmer's notes**, a player's catalogue of every card,
+   equipment and mercenary with where it was obtained (the Alachian Sea packs, the set chests, the arena's
+   rewards, the Kismet's Reserve packs).
 
 What is left is marked **PLACEHOLDER** (a value or behaviour chosen without a source). In short:
 
@@ -167,7 +169,8 @@ To the players who report bugs and suggest features, among them **mornox** (the 
 blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
 taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns), **KrystoferRobin** (the mercenary slots of the battle
 panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
-champion creation and selection hang).
+champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
+from.
 
 ## Building from source
 

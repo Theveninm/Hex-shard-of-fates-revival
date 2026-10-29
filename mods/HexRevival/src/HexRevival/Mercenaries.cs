@@ -14,7 +14,10 @@ namespace HexRevival
 {
     /// <summary>
     /// Campaign mercenaries (AZ2 rewards: Augustine, Katsuhiro, Mayor Galway, Sister of the Herd; Sin'glar at account
-    /// level 9; Rosina Leckermaul in Siege Packs; all of them on "unlock everything" saves). A mercenary is
+    /// level 9; Rosina Leckermaul in Siege Packs; from Zymmer's notes (Src.Zymmer): G24A-19 and Sister of the Herd in
+    /// Alachian Sea Packs, Clatterclank in Great Machine Graveyard Packs (Loot), the four Kismet's Reserve mercenaries
+    /// in the store's Kismet packs (Store), the set chest mercenaries in account level chests (Progression); all of
+    /// them on "unlock everything" saves). A mercenary is
     /// an inventory item (InventoryMercenaryData); the reward window's "MERCPAC" line makes the client put it in
     /// the champion's party with its starter deck, saved as a profile deck template (see DeckTemplates). The party
     /// (ClientCampaignManager.SaveChampionParty, a server request) is saved here in parties.txt. A battle launched
@@ -118,7 +121,7 @@ namespace HexRevival
         /// </summary>
         public const double BoosterChance = 0.02;
 
-        /// <summary>The mercenaries of a card set's chests and Wheel of Fate (by their item description).</summary>
+        /// <summary>The mercenaries of a card set's chests and Wheel of Fate (by their item description; Zymmer's notes list the same 54, Src.Zymmer).</summary>
         public static List<InventoryMercenaryData> OfSet(string setName)
         {
             List<InventoryMercenaryData> res = new List<InventoryMercenaryData>();
