@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     ports:
       - "7777:7777"
+      # Featured Content of the main menu (HTTP)
+      - "7780:7780"
     volumes:
       - hexrevival-data:/data
     # A small VPS shared with other apps: the server needs far less than this.
