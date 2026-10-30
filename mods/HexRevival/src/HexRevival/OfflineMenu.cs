@@ -362,7 +362,7 @@ namespace HexRevival
                 if (g != null) g.Reposition();
             }
             if (vm == null || vm.MenuUI.Campaign == null) return;
-            DuelingPit.EnsureButton(vm);
+            DuelingPit.OpenIfAsked(vm);
             // Red, as a cancel button.
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);

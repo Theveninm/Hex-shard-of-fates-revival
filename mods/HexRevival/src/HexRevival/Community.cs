@@ -151,6 +151,8 @@ namespace HexRevival
 
         // ---- Featured Content: arrows, no change under the mouse ----
 
+        private static bool s_PicturesDone;
+        private float m_NextPictures;
         private UINewsEventsViewModel m_News;
         private UIWidget m_NewsFrame;
         private Rect m_NewsRect;
@@ -164,6 +166,12 @@ namespace HexRevival
         /// </summary>
         private void Update()
         {
+            // A newer release: its panel's picture loaded before the main menu (during the account choice).
+            if (Checked && NewVersion != null && !s_PicturesDone && Time.realtimeSinceStartup > m_NextPictures)
+            {
+                m_NextPictures = Time.realtimeSinceStartup + 1f;
+                try { TemplateManager tm = Singleton<TemplateManager>.Instance; s_PicturesDone = Saves.Current != null && tm != null && tm.Cards.Count > 0 && PicturesReady(); } catch { }
+            }
             AddDiscordIcon();
             ShowFeaturedContent();
             LayOutZoom();
@@ -197,8 +205,38 @@ namespace HexRevival
         private GameObject m_NewsBox, m_NewsBackdrop, m_NewsBar;
 
         /// <summary>
+        /// Whether this main menu shows Featured Content: decided once, when the menu is built (OnLandingAwake), from
+        /// the update check done at startup, before the account choice (user, 2026-10-30: the frame must not pop up
+        /// on the menu). A check still running then shows the frame only the next time the menu is built.
+        /// </summary>
+        private static bool s_ShowNews;
+
+        /// <summary>UILandingPageViewModel.Awake (postfix): Featured Content shown or hidden before the menu's first frame.</summary>
+        public static void OnLandingAwake(UILandingPageViewModel vm)
+        {
+            s_ShowNews = Checked && NewVersion != null;
+            try
+            {
+                Transform frame = vm.transform.Find("2D/Buttons/Frame_L");
+                if (frame != null)
+                    foreach (string n in new[] { "Frame_Ads", "Social_Bar" })
+                    {
+                        Transform t = frame.Find(n);
+                        if (t != null) t.gameObject.SetActive(s_ShowNews);
+                    }
+                foreach (UINewsEventsViewModel news in vm.GetComponentsInChildren<UINewsEventsViewModel>(true))
+                {
+                    Transform box = news.transform.Find("News_Events");
+                    if (box != null) box.gameObject.SetActive(s_ShowNews);
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] featured content: " + e.Message); }
+        }
+
+        /// <summary>
         /// The Featured Content frame (NewsEventsVM/News_Events: its title and panels; the landing page's frame around it,
-        /// Frame_L/Frame_Ads and its bottom strip Social_Bar) only while a newer release is out.
+        /// Frame_L/Frame_Ads and its bottom strip Social_Bar) as decided when the menu was built (also if the game shows
+        /// it again later).
         /// </summary>
         private void ShowFeaturedContent()
         {
@@ -215,12 +253,9 @@ namespace HexRevival
                     m_NewsBackdrop = ads != null ? ads.gameObject : null;
                     m_NewsBar = bar != null ? bar.gameObject : null;
                 }
-                // Room for the main menu's Dueling Pit button (see DuelingPit).
-                foreach (GameObject g in new[] { m_NewsBox, m_NewsBackdrop, m_NewsBar }) UiClone.ShiftUp(g, DuelingPit.FeaturedShift);
             }
-            bool show = Checked && NewVersion != null;
             foreach (GameObject g in new[] { m_NewsBox, m_NewsBackdrop, m_NewsBar })
-                if (g != null && g.activeSelf != show) g.SetActive(show);
+                if (g != null && g.activeSelf != s_ShowNews) g.SetActive(s_ShowNews);
         }
 
         private bool m_ZoomLaidOut;
@@ -560,7 +595,7 @@ namespace HexRevival
         }
 
         /// <summary>The uv area of a texture copied into a new one (the card art without the rest of the card's picture).</summary>
-        private static Texture2D Crop(Texture2D src, Rect uv)
+        internal static Texture2D Crop(Texture2D src, Rect uv)
         {
             int w = Mathf.Max(1, Mathf.RoundToInt(src.width * uv.width)), h = Mathf.Max(1, Mathf.RoundToInt(src.height * uv.height));
             RenderTexture rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32);

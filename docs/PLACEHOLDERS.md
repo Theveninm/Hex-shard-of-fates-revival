@@ -131,13 +131,13 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:206 | PLACEHOLDER prize: one booster per match won.</summary> |
-| Battlegrounds.cs:863 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:954 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:992 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1038 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:210 | PLACEHOLDER prize: one booster per match won.</summary> |
+| Battlegrounds.cs:867 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:958 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:996 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1042 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:122 | 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage". |
-| DuelingPit.cs:15 | its "- AI" version (which one: PLACEHOLDER, drawn at random). "Versus Player" stays locked (no matchmaking). |
+| DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:387 | PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:706 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
 | Dungeons.cs:729 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |

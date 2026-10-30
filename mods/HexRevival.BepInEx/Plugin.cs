@@ -173,6 +173,12 @@ namespace HexRevival
                 apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
                 apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
                 // The Dueling Pit's Versus AI (see DuelingPit.cs).
+                apply("Localization.Get", () => harmony.Patch(AccessTools.Method(typeof(Localization), "Get", new[] { typeof(string) }), postfix: new HarmonyMethod(typeof(Hooks), "Localization_Get")));
+                apply("UITournamentPendingViewModel.OnJoinTournamentClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnJoinTournamentClicked", Type.EmptyTypes, "Tournament_Join"));
+                apply("UITournamentPendingViewModel.OnTournamentDoubleClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnTournamentDoubleClicked", new[] { typeof(UITournamentDescContext) }, "Tournament_DoubleClick"));
+                apply("UILandingPageViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UILandingPageViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "Landing_Awake")));
+                apply("UIPremiumStoreItemContext..ctor(chest)", () => harmony.Patch(AccessTools.Constructor(typeof(UIPremiumStoreItemContext), new[] { typeof(Reckoning.Game.InventoryTreasureChest), typeof(Game.Shared.StoreItem) }), postfix: new HarmonyMethod(typeof(Hooks), "Store_ChestItem")));
+                apply("StoreItem3DController.OnAssetBundleObjectLoaded", () => harmony.Patch(AccessTools.Method(typeof(StoreItem3DController), "OnAssetBundleObjectLoaded"), postfix: new HarmonyMethod(typeof(Hooks), "Store_3DLoaded")));
                 apply("DuelingPitVM.FindMatch", () => Prefix(harmony, typeof(DuelingPitVM), "FindMatch", Type.EmptyTypes, "DuelingPit_FindMatch"));
                 // The buffs' conversations were the server's: clicking a buff shows nothing (its text is in its tooltip).
                 apply("UIArenaCampaignViewModel.OnBuff1Click", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "OnBuff1Click", Type.EmptyTypes, "Skip"));
@@ -498,9 +504,15 @@ namespace HexRevival
         public static bool Arena_Destroy(Game.Client.Network.Campaign.CampaignService.DestroyArenaData.ResponseHandler __1) { Arena.Destroy(__1); return false; }
         public static bool Arena_Refresh(Game.Client.Network.Campaign.CampaignService.RefreshArenaInfo.ResponseHandler __3) { Arena.Refresh(__3); return false; }
         public static void Arena_Start(UIArenaCampaignViewModel __instance) { Arena.OnScreenStart(__instance); }
-        public static void Icons_GetAsset(AssetBundleManager __instance, AssetBundleFile __0, string __1, string __2, AssetType __3, ref UnityEngine.Object __result) { if (__result == null) __result = StoreIcons.MissingThumb(__instance, __0, __1, __2, __3); }
+        public static void Icons_GetAsset(AssetBundleManager __instance, AssetBundleFile __0, string __1, string __2, AssetType __3, ref UnityEngine.Object __result) { if (__result == null) __result = StoreIcons.Missing(__instance, __0, __1, __2, __3); }
         public static void Arena_ChampionHud(UIArenaCampaignContext __instance, DeckCache __0) { Arena.OnAssignChampionHud(__instance, __0); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
+        public static void Localization_Get(string key, ref string __result) { if (key != null && key.StartsWith("hexrevival-")) { string t = DuelingPit.Localize(key); if (t != null) __result = t; } }
+        public static bool Tournament_Join(UITournamentPendingViewModel __instance) { return DuelingPit.OnJoin(__instance, null); }
+        public static bool Tournament_DoubleClick(UITournamentPendingViewModel __instance, UITournamentDescContext __0) { return DuelingPit.OnJoin(__instance, __0); }
+        public static void Landing_Awake(UILandingPageViewModel __instance) { Community.OnLandingAwake(__instance); }
+        public static void Store_ChestItem(UIPremiumStoreItemContext __instance, Reckoning.Game.InventoryTreasureChest __0) { StoreIcons.OnChestItem(__instance, __0); }
+        public static void Store_3DLoaded(StoreItem3DController __instance) { StoreIcons.On3DItemLoaded(__instance); }
         public static bool DuelingPit_FindMatch(DuelingPitVM __instance) { return DuelingPit.FindMatch(__instance); }
 
         public static bool Ladder_Record(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response>> __0)

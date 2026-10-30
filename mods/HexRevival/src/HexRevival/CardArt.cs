@@ -18,6 +18,7 @@ namespace HexRevival
         {
             public Texture2D Texture;
             public bool Requested, Loading, Failed;
+            public float FailedAt;
         }
 
         private static readonly Dictionary<string, Item> s_Cache = new Dictionary<string, Item>();
@@ -34,6 +35,8 @@ namespace HexRevival
             if (!s_Cache.TryGetValue(c.m_CardImagePath, out it)) { it = new Item(); s_Cache[c.m_CardImagePath] = it; }
             // Unloaded by the game (screen change): asked again.
             if (it.Requested && !it.Loading && !it.Failed && it.Texture == null) it.Requested = false;
+            // Failed (asked while the game was still loading its bundles, at login): asked again 5 s later.
+            if (it.Failed && Time.realtimeSinceStartup - it.FailedAt > 5f) { it.Failed = false; it.Requested = false; }
             if (!it.Requested) Request(c, it);
             return it.Texture;
         }
@@ -47,7 +50,8 @@ namespace HexRevival
                 CardSetTemplate set;
                 if (AssetBundleManager.Instance == null || !Singleton<TemplateManager>.Instance.CardSets.TryGetValue(c.m_SetId, out set) || set == null)
                 {
-                    it.Failed = true; it.Loading = false; return;
+                    // Asked before the game loaded its bundles or sets: asked again next time.
+                    it.Requested = false; it.Loading = false; return;
                 }
                 string bundle = string.IsNullOrEmpty(set.m_BundleName) ? set.m_Name : set.m_BundleName;
                 string name = FolderUtils.GetFileNameWithoutPathOrExtension(c.m_CardImagePath);
@@ -62,12 +66,13 @@ namespace HexRevival
                     try { it.Texture = AssetBundleManager.Instance.GetAsset(req) as Texture2D; }
                     catch { }
                     it.Loading = false;
-                    if (it.Texture == null) it.Failed = true;
+                    if (it.Texture == null) { it.Failed = true; it.FailedAt = Time.realtimeSinceStartup; }
                 }));
             }
             catch (Exception e)
             {
                 it.Failed = true;
+                it.FailedAt = Time.realtimeSinceStartup;
                 it.Loading = false;
                 Debug.LogWarning("[HexRevival] [CardArt] " + c.m_CardImagePath + " : " + e.Message);
             }

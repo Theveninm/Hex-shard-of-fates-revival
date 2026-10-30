@@ -179,7 +179,8 @@ namespace HexRevival
 
         public static CardTemplate CardByName(string name)
         {
-            if (s_CardsByName == null)
+            // Built again while empty: asked before the game loaded its cards.
+            if (s_CardsByName == null || s_CardsByName.Count == 0)
             {
                 s_CardsByName = new Dictionary<string, CardTemplate>(StringComparer.OrdinalIgnoreCase);
                 // Prefer the regular printing: non-PvE, then the oldest set (alternate arts come later).

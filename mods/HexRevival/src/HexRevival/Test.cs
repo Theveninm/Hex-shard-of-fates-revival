@@ -871,6 +871,7 @@ namespace HexRevival
                     return "restarting";
                 }
                 case "dump": return DumpString(session);
+                case "store3d": return StoreIcons.Dump();   // dev: the store's 3D item and the cameras
                 case "pass": return "pass=" + (player != null ? player.PassPriority().ToString() : "noplayer");
                 case "autopass": if (player != null) player.SendAutoPass(EPassingState.EndOfTurn); return "autopass sent";
                 case "accept": if (player != null) player.AcceptStartingHand(); return "accept sent";
@@ -1004,7 +1005,25 @@ namespace HexRevival
                         return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
                     }
                     if (parts.Length > 2 && parts[1] == "open") return Store.DevOpen(ulong.Parse(parts[2]));
-                    return "usage: store pools | store products [text] | store cosmic <n> | store open <product id>";
+                    if (parts.Length > 2 && parts[1] == "select")   // dev: selects the store screen's first item (of the tab shown) whose name holds the text
+                    {
+                        string q = string.Join(" ", parts, 2, parts.Length - 2);
+                        UIPremiumStoreViewModel svm = UnityEngine.Object.FindObjectOfType<UIPremiumStoreViewModel>();
+                        if (svm == null || svm.Context == null) return "no store screen";
+                        for (int i = 0; i < svm.Context.Catalog.Count; i++)
+                        {
+                            UIPremiumStoreItemContext it = svm.Context.Catalog.GetItem(i);
+                            if (it != null && it.Name != null && it.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                svm.Context.Catalog.SelectItem(i);
+                                UIScrollView sv = svm.GetComponentInChildren<UIScrollView>();
+                                if (sv != null && svm.Context.Catalog.Count > 1) sv.SetDragAmount(0f, (float)i / (svm.Context.Catalog.Count - 1), false);
+                                return "selected " + it.Name;
+                            }
+                        }
+                        return "not in this tab: " + q;
+                    }
+                    return "usage: store pools | store products [text] | store cosmic <n> | store open <product id> | store select <text>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type

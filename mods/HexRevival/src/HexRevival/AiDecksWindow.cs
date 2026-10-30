@@ -729,7 +729,7 @@ namespace HexRevival
         {
             UITournamentPendingViewModel vm = FindObjectOfType<UITournamentPendingViewModel>();
             UITournamentDescContext sel = vm != null && vm.m_Context != null ? vm.m_Context.SelectedTournament : null;
-            if (sel == null || sel.m_TournamentDesc == null) return null;
+            if (sel == null || sel.m_TournamentDesc == null || sel.m_TournamentDesc.TournamentID == DuelingPit.Id) return null;
             if (sel.TournamentStyle == Game.Shared.Tournaments.ETournamentStyle.Ladder) return AiConfig.Ladder;
             return Battlegrounds.ModeOf(sel.m_TournamentDesc.TournamentID);
         }

@@ -170,6 +170,10 @@ namespace HexRevival
                     Run r = RunOf(g.Id);
                     if (r != null) Register(g, r);
                 }
+                // The Dueling Pit (no run: its entry opens its own screen, see DuelingPit).
+                TournamentDesc pit = DuelingPit.Describe();
+                m.AddDescriptionToTournamentList(pit);
+                list.Add(pit);
                 m.OnInitDescriptionsMKII(list);
                 Debug.Log("[HexRevival] [Battlegrounds] " + list.Count + " gauntlets listed, " + Data.Runs.Count + " in progress");
             }
