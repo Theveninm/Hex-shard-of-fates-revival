@@ -286,13 +286,13 @@ first text (Video: still shown after the Kraken; its "post-Kraken" text appears 
 once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
 
 Shroom Hauses (Game: conversation nodes "Shroom house"): the card choice window opens after the Shroomkin's dialogue,
-3 AZ2 uncommons of one shard. Fungal Hillock (node 17) Sapphire: Dancing Faeries, Bull Shark, Arcane Spritegang
-(Video: MHS 2017-04-21 5:52, KVC part 1); Vale of Fallen Apples (node 39) Wild: Aryndel Warden, Pippit's Gift, Shroom
-Swarm (Video: MHS 2017-09-14 0:22, KVC part 4 4:13); Silvas Meadow (10) Blood: Bone Goliath, Grub Crawler, Chupacabra
-(Video: KVC part 1 1:31:59, between Katsuhiro, node 9, and Hired Horn Picaroon, node 11); Lake Hsieh (42) Artifact: Hex
-Battery, Forge Flock, Junk Barrier (Video: MHS 2017-10-19 0:33). PLACEHOLDER, the other two (as AZ1's: one shard each,
-AZ2 uncommons that are not already a campaign reward): Portabella Island (29) Diamond: Chimeerkat, Ghost Sentinel,
-Portsmeare Guard; Shroombottom Burrow (36) Ruby: Cinder Walker, Wool'vir Baa'serker, Blazemaw.
+3 AZ2 cards of one shard, all from the videos. Fungal Hillock (node 17) Sapphire: Dancing Faeries, Bull Shark, Arcane
+Spritegang (MHS 2017-04-21 5:52, KVC part 1); Vale of Fallen Apples (39) Wild: Aryndel Warden, Pippit's Gift, Shroom
+Swarm (MHS 2017-09-14 0:22, KVC part 4 4:13); Silvas Meadow (10) Blood: Bone Goliath, Grub Crawler, Chupacabra (KVC
+part 1 1:31:59, between Katsuhiro, node 9, and Hired Horn Picaroon, node 11); Portabella Island (29) Diamond: Quicksand,
+Ghost Sentinel, Chimeerkat (MHS 2017-03-31 0:26, before the Puke Troll); Shroombottom Burrow (36) Ruby: Wool'vir
+Baa'serker, Cinderclone Offensive, Cinder Walker (MHS 2017-09-07 0:31, before the Wandering Totem); Lake Hsieh (42)
+Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
 
 ### Sea voyages (Game)
 

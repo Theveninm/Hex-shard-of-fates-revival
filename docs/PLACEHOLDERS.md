@@ -166,8 +166,6 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
 | Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
 | Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:352 | Artifact (Lake Hsieh, Src.Video: MHS 2017-10-19 0:33). The two others PLACEHOLDER: the other shards (as AZ1's), |
-| Progression.cs:395 | AZ2 (Src.Video for nodes 17, 39, 10 and 42; nodes 29 and 36 PLACEHOLDER, see ShroomHauses). |
 | Progression.cs:541 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
 | Progression.cs:748 | no list for that set: the old PLACEHOLDER gold |
 | Progression.cs:784 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
