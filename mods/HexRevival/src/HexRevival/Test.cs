@@ -81,7 +81,7 @@ namespace HexRevival
             // persistent counter (the game restarts after a stall)
             try
             {
-                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.stalls"));
+                string f = Path.Combine(LocalServer.Root, Instance.Name("HexRevival.stalls"));
                 int n = 0;
                 if (File.Exists(f)) int.TryParse(File.ReadAllText(f).Trim(), out n);
                 File.WriteAllText(f, (n + 1).ToString());
@@ -103,7 +103,7 @@ namespace HexRevival
         {
             try
             {
-                string f = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.stalls"));
+                string f = Path.Combine(LocalServer.Root, Instance.Name("HexRevival.stalls"));
                 int n;
                 if (File.Exists(f) && int.TryParse(File.ReadAllText(f).Trim(), out n)) return n;
             }
@@ -126,7 +126,7 @@ namespace HexRevival
                 l.Add("Phase : " + (session != null ? session.CurrentPhase.ToString() : gc.StateManager.CurrentGameState.ToString()));
                 if (Gauntlet.Enabled())
                     l.Add(Gauntlet.Summary());
-                File.WriteAllText(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), Instance.Name("HexRevival.status.txt")), string.Join("\r\n", l.ToArray()).Replace("\n", "\r\n").Replace("\r\r", "\r") + "\r\n");
+                File.WriteAllText(Path.Combine(LocalServer.Root, Instance.Name("HexRevival.status.txt")), string.Join("\r\n", l.ToArray()).Replace("\n", "\r\n").Replace("\r\r", "\r") + "\r\n");
             }
             catch { }
         }
@@ -177,7 +177,7 @@ namespace HexRevival
         {
             m_Enabled = true;
             m_StartTime = Time.realtimeSinceStartup;
-            string root = Path.GetFullPath(Application.dataPath + "/../");
+            string root = LocalServer.Root;
             m_StatePath = Path.Combine(root, Instance.Name("HexRevival.state.log"));
             m_CmdPath = Path.Combine(root, Instance.Name("HexRevival.cmd"));
             m_RespPath = Path.Combine(root, Instance.Name("HexRevival.resp"));
@@ -238,7 +238,7 @@ namespace HexRevival
                     Time.timeScale = m_Speed;
                 // Stops supervised instances: HexRevival.soak.stop file.
                 if (Instance.Supervised && Time.frameCount % 120 == 0
-                    && File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.soak.stop")))
+                    && File.Exists(Path.Combine(LocalServer.Root, "HexRevival.soak.stop")))
                     System.Diagnostics.Process.GetCurrentProcess().Kill();
                 if (m_Mute && AudioListener.volume != 0f)
                     AudioListener.volume = 0f;
@@ -488,7 +488,7 @@ namespace HexRevival
         {
             try
             {
-                string path = Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.encounters");
+                string path = Path.Combine(LocalServer.Root, "HexRevival.encounters");
                 if (File.Exists(path))
                 {
                     List<string> lines = new List<string>();
@@ -835,7 +835,7 @@ namespace HexRevival
                 case "soak":
                 {
                     // Switch to headless testing: runs HexRevival_soak.bat N then closes this instance.
-                    string root2 = Path.GetFullPath(Application.dataPath + "/../");
+                    string root2 = LocalServer.Root;
                     string bat2 = Path.Combine(root2, "HexRevival_soak.bat");
                     if (!File.Exists(bat2)) return "HexRevival_soak.bat not found";
                     string n = parts.Length > 1 ? parts[1] : "1";
@@ -857,7 +857,7 @@ namespace HexRevival
                         return "restarting (superviseur)";
                     }
                     // Restart through HexRevival_restart.bat (installs a pending .new plugin, restarts Hex.exe).
-                    string root = Path.GetFullPath(Application.dataPath + "/../");
+                    string root = LocalServer.Root;
                     string bat = Path.Combine(root, "HexRevival_restart.bat");
                     if (!File.Exists(bat)) return "HexRevival_restart.bat not found";
                     System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c \"" + bat + "\"");

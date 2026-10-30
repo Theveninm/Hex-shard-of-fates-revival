@@ -151,7 +151,7 @@ namespace HexRevival
             get
             {
                 if (s_Loopback == null)
-                    s_Loopback = Dev.Enabled && File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.netloop"));
+                    s_Loopback = Dev.Enabled && File.Exists(Path.Combine(LocalServer.Root, "HexRevival.netloop"));
                 return s_Loopback.Value;
             }
         }

@@ -117,6 +117,29 @@ folder per account in `HexRevivalSaves`.
 **Uninstall**: run `HexRevival.exe --uninstall` (your decks are kept).
 A Steam "Verify integrity of game files" does not remove the mod files, they are additions.
 
+### macOS (native version)
+
+The macOS version of the game that Steam installs on a Mac (`Hex.app`) runs HEX Revival too, with the same
+`HexRevival.dll` as on Windows. It needs no launcher and no Wine/CrossOver. On Apple silicon the game runs through Rosetta.
+
+1. Install the game with Steam on your Mac (or use any complete copy of the macOS game folder, the one containing `Hex.app`).
+   Steam's game folder: Steam > right-click HEX > Manage > Browse local files.
+2. Download `HexRevival-<version>-macOS.zip` from the [Releases](../../releases) page, extract it and copy
+   its whole content (including the hidden `.doorstop_version`) into the game folder, next to `Hex.app`.
+3. Allow the downloaded files to run (once, in Terminal):
+   `xattr -dr com.apple.quarantine "<game folder>"`
+4. Start the game with `run_bepinex.sh` in the game folder, or from Steam: right-click HEX > Properties >
+   Launch options: `"<game folder>/run_bepinex.sh" %command%`
+
+Saves are written to `HexRevivalSaves` next to `Hex.app`. The macOS game's
+`Hex.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll` has this SHA-256 checksum (`shasum -a 256 <file>`):
+`b8be951bb5b1776a6b49bd98ba92db457191dc04ce56a9bb4b97b96e51ecc3dc`
+
+Why the archive's `run_bepinex.sh` differs from the official one: it starts `Hex.app`, and it adds the game's own
+Mono folder (`Hex.app/Contents/Frameworks/MonoEmbedRuntime/osx`) to `DYLD_LIBRARY_PATH`. Without it MonoMod cannot load
+`libMonoPosixHelper.dylib`, and every Harmony patch fails (NullReferenceException in `NativeDetour`). The variable
+must be set inside the script, because macOS removes `DYLD_*` variables when it starts `/bin/sh`.
+
 ## How faithful is the campaign?
 
 The original campaign ran on the game's servers, which are gone: the client files hold the maps, dialogues,
@@ -180,6 +203,9 @@ from, and for the tutorial's last battle that froze.
   installed, see `build.sh`.
 - Release archive: `tools/package.sh <version> <HexRevival.dll> <HexRevival.exe>` downloads the official
   BepInEx release and assembles `HexRevival-<version>.zip` with its `SHA256SUMS.txt`.
+- macOS: `tools/macos/package.sh <version> <HexRevival.dll>` assembles `HexRevival-<version>-macOS.zip` (BepInEx for
+  macOS, set up for `Hex.app`) from the same `HexRevival.dll`; `tools/macos/install.sh <HexRevival.dll> [game folder]`
+  installs a build straight into the game folder. A release holds both archives.
 
 ### Repository layout
 
@@ -188,6 +214,7 @@ from, and for the tutorial's last battle that froze.
 | `mods/HexRevival/src/HexRevival/` | The plugin: local game server, AI driver, local profile and decks, menus |
 | `mods/HexRevival.BepInEx/` | BepInEx entry point (Harmony patches) |
 | `tools/launcher/` | The launcher / installer `HexRevival.exe` |
+| `tools/macos/` | BepInEx setup, installer and release archive for the macOS version |
 | `.github/workflows/` | Builds the launcher from source on GitHub |
 
 ## License

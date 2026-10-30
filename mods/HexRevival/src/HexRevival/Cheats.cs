@@ -26,7 +26,7 @@ namespace HexRevival
     {
         public static bool Enabled()
         {
-            return File.Exists(Path.Combine(Path.GetFullPath(Application.dataPath + "/../"), "HexRevival.cheats"));
+            return File.Exists(Path.Combine(LocalServer.Root, "HexRevival.cheats"));
         }
 
         public static string Execute(StandaloneGameClient gc, string[] parts)
@@ -274,7 +274,7 @@ namespace HexRevival
         private static string s_LastFeed;
         private static int s_Game;
 
-        private static string Root { get { return Path.GetFullPath(Application.dataPath + "/../"); } }
+        private static string Root { get { return LocalServer.Root; } }
         /// <summary>Activation: HexRevival.gauntlet file (shared). Position: per instance.</summary>
         private static string MarkerPath { get { return Path.Combine(Root, "HexRevival.gauntlet"); } }
         private static string StatePath { get { return Path.Combine(Root, Instance.Id == 0 ? "HexRevival.gauntlet" : "HexRevival.gauntlet.pos" + Instance.Suffix); } }

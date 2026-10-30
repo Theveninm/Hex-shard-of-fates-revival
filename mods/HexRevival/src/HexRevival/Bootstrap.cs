@@ -14,7 +14,7 @@ namespace HexRevival
         {
             try
             {
-                string root = Path.GetFullPath(Application.dataPath + "/../");
+                string root = LocalServer.Root;
                 string logPath = Path.Combine(root, "HexRevival.log");
                 File.AppendAllText(logPath, DateTime.Now.ToString("s") + "  Bootstrap.Init() called" + Environment.NewLine);
                 Debug.Log("[HexRevival] Bootstrap.Init OK - plugin loaded");
@@ -44,6 +44,6 @@ namespace HexRevival
     /// </summary>
     public static class Dev
     {
-        public static readonly bool Enabled = System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), "HexRevival.dev"));
+        public static readonly bool Enabled = System.IO.File.Exists(System.IO.Path.Combine(LocalServer.Root, "HexRevival.dev"));
     }
 }
