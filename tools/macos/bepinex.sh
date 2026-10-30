@@ -12,12 +12,13 @@ if [ ! -f "$DIR/BepInEx/core/BepInEx.Preloader.dll" ] || [ ! -f "$DIR/libdoorsto
   rm -f "$DIR/changelog.txt"
   rm -rf "$WORK"
 fi
-sed -i '' 's/^executable_name=""/executable_name="Hex.app"/' "$DIR/run_bepinex.sh"
+sed -i.orig 's/^executable_name=""/executable_name="Hex.app"/' "$DIR/run_bepinex.sh"
 # Unity's Mono finds libMonoPosixHelper.dylib (which MonoMod needs to patch memory) only through DYLD_LIBRARY_PATH.
 # It has to be set inside the script: macOS drops DYLD_* variables when it starts /bin/sh.
-grep -q MonoEmbedRuntime "$DIR/run_bepinex.sh" || sed -i '' '/^export DYLD_LIBRARY_PATH=/a\
+grep -q MonoEmbedRuntime "$DIR/run_bepinex.sh" || sed -i.orig '/^export DYLD_LIBRARY_PATH=/a\
 export DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH}:${BASEDIR}/Hex.app/Contents/Frameworks/MonoEmbedRuntime/osx"
 ' "$DIR/run_bepinex.sh"
+rm -f "$DIR/run_bepinex.sh.orig"   # sed -i.orig: works with both macOS (BSD) and GNU sed
 chmod +x "$DIR/run_bepinex.sh"
 # The preloader fails on its first start when this folder is missing.
 mkdir -p "$DIR/BepInEx/patchers" "$DIR/BepInEx/plugins/HexRevival"
