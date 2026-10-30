@@ -931,6 +931,23 @@ namespace HexRevival
                         }
                         return r0;
                     }   // dev: "sleeves [state|holiday|season|give <pattern>]"
+                case "itemdump":   // dev: "itemdump <text>" = the game's items whose name contains it: type, pack type, set, price, description
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        foreach (InventoryItemData i in tm.InventoryItems.Values)
+                        {
+                            if (i == null || i.m_Name == null || i.m_Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            InventoryCardPack cp = i as InventoryCardPack;
+                            CardSetTemplate set = null;
+                            if (cp != null) tm.CardSets.TryGetValue(cp.m_SetId, out set);
+                            sb.Append(i.m_Name).Append(" | ").Append(i.GetType().Name).Append(cp != null ? " " + cp.m_CardPackType + " set=" + (set != null ? set.m_Name : cp.m_SetId.ToString()) : "")
+                              .Append(" price=").Append(i.m_BasePrice).Append(" buy=").Append(i.m_AvailableForPurchase).Append(" tag=").Append(i.m_BuildTag)
+                              .Append(" | ").Append((i.Description ?? "").Replace("\n", " ")).Append('\n');
+                        }
+                        return sb.Length == 0 ? "none" : sb.ToString();
+                    }
                 case "sleevedump":   // dev: "sleevedump [text]" = the game's sleeves whose description contains the text
                     {
                         string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
@@ -986,7 +1003,8 @@ namespace HexRevival
                         Saves.SaveCurrent();
                         return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
                     }
-                    return "usage: store pools | store products [text] | store cosmic <n>";
+                    if (parts.Length > 2 && parts[1] == "open") return Store.DevOpen(ulong.Parse(parts[2]));
+                    return "usage: store pools | store products [text] | store cosmic <n> | store open <product id>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type

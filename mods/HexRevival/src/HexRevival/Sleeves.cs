@@ -180,17 +180,23 @@ namespace HexRevival
         /// </summary>
         private static void GrantHolidayEquipment(string holiday)
         {
+            InventoryItemData e = HolidayEquipment(holiday);
+            if (e == null) return;
+            inventory_bits b = Inventory.GrantSilently(e.m_Id);
+            if (b == null) return;
+            try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception x) { Debug.LogWarning("[HexRevival] [Sleeves] " + x.Message); }
+            Notices.Show(Loc.Get("holiday_item", e.m_Name.Trim()));
+        }
+
+        /// <summary>A piece of the holiday's equipment not owned yet (null: none left).</summary>
+        public static InventoryItemData HolidayEquipment(string holiday)
+        {
             string name = holiday.StartsWith("The ") ? holiday.Substring(4) : holiday;   // "Sea Festival" in the equipment lists
             List<InventoryItemData> pool = new List<InventoryItemData>();
             for (int y = 2014; y <= 2020; y++)
                 foreach (InventoryItemData i in Zymmer.Equipment("Events - " + name + " " + y))
                     if (Inventory.Count(i.m_Id) == 0 && !pool.Contains(i)) pool.Add(i);
-            if (pool.Count == 0) return;
-            InventoryItemData e = pool[UnityEngine.Random.Range(0, pool.Count)];
-            inventory_bits b = Inventory.GrantSilently(e.m_Id);
-            if (b == null) return;
-            try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception x) { Debug.LogWarning("[HexRevival] [Sleeves] " + x.Message); }
-            Notices.Show(Loc.Get("holiday_item", e.m_Name.Trim()));
+            return pool.Count == 0 ? null : pool[UnityEngine.Random.Range(0, pool.Count)];
         }
 
         // ------------------------------------------------------------------

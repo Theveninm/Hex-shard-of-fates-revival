@@ -790,7 +790,14 @@ namespace HexRevival
 
         public static CardTemplate RandomCard(CardSetTemplate set, ERarity rarity, ECardTypes? type)
         {
-            if (set == null) return null;
+            List<CardTemplate> pool = Pool(set, rarity, type);
+            return pool.Count > 0 ? pool[UnityEngine.Random.Range(0, pool.Count)] : null;
+        }
+
+        /// <summary>The ownable cards of a set and rarity (of a type), basic resources excepted. Shared: do not modify.</summary>
+        public static List<CardTemplate> Pool(CardSetTemplate set, ERarity rarity, ECardTypes? type = null)
+        {
+            if (set == null) return new List<CardTemplate>();
             string key = set.m_Id + "|" + rarity + "|" + type;
             List<CardTemplate> pool;
             if (!s_Pools.TryGetValue(key, out pool))
@@ -806,7 +813,7 @@ namespace HexRevival
                 }
                 s_Pools[key] = pool;
             }
-            return pool.Count > 0 ? pool[UnityEngine.Random.Range(0, pool.Count)] : null;
+            return pool;
         }
 
         /// <summary>Card sets of the campaign packs: "AZ1" holds the Howling Plains cards, "AZ2" the Alachian Sea ones (Src.Game).</summary>

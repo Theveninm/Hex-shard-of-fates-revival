@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Game.Client;
 using Game.Client.Network.Escrow;
@@ -123,6 +124,8 @@ namespace HexRevival
                     : item.m_Name.StartsWith("Collector's Deck") ? CollectorDeckGold : OtherDeckGold;
                 return new Product { Item = item, Price = gold, Tab = "collectordeck" };
             }
+            string special = SpecialPacks.KindOf(item);
+            if (special != null) return new Product { Item = item, Price = SpecialPacks.GoldPrice(special), Tab = special == "common" || special == "fullset" ? "cardpack" : "special" };
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack != null)
             {
@@ -246,6 +249,7 @@ namespace HexRevival
                     if (!Sleeves.Owned(id)) { inventory_bits sb = Inventory.GrantSilently(id); if (sb != null) r.GrantedInventory.Add(sb); }
                 return;
             }
+            if (SpecialPacks.Deliver(item, r)) return;
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack != null)
             {
@@ -279,8 +283,34 @@ namespace HexRevival
             return o.Count + " product(s)" + (o.Count > 0 ? ":\n" + string.Join("\n", o.ToArray()) : "");
         }
 
+        /// <summary>Dev: "store open <product id>" = delivers one product without paying (as bought), and lists what it gave.</summary>
+        public static string DevOpen(ulong id)
+        {
+            Items();
+            Product p;
+            if (!s_Products.TryGetValue(id, out p)) return "no product " + id;
+            PurchaseItemResponse r = LocalServer.Ok<PurchaseItemResponse>();
+            r.PurchasedInventory = new List<inventory_bits>(); r.PurchasedDeckBits = new List<deck_bits>(); r.PurchasedCards = new List<card_instance_bits>();
+            r.GrantedInventory = new List<inventory_bits>(); r.GrantedDeckBits = new List<deck_bits>(); r.GrantedCards = new List<card_instance_bits>();
+            Deliver(p.Item, r);
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<string> o = new List<string>();
+            foreach (card_instance_bits c in r.PurchasedCards.Concat(r.GrantedCards))
+            {
+                CardTemplate t = tm.GetCardTemplate(c.TemplateID);
+                o.Add(t != null ? t.m_Name.Trim() + " (" + t.m_CardRarity + ", " + t.CardShards + ")" : c.TemplateID.ToString());
+            }
+            foreach (inventory_bits i in r.PurchasedInventory.Concat(r.GrantedInventory))
+            {
+                InventoryItemData d = tm.GetInventoryItem(i.TemplateID);
+                o.Add(d != null ? d.m_Name.Trim() + " [" + d.GetType().Name + "]" : i.TemplateID.ToString());
+            }
+            Saves.SaveCurrent();
+            return p.Item.m_Name.Trim() + ": " + o.Count + " item(s)\n" + string.Join("\n", o.ToArray());
+        }
+
         /// <summary>A Kismet's Reserve pack: its theme's cards, equipment and mercenary (Src.Zymmer + Src.Game, see Zymmer.KismetBundle).</summary>
-        private static void DeliverKismet(InventoryItemData item, PurchaseItemResponse r)
+        internal static void DeliverKismet(InventoryItemData item, PurchaseItemResponse r)
         {
             foreach (Loot.Drop d in Zymmer.KismetBundle(item.m_Name))
             {
