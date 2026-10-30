@@ -285,6 +285,10 @@ meeting, then the repeat dialogue with or without a fortune (Game names, not fil
 first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run). "The New Land" is offered
 once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
 
+Whisper Delta (node 3), Chumspike's first attack: surviving until the "Row Faster" terrain effect lets the champion row
+away ends with "Player successfully escaped" (Video: every run, e.g. KVC part 1 20:34); killing Chumspike (30 health)
+ends with the game's "Player wins battle" conversation instead (Game; never seen on video).
+
 Shroom Hauses (Game: conversation nodes "Shroom house"): the card choice window opens after the Shroomkin's dialogue,
 3 AZ2 cards of one shard, all from the videos. Fungal Hillock (node 17) Sapphire: Dancing Faeries, Bull Shark, Arcane
 Spritegang (MHS 2017-04-21 5:52, KVC part 1); Vale of Fallen Apples (39) Wild: Aryndel Warden, Pippit's Gift, Shroom

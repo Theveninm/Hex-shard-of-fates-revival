@@ -58,7 +58,10 @@ namespace HexRevival
             return level;
         }
 
-        /// <summary>Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary>
+        /// <summary>
+        /// Talent points per champion level gained: 1. Src.Video: KVC part 5, Vash's talent tree with 0 unspent points,
+        /// 2 one-point talents at level 3 (30:45) and 3 at level 4 (38:19).
+        /// </summary>
         private const int TalentPointsPerLevel = 1;
 
         // ==================================================================
@@ -1072,6 +1075,19 @@ namespace HexRevival
 
         private static object s_EndedSession;
 
+        /// <summary>Every AI champion of the match is dead (a won battle, not one survived or escaped).</summary>
+        private static bool AiChampionsDead(StandaloneSession ss)
+        {
+            bool any = false;
+            foreach (Player p in ss.GetAllPlayers())
+            {
+                if (p == null || !Server.IsAIId(p.m_PlayerId) || p.m_ChampionCard == null) continue;
+                any = true;
+                if (p.m_ChampionCard.CurrentHealthValue > 0) return false;
+            }
+            return any;
+        }
+
         /// <summary>
         /// A match ended. EndGame can run several times for one match: only the first call counts.
         /// </summary>
@@ -1090,6 +1106,7 @@ namespace HexRevival
             if (winners != null)
                 foreach (UID u in winners)
                     if (!Server.IsAIId(u)) won = true;
+            Campaign.OpponentDefeated = won && ss != null && AiChampionsDead(ss);
             if (Arena.OnGameEnded(won)) return;   // the arena's own rewards (see Arena)
             if (Siege.OnGameEnded(won)) return;   // no account XP for Siege battles: PLACEHOLDER, not known
             if (Battlegrounds.OnGameEnded(won) || Battlegrounds.OnLadderGameEnded(won)) return;   // same for the Battlegrounds: PLACEHOLDER

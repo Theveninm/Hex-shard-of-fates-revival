@@ -514,7 +514,8 @@ namespace HexRevival
         private static bool IsOutcome(string name)
         {
             string u = name.ToUpperInvariant();
-            return u.Contains("SUCCESS") || u.Contains("FAIL") || u.Contains("REPEAT ENCOUNTERS");
+            // Whisper Delta: "Player wins battle" is an outcome too, and the "Narration" ones are said during the battle.
+            return u.Contains("SUCCESS") || u.Contains("FAIL") || u.Contains("REPEAT ENCOUNTERS") || u.Contains("WINS BATTLE") || u.Contains("NARRATION");
         }
 
         /// <summary>Conversation of a non-battle node for this champion: quest step rules first, else the best matching one.</summary>
@@ -594,7 +595,15 @@ namespace HexRevival
             return best != null ? best.m_Id.ToString() : null;
         }
 
-        /// <summary>Conversation shown after a node's battle ("... Success" / "... Fail", by the choice made before it).</summary>
+        /// <summary>The AI's champion died in the battle just won (set by Progression.OnMatchEnded before OnGameEnded).</summary>
+        public static bool OpponentDefeated;
+
+        /// <summary>
+        /// Conversation shown after a node's battle ("... Success" / "... Fail", by the choice made before it).
+        /// Whisper Delta's first Chumspike attack (AZ2 Node 3) is won by surviving until the "Row Faster" terrain
+        /// effect lets the champion row away: "Player successfully escaped" (Src.Video: every run, e.g. KVC part 1
+        /// 20:34), or by killing Chumspike: "Player wins battle" (Src.Game: its own conversations, never seen on video).
+        /// </summary>
         private static string Outcome(ulong champ, MapNode n, bool won)
         {
             string choice = Quests.Flag(champ, "choice:" + n.Key);
@@ -603,8 +612,11 @@ namespace HexRevival
             foreach (ConversationTemplate c in NodeConvs(n))
             {
                 string u = c.m_Name.ToUpperInvariant();
-                if (!Quests.MatchesChampion(c.m_Name, champ) || !(won ? u.Contains("SUCCESS") : u.Contains("FAIL"))) continue;
+                bool winsBattle = u.Contains("WINS BATTLE"), escaped = u.Contains("ESCAPED");
+                if (!Quests.MatchesChampion(c.m_Name, champ) || !(won ? u.Contains("SUCCESS") || winsBattle : u.Contains("FAIL"))) continue;
                 int score = 1;
+                if (winsBattle) score = OpponentDefeated ? 3 : 0;
+                else if (escaped) score = OpponentDefeated ? 0 : 2;
                 // Harp Rock: the outcome of the demon fought (dialogue event "swaptosuccubus" / "swaptomancubus")
                 string fought = choice != null && choice.StartsWith("swapto") ? choice.Substring(6).ToUpperInvariant() : n.Variants != null && n.Variants.ContainsKey("swaptomancubus") ? "MANCUBUS" : null;
                 if (fought != null) score = u.Contains(fought) ? 3 : 0;

@@ -98,12 +98,23 @@ Hogarth's challenge window (the client's is the consoles', without buttons on PC
 | NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit |
 | CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage" |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
-| Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video |
-| Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen |
+| Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video (checked 2026-10-31: KVC parts 4, 9, 15 and MHS's 2019 Kukatan run go from the Mausoleum to the Black Hall and the Forgotten Crypt) |
+| Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen (Vandersveldt parts 27, 28, 35: the 2016 client shows no form on the board) |
 | Fortunes.cs | which fortune is drawn | random in the runs |
 | Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first |
 | Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video |
-| Progression.cs TalentPointsPerLevel | 1 | the reward window only says "Leveled Up!" (Vandersveldt part 79 4:54) |
+
+## Game content the mod does not place (audit of 2026-10-31)
+Every conversation (2,297) and encounter scene (362) of the game files was checked against the map nodes, the dungeons
+and the mod's code (dev commands `camp nodes`, `camp nodes AZ2`, `camp battleaudit`, `camp nodeaudit`, `camp convs -`,
+`camp scene <filter>`). What is left out, and why:
+| Content | Why it is not placed |
+|---|---|
+| Wild Heist, Wooly Bully, Yeti Family, Corrupted Pool (Pool of Corruption), Clan Oni, Ambush: 46 battles and their conversations | tagged `FutureRelease` in the game data: never released; no dungeon map or quest for them in the client |
+| Doomsday Dwarf, Chaos Key, Sphinx, Skullzzor, Primal of Pain, Garden of Corruption, Frankie the Swine, Spear of Madness, Stolen Offerings, Master's Workshop, King Ook-Bok, Killing Time, The Depths of Blood, The Battle of Quash Ridge, Fury of Oberon, Rise of Slaughtergear, The Eye of Zakiir, A Friend In Need / In Deed, The Samurai / Sapper / Gladiator, Cave of the Dream Bear, Hunted, Wendigo Hunt, Battle of Daventry, Zodiac Bells, the RAIDs, GenCon 2015 Demo and other small sets | conversations only: no battle, map, deck or quest in the client (never released). No video shows them (the one OCR hit, JBStevenson part 11 1:54, is the AZ1 map) |
+| AZ1 Node 72 / 76 "Blacksmith 3 / 4 - Reward" scenes | no such nodes on the AZ1 map prefab (Node 20's Blacksmith 2 is used) |
+| "AZ2 - Node B0 - CUT - See Node 00B A" | marked cut in its own name |
+| Horwich Sea: "Hag - Princess Revert" and the "06 B - Sea Witch - No Frog" battle | released data, but no run shows them: every fight (Vandersveldt parts 18-30, MHS Ardent 2017-02-07) opens with "Hag" and plays "Daphne in Distress", and MHS's win shows no dialogue during the battle. Its text ("you saw through my little transformation spell") fits the moment Daphne is saved; left out rather than guessed |
 
 ## Placeholders with no source expected (other modes, economy)
 Arena, Battlegrounds, Siege, Store, prize packs, loot weights, the Wheel of Fate's reel colors and booster chest rarity: the original values
@@ -163,21 +174,20 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
-| Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
-| Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
-| Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:541 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:748 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:784 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:787 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:903 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:984 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:987 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:990 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1005 | level: PLACEHOLDER). |
-| Progression.cs:1018 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1094 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1095 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:150 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
+| Progression.cs:203 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:544 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:751 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:787 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:790 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:906 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:987 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:990 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:993 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1008 | level: PLACEHOLDER). |
+| Progression.cs:1021 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1111 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1112 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
 | Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
