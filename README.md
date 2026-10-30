@@ -193,7 +193,7 @@ blockade, the faction locations of the campaign map, gems not saved in decks, eq
 taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns), **KrystoferRobin** (the mercenary slots of the battle
 panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
 champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
-from, and for the tutorial's last battle that froze.
+from, and for the tutorial's last battle that froze. To **Criesener** for the macOS version.
 
 ## Building from source
 
