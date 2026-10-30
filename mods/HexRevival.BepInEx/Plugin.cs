@@ -177,6 +177,7 @@ namespace HexRevival
                 apply("UITournamentPendingViewModel.OnJoinTournamentClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnJoinTournamentClicked", Type.EmptyTypes, "Tournament_Join"));
                 apply("UITournamentPendingViewModel.OnTournamentDoubleClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnTournamentDoubleClicked", new[] { typeof(UITournamentDescContext) }, "Tournament_DoubleClick"));
                 apply("UILandingPageViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UILandingPageViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "Landing_Awake")));
+                apply("UIPremiumStoreItemContext..ctor(pack)", () => harmony.Patch(AccessTools.Constructor(typeof(UIPremiumStoreItemContext), new[] { typeof(Reckoning.Game.InventoryCardPack), typeof(Game.Shared.StoreItem) }), postfix: new HarmonyMethod(typeof(Hooks), "Store_PackItem")));
                 apply("UIPremiumStoreItemContext..ctor(chest)", () => harmony.Patch(AccessTools.Constructor(typeof(UIPremiumStoreItemContext), new[] { typeof(Reckoning.Game.InventoryTreasureChest), typeof(Game.Shared.StoreItem) }), postfix: new HarmonyMethod(typeof(Hooks), "Store_ChestItem")));
                 apply("StoreItem3DController.OnAssetBundleObjectLoaded", () => harmony.Patch(AccessTools.Method(typeof(StoreItem3DController), "OnAssetBundleObjectLoaded"), postfix: new HarmonyMethod(typeof(Hooks), "Store_3DLoaded")));
                 apply("DuelingPitVM.FindMatch", () => Prefix(harmony, typeof(DuelingPitVM), "FindMatch", Type.EmptyTypes, "DuelingPit_FindMatch"));
@@ -504,13 +505,14 @@ namespace HexRevival
         public static bool Arena_Destroy(Game.Client.Network.Campaign.CampaignService.DestroyArenaData.ResponseHandler __1) { Arena.Destroy(__1); return false; }
         public static bool Arena_Refresh(Game.Client.Network.Campaign.CampaignService.RefreshArenaInfo.ResponseHandler __3) { Arena.Refresh(__3); return false; }
         public static void Arena_Start(UIArenaCampaignViewModel __instance) { Arena.OnScreenStart(__instance); }
-        public static void Icons_GetAsset(AssetBundleManager __instance, AssetBundleFile __0, string __1, string __2, AssetType __3, ref UnityEngine.Object __result) { if (__result == null) __result = StoreIcons.Missing(__instance, __0, __1, __2, __3); }
+        public static void Icons_GetAsset(AssetBundleManager __instance, AssetBundleFile __0, string __1, string __2, AssetType __3, ref UnityEngine.Object __result) { if (__result == null || StoreIcons.IsPlaceholder(__0, __2)) { UnityEngine.Object r = StoreIcons.Missing(__instance, __0, __1, __2, __3); if (r != null) __result = r; } }
         public static void Arena_ChampionHud(UIArenaCampaignContext __instance, DeckCache __0) { Arena.OnAssignChampionHud(__instance, __0); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
         public static void Localization_Get(string key, ref string __result) { if (key != null && key.StartsWith("hexrevival-")) { string t = DuelingPit.Localize(key); if (t != null) __result = t; } }
         public static bool Tournament_Join(UITournamentPendingViewModel __instance) { return DuelingPit.OnJoin(__instance, null); }
         public static bool Tournament_DoubleClick(UITournamentPendingViewModel __instance, UITournamentDescContext __0) { return DuelingPit.OnJoin(__instance, __0); }
         public static void Landing_Awake(UILandingPageViewModel __instance) { Community.OnLandingAwake(__instance); }
+        public static void Store_PackItem(UIPremiumStoreItemContext __instance, Reckoning.Game.InventoryCardPack __0) { StoreIcons.OnPackItem(__instance, __0); }
         public static void Store_ChestItem(UIPremiumStoreItemContext __instance, Reckoning.Game.InventoryTreasureChest __0) { StoreIcons.OnChestItem(__instance, __0); }
         public static void Store_3DLoaded(StoreItem3DController __instance) { StoreIcons.On3DItemLoaded(__instance); }
         public static bool DuelingPit_FindMatch(DuelingPitVM __instance) { return DuelingPit.FindMatch(__instance); }

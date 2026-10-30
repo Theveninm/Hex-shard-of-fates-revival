@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Shared;
 using Reckoning.Game;
 using UnityEngine;
 
@@ -16,6 +17,10 @@ namespace HexRevival
     ///   on the right: missing for Frostlock and Dream Forest, which only have their picture. The banner is the middle of
     ///   the picture (the banners are 4:1, the pictures 2:1); the board is another board's model (Badlands) with this
     ///   board's picture.
+    /// - "&lt;texture&gt;_Wallpaper" of the other products without one (most primal packs, Kismet's Draft Pack, the Starter
+    ///   Trials packs, the Gauntlet pack, the Random Previous Kismet Pack), and Dead of Winter Primal Pack's, which is a
+    ///   "PLACEHOLDER" picture: a related product's banner (see Related); the Random Previous Kismet Pack's missing model
+    ///   too.
     /// The gift boxes (treasure chests in the game data, shown as the campaign packs) lose the campaign packs' "Bonus
     /// chance!", and the outline the store draws around its 3D item is put on their chest.
     /// </summary>
@@ -25,24 +30,88 @@ namespace HexRevival
         /// <summary>The board whose model the boards without one borrow: Badlands (Src.Game, icons.ab).</summary>
         private const string ModelBoard = "a0008050";
 
-        /// <summary>AssetBundleManager.GetAsset (postfix, when it found nothing): a picture or model the bundle lacks.</summary>
+        /// <summary>
+        /// Banners the game ships as a "PLACEHOLDER" picture (Src.Game, icons.ab): Dead of Winter Primal Pack's. Replaced
+        /// like a missing one.
+        /// </summary>
+        private static readonly HashSet<string> PlaceholderBanners = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "a0008437_Wallpaper" };
+
+        /// <summary>Whether a picture the bundle has must be replaced all the same.</summary>
+        public static bool IsPlaceholder(AssetBundleFile bundle, string name)
+        {
+            return bundle == AssetBundleFile.Icons && name != null && PlaceholderBanners.Contains(name);
+        }
+
+        private static int s_Depth;
+
+        /// <summary>AssetBundleManager.GetAsset (postfix, when it found nothing or a placeholder): a picture or model the bundle lacks.</summary>
         public static UnityEngine.Object Missing(AssetBundleManager m, AssetBundleFile bundle, string subBundle, string name, AssetType type)
         {
-            if (bundle != AssetBundleFile.Icons || string.IsNullOrEmpty(name)) return null;
+            if (bundle != AssetBundleFile.Icons || string.IsNullOrEmpty(name) || s_Depth > 0) return null;
+            s_Depth++;
             try
             {
                 if (type == AssetType.Texture2D && name.EndsWith(Thumb))
                     return m.GetAsset(bundle, subBundle, name.Substring(0, name.Length - Thumb.Length), type);
                 if (type == AssetType.Texture2D && name.EndsWith(Wallpaper))
                 {
-                    string board = name.Substring(0, name.Length - Wallpaper.Length);
-                    return IsBoard(board) ? Banner(m.GetAsset(bundle, subBundle, board, type) as Texture2D, board) : null;
+                    string tex = name.Substring(0, name.Length - Wallpaper.Length);
+                    if (IsBoard(tex)) return Banner(m.GetAsset(bundle, subBundle, tex, type) as Texture2D, tex);
+                    string from = Related(tex);
+                    return from != null ? m.GetAsset(bundle, subBundle, from + Wallpaper, type) : null;
                 }
                 if (type == AssetType.Prefab && IsBoard(name)) return BoardModel(m, bundle, subBundle, name);
+                if (type == AssetType.Prefab)
+                {
+                    string from = Related(name);
+                    return from != null ? m.GetAsset(bundle, subBundle, from, type) : null;
+                }
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Store] icon " + name + ": " + e.Message); }
+            finally { s_Depth--; }
             return null;
         }
+
+        // ---- Products without a banner or model of their own ----
+
+        private static Dictionary<string, string> s_Related;
+
+        /// <summary>
+        /// The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original
+        /// store's rows for these are not known): a pack, its set's booster's; Kismet's Draft Pack and the Random Previous
+        /// Kismet Pack, the Kismet's Reserve Pack's. By texture name; null if none.
+        /// </summary>
+        private static string Related(string texture)
+        {
+            if (s_Related == null)
+            {
+                s_Related = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<ResourceId, string> boosters = new Dictionary<ResourceId, string>();
+                string kismet = null;
+                List<InventoryItemData> all = new List<InventoryItemData>(Singleton<TemplateManager>.Instance.InventoryItems.Values);
+                foreach (InventoryItemData i in all)
+                {
+                    InventoryCardPack p = i as InventoryCardPack;
+                    if (p != null && p.m_CardPackType == ECardPackType.BoosterPack && p.m_SetId.IsValid && !string.IsNullOrEmpty(i.m_TexturePath)
+                        && i.m_Name != null && i.m_Name.EndsWith("Booster Pack") && !boosters.ContainsKey(p.m_SetId))
+                        boosters[p.m_SetId] = Tex(i);
+                    if (i is InventoryTreasureChest && i.m_Name != null && i.m_Name.Trim() == "Kismet's Reserve Pack") kismet = Tex(i);
+                }
+                foreach (InventoryItemData i in all)
+                {
+                    InventoryCardPack p = i as InventoryCardPack;
+                    if (p == null || string.IsNullOrEmpty(i.m_TexturePath)) continue;
+                    string tex = Tex(i), from = null;
+                    if (p.m_CardPackType == ECardPackType.KismetPack || (i.m_Name ?? "").Trim() == "Random Previous Kismet Pack") from = kismet;
+                    else boosters.TryGetValue(p.m_SetId, out from);
+                    if (from != null && !string.Equals(from, tex, StringComparison.OrdinalIgnoreCase) && !s_Related.ContainsKey(tex)) s_Related[tex] = from;
+                }
+            }
+            string r;
+            return s_Related.TryGetValue(texture, out r) ? r : null;
+        }
+
+        private static string Tex(InventoryItemData i) { return FolderUtils.GetFileNameWithoutPathOrExtension(i.m_TexturePath); }
 
         // ---- Battleboards ----
 
@@ -125,6 +194,18 @@ namespace HexRevival
             if (ctx == null || SpecialPacks.KindOf(chest) != "giftbox") return;
             ctx.IsCampaignPack = false;
             ctx.Quantity = 1;
+        }
+
+        /// <summary>
+        /// UIPremiumStoreItemContext(InventoryCardPack, StoreItem) (postfix): the Random Previous Kismet Pack is a booster
+        /// in the game data, but holds a Kismet's Reserve pack: no "Primal chance!" and no collection count of a set.
+        /// </summary>
+        public static void OnPackItem(UIPremiumStoreItemContext ctx, InventoryCardPack pack)
+        {
+            if (ctx == null || SpecialPacks.KindOf(pack) != "randomkismet") return;
+            ctx.IsBoosterPack = false;
+            ctx.HasDetails = false;
+            ctx.StarterPackContentTooltip = string.Empty;
         }
 
         /// <summary>StoreItem3DController.OnAssetBundleObjectLoaded (postfix): the outline put on a gift box's chest.</summary>
