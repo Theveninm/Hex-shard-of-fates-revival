@@ -265,6 +265,19 @@ namespace HexRevival
                 catch { }
             }
             m_GameDecks.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
+            // After the game's decks: the decks players brought to tournaments (TournamentDecks).
+            List<TournamentDecks.Deck> played = TournamentDecks.All();
+            if (played.Count > 0) m_GameDecks.Add(new Entry { Label = Loc.Get("ai_cat_tournament"), Header = true, Search = "" });
+            foreach (TournamentDecks.Deck d in played)
+            {
+                DeckTemplate t = Opponents.DeckOf(TournamentDecks.Opponent(d.Key));
+                if (t == null) continue;
+                m_GameDecks.Add(new Entry
+                {
+                    Label = d.Name, Detail = d.Detail, Search = (d.Name + " " + d.Detail + " tournament").ToLowerInvariant(), Template = t,
+                    Champion = tm.GetChampionTemplate(t.m_ChampionId),
+                });
+            }
             foreach (SceneData sd in tm.CampaignScenes.Values)
             {
                 try
@@ -349,6 +362,7 @@ namespace HexRevival
                 if (g != null) g.Reposition();
             }
             if (vm == null || vm.MenuUI.Campaign == null) return;
+            DuelingPit.OpenIfAsked(vm);
             // Red, as a cancel button.
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);

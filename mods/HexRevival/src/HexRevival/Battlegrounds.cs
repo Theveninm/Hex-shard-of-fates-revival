@@ -170,6 +170,10 @@ namespace HexRevival
                     Run r = RunOf(g.Id);
                     if (r != null) Register(g, r);
                 }
+                // The Dueling Pit (no run: its entry opens its own screen, see DuelingPit).
+                TournamentDesc pit = DuelingPit.Describe();
+                m.AddDescriptionToTournamentList(pit);
+                list.Add(pit);
                 m.OnInitDescriptionsMKII(list);
                 Debug.Log("[HexRevival] [Battlegrounds] " + list.Count + " gauntlets listed, " + Data.Runs.Count + " in progress");
             }
@@ -859,13 +863,21 @@ namespace HexRevival
             for (int i = 0; i < PrizeBoosters(r.Wins); i++)
                 foreach (CardTemplate t in Progression.OpenPack(set)) { cards.Add(t.m_Id); Collection.Grant(t.m_Id, 1); }
             Debug.Log("[HexRevival] [Battlegrounds] " + (g != null ? g.Name : "?") + " over: " + r.Wins + "-" + r.Losses + ", " + cards.Count + " cards");
+            // Sleeves (Src.HexCodex): "Awarded for getting 3 wins in Kismet's Draft events"; "Obtained through Gauntlet
+            // Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet.
+            List<ResourceId> items = new List<ResourceId>();
+            if (g != null && r.Wins >= 3 && (g.Kind == Kind.Draft || g.Kind == Kind.Constructed))
+            {
+                InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching(g.Kind == Kind.Draft ? "^Awarded for getting 3 wins in Kismet's Draft" : "^Obtained through Gauntlet Tournaments"));
+                if (sl != null && Sleeves.Grant(sl, false) != null) items.Add(sl.m_Id);
+            }
             Manager.OnTournamentReceivePrizeEvent(new TournamentReceivePrizeEventArgs
             {
                 TournamentID = r.TournamentId,
                 wins = r.Wins,
                 losses = r.Losses,
                 cardTemplateIDs = cards,
-                inventoryTemplateIDs = new List<ResourceId>(),
+                inventoryTemplateIDs = items,
             });
         }
 
@@ -939,6 +951,39 @@ namespace HexRevival
         {
             public int ConstructedStars, ConstructedMax, ConstructedStreak;
             public int LimitedStars, LimitedMax, LimitedStreak;
+            /// <summary>When the account played its first ranked game (DateTime ticks): the seasons count from it.</summary>
+            public long SeasonsFrom;
+        }
+
+        /// <summary>The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary>
+        private static readonly int[] TierStars = { 0, 10, 25, 45, 70 };
+
+        /// <summary>The ladder season now (Sleeves.Seasons), or null if the game has none.</summary>
+        private static string Season()
+        {
+            LadderRecord l = Data.Ladder;
+            if (l.SeasonsFrom == 0) return null;
+            int i = Sleeves.SeasonIndex(new DateTime(l.SeasonsFrom), DateTime.Now);
+            return i >= 0 ? Sleeves.Seasons()[i] : null;
+        }
+
+        /// <summary>
+        /// The season's sleeves of the tiers reached ("Awarded by obtaining the [tier] Rank in the [season] Ladder",
+        /// Src.HexCodex), each once.
+        /// </summary>
+        private static void LadderSleeves()
+        {
+            string season = Season();
+            if (season == null || Saves.Current == null) return;
+            for (int t = 0; t < TierStars.Length; t++)
+            {
+                if (Data.Ladder.ConstructedStars < TierStars[t]) break;
+                string claim = "ladder:" + season + ":" + Sleeves.LadderTiers[t];
+                if (Saves.Current.Claims.Contains(claim)) continue;
+                Saves.Current.Claims.Add(claim);
+                Sleeves.Grant(Sleeves.SeasonSleeve(season, Sleeves.LadderTiers[t]));
+            }
+            Saves.SaveCurrent();
         }
 
         private static bool s_LadderBattle;
@@ -956,8 +1001,18 @@ namespace HexRevival
                 limitedMaxStars = l.LimitedMax,
                 limitedStreak = l.LimitedStreak,
                 limitedSleeves = new List<ResourceId>(),
-                constructedSleeves = new List<ResourceId>(),
+                constructedSleeves = SeasonSleeves(),
             };
+        }
+
+        /// <summary>The current season's tier sleeves (Bronze to Cosmic), shown by the ladder bar.</summary>
+        private static List<ResourceId> SeasonSleeves()
+        {
+            List<ResourceId> res = new List<ResourceId>();
+            string season = Season() ?? (Sleeves.Seasons().Count > 0 ? Sleeves.Seasons()[0] : null);
+            if (season == null) return res;
+            foreach (string t in Sleeves.LadderTiers) { InventoryDeckSleeve s = Sleeves.SeasonSleeve(season, t); if (s != null) res.Add(s.m_Id); }
+            return res;
         }
 
         /// <summary>LadderFindMatch: a match against the AI with the chosen deck (ladder 0 ranked, 2 unranked, 3 immortal).</summary>
@@ -995,8 +1050,10 @@ namespace HexRevival
             int stars = won ? 1 + (l.ConstructedStreak >= 2 ? 1 : 0) : -1;
             l.ConstructedStars = Math.Max(0, l.ConstructedStars + stars);
             l.ConstructedMax = Math.Max(l.ConstructedMax, l.ConstructedStars);
+            if (l.SeasonsFrom == 0) l.SeasonsFrom = DateTime.Now.Ticks;
             Save();
             Notices.Show(Loc.Get("ladder_stars", l.ConstructedStars));
+            LadderSleeves();
             return true;
         }
     }

@@ -103,6 +103,17 @@ namespace HexRevival
             return new UID(UID.Type.Deck, d.Id);
         }
 
+        /// <summary>A game deck template as the player's deck for one match (the arena's Ol' Switcheroo); never saved.</summary>
+        public static UID SetTemporary(Reckoning.Game.DeckTemplate t)
+        {
+            StoredDeck d = new StoredDeck { Id = TemporaryId, Name = t.m_DeckName ?? "", PvpChampion = t.m_ChampionId };
+            if (t.m_DeckSleeve.IsValid) d.Sleeve = t.m_DeckSleeve;
+            foreach (Reckoning.Game.TemplateCardStack st in t.m_DeckResources) AddStack(d, st);
+            foreach (ResourceId e in t.m_EquipmentIDs) if (e.IsValid) d.Equipment.Add(e);
+            s_Temporary = d;
+            return new UID(UID.Type.Deck, d.Id);
+        }
+
         /// <summary>The AI settings of the shared deck a template was made from (same name and champion), or the defaults.</summary>
         public static AiSettings AiOfTemplate(Game.Shared.Profile.ProfileDeckTemplate t)
         {

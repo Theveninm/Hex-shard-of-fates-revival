@@ -871,6 +871,7 @@ namespace HexRevival
                     return "restarting";
                 }
                 case "dump": return DumpString(session);
+                case "store3d": return StoreIcons.Dump();   // dev: the store's 3D item and the cameras
                 case "pass": return "pass=" + (player != null ? player.PassPriority().ToString() : "noplayer");
                 case "autopass": if (player != null) player.SendAutoPass(EPassingState.EndOfTurn); return "autopass sent";
                 case "accept": if (player != null) player.AcceptStartingHand(); return "accept sent";
@@ -917,6 +918,83 @@ namespace HexRevival
                 case "profile": return AccountMenu.Command(parts);
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
+                case "tdecks": return TournamentDecks.Command(parts);
+                case "sleeves": return Sleeves.Command(parts);
+                case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
+                    {
+                        UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+                        if (vm == null) return "no landing page";
+                        string r0 = "button " + (vm.MenuUI.DuelingPit != null) + ", view " + (vm.DuelingPit != null);
+                        if (parts.Length > 1 && parts[1] == "show")
+                        {
+                            if (vm.MenuUI.DuelingPit != null) vm.MenuUI.DuelingPit.gameObject.SetActive(true);
+                            if (vm.DuelingPit != null) { vm.DuelingPit.gameObject.SetActive(true); vm.DuelingPit.SetView(DuelingPitVM.EDuelingPitView.ChooseOpponent); }
+                        }
+                        return r0;
+                    }   // dev: "sleeves [state|holiday|season|give <pattern>]"
+                case "itemdump":   // dev: "itemdump <text>" = the game's items whose name contains it: type, pack type, set, price, description
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        foreach (InventoryItemData i in tm.InventoryItems.Values)
+                        {
+                            if (i == null || i.m_Name == null || i.m_Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            InventoryCardPack cp = i as InventoryCardPack;
+                            CardSetTemplate set = null;
+                            if (cp != null) tm.CardSets.TryGetValue(cp.m_SetId, out set);
+                            sb.Append(i.m_Name).Append(" | ").Append(i.GetType().Name).Append(cp != null ? " " + cp.m_CardPackType + " set=" + (set != null ? set.m_Name : cp.m_SetId.ToString()) : "")
+                              .Append(" price=").Append(i.m_BasePrice).Append(" buy=").Append(i.m_AvailableForPurchase).Append(" tag=").Append(i.m_BuildTag).Append(" tex=").Append(i.m_TexturePath)
+                              .Append(" | ").Append((i.Description ?? "").Replace("\n", " ")).Append('\n');
+                        }
+                        return sb.Length == 0 ? "none" : sb.ToString();
+                    }
+                case "sleevedump":   // dev: "sleevedump [text]" = the game's sleeves whose description contains the text
+                    {
+                        string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        int n = 0, all = 0;
+                        foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                        {
+                            if (!(i is InventoryDeckSleeve)) continue;
+                            all++;
+                            if (q != "" && (i.Description ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            if (n++ < 15) sb.Append(i.m_Name).Append(" | ").Append(i.m_Description).Append(" | ").Append(i.Description).Append(" | ").Append(i.m_BuildTag).Append('\n');
+                        }
+                        return all + " sleeves, " + n + " matching\n" + sb;
+                    }
+                case "cardsearch":   // dev: "cardsearch <text>" = abilities whose text contains it, and the cards holding them
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        HashSet<ResourceId> found = new HashSet<ResourceId>();
+                        foreach (ResourceId k in tm.Abilities.Keys)
+                        {
+                            AbilityTemplate at = tm.Abilities[k];
+                            // "=text": exactly that text.
+                            if (at != null && at.m_GameText != null && (q.StartsWith("=") ? at.m_GameText.Trim() == q.Substring(1) : at.m_GameText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)) found.Add(k);
+                        }
+                        sb.Append(found.Count).Append(" abilities\n");
+                        int shownAb = 0;
+                        foreach (ResourceId k in found) { if (shownAb++ >= 12) break; sb.Append("  ").Append(k.m_Guid).Append(" ").Append(tm.Abilities[k].m_GameText.Replace("\n", " ")).Append('\n'); }
+                        int n = 0;
+                        foreach (CardTemplate c in tm.Cards.Values)
+                        {
+                            if (c == null || c.m_CardAbilities == null) continue;
+                            foreach (CardAbilityContainer a in c.m_CardAbilities)
+                            {
+                                if (!found.Contains(a.m_CardAbilityId)) continue;
+                                CardSetTemplate set;
+                                tm.CardSets.TryGetValue(c.m_SetId, out set);
+                                sb.Append(c.m_Name).Append(" | ").Append(c.m_CardType).Append(" | ").Append(set != null ? set.m_Name : "?").Append(" | ").Append(tm.Abilities[a.m_CardAbilityId].m_GameText.Replace("\n", " ")).Append('\n');
+                                n++;
+                                break;
+                            }
+                            if (n >= 25) break;
+                        }
+                        return sb.ToString();
+                    }   // dev: "tdecks [check]" = the bundled tournament decks
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 1 && parts[1] == "products") return Store.Products(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : "");
@@ -926,7 +1004,26 @@ namespace HexRevival
                         Saves.SaveCurrent();
                         return "cosmic coins = " + Saves.Current.CosmicCoins + " (seen after the next login)";
                     }
-                    return "usage: store pools | store products [text] | store cosmic <n>";
+                    if (parts.Length > 2 && parts[1] == "open") return Store.DevOpen(ulong.Parse(parts[2]));
+                    if (parts.Length > 2 && parts[1] == "select")   // dev: selects the store screen's first item (of the tab shown) whose name holds the text
+                    {
+                        string q = string.Join(" ", parts, 2, parts.Length - 2);
+                        UIPremiumStoreViewModel svm = UnityEngine.Object.FindObjectOfType<UIPremiumStoreViewModel>();
+                        if (svm == null || svm.Context == null) return "no store screen";
+                        for (int i = 0; i < svm.Context.Catalog.Count; i++)
+                        {
+                            UIPremiumStoreItemContext it = svm.Context.Catalog.GetItem(i);
+                            if (it != null && it.Name != null && it.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                svm.Context.Catalog.SelectItem(i);
+                                UIScrollView sv = svm.GetComponentInChildren<UIScrollView>();
+                                if (sv != null && svm.Context.Catalog.Count > 1) sv.SetDragAmount(0f, (float)i / (svm.Context.Catalog.Count - 1), false);
+                                return "selected " + it.Name;
+                            }
+                        }
+                        return "not in this tab: " + q;
+                    }
+                    return "usage: store pools | store products [text] | store cosmic <n> | store open <product id> | store select <text>";
                 case "toggles": return Settings.DumpToggles();
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
@@ -1297,10 +1394,22 @@ namespace HexRevival
                         StandaloneSession ss = Server.CurrentSession;
                         if (ss == null) return "no game";
                         string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        // "cardtext ai:<name>": the AI's cards ("ai:*" its champion's abilities and every troop's Rage).
+                        bool ai = name.StartsWith("ai:");
+                        if (ai) name = name.Substring(3);
                         System.Text.StringBuilder sb = new System.Text.StringBuilder();
                         foreach (Player p in ss.GetAllPlayers())
                         {
-                            if (p == null || p.IsAI()) continue;
+                            if (p == null || p.IsAI() != ai) continue;
+                            if (name == "*")
+                            {
+                                foreach (ResourceId a in p.m_ChampionCard.CurrentAbilities) { AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a); if (at != null) sb.Append("champion: ").Append(at.m_GameText).Append('\n'); }
+                                foreach (Player q in ss.GetAllPlayers())
+                                    foreach (Card c in q.GetAllCards())
+                                        if (c != null && c.m_CardTemplate != null && (c.m_CardTemplate.m_CardType & ECardTypes.Troop) != 0 && (c.m_CurrentCardCollection == ECardCollections.Warzone || c.m_CurrentCardCollection == ECardCollections.Hand))
+                                            sb.Append(q.IsAI() ? "AI " : "you ").Append(c.m_CardTemplate.m_Name).Append(" in ").Append(c.m_CurrentCardCollection).Append(" rage=").Append(c.GetCardContext().Get(IntAttrs.Rage)).Append('\n');
+                                continue;
+                            }
                             sb.Append("equipment: ").Append(string.Join(", ", p.m_Equipment.ConvertAll(e => { InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e); return it != null ? it.m_Name : e.ToString(); }).ToArray())).Append(" slots=").Append(p.m_EquipmentSlotsEnabled).Append('\n');
                             foreach (Card c in p.GetAllCards())
                             {
