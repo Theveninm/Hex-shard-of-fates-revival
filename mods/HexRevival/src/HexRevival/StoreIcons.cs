@@ -102,12 +102,12 @@ namespace HexRevival
             { "a0008437", Art("BoosterPack_Set08_Primal", 0.14f, 0.86f, 0.22f) },  // Dead of Winter
             { "a0008803", Art("BoosterPack_Set09_Primal", 0.14f, 0.86f, 0.22f) },  // Doombringer
             { "a0008362", Art("BoosterPack_KismetDraft", 0f, 0.8f, 0.02f) },       // Kismet's Draft Pack
-            // Standard Format Gauntlet Pack: its icon (a black pack, the five shards above the HEX logo) has no texture of
-            // its own (its model wears the Common Only Booster Pack's); both are on that texture, in full size.
-            { "a0007459", new[] { new Layer("BoosterPack_Commons", new Rect(0.28f, 0.815f, 0.35f, 0.06f), new Rect(605, 22, 300, 51)),
-                                  new Layer("BoosterPack_Commons", new Rect(0.23f, 0.08f, 0.46f, 0.175f), new Rect(555, 88, 400, 152)) } },
-            // Random Previous Kismet Pack: only its icon (a "?" card box) shows it.
-            { "a0008551", new[] { new Layer("a0008551", new Rect(0f, 0f, 1f, 1f), new Rect(1024 - 30 - 256, 0, 256, 256), true) } },
+            // Standard Format Gauntlet Pack: its icon (a black pack with the HEX logo) has no texture of its own (its model
+            // wears the Common Only Booster Pack's): the HEX logo of that texture, in full size (user, 2026-10-31: the logo only).
+            { "a0007459", new[] { new Layer("BoosterPack_Commons", new Rect(0.23f, 0.08f, 0.46f, 0.175f), new Rect(1024 - 40 - 470, 38, 470, 179)) } },
+            // Random Previous Kismet Pack: its icon (a "?" card box) is 128 pixels; its banner is the owl of the Kismet's
+            // Reserve Pack, whose model it shows (user, 2026-10-31).
+            { "a0008551", Art("KismetsReservePack", 0.125f, 0.655f, 0.18f) },
         };
 
         /// <summary>A piece of a texture (src: fractions from its top left) drawn on the banner (dst: pixels from its top left).</summary>

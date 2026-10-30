@@ -346,16 +346,17 @@ namespace HexRevival
             { "Sapphire", new[] { "Morphology", "Chaotic Murmurs", "Heroic Echo" } },
             { "Ruby",     new[] { "Skittering Skarn", "Fuel for the Fire", "Emberbrute" } },
             { "Wild",     new[] { "Feralroot Jaguar", "Walking Hive", "Thornsprout" } },
-            // AZ2's Hauses: 3 AZ2 uncommons of one shard. Sapphire (Fungal Hillock, Src.Video: MHS 2017-04-21 5:52, KVC
-            // part 1 1:46:26) and Wild (Vale of Fallen Apples, Src.Video: MHS 2017-09-14 0:22, KVC part 4 4:13) seen; the
-            // four others PLACEHOLDER: the other shards (as AZ1's), with AZ2 uncommons of that shard that are not already a
-            // campaign reward.
+            // AZ2's Hauses: 3 AZ2 uncommons of one shard. Seen: Sapphire (Fungal Hillock, Src.Video: MHS 2017-04-21 5:52, KVC
+            // part 1 1:46:26), Wild (Vale of Fallen Apples, Src.Video: MHS 2017-09-14 0:22, KVC part 4 4:13), Blood (Silvas
+            // Meadow, Src.Video: KVC part 1 1:31:59, between Katsuhiro (node 9) and Hired Horn Picaroon (node 11)) and
+            // Artifact (Lake Hsieh, Src.Video: MHS 2017-10-19 0:33). The two others PLACEHOLDER: the other shards (as AZ1's),
+            // with AZ2 uncommons of that shard that are not already a campaign reward.
             { "AZ2 Sapphire", new[] { "Dancing Faeries", "Bull Shark", "Arcane Spritegang" } },
             { "AZ2 Wild",     new[] { "Aryndel Warden", "Pippit's Gift", "Shroom Swarm" } },
-            { "AZ2 Blood",    new[] { "Chupacabra", "Bone Goliath", "Grub Crawler" } },
+            { "AZ2 Blood",    new[] { "Bone Goliath", "Grub Crawler", "Chupacabra" } },
             { "AZ2 Diamond",  new[] { "Chimeerkat", "Ghost Sentinel", "Portsmeare Guard" } },
             { "AZ2 Ruby",     new[] { "Cinder Walker", "Wool'vir Baa'serker", "Blazemaw" } },
-            { "AZ2 Artifact", new[] { "Forge Flock", "Junk Barrier", "Dynamo Whistle" } },
+            { "AZ2 Artifact", new[] { "Hex Battery", "Forge Flock", "Junk Barrier" } },
         };
 
         /// <summary>Every fixed reward name (for the "loot check" dev command).</summary>
@@ -391,9 +392,9 @@ namespace HexRevival
         {
             { "Node004", "Artifact" }, { "Node042", "Sapphire" }, { "Node025", "Diamond" },
             { "Node077", "Blood" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
-            // AZ2 (Src.Video for nodes 17 and 39; the others PLACEHOLDER, see ShroomHauses).
-            { "AZ2/Node017", "AZ2 Sapphire" }, { "AZ2/Node039", "AZ2 Wild" },
-            { "AZ2/Node010", "AZ2 Blood" }, { "AZ2/Node029", "AZ2 Diamond" }, { "AZ2/Node036", "AZ2 Ruby" }, { "AZ2/Node042", "AZ2 Artifact" },
+            // AZ2 (Src.Video for nodes 17, 39, 10 and 42; nodes 29 and 36 PLACEHOLDER, see ShroomHauses).
+            { "AZ2/Node017", "AZ2 Sapphire" }, { "AZ2/Node039", "AZ2 Wild" }, { "AZ2/Node010", "AZ2 Blood" }, { "AZ2/Node042", "AZ2 Artifact" },
+            { "AZ2/Node029", "AZ2 Diamond" }, { "AZ2/Node036", "AZ2 Ruby" },
         };
 
         /// <summary>Card template ids offered by a Shroom Haus (the game's choice window).</summary>

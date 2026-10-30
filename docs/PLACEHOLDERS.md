@@ -166,20 +166,20 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
 | Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
 | Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:351 | four others PLACEHOLDER: the other shards (as AZ1's), with AZ2 uncommons of that shard that are not already a |
-| Progression.cs:394 | AZ2 (Src.Video for nodes 17 and 39; the others PLACEHOLDER, see ShroomHauses). |
-| Progression.cs:540 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:747 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:783 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:786 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:902 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:983 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:986 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:989 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1004 | level: PLACEHOLDER). |
-| Progression.cs:1017 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1093 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1094 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:352 | Artifact (Lake Hsieh, Src.Video: MHS 2017-10-19 0:33). The two others PLACEHOLDER: the other shards (as AZ1's), |
+| Progression.cs:395 | AZ2 (Src.Video for nodes 17, 39, 10 and 42; nodes 29 and 36 PLACEHOLDER, see ShroomHauses). |
+| Progression.cs:541 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:748 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:784 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:787 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:903 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:984 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:987 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:990 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1005 | level: PLACEHOLDER). |
+| Progression.cs:1018 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1094 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1095 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
 | Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
