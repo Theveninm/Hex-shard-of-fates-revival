@@ -314,7 +314,7 @@ namespace HexRevival
             float S = GameSkin.Scale;
             Controls.Frame(r, Loc.Get("opp_tiers"));
             float rowH = 54 * S, x = r.x + 10 * S, w = r.width - 20 * S;
-            float editH = 130 * S;
+            float editH = 170 * S;
             Rect area = new Rect(x, r.y + 44 * S, w, r.height - 44 * S - editH - 50 * S);
             List<AiConfig.Tier> tiers = m_Cfg.Tiers;
             m_ScrollTiers = Controls.List(area, m_ScrollTiers, tiers.Count, rowH, i =>
@@ -341,7 +341,12 @@ namespace HexRevival
             int unit = siege ? 500 : 1, max = siege ? 999999999 : 9999;
             tier.Name = Controls.TextField(new Rect(x, y, w, lh), tier.Name, 40); y += step;
             tier.From = Controls.Stepper(new Rect(x, y, w, lh), FromLabel(), tier.From, unit, 0, max); y += step;
-            tier.To = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_to"), tier.To, unit, tier.From, max);
+            tier.To = Controls.Stepper(new Rect(x, y, w, lh), Loc.Get("opp_to"), tier.To, unit, tier.From, max); y += step;
+            // The tier's modifiers, added to each deck's own (the "upgraded" decks of the top tiers).
+            bool mods = (tier.AI != null && !tier.AI.IsEmpty) || (tier.Player != null && !tier.Player.IsEmpty);
+            if (GameSkin.GoldButton(new Rect(x, y, w, lh), Loc.Get("modifiers") + (mods ? " *" : ""), GUI.enabled, 15))
+                ModifiersWindow.Open(new Decks.AiSettings { AI = tier.AI != null ? tier.AI.Clone() : null, Player = tier.Player != null ? tier.Player.Clone() : null },
+                    a => { tier.AI = a.AI != null && !a.AI.IsEmpty ? a.AI : null; tier.Player = a.Player != null && !a.Player.IsEmpty ? a.Player : null; m_Dirty = true; });
         }
 
         private void DrawTierDecks(Rect r)

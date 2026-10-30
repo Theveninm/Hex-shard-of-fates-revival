@@ -917,7 +917,52 @@ namespace HexRevival
                 case "profile": return AccountMenu.Command(parts);
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
-                case "tdecks": return TournamentDecks.Command(parts);   // dev: "tdecks [check]" = the bundled tournament decks
+                case "tdecks": return TournamentDecks.Command(parts);
+                case "sleevedump":   // dev: "sleevedump [text]" = the game's sleeves whose description contains the text
+                    {
+                        string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        int n = 0, all = 0;
+                        foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                        {
+                            if (!(i is InventoryDeckSleeve)) continue;
+                            all++;
+                            if (q != "" && (i.Description ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            if (n++ < 15) sb.Append(i.m_Name).Append(" | ").Append(i.m_Description).Append(" | ").Append(i.Description).Append(" | ").Append(i.m_BuildTag).Append('\n');
+                        }
+                        return all + " sleeves, " + n + " matching\n" + sb;
+                    }
+                case "cardsearch":   // dev: "cardsearch <text>" = abilities whose text contains it, and the cards holding them
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        HashSet<ResourceId> found = new HashSet<ResourceId>();
+                        foreach (ResourceId k in tm.Abilities.Keys)
+                        {
+                            AbilityTemplate at = tm.Abilities[k];
+                            if (at != null && at.m_GameText != null && at.m_GameText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) found.Add(k);
+                        }
+                        sb.Append(found.Count).Append(" abilities\n");
+                        int shownAb = 0;
+                        foreach (ResourceId k in found) { if (shownAb++ >= 12) break; sb.Append("  ").Append(k.m_Guid).Append(" ").Append(tm.Abilities[k].m_GameText.Replace("\n", " ")).Append('\n'); }
+                        int n = 0;
+                        foreach (CardTemplate c in tm.Cards.Values)
+                        {
+                            if (c == null || c.m_CardAbilities == null) continue;
+                            foreach (CardAbilityContainer a in c.m_CardAbilities)
+                            {
+                                if (!found.Contains(a.m_CardAbilityId)) continue;
+                                CardSetTemplate set;
+                                tm.CardSets.TryGetValue(c.m_SetId, out set);
+                                sb.Append(c.m_Name).Append(" | ").Append(c.m_CardType).Append(" | ").Append(set != null ? set.m_Name : "?").Append(" | ").Append(tm.Abilities[a.m_CardAbilityId].m_GameText.Replace("\n", " ")).Append('\n');
+                                n++;
+                                break;
+                            }
+                            if (n >= 25) break;
+                        }
+                        return sb.ToString();
+                    }   // dev: "tdecks [check]" = the bundled tournament decks
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 1 && parts[1] == "products") return Store.Products(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : "");

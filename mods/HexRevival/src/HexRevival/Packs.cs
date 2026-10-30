@@ -27,8 +27,8 @@ namespace HexRevival
     /// art card, hearts two upgrades, spiders a PvP rare card, each with a paid spin; "1 or 2 gold icons gift Gold. 3 gold
     /// icons gift exclusive rewards", "3 Red Icons gift exclusive rewards". Src.Zymmer: what each set's wheel and chests
     /// held. Src.Survey2014: how often each outcome came, by chest rarity (see Survey). Src.HexServer: 500 / 2,500 gold
-    /// for 1 / 2 gold reels. PLACEHOLDER: the reel colors' odds; the prizes the mod has no item for
-    /// (sleeves, alternate arts: a rare of the set instead); "exclusive rewards" = one of the set's wheel items; a
+    /// for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the
+    /// reel colors' odds; the prizes the mod has no item for (alternate arts: a rare of the set instead); "exclusive rewards" = one of the set's wheel items; a
     /// legendary chest 2 items, a primal one 3.
     /// </summary>
     public static class Packs
@@ -107,6 +107,13 @@ namespace HexRevival
                 // The chest of the pack (a primal pack's is legendary, Src.HexServer).
                 Chest c = NewChest(primal ? ETreasureChestType.Legendary : RollRarity(), set.m_Id);
                 r.NewChestInstances.Add(Bits(c));
+                // "Obtained by opening [set] Booster Packs" (Src.HexCodex: Doombringer's): sometimes one of them
+                // (PLACEHOLDER chance), given when the opening is over.
+                if (!primal && UnityEngine.Random.value < BoosterSleeveChance)
+                {
+                    InventoryDeckSleeve sl = Sleeves.OfSet("booster", set.m_Name);
+                    if (sl != null) s_AfterOpening.Add(sl);
+                }
             }
             Inventory.Remove(item, n);
             Save();
@@ -232,8 +239,14 @@ namespace HexRevival
                 case Outcome.Equipment: Prize(Zymmer.WheelEquipment(wheel), r, won); break;
                 case Outcome.PveCard: Prize(Zymmer.RandomCard(wheel), r, won); break;
                 case Outcome.Sleeves:
+                {
+                    // One of the set's Wheel of Fate sleeves not owned yet (Src.HexCodex, see Sleeves); none left: a rare.
+                    InventoryDeckSleeve sl = Sleeves.OfSet("wheel", set != null ? set.m_Name : null);
+                    Prize(sl != null ? new Loot.Drop { Item = sl.m_Id } : RareOf(set), r, won);
+                    break;
+                }
                 case Outcome.AltArt:
-                case Outcome.PvpRare: Prize(RareOf(set), r, won); break;   // sleeves and alternate arts: PLACEHOLDER, see the class
+                case Outcome.PvpRare: Prize(RareOf(set), r, won); break;   // alternate arts: PLACEHOLDER, see the class
             }
             if (golds == 1) r.GoldAward += 500;
             else if (golds == 2) r.GoldAward += 2500;
@@ -300,6 +313,9 @@ namespace HexRevival
         // Opening a chest
         // ------------------------------------------------------------------
 
+        /// <summary>PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary>
+        private const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
+
         private static OpenChestResponse OpenChests(List<ulong> ids)
         {
             OpenChestResponse r = Empty<OpenChestResponse>();
@@ -316,6 +332,13 @@ namespace HexRevival
                 int setNumber = Zymmer.SetNumber(set);
                 List<Loot.Drop> drops = Zymmer.OpenChest(setNumber, rarity);
                 if (c.Rarity == ETreasureChestType.Primal) drops.AddRange(Zymmer.OpenChest(setNumber, ERarity.Rare));
+                // "Found in Chests for [set]" (Src.HexCodex): one of the set's chest sleeves not owned yet, 5% of the
+                // chests (PLACEHOLDER chance).
+                if (UnityEngine.Random.value < ChestSleeveChance)
+                {
+                    InventoryDeckSleeve sl = Sleeves.OfSet("chest", set != null ? set.m_Name : null);
+                    if (sl != null) drops.Add(new Loot.Drop { Item = sl.m_Id });
+                }
                 if (drops.Count == 0)
                 {
                     // A set without a chest list: gold (the account chests' old PLACEHOLDER).

@@ -118,6 +118,93 @@ namespace HexRevival
             return c;
         }
 
+        /// <summary>The fights with a challenge carry one for the client (RoundChallenge), so that Hogarth offers it.</summary>
+        private static void MarkChallenges(Run r)
+        {
+            for (int i = 0; i < r.Fights.Count && i < r.Challenges.Count; i++)
+            {
+                ArenaFight f = r.Fights[i];
+                if (r.Challenges[i] == "" || !Challenges.ContainsKey(r.Challenges[i])) continue;
+                if (!f.RoundChallenge.IsValid) f.RoundChallenge = new ResourceId(Opponents.StableGuid("arena-challenge|" + r.Challenges[i]));
+                if (string.IsNullOrEmpty(f.ChallengeResponse)) f.ChallengeResponse = "NONE";
+            }
+        }
+
+        /// <summary>The current fight's challenge as Hogarth's window shows it (null if none); its texts already in the game's language.</summary>
+        private static ArenaMCChallenge McChallenge(Run r)
+        {
+            string key = r.Current < r.Challenges.Count ? r.Challenges[r.Current] : "";
+            Challenge c;
+            if (key == "" || !Challenges.TryGetValue(key, out c)) return null;
+            ArenaFight f = r.Fights[r.Current];
+            return new ArenaMCChallenge { ChallengeID = f.FightID, TemplateID = f.RoundChallenge, Header = c.Name, Body = c.Text };
+        }
+
+        /// <summary>
+        /// After the arena's data reached the screen: Hogarth offers the current fight's challenge (the client's own
+        /// window, UIArenaCampaignViewModel.CheckMCChallenge, which nothing in the client calls).
+        /// </summary>
+        private static void OfferChallenge(Run r)
+        {
+            if (r == null || r.Current >= r.Fights.Count || r.Fights[r.Current].ChallengeResponse != "NONE" || McChallenge(r) == null) return;
+            LocalServer.Later(() =>
+            {
+                try
+                {
+                    UIArenaCampaignViewModel vm = UnityEngine.Object.FindObjectOfType<UIArenaCampaignViewModel>();
+                    if (vm != null) typeof(UIArenaCampaignViewModel).GetMethod("CheckMCChallenge", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(vm, null);
+                }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Arena] challenge window: " + e.Message); }
+            });
+        }
+
+        /// <summary>A fight's challenger as the screens show it: with the equipment it plays in that fight.</summary>
+        private static ArenaChallenger ChallengerOf(Run r, int fight)
+        {
+            ArenaChallenger c = Challenger(r.Opponents[fight]);
+            c.Equipment = FightEquipment(r, fight, Opponents.DeckOf(r.Opponents[fight]));
+            return c;
+        }
+
+        /// <summary>
+        /// The opponent's equipment in a fight: "Tier 1: Champions in this Tier each use no equipment. Tier 2: [...] 2
+        /// equipment. Tier 3: [...] 3 [...]. Tier 4: [...] 4" (Src.HexCodex, the arena's own text). The game's arena
+        /// decks carry none (the server chose it): pieces that modify cards of the deck, one per slot, drawn once per
+        /// run and fight (which pieces: PLACEHOLDER).
+        /// </summary>
+        private static List<ResourceId> FightEquipment(Run r, int fight, DeckTemplate deck)
+        {
+            List<ResourceId> res = new List<ResourceId>();
+            int n = fight < r.Fights.Count && r.Fights[fight].FightTier >= 2 ? r.Fights[fight].FightTier : 0;
+            if (n == 0 || deck == null) return res;
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            // The pieces that modify a card of the deck (CardTemplate.m_EquipmentSlots, as the game's deck editor).
+            List<InventoryEquipmentData> fits = new List<InventoryEquipmentData>();
+            HashSet<ResourceId> seen = new HashSet<ResourceId>();
+            foreach (TemplateCardStack st in deck.m_DeckResources)
+            {
+                CardTemplate c = tm.GetCardTemplate(st.m_idTemplate);
+                if (c == null || c.m_EquipmentSlots == null) continue;
+                foreach (ResourceId id in c.m_EquipmentSlots)
+                {
+                    if (!id.IsValid || !seen.Add(id)) continue;
+                    InventoryEquipmentData e = tm.GetInventoryItem(id) as InventoryEquipmentData;
+                    if (e != null) fits.Add(e);
+                }
+            }
+            fits.Sort((a, b) => a.m_Id.m_Guid.CompareTo(b.m_Id.m_Guid));
+            System.Random rng = new System.Random((int)(r.Info.ArenaID * 31 + (ulong)fight));
+            HashSet<EEquipmentType> slots = new HashSet<EEquipmentType>();
+            while (fits.Count > 0 && res.Count < n)
+            {
+                int k = rng.Next(fits.Count);
+                InventoryEquipmentData e = fits[k];
+                fits.RemoveAt(k);
+                if (slots.Add(e.m_EquipmentType)) res.Add(e.m_Id);
+            }
+            return res;
+        }
+
         /// <summary>Every opponent of the pack's arena tiers, and the run's, in the master list.</summary>
         private static void FillMaster()
         {
@@ -129,6 +216,7 @@ namespace HexRevival
         {
             foreach (Opponents.Opponent o in r.Opponents) Challenger(o);
             if (r.Challenges == null || r.Challenges.Count != r.Fights.Count) { r.Challenges = new List<string>(); foreach (ArenaFight f in r.Fights) r.Challenges.Add(""); }
+            MarkChallenges(r);
             if (r.Buffs == null) r.Buffs = new List<string>();
             r.Info.Buffs = r.Buffs.ConvertAll(b => Buff(b).Shown);
         }
@@ -166,11 +254,13 @@ namespace HexRevival
             {
                 res.ArenaInfo = r.Info;
                 res.EncounterData = r.Fights[r.Current];
-                res.ChallengerData = Challenger(r.Opponents[r.Current]);
+                res.ChallengerData = ChallengerOf(r, r.Current);
                 res.FightHistory = r.Fights;
+                res.MCChallengeData = McChallenge(r);
             }
             Debug.Log("[HexRevival] [Arena] join: " + (r != null ? r.Info.Wins + " wins, " + r.Info.Loses + " losses, fight " + (r.Current + 1) : "no run"));
             LocalServer.Answer(typeof(CampaignService.JoinCampaignArena), res, handler);
+            OfferChallenge(r);
         }
 
         public static void Refresh(Delegate handler)
@@ -183,10 +273,12 @@ namespace HexRevival
             {
                 res.ArenaInfo = r.Info;
                 res.EncounterData = r.Fights[r.Current];
-                res.ChallengerData = Challenger(r.Opponents[r.Current]);
+                res.ChallengerData = ChallengerOf(r, r.Current);
                 res.FightHistory = r.Fights;
+                res.MCChallengeData = McChallenge(r);
             }
             LocalServer.Answer(typeof(CampaignService.RefreshArenaInfo), res, handler);
+            OfferChallenge(r);
         }
 
         public static void MasterList(Delegate handler)
@@ -211,7 +303,7 @@ namespace HexRevival
             {
                 res.ArenaInfo = r.Info;
                 res.EncounterData = r.Fights[0];
-                res.ChallengerData = Challenger(r.Opponents[0]);
+                res.ChallengerData = ChallengerOf(r, 0);
                 res.FightHistory = r.Fights;
             }
             LocalServer.Answer(typeof(CampaignService.AssignArenaDeck), res, handler);
@@ -263,6 +355,7 @@ namespace HexRevival
             for (int i = 0; i < Fights; i++) r.Challenges.Add("");
             for (int t = 0; t < Fights / PerTier; t++)
                 r.Challenges[t * PerTier + UnityEngine.Random.Range(0, PerTier - 1)] = ChallengeKeys[UnityEngine.Random.Range(0, ChallengeKeys.Length)];
+            MarkChallenges(r);
             r.Info.FightId = r.Fights[0].FightID;
             st.Run = r;
             Save();
@@ -283,14 +376,31 @@ namespace HexRevival
             }
             Opponents.Opponent o = r.Opponents[r.Current];
             DeckTemplate deck = Opponents.DeckOf(o);
+            List<ResourceId> equipment = FightEquipment(r, r.Current, deck);
+            if (deck != null && equipment.Count > 0)
+            {
+                // A copy: the game's template stays as it is. The match engine equips the AI from its deck in the arena.
+                deck = (DeckTemplate)typeof(object).GetMethod("MemberwiseClone", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(deck, null);
+                deck.m_EquipmentIDs = equipment;
+            }
             bool boss = (r.Current + 1) % PerTier == 0;
             Opponents.Handicap ai = null, me = null;
+            // A challenge declined in Hogarth's window is not played (ArenaFight.ChallengeResponse: the client sets it
+            // on the fight the mod gave it).
             string ch = r.Challenges[r.Current];
+            if (ch != "" && r.Fights[r.Current].ChallengeResponse == "DECLINE") ch = "";
+            UID playerDeck = new UID(UID.Type.Deck, r.Info.DeckId);
             if (ch != "")
             {
                 Challenge c = Challenges[ch];
                 c.Draw(out ai, out me);
                 Notices.Show(Loc.Get("arena_goal", c.Name, c.Text));
+                if (c.Swap && deck != null)
+                {
+                    // The Ol' Switcheroo: the player plays the opponent's deck, champion and equipment, the AI the player's.
+                    DeckTemplate mine = Decks.ToTemplate(playerDeck);
+                    if (mine != null) { playerDeck = Decks.SetTemporary(deck); deck = mine; }
+                }
             }
             if (boss)
                 foreach (string b in r.Buffs) me = Opponents.Handicap.Add(me, Buff(b).Effect);
@@ -304,7 +414,7 @@ namespace HexRevival
                 e.ArenaOwner = owner;
             };
             s_InBattle = true;
-            Patches.StartMatch(new UID(UID.Type.Deck, r.Info.DeckId), Opponents.SceneOf(o), deck,
+            Patches.StartMatch(playerDeck, Opponents.SceneOf(o), deck,
                 "arena fight " + (r.Current + 1) + " vs " + o.Name, Opponents.PersonalityOf(o));
         }
 
@@ -323,6 +433,7 @@ namespace HexRevival
             Opponents.Opponent o = r.Opponents[r.Current];
             bool boss = (r.Current + 1) % PerTier == 0;
             string challenge = r.Challenges[r.Current];
+            if (challenge != "" && f.ChallengeResponse == "DECLINE") challenge = "";
             List<ArenaReward> news = new List<ArenaReward>();
             if (won)
             {
@@ -556,6 +667,10 @@ namespace HexRevival
             public Opponents.Handicap AI, Player;
             /// <summary>Each champion starts with one of these cards in play, drawn for each (The Pacts).</summary>
             public string[] EachOneOf;
+            /// <summary>What each champion gets, drawn for each (Shards Aplenty).</summary>
+            public Func<Opponents.Handicap> EachDraws;
+            /// <summary>The players swap decks, champions and equipment (The Ol' Switcheroo).</summary>
+            public bool Swap;
             /// <summary>One of Hogarth's challenges of the game's texts (ArenaPVE_Challenge_Header/Body n), 0 for the ones seen on video.</summary>
             public int GameText;
             /// <summary>In the game's language (the card's name as the game shows it).</summary>
@@ -573,6 +688,7 @@ namespace HexRevival
             public void Draw(out Opponents.Handicap ai, out Opponents.Handicap me)
             {
                 ai = AI; me = Player;
+                if (EachDraws != null) { ai = Opponents.Handicap.Add(ai, EachDraws()); me = Opponents.Handicap.Add(me, EachDraws()); }
                 if (EachOneOf == null) return;
                 ai = Opponents.Handicap.Add(ai, new Opponents.Handicap { InPlay = new List<string> { EachOneOf[UnityEngine.Random.Range(0, EachOneOf.Length)] } });
                 me = Opponents.Handicap.Add(me, new Opponents.Handicap { InPlay = new List<string> { EachOneOf[UnityEngine.Random.Range(0, EachOneOf.Length)] } });
@@ -587,11 +703,12 @@ namespace HexRevival
 
         /// <summary>
         /// The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game"), and those
-        /// of Hogarth's challenges in the game's texts (Src.Game: ArenaPVE_Challenge_Header/Body 1-10) that are cards in
-        /// play: Inferno (3) and The Pacts (8). Not done: the others change rules (Shards Aplenty's resources, Swarm!
-        /// Swarm!'s cost -1, Rage 1, Charge!'s charges, The Ol' Switcheroo's deck swap) or play an action for free (The
-        /// Primal of Luck, Infernal Professor). Cerebral Fulmination (1) is in both: "each champion" in the game's text,
-        /// the opponent only on video; the video's is kept.
+        /// of Hogarth's challenges in the game's texts (Src.Game: ArenaPVE_Challenge_Header/Body 1-10): Shards Aplenty (2),
+        /// Inferno (3), Rage (5), The Ol' Switcheroo (7), The Pacts (8). Not done: Swarm! Swarm! (troops cost -1) and
+        /// Charge! (an additional charge) have no ability in the game's data to give; The Primal of Luck and Infernal
+        /// Professor play an action for free. Cerebral Fulmination (1) is in both: "each champion" in the game's text,
+        /// the opponent only on video; the video's is kept. Each is offered with the game's own Hogarth window
+        /// (accept or decline, ArenaFight.ChallengeResponse); a declined challenge is not played and gives nothing.
         /// </summary>
         private static readonly Dictionary<string, Challenge> Challenges = new Dictionary<string, Challenge>
         {
@@ -606,8 +723,20 @@ namespace HexRevival
             { "inferno", new Challenge { Key = "inferno", Card = "Inferno", GameText = 3,
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Inferno" } }, Player = new Opponents.Handicap { InPlay = new List<string> { "Inferno" } } } },
             { "pacts", new Challenge { Key = "pacts", GameText = 8, EachOneOf = new[] { "Pact of Life", "Pact of Pain" } } },
+            // "each champion will randomly receive [2/0], [0/2], or [1/1] resources at the start of their first turn":
+            // read as temporary / permanent resources (as the Resource buff's "1 temporary resource 1 permanent resource").
+            { "shards", new Challenge { Key = "shards", GameText = 2, EachDraws = () =>
+                {
+                    int k = UnityEngine.Random.Range(0, 3);
+                    return new Opponents.Handicap { TempResources = k == 0 ? 2 : k == 2 ? 1 : 0, Resources = k == 1 ? 2 : k == 2 ? 1 : 0 };
+                } } },
+            // "troops gain Rage 1 in all zones": the game's own ability "Troops in all zones have Rage 1." (on no card: the
+            // challenge's), given to the opponent's champion; it acts on every troop.
+            { "rage", new Challenge { Key = "rage", GameText = 5, AI = new Opponents.Handicap { Abilities = new List<string> { RageAbility } } } },
+            { "switcheroo", new Challenge { Key = "switcheroo", GameText = 7, Swap = true } },
         };
-        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts" };
+        private const string RageAbility = "f56878b1-91c4-7aef-bc3d-25c93b2ea02f";
+        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts", "shards", "rage", "switcheroo" };
 
         private class BuffDef { public ArenaBuff Shown; public Opponents.Handicap Effect; }
 
@@ -618,7 +747,7 @@ namespace HexRevival
             {
                 case "charge": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_charge"), Loc.Get("arena_buff_charge_text")), Effect = new Opponents.Handicap { Charges = 2 } };
                 case "health": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_health"), Loc.Get("arena_buff_health_text")), Effect = new Opponents.Handicap { Health = 5 } };
-                case "resource": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_resource"), Loc.Get("arena_buff_resource_text")), Effect = new Opponents.Handicap { Resources = 1 } };
+                case "resource": return new BuffDef { Shown = Shown(Loc.Get("arena_buff_resource"), Loc.Get("arena_buff_resource_text")), Effect = new Opponents.Handicap { Resources = 1, TempResources = 1 } };   // "1 temporary resource 1 permanent resource" (Src.HexCodex)
                 default: return new BuffDef { Shown = Shown(Loc.Get("arena_buff_brawler"), Loc.Get("arena_buff_brawler_text", CardName("Arena Brawler"))), Effect = new Opponents.Handicap { InPlay = new List<string> { "Arena Brawler" } } };
             }
         }
@@ -686,10 +815,21 @@ namespace HexRevival
                             ChampionTemplate ch = Singleton<TemplateManager>.Instance.GetChampionTemplate(d.m_ChampionId);
                             sb.Append(d.m_DeckName).Append(" | ").Append(ch != null ? ch.m_Name + " " + ch.m_StartingHealth : "?").Append(" | eq ").Append(d.m_EquipmentIDs != null ? d.m_EquipmentIDs.Count : 0).Append('\n');
                         }
+                        int shown = 0;
+                        foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                        {
+                            InventoryEquipmentData e = i as InventoryEquipmentData;
+                            if (e == null || shown++ >= 5) continue;
+                            sb.Append("eq ").Append(e.m_Name).Append(" from=").Append(e.m_From).Append(" to=").Append(e.m_To).Append(" mods=").Append(e.m_Modifiers).Append('\n');
+                        }
+                        if (r != null)
+                            for (int f = 0; f < r.Fights.Count; f++)
+                                sb.Append("fight ").Append(f + 1).Append(" t").Append(r.Fights[f].FightTier).Append(": ").Append(string.Join(", ", FightEquipment(r, f, Opponents.DeckOf(r.Opponents[f])).ConvertAll(x => { InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(x); return it != null ? it.m_Name : "?"; }).ToArray())).Append('\n');
                         foreach (string n in new[] { "Inferno", "Pact of Life", "Pact of Pain", "Kismet's Reverie", "Infernal Professor", "Cerebral Fulmination" })
                         {
                             CardTemplate c = Opponents.CardByName(n);
-                            sb.Append(n).Append(": ").Append(c != null ? c.m_CardType + (c.m_IsPvE ? " PvE" : "") : "NOT FOUND").Append('\n');
+                            sb.Append(n).Append(": ").Append(c != null ? c.m_CardType + (c.m_IsPvE ? " PvE" : "") + " cost " + c.m_ResourceCost : "NOT FOUND").Append('\n');
+                            if (c != null) foreach (CardAbilityContainer a in c.m_CardAbilities) { AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a.m_CardAbilityId); if (at != null) sb.Append("   ").Append(at.m_GameText).Append('\n'); }
                         }
                         return sb.ToString();
                     }

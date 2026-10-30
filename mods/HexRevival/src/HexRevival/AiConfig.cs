@@ -60,6 +60,8 @@ namespace HexRevival
             /// <summary>Ladder: stars; gauntlet: match wins; arena: tier 1 to 4; Siege: bounty (gold).</summary>
             public int From, To;
             public List<DeckRef> Decks = new List<DeckRef>();
+            /// <summary>Modifiers for every fight of the tier, added to the deck's own (null: none): a tier's "upgraded" decks.</summary>
+            public Opponents.Handicap AI, Player;
         }
 
         /// <summary>A sealed / draft opponent: its decks come from its card pool, the rest is its own.</summary>
@@ -105,7 +107,7 @@ namespace HexRevival
             public List<ModeConfig> Modes = new List<ModeConfig>();
         }
 
-        private const int DefaultsVersion = 5;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role; 4: Siege attackers are decks; 5: tournament decks
+        private const int DefaultsVersion = 6;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role; 4: Siege attackers are decks; 5: tournament decks; 6: prebuilt decks low, tournament decks high, modifiers at the top
 
         private static string DefaultsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "ai_defaults.json"); } }
         private static string AccountPath { get { return Saves.File("ai.json"); } }
@@ -213,11 +215,12 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// The default configuration. The modes whose opponents were players play decks real players brought to HEX
-        /// tournaments (Src.HexCodex, see TournamentDecks): in the ladder, weaker players' decks in the low tiers and the
-        /// strongest players' at the top (PLACEHOLDER: the original ladder matched players of a similar rank), each
-        /// archetype as often as it was played. The arena plays the game's own arena decks. Without the bundled decks:
-        /// the game's prebuilt decks with a PvP champion.
+        /// The default configuration of the modes whose opponents were players (user's choice, 2026-10-30): the game's
+        /// prebuilt decks at the bottom, decks real players brought to HEX tournaments higher up (Src.HexCodex, see
+        /// TournamentDecks: weaker players' typical lists first, then the strongest players' best records), and at the
+        /// top those with modifiers for the AI. Which decks in which tier, and the modifiers: PLACEHOLDER (the original
+        /// opponents were players of a similar rank). The arena plays the game's own arena decks. Without the bundled
+        /// tournament decks, the prebuilt decks everywhere.
         /// </summary>
         private static File_ BuildDefaults()
         {
@@ -225,14 +228,23 @@ namespace HexRevival
             List<DeckRef> prebuilt = Decks.PrebuiltPvp().ConvertAll(d => new DeckRef(GameDeck, GameKey(d)));
             List<DeckRef> gauntlet = TournamentTier("Gauntlet", prebuilt);
 
+            // Ladder: Bronze the prebuilt decks; Silver half prebuilt, half the weakest band's lists; Gold the next two
+            // bands; Platinum the strong band; Cosmic the strongest band, the AI with 5 more health and a card more.
             ModeConfig ladder = new ModeConfig { Mode = Ladder };
-            string[] names = { "Bronze", "Silver", "Gold", "Platinum", "Cosmic" };
-            int[] from = { 0, 10, 25, 45, 70 };
-            for (int i = 0; i < names.Length; i++)
-                ladder.Tiers.Add(new Tier { Name = names[i], From = from[i], To = i + 1 < from.Length ? from[i + 1] - 1 : 9999, Decks = TournamentTier(names[i], prebuilt) });
+            ladder.Tiers.Add(new Tier { Name = "Bronze", From = 0, To = 9, Decks = Clone(prebuilt) });
+            ladder.Tiers.Add(new Tier { Name = "Silver", From = 10, To = 24, Decks = Mix(prebuilt, TournamentTier("Bronze", prebuilt)) });
+            ladder.Tiers.Add(new Tier { Name = "Gold", From = 25, To = 44, Decks = Merge(TournamentTier("Silver", prebuilt), TournamentTier("Gold", prebuilt)) });
+            ladder.Tiers.Add(new Tier { Name = "Platinum", From = 45, To = 69, Decks = TournamentTier("Platinum", prebuilt) });
+            ladder.Tiers.Add(new Tier { Name = "Cosmic", From = 70, To = 9999, Decks = TournamentTier("Cosmic", prebuilt), AI = Upgraded() });
             f.Modes.Add(ladder);
 
-            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = Clone(gauntlet) } } });
+            // Constructed gauntlet: by wins in the run, the same steps.
+            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier>
+            {
+                new Tier { Name = "0-1 wins", From = 0, To = 1, Decks = Mix(prebuilt, TournamentTier("Bronze", prebuilt)) },
+                new Tier { Name = "2-3 wins", From = 2, To = 3, Decks = Clone(gauntlet) },
+                new Tier { Name = "4+ wins", From = 4, To = 99, Decks = Clone(gauntlet), AI = Upgraded() },
+            } });
             f.Modes.Add(new ModeConfig { Mode = Limited, Players = DefaultPlayers() });
 
             ModeConfig arena = new ModeConfig { Mode = Arena };
@@ -257,11 +269,44 @@ namespace HexRevival
             arena.Tiers.AddRange(new[] { t1, t23, t4 });
             f.Modes.Add(arena);
 
-            f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(gauntlet) });
-            // The attackers of the player's defense: players' tournament decks (PLACEHOLDER: the attackers were players,
-            // with their Siege decks).
-            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Tiers = new List<Tier> { new Tier { Name = "Attackers", From = 0, To = 999999999, Decks = Clone(gauntlet) } } });
+            f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(prebuilt, gauntlet) });
+            // The attackers of the player's defense, by its bounty: prebuilt decks for a small one, players' tournament
+            // decks above, with modifiers for a large one (PLACEHOLDER: the attackers were players).
+            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Tiers = new List<Tier>
+            {
+                new Tier { Name = "Small bounty", From = 0, To = 4999, Decks = Clone(prebuilt) },
+                new Tier { Name = "Bounty 5,000+", From = 5000, To = 19999, Decks = Clone(gauntlet) },
+                new Tier { Name = "Bounty 20,000+", From = 20000, To = 999999999, Decks = Clone(gauntlet), AI = Upgraded() },
+            } });
             return f;
+        }
+
+        /// <summary>The AI's modifiers of the top tiers ("upgraded" decks): 5 more health, a card more (PLACEHOLDER).</summary>
+        private static Opponents.Handicap Upgraded() { return new Opponents.Handicap { Health = 5, Cards = 1 }; }
+
+        /// <summary>Two pools drawn equally often: each one's frequencies scaled to the same total.</summary>
+        private static List<DeckRef> Mix(List<DeckRef> a, List<DeckRef> b)
+        {
+            int ta = 0, tb = 0;
+            foreach (DeckRef r in a) ta += r.Weight;
+            foreach (DeckRef r in b) tb += r.Weight;
+            List<DeckRef> res = Clone(a);
+            if (ta == 0 || tb == 0) return Merge(res, b);
+            foreach (DeckRef r in b) res.Add(new DeckRef(r.Kind, r.Key) { Weight = Math.Max(1, Math.Min(MaxWeight, (int)Math.Round((double)r.Weight * ta / tb))), Role = r.Role });
+            return res;
+        }
+
+        /// <summary>Both lists, a deck in both once (the higher frequency).</summary>
+        private static List<DeckRef> Merge(List<DeckRef> a, List<DeckRef> b)
+        {
+            List<DeckRef> res = Clone(a);
+            foreach (DeckRef r in b)
+            {
+                DeckRef same = res.Find(x => x.Same(r));
+                if (same != null) same.Weight = Math.Max(same.Weight, r.Weight);
+                else res.Add(new DeckRef(r.Kind, r.Key) { Weight = r.Weight, Role = r.Role });
+            }
+            return res;
         }
 
         /// <summary>A tier of the bundled tournament decks with their frequencies, or the fallback if there is none.</summary>
@@ -285,13 +330,14 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 decks of the
-        /// pool (players' tournament decks) with an AI style; most at the minimum bounty, a few higher (Src.Video, A 0:28-8:04).
+        /// PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 decks with an
+        /// AI style; most at the minimum bounty, a few higher (Src.Video, A 0:28-8:04). A defense at the minimum bounty
+        /// plays prebuilt decks, a higher one players' tournament decks.
         /// </summary>
-        private static List<KeepDef> DefaultKeeps(List<DeckRef> pool)
+        private static List<KeepDef> DefaultKeeps(List<DeckRef> low, List<DeckRef> high)
         {
             List<KeepDef> res = new List<KeepDef>();
-            if (pool.Count < 3) return res;
+            if (low.Count < 3 || high.Count < 3) return res;
             System.Random rng = new System.Random(1000);
             string[] styles = Enum.GetNames(typeof(Game.Shared.Mechanics.EDeckPersonality));
             for (int i = 0; i < 50; i++)
@@ -304,6 +350,7 @@ namespace HexRevival
                     Id = "default-" + i, Name = PlaceholderKeeps.RandomName(rng), Platinum = platinum,
                     Bounty = r < 0.75 ? min : r < 0.95 ? min * (2 + rng.Next(4)) / 2 : min * (5 + rng.Next(20)),
                 };
+                List<DeckRef> pool = k.Bounty > min ? high : low;
                 List<int> used = new List<int>();
                 while (k.Fights.Count < 3)
                 {
@@ -407,7 +454,9 @@ namespace HexRevival
                     break;
                 default: return null;
             }
-            // The tier's weight and role (an arena boss, a Siege elite...).
+            // The tier's weight and role (an arena boss, a Siege elite...), and its modifiers.
+            if (t != null && t.AI != null && !t.AI.IsEmpty) o.AI = Opponents.Handicap.Add(o.AI, t.AI);
+            if (t != null && t.Player != null && !t.Player.IsEmpty) o.Player = Opponents.Handicap.Add(o.Player, t.Player);
             o.Weight = r.Weight;
             o.Boss = r.Role == Boss; o.Elite = r.Role == Elite;
             return o;

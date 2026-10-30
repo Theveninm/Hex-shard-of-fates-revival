@@ -53,11 +53,15 @@ namespace HexRevival
             public int Resources;   // resources in play (no shard threshold)
             public int Charges;
             public int Cards;       // cards drawn
+            /// <summary>Resources for the player's first turn only (the arena's Resource buff, Shards Aplenty).</summary>
+            public int TempResources;
+            /// <summary>Abilities of the game (template ids) given to the champion (an arena challenge's rule).</summary>
+            public List<string> Abilities = new List<string>();
             /// <summary>Cards in play from the start (names).</summary>
             public List<string> InPlay = new List<string>();
             /// <summary>Shards in play from the start, by color: Blood, Diamond, Ruby, Sapphire, Wild (resource and threshold).</summary>
             public int[] Shards = new int[5];
-            public bool IsEmpty { get { return Health == 0 && Resources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0) && ShardCount == 0; } }
+            public bool IsEmpty { get { return Health == 0 && Resources == 0 && TempResources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0) && (Abilities == null || Abilities.Count == 0) && ShardCount == 0; } }
             public int ShardCount { get { int n = 0; if (Shards != null) foreach (int x in Shards) n += x; return n; } }
 
             public static readonly ECardShards[] ShardColors = { ECardShards.Blood, ECardShards.Diamond, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild };
@@ -66,6 +70,7 @@ namespace HexRevival
             {
                 Handicap h = (Handicap)MemberwiseClone();
                 h.InPlay = InPlay != null ? new List<string>(InPlay) : new List<string>();
+                h.Abilities = Abilities != null ? new List<string>(Abilities) : new List<string>();
                 h.Shards = new int[5];
                 if (Shards != null) Array.Copy(Shards, h.Shards, Math.Min(5, Shards.Length));
                 return h;
@@ -76,10 +81,12 @@ namespace HexRevival
             {
                 if (b == null) return a;
                 if (a == null) return b;
-                Handicap r = new Handicap { Health = a.Health + b.Health, Resources = a.Resources + b.Resources, Charges = a.Charges + b.Charges, Cards = a.Cards + b.Cards };
+                Handicap r = new Handicap { Health = a.Health + b.Health, Resources = a.Resources + b.Resources, TempResources = a.TempResources + b.TempResources, Charges = a.Charges + b.Charges, Cards = a.Cards + b.Cards };
                 for (int i = 0; i < 5; i++) r.Shards[i] = (a.Shards != null && i < a.Shards.Length ? a.Shards[i] : 0) + (b.Shards != null && i < b.Shards.Length ? b.Shards[i] : 0);
                 if (a.InPlay != null) r.InPlay.AddRange(a.InPlay);
                 if (b.InPlay != null) r.InPlay.AddRange(b.InPlay);
+                if (a.Abilities != null) r.Abilities.AddRange(a.Abilities);
+                if (b.Abilities != null) r.Abilities.AddRange(b.Abilities);
                 return r;
             }
         }
@@ -267,8 +274,26 @@ namespace HexRevival
         {
             if (s_Applied || (s_InBattle == null && s_BattleExtraAI == null && s_BattleExtraPlayer == null) || ss == null || (int)ss.CurrentTurnPhase <= (int)ETurnPhases.Mulligan) return;
             s_Applied = true;
+            s_FirstTurn.Clear();
             Apply(ss, Cheats.FindPlayer(ss, "ai"), Handicap.Add(s_InBattle != null ? s_InBattle.AI : null, s_BattleExtraAI));
             Apply(ss, Cheats.FindPlayer(ss, "j"), Handicap.Add(s_InBattle != null ? s_InBattle.Player : null, s_BattleExtraPlayer));
+        }
+
+        /// <summary>Resources waiting for their player's first main phase (TempResources), by player.</summary>
+        private static readonly Dictionary<Player, int> s_FirstTurn = new Dictionary<Player, int>();
+
+        /// <summary>Every server update after the handicaps: the first-turn resources, once that player's turn has begun.</summary>
+        public static void OnFirstTurns(StandaloneSession ss)
+        {
+            if (s_FirstTurn.Count == 0 || ss == null || ss.CurrentTurnPhase != ETurnPhases.FirstMainPhase) return;
+            Player p = ss.GetActivePlayer();
+            int n;
+            if (p == null || !s_FirstTurn.TryGetValue(p, out n)) return;
+            s_FirstTurn.Remove(p);
+            // The current pool only: gone at the end of the turn, as a temporary resource.
+            ss.IncrementPlayerCurrentResourcePool(p, n, false);
+            Server.MarkDirty();
+            Debug.Log("[HexRevival] [Opponents] " + n + " temporary resource(s) for " + p.m_PlayerId);
         }
 
         private static void Apply(StandaloneSession ss, Player p, Handicap h)
@@ -282,6 +307,15 @@ namespace HexRevival
                     ss.SetChampionHealth(p.m_ChampionCard, Math.Max(1, now + h.Health), false);
                 }
                 if (h.Resources > 0) Cheats.AddResourcesOnly(ss, p, h.Resources);
+                if (h.TempResources > 0) s_FirstTurn[p] = h.TempResources;
+                if (h.Abilities != null)
+                    foreach (string a in h.Abilities)
+                    {
+                        ResourceId id;
+                        try { id = new ResourceId(new Guid(a)); } catch { Debug.LogWarning("[HexRevival] [Opponents] bad ability id " + a); continue; }
+                        if (Singleton<TemplateManager>.Instance.GetAbilityTemplate(id) == null) { Debug.LogWarning("[HexRevival] [Opponents] unknown ability " + a); continue; }
+                        p.m_ChampionCard.AddDynamicAbility(id, ss, true, true);
+                    }
                 // Shards of a color: a resource and its threshold each.
                 if (h.Shards != null)
                     for (int i = 0; i < h.Shards.Length && i < 5; i++)

@@ -409,6 +409,15 @@ namespace HexRevival
             if (k == null || k.CurStatus != siege_bits.Status.ACTIVE || s_Assault != null) { error = "Siege_InitChallenge_Error_Text"; return null; }
             UID deck = Decks.FindDeck(c.Deck);
             if (deck == UID.Invalid) { error = "Siege_InitChallenge_Error_Text"; return null; }
+            // "You must then select a Standard legal deck to use in the Siege Attack" (Src.HexCodex, the game's Siege
+            // rules): checked by the game's own validator, before the fee is paid.
+            List<string> why = new List<string>();
+            if (!OnlineFormats.Validate("standard", deck, why))
+            {
+                Notices.Show(Loc.Get("siege_not_standard") + (why.Count > 0 ? " (" + why[0] + ")" : ""));
+                error = "Siege_InitChallenge_Error_Text";
+                return null;
+            }
             bool plat = k.Currency == siege_bits.CurrencyType.PLATINUM;
             int total, defender, pot, rake;
             Calculate(k.Pot, out total, out defender, out pot, out rake);
