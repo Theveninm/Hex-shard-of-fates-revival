@@ -117,10 +117,23 @@ namespace HexRevival
             }
             Inventory.Remove(item, n);
             Save();
-            // The client takes the cards and chests from the answer (PlayerProfile.HandleOpenCardPack); the packs are ours to take.
-            LocalServer.Later(() => { try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(item, n); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); } });
+            // The client takes the cards and chests from the answer (PlayerProfile.HandleOpenCardPack); the packs are
+            // ours to take, once the (delayed) answer is delivered: earlier, the screen's pack list is rebuilt before
+            // the opening animation (issue #25).
+            s_ToRemove.Add(new KeyValuePair<ResourceId, int>(item, n));
             Debug.Log("[HexRevival] [Packs] opened " + n + " x " + pack.m_Name + ": " + r.NewCardInstances.Count + " card(s), " + n + " chest(s)");
             return r;
+        }
+
+        private static readonly List<KeyValuePair<ResourceId, int>> s_ToRemove = new List<KeyValuePair<ResourceId, int>>();
+
+        /// <summary>After an OpenCardPack answer was delivered (LocalServer.Pump): the opened packs leave the client's inventory.</summary>
+        public static void OnPackAnswerDelivered()
+        {
+            foreach (KeyValuePair<ResourceId, int> kv in s_ToRemove)
+                try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, kv.Value); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
+            s_ToRemove.Clear();
         }
 
         /// <summary>A primal pack: 2 legendaries and 13 rares of the set (Src.Forum2017).</summary>
