@@ -57,6 +57,8 @@ namespace HexRevival
                 {
                     string tex = name.Substring(0, name.Length - Wallpaper.Length);
                     if (IsBoard(tex)) return Banner(m.GetAsset(bundle, subBundle, tex, type) as Texture2D, tex);
+                    Texture2D own = PackBanner(m, bundle, subBundle, tex);
+                    if (own != null) return own;
                     string from = Related(tex);
                     return from != null ? m.GetAsset(bundle, subBundle, from + Wallpaper, type) : null;
                 }
@@ -70,6 +72,116 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Store] icon " + name + ": " + e.Message); }
             finally { s_Depth--; }
             return null;
+        }
+
+        // ---- Banners made from a pack's own art ----
+
+        /// <summary>
+        /// A pack's art on its wrapper (Src.Game, icons.ab: the texture of the pack's 3D model) and the band of it that
+        /// shows its figure, as fractions of the texture from its top left: x0, x1, y0 (the band is 2:1, as tall as half
+        /// its width). Four are card illustrations (matched with the card database: Bertram Cragraven, Prophet of
+        /// Lodegan, Zoltog, Strength in Numbers); the others were painted for the pack. Which band: a mod choice.
+        /// </summary>
+        private static readonly Dictionary<string, KeyValuePair<string, Vector3>> PackArt = new Dictionary<string, KeyValuePair<string, Vector3>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "a0005474", Art("BoosterPack_Set01_Dwarf", 0f, 0.85f, 0.05f) },      // Dwarf Starter Trials Pack
+            { "a0005476", Art("BoosterPack_Set01_Human", 0f, 0.85f, 0f) },         // Human
+            { "a0005478", Art("BoosterPack_Set01_Orc", 0.05f, 0.85f, 0.02f) },     // Orc
+            { "a0005482", Art("BoosterPack_Set01_Shinhare", 0f, 0.85f, 0.02f) },   // Shin'hare
+            { "a0005473", Art("BoosterPack_Set03_Coyotle", 0.24f, 0.74f, 0.36f) }, // Coyotle
+            { "a0005475", Art("BoosterPack_Set03_Elf", 0.24f, 0.74f, 0.36f) },     // Elf
+            { "a0005477", Art("BoosterPack_Set03_Necrotic", 0.24f, 0.74f, 0.36f) },// Necrotic
+            { "a0005483", Art("BoosterPack_Set03_Vennen", 0.24f, 0.74f, 0.36f) },  // Vennen
+            { "a0005479", Art("BoosterPack_Set01_Primal", 0.08f, 0.86f, 0.02f) },  // Set 001 Primal Pack
+            { "a0005480", Art("BoosterPack_Set02_Primal", 0.1f, 0.75f, 0.24f) },   // Set 002
+            { "a0005481", Art("BoosterPack_Set03_Primal", 0.15f, 0.85f, 0.22f) },  // Set 003
+            { "a0006242", Art("BoosterPack_Set04_Primal", 0.14f, 0.86f, 0.18f) },  // Set 004 (Primal Dawn)
+            { "a0006829", Art("BoosterPack_Set05_Primal", 0.14f, 0.86f, 0.18f) },  // Herofall
+            { "a0007598", Art("BoosterPack_Set06_Primal", 0.14f, 0.86f, 0.18f) },  // Scars of War
+            { "a0008022", Art("BoosterPack_Set07_Primal", 0.14f, 0.86f, 0.18f) },  // Frostheart
+            { "a0008437", Art("BoosterPack_Set08_Primal", 0.14f, 0.86f, 0.22f) },  // Dead of Winter
+            { "a0008803", Art("BoosterPack_Set09_Primal", 0.14f, 0.86f, 0.22f) },  // Doombringer
+            { "a0008362", Art("BoosterPack_KismetDraft", 0f, 0.8f, 0.02f) },       // Kismet's Draft Pack
+        };
+
+        private static KeyValuePair<string, Vector3> Art(string wrapper, float x0, float x1, float y0) { return new KeyValuePair<string, Vector3>(wrapper, new Vector3(x0, x1, y0)); }
+
+        private static readonly Dictionary<string, Texture2D> s_PackBanners = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A banner like the game's (1024x256, the figure on the right fading into black on the left) from the pack's
+        /// art; null when the pack is not in PackArt or its art is not loaded.
+        /// </summary>
+        private static Texture2D PackBanner(AssetBundleManager m, AssetBundleFile bundle, string subBundle, string tex)
+        {
+            KeyValuePair<string, Vector3> art;
+            if (!PackArt.TryGetValue(tex, out art)) return null;
+            Texture2D b;
+            if (s_PackBanners.TryGetValue(tex, out b) && b != null) return b;
+            Texture2D src = m.GetAsset(bundle, subBundle, art.Key, AssetType.Texture2D) as Texture2D;
+            if (src == null) return null;
+            float x0 = art.Value.x, x1 = art.Value.y, y0 = art.Value.z, y1 = y0 + (x1 - x0) / 2f;
+            const int W = 1024, H = 256, ArtW = 512, Right = 30;
+            RenderTexture rt = RenderTexture.GetTemporary(W, H, 0, RenderTextureFormat.ARGB32);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                RenderTexture.active = rt;
+                GL.Clear(true, true, Color.black);
+                GL.PushMatrix();
+                GL.LoadPixelMatrix(0, W, H, 0);
+                // The source rect in uv (origin at the bottom left).
+                Graphics.DrawTexture(new Rect(W - Right - ArtW, 0, ArtW, H), src, new Rect(x0, 1f - y1, x1 - x0, y1 - y0), 0, 0, 0, 0);
+                GL.PopMatrix();
+                b = new Texture2D(W, H, TextureFormat.RGB24, false);
+                b.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+                // Its left half fades into black.
+                Color32[] px = b.GetPixels32();
+                int fadeFrom = W - Right - ArtW, fadeW = ArtW / 2;
+                for (int y = 0; y < H; y++)
+                    for (int x = fadeFrom; x < fadeFrom + fadeW; x++)
+                    {
+                        float f = (x - fadeFrom) / (float)fadeW;
+                        int i = y * W + x;
+                        px[i] = new Color32((byte)(px[i].r * f), (byte)(px[i].g * f), (byte)(px[i].b * f), 255);
+                    }
+                b.SetPixels32(px);
+                b.Apply();
+                b.name = tex + Wallpaper;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+            s_PackBanners[tex] = b;
+            return b;
+        }
+
+        // ---- 3D models with the wrong texture ----
+
+        /// <summary>
+        /// Packs whose 3D model wears another texture (Src.Game, icons.ab): the Vennen Starter Trials Pack's model uses
+        /// the Vennen starter deck's box (Starter_Vennen); its own wrapper is BoosterPack_Set03_Vennen, as the seven other
+        /// races' packs use theirs.
+        /// </summary>
+        private static readonly Dictionary<string, string> ModelTextures = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "a0005483", "BoosterPack_Set03_Vennen" },
+        };
+
+        private static void FixModelTexture(GameObject go, string tex)
+        {
+            string right;
+            if (go == null || tex == null || !ModelTextures.TryGetValue(tex, out right) || AssetBundleManager.Instance == null) return;
+            Texture2D t = AssetBundleManager.Instance.GetAsset(AssetBundleFile.Icons, right, AssetType.Texture2D) as Texture2D;
+            if (t == null) return;
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+                foreach (Material mat in r.materials)
+                {
+                    mat.mainTexture = t;
+                    if (mat.HasProperty("_EmissionMap")) mat.SetTexture("_EmissionMap", t);
+                }
         }
 
         // ---- Products without a banner or model of their own ----
@@ -233,6 +345,7 @@ namespace HexRevival
             GameObject go = holder != null ? holder.LoadedPrefab : null;
             UIPremiumStoreViewModel vm = UnityEngine.Object.FindObjectOfType<UIPremiumStoreViewModel>();
             UIPremiumStoreItemContext sel = vm != null && vm.Context != null ? vm.Context.Catalog.SelectedItem : null;
+            if (sel != null && sel.ItemData != null && !string.IsNullOrEmpty(sel.ItemData.m_TexturePath)) FixModelTexture(go, Tex(sel.ItemData));
             // The mesh the controller took (the first one under the model).
             MeshFilter mf = holder != null ? holder.GetComponentInChildren<MeshFilter>() : null;
             bool chest = sel != null && go != null && mf != null && mf.transform != go.transform && mf.transform.IsChildOf(go.transform)
