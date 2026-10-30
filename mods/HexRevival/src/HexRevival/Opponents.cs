@@ -184,16 +184,25 @@ namespace HexRevival
                 List<CardTemplate> all = new List<CardTemplate>(Singleton<TemplateManager>.Instance.Cards.Values);
                 all.RemoveAll(c => c == null || string.IsNullOrEmpty(c.m_Name));
                 all.Sort((a, b) => a.m_IsPvE != b.m_IsPvE ? (a.m_IsPvE ? 1 : -1) : string.CompareOrdinal(a.m_SetId.ToString(), b.m_SetId.ToString()));
-                foreach (CardTemplate c in all) if (!s_CardsByName.ContainsKey(c.m_Name)) s_CardsByName[c.m_Name] = c;
+                // Trimmed: a few of the game's names end with a space ("Poppy Pixie "), the deck lists' do not.
+                foreach (CardTemplate c in all) if (!s_CardsByName.ContainsKey(c.m_Name.Trim())) s_CardsByName[c.m_Name.Trim()] = c;
             }
             CardTemplate t;
-            return s_CardsByName.TryGetValue(name, out t) ? t : null;
+            return name != null && s_CardsByName.TryGetValue(name.Trim(), out t) ? t : null;
+        }
+
+        /// <summary>True if the game has a player champion of that name.</summary>
+        public static bool IsChampion(string name)
+        {
+            foreach (ChampionTemplate ch in Singleton<TemplateManager>.Instance.Champions.Values)
+                if (ch != null && ch.m_ChampionType == EChampionType.PvPChampion && string.Equals(ch.m_Name.Trim(), (name ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         public static ResourceId ChampionId(string name)
         {
             foreach (ChampionTemplate ch in Singleton<TemplateManager>.Instance.Champions.Values)
-                if (ch != null && ch.m_ChampionType == EChampionType.PvPChampion && string.Equals(ch.m_Name, name, StringComparison.OrdinalIgnoreCase)) return ch.m_Id;
+                if (ch != null && ch.m_ChampionType == EChampionType.PvPChampion && string.Equals(ch.m_Name.Trim(), (name ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) return ch.m_Id;
             List<DeckTemplate> decks = Decks.PrebuiltPvp();
             return decks.Count > 0 ? decks[0].m_ChampionId : new ResourceId(GameConfig.DefaultChampionTemplateId);
         }

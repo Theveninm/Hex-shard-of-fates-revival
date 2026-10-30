@@ -265,6 +265,19 @@ namespace HexRevival
                 catch { }
             }
             m_GameDecks.Sort((a, b) => string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
+            // After the game's decks: the decks players brought to tournaments (TournamentDecks).
+            List<TournamentDecks.Deck> played = TournamentDecks.All();
+            if (played.Count > 0) m_GameDecks.Add(new Entry { Label = Loc.Get("ai_cat_tournament"), Header = true, Search = "" });
+            foreach (TournamentDecks.Deck d in played)
+            {
+                DeckTemplate t = Opponents.DeckOf(TournamentDecks.Opponent(d.Key));
+                if (t == null) continue;
+                m_GameDecks.Add(new Entry
+                {
+                    Label = d.Name, Detail = d.Detail, Search = (d.Name + " " + d.Detail + " tournament").ToLowerInvariant(), Template = t,
+                    Champion = tm.GetChampionTemplate(t.m_ChampionId),
+                });
+            }
             foreach (SceneData sd in tm.CampaignScenes.Values)
             {
                 try

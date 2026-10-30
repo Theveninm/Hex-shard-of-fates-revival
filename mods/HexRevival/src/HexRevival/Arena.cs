@@ -289,7 +289,7 @@ namespace HexRevival
             if (ch != "")
             {
                 Challenge c = Challenges[ch];
-                ai = c.AI; me = c.Player;
+                c.Draw(out ai, out me);
                 Notices.Show(Loc.Get("arena_goal", c.Name, c.Text));
             }
             if (boss)
@@ -338,6 +338,9 @@ namespace HexRevival
                     r.BonusChest = true;
                 }
                 news.AddRange(Rewards.ForWin(r, f, o, boss));
+                // "Remove strikes by Perfecting a Tier, or completing Hogarth's Challenges" (Src.HexCodex, the arena's
+                // own text): a tier won without a loss takes off a boss's loss mark (the only marks left by then).
+                if (boss && (r.Info.LastTierLoss & (1 << f.FightTier)) == 0 && r.BossLosses > 0) r.BossLosses--;
                 if (boss) { r.TierLosses = 0; r.Buffs.Clear(); r.BonusChest = false; }
                 if (r.Current < Fights - 1) r.Current++;
             }
@@ -551,9 +554,29 @@ namespace HexRevival
         {
             public string Key, Card;
             public Opponents.Handicap AI, Player;
+            /// <summary>Each champion starts with one of these cards in play, drawn for each (The Pacts).</summary>
+            public string[] EachOneOf;
+            /// <summary>One of Hogarth's challenges of the game's texts (ArenaPVE_Challenge_Header/Body n), 0 for the ones seen on video.</summary>
+            public int GameText;
             /// <summary>In the game's language (the card's name as the game shows it).</summary>
-            public string Name { get { return Loc.Get("arena_ch_" + Key); } }
-            public string Text { get { return Loc.Get(Player != null ? "arena_ch_reflection_text" : "arena_ch_opponent_text", CardName(Card)); } }
+            public string Name { get { return GameText > 0 ? Localization.Get("ArenaPVE_Challenge_Header" + GameText) : Loc.Get("arena_ch_" + Key); } }
+            public string Text
+            {
+                get
+                {
+                    if (GameText > 0) return Localization.Get("ArenaPVE_Challenge_Body" + GameText).Replace("[b]", "").Replace("[/b]", "");
+                    return Loc.Get(Player != null ? "arena_ch_reflection_text" : "arena_ch_opponent_text", CardName(Card));
+                }
+            }
+
+            /// <summary>What each side starts with in this fight (EachOneOf drawn now).</summary>
+            public void Draw(out Opponents.Handicap ai, out Opponents.Handicap me)
+            {
+                ai = AI; me = Player;
+                if (EachOneOf == null) return;
+                ai = Opponents.Handicap.Add(ai, new Opponents.Handicap { InPlay = new List<string> { EachOneOf[UnityEngine.Random.Range(0, EachOneOf.Length)] } });
+                me = Opponents.Handicap.Add(me, new Opponents.Handicap { InPlay = new List<string> { EachOneOf[UnityEngine.Random.Range(0, EachOneOf.Length)] } });
+            }
         }
 
         private static string CardName(string name)
@@ -562,7 +585,14 @@ namespace HexRevival
             return c != null && !string.IsNullOrEmpty(c.m_Name) ? c.m_Name : name;
         }
 
-        /// <summary>The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game").</summary>
+        /// <summary>
+        /// The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game"), and those
+        /// of Hogarth's challenges in the game's texts (Src.Game: ArenaPVE_Challenge_Header/Body 1-10) that are cards in
+        /// play: Inferno (3) and The Pacts (8). Not done: the others change rules (Shards Aplenty's resources, Swarm!
+        /// Swarm!'s cost -1, Rage 1, Charge!'s charges, The Ol' Switcheroo's deck swap) or play an action for free (The
+        /// Primal of Luck, Infernal Professor). Cerebral Fulmination (1) is in both: "each champion" in the game's text,
+        /// the opponent only on video; the video's is kept.
+        /// </summary>
         private static readonly Dictionary<string, Challenge> Challenges = new Dictionary<string, Challenge>
         {
             { "reflection", new Challenge { Key = "reflection", Card = "Locket of Reflection",
@@ -573,8 +603,11 @@ namespace HexRevival
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Gooplasm" } } } },
             { "fulmination", new Challenge { Key = "fulmination", Card = "Cerebral Fulmination",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Cerebral Fulmination" } } } },
+            { "inferno", new Challenge { Key = "inferno", Card = "Inferno", GameText = 3,
+                AI = new Opponents.Handicap { InPlay = new List<string> { "Inferno" } }, Player = new Opponents.Handicap { InPlay = new List<string> { "Inferno" } } } },
+            { "pacts", new Challenge { Key = "pacts", GameText = 8, EachOneOf = new[] { "Pact of Life", "Pact of Pain" } } },
         };
-        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination" };
+        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts" };
 
         private class BuffDef { public ArenaBuff Shown; public Opponents.Handicap Effect; }
 
@@ -645,6 +678,21 @@ namespace HexRevival
             Run r = Current;
             switch (sub)
             {
+                case "decks":   // dev: the game's arena decks: champion, health, equipment count, and the challenge cards found
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        foreach (DeckTemplate d in AiConfig.ArenaDecks())
+                        {
+                            ChampionTemplate ch = Singleton<TemplateManager>.Instance.GetChampionTemplate(d.m_ChampionId);
+                            sb.Append(d.m_DeckName).Append(" | ").Append(ch != null ? ch.m_Name + " " + ch.m_StartingHealth : "?").Append(" | eq ").Append(d.m_EquipmentIDs != null ? d.m_EquipmentIDs.Count : 0).Append('\n');
+                        }
+                        foreach (string n in new[] { "Inferno", "Pact of Life", "Pact of Pain", "Kismet's Reverie", "Infernal Professor", "Cerebral Fulmination" })
+                        {
+                            CardTemplate c = Opponents.CardByName(n);
+                            sb.Append(n).Append(": ").Append(c != null ? c.m_CardType + (c.m_IsPvE ? " PvE" : "") : "NOT FOUND").Append('\n');
+                        }
+                        return sb.ToString();
+                    }
                 case "state":
                     if (r == null) return "no run (pool: " + ArenaCards().Count + " cards, " + ArenaEquipment().Count + " equipment)";
                     string s = r.Info.Wins + "-" + r.Info.Loses + ", fight " + (r.Current + 1) + ", loot " + r.Loot.Count + ", buffs " + string.Join(",", r.Buffs.ToArray());

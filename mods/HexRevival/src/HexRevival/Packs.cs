@@ -20,7 +20,7 @@ namespace HexRevival
     /// opened for its loot (OpenChest). Before 1.2.10 packs were opened at purchase, without chest (SirBeastmaster).
     ///
     /// Sources. Src.Game: the requests and their answers; the spin costs (ChestUtils.GetChestSpinCost: 1,200 / 3,100 /
-    /// 8,500 / 30,000 gold, Primal chests and free spins 0); the client's texts: a booster holds "1 Treasure Chest", a
+    /// 8,500 / 30,000 gold, Primal chests and free spins 0; the same on the wiki's "Wheels of Fate"); the client's texts: a booster holds "1 Treasure Chest", a
     /// primal pack "1 Legendary Treasure Chest", "Most chests contain a single item. Legendary and Primal chests will have
     /// additional items", and the payout table: 1 / 2 / 3 eyes = paid spin / free spin / upgrade chest; three stars a
     /// mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls an alternate
@@ -129,7 +129,9 @@ namespace HexRevival
         /// <summary>
         /// A booster's chest: common. Src.Survey2015, the players' chest survey (Google sheet
         /// 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs): all 93 chests recorded from boosters were common, 1 item each;
-        /// better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample).
+        /// better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki
+        /// (Src.Wiki, "Treasure Chest", 2014) says "of a random rarity (common, uncommon, rare or legendary)", without
+        /// odds; the later survey is kept.
         /// </summary>
         private static ETreasureChestType RollRarity() { return ETreasureChestType.Common; }
 
@@ -263,10 +265,14 @@ namespace HexRevival
             }
         }
 
+        /// <summary>
+        /// A chest's rarity goes up; an upgraded legendary chest "becomes a primal chest", the only way to get one
+        /// (Src.Wiki: hextcg.fandom.com "Treasure Chest"; the client knows primal chests and opens them).
+        /// </summary>
         private static void Upgrade(Chest c, int steps)
         {
-            int v = Math.Min((int)ETreasureChestType.Legendary, (int)c.Rarity + steps);
-            if (c.Rarity < ETreasureChestType.Legendary) c.Rarity = (ETreasureChestType)v;
+            int v = Math.Min((int)ETreasureChestType.Primal, (int)c.Rarity + steps);
+            if (c.Rarity < ETreasureChestType.Primal) c.Rarity = (ETreasureChestType)v;
         }
 
         /// <summary>A prize of the wheel: silently granted, the answer gives it to the client (PlayerProfile.HandleChestUpdate).</summary>

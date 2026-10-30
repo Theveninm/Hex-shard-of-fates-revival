@@ -38,12 +38,12 @@ namespace HexRevival
         public const int MaxWeight = 99;
 
         /// <summary>Kinds of deck in a tier.</summary>
-        public const string Shared = "deck", GameDeck = "game", Encounter = "encounter";
+        public const string Shared = "deck", GameDeck = "game", Encounter = "encounter", Tournament = "tournament";
 
         public class DeckRef
         {
             public string Kind = Shared;
-            /// <summary>Shared deck: its id; game deck: "name|champion"; encounter: its scene id.</summary>
+            /// <summary>Shared deck: its id; game deck: "name|champion"; encounter: its scene id; tournament deck: its key (TournamentDecks).</summary>
             public string Key = "";
             /// <summary>Relative chance to be drawn among the decks of the tier.</summary>
             public int Weight = 1;
@@ -105,7 +105,7 @@ namespace HexRevival
             public List<ModeConfig> Modes = new List<ModeConfig>();
         }
 
-        private const int DefaultsVersion = 4;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role; 4: Siege attackers are decks
+        private const int DefaultsVersion = 5;   // 2: weight and role per deck, no skill per tier; 3: Siege keeps and attackers, limited players, no rare role; 4: Siege attackers are decks; 5: tournament decks
 
         private static string DefaultsPath { get { return Path.Combine(Path.Combine(LocalServer.Root, "HexRevivalSaves"), "ai_defaults.json"); } }
         private static string AccountPath { get { return Saves.File("ai.json"); } }
@@ -213,22 +213,26 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// The default configuration: the game's prebuilt decks with a PvP champion (the AI playing better as the ladder
-        /// rank rises: PLACEHOLDER, the original opponents were players), and the game's own arena decks for the arena.
+        /// The default configuration. The modes whose opponents were players play decks real players brought to HEX
+        /// tournaments (Src.HexCodex, see TournamentDecks): in the ladder, weaker players' decks in the low tiers and the
+        /// strongest players' at the top (PLACEHOLDER: the original ladder matched players of a similar rank), each
+        /// archetype as often as it was played. The arena plays the game's own arena decks. Without the bundled decks:
+        /// the game's prebuilt decks with a PvP champion.
         /// </summary>
         private static File_ BuildDefaults()
         {
             File_ f = new File_ { Version = DefaultsVersion };
             List<DeckRef> prebuilt = Decks.PrebuiltPvp().ConvertAll(d => new DeckRef(GameDeck, GameKey(d)));
+            List<DeckRef> gauntlet = TournamentTier("Gauntlet", prebuilt);
 
             ModeConfig ladder = new ModeConfig { Mode = Ladder };
             string[] names = { "Bronze", "Silver", "Gold", "Platinum", "Cosmic" };
             int[] from = { 0, 10, 25, 45, 70 };
             for (int i = 0; i < names.Length; i++)
-                ladder.Tiers.Add(new Tier { Name = names[i], From = from[i], To = i + 1 < from.Length ? from[i + 1] - 1 : 9999, Decks = Clone(prebuilt) });
+                ladder.Tiers.Add(new Tier { Name = names[i], From = from[i], To = i + 1 < from.Length ? from[i + 1] - 1 : 9999, Decks = TournamentTier(names[i], prebuilt) });
             f.Modes.Add(ladder);
 
-            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = Clone(prebuilt) } } });
+            f.Modes.Add(new ModeConfig { Mode = Gauntlet, Tiers = new List<Tier> { new Tier { Name = "Constructed gauntlet", From = 0, To = 99, Decks = Clone(gauntlet) } } });
             f.Modes.Add(new ModeConfig { Mode = Limited, Players = DefaultPlayers() });
 
             ModeConfig arena = new ModeConfig { Mode = Arena };
@@ -253,10 +257,18 @@ namespace HexRevival
             arena.Tiers.AddRange(new[] { t1, t23, t4 });
             f.Modes.Add(arena);
 
-            f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(prebuilt) });
-            // The attackers of the player's defense: the game's prebuilt decks (PLACEHOLDER: the attackers were players).
-            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Tiers = new List<Tier> { new Tier { Name = "Attackers", From = 0, To = 999999999, Decks = Clone(prebuilt) } } });
+            f.Modes.Add(new ModeConfig { Mode = SiegeKeeps, Keeps = DefaultKeeps(gauntlet) });
+            // The attackers of the player's defense: players' tournament decks (PLACEHOLDER: the attackers were players,
+            // with their Siege decks).
+            f.Modes.Add(new ModeConfig { Mode = SiegeAttackers, Tiers = new List<Tier> { new Tier { Name = "Attackers", From = 0, To = 999999999, Decks = Clone(gauntlet) } } });
             return f;
+        }
+
+        /// <summary>A tier of the bundled tournament decks with their frequencies, or the fallback if there is none.</summary>
+        private static List<DeckRef> TournamentTier(string name, List<DeckRef> fallback)
+        {
+            List<DeckRef> res = TournamentDecks.Tier(name).ConvertAll(kv => new DeckRef(Tournament, kv.Key) { Weight = Math.Min(MaxWeight, kv.Value) });
+            return res.Count > 0 ? res : Clone(fallback);
         }
 
         /// <summary>The usual frequency of the arena's decks: room below it for the rare challengers.</summary>
@@ -273,13 +285,13 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 of the game's
-        /// prebuilt decks with an AI style; most at the minimum bounty, a few higher (Src.Video, A 0:28-8:04).
+        /// PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 decks of the
+        /// pool (players' tournament decks) with an AI style; most at the minimum bounty, a few higher (Src.Video, A 0:28-8:04).
         /// </summary>
-        private static List<KeepDef> DefaultKeeps(List<DeckRef> prebuilt)
+        private static List<KeepDef> DefaultKeeps(List<DeckRef> pool)
         {
             List<KeepDef> res = new List<KeepDef>();
-            if (prebuilt.Count < 3) return res;
+            if (pool.Count < 3) return res;
             System.Random rng = new System.Random(1000);
             string[] styles = Enum.GetNames(typeof(Game.Shared.Mechanics.EDeckPersonality));
             for (int i = 0; i < 50; i++)
@@ -295,10 +307,10 @@ namespace HexRevival
                 List<int> used = new List<int>();
                 while (k.Fights.Count < 3)
                 {
-                    int d = rng.Next(prebuilt.Count);
+                    int d = rng.Next(pool.Count);
                     if (used.Contains(d)) continue;
                     used.Add(d);
-                    k.Fights.Add(new KeepFight { Deck = new DeckRef(prebuilt[d].Kind, prebuilt[d].Key), Personality = styles[rng.Next(styles.Length)] });
+                    k.Fights.Add(new KeepFight { Deck = new DeckRef(pool[d].Kind, pool[d].Key), Personality = styles[rng.Next(styles.Length)] });
                 }
                 res.Add(k);
             }
@@ -381,6 +393,10 @@ namespace HexRevival
                     o = new Opponents.Opponent { Name = p.Length > 1 && p[1] != "" ? p[1] : p[0], Prebuilt = p[0], Champion = p.Length > 1 ? p[1] : "" };
                     DeckTemplate gd = Opponents.DeckOf(o);
                     if (gd == null) return null;
+                    break;
+                case Tournament:
+                    o = TournamentDecks.Opponent(r.Key);
+                    if (o == null) return null;
                     break;
                 case Encounter:
                     SceneData sc;

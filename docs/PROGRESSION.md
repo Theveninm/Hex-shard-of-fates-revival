@@ -37,6 +37,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
 | Survey2014 | players' Wheels of Fate survey, 2014: 2,167 spins by chest rarity and outcome (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw) |
 | Survey2015 | players' treasure chest survey, 2015: chests from boosters and what they held (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs) |
+| HexCodex | Hex Codex, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its tournament database (46,674 decks from 1,550 constructed events, 2016-2020) and its Frost Ring Arena page, which quotes the game's own arena texts |
+| Wiki | HEX fandom wiki (hextcg.fandom.com), mostly 2014-2015 pages: "Treasure Chest", "Wheels of Fate" |
 
 ## New account
 
@@ -500,8 +502,8 @@ the end, and single fights).
 | Run | 20 fights in 4 tiers of 5, a boss closing each tier; tier 1: 4 standard fights; tier 2: 3 standard, 1 elite (slot 9); tiers 3 and 4: 2 standard, 2 elite (slots 12, 14 / 17, 19); tier 4's boss is an elite | HexCompendium, Video |
 | Tier 1 | its own opponents, 7 less health (the game's 15-health arena decks), the Eternal Guardian as boss | HexCompendium, Game, Video |
 | Opponents | drawn at random for each run; an elite is a stronger version of a standard opponent | Video |
-| Loss marks | a lost fight is passed (red X) and its mark counts until the tier's boss is beaten; a lost boss is fought again and its mark stays; 3 marks end the run | Video (the defeats counter of several runs); HexCompendium (3 marks) |
-| Challenges | one fight of each tier: Reflection (both players start with Locket of Reflection in play), Primordial (the opponent starts with Primordial Caves in play), Gooplasm (with a Gooplasm), Fulmination (with Cerebral Fulmination); goal: win the game | Video (texts); one per tier always: PLACEHOLDER |
+| Loss marks | a lost fight is passed (red X) and its mark counts until the tier's boss is beaten; a lost boss is fought again and its mark stays; 3 marks end the run; a tier won without a loss takes off a boss's mark ("Remove strikes by Perfecting a Tier, or completing Hogarth's Challenges") | Video (the defeats counter of several runs); HexCompendium (3 marks); HexCodex (perfect tier) |
+| Challenges | one fight of each tier: Reflection (both players start with Locket of Reflection in play), Primordial (the opponent starts with Primordial Caves in play), Gooplasm (with a Gooplasm), Fulmination (with Cerebral Fulmination); Inferno (each champion starts with Inferno in play), The Pacts (each starts with Pact of Life or Pact of Pain); goal: win the game. Not done, rules the mod cannot set yet: Shards Aplenty, Swarm! Swarm!, Rage, Charge!, The Ol' Switcheroo, The Primal of Luck and Infernal Professor (an action played for free) | Video (the first four); Game (Hogarth's 10 challenges, ArenaPVE_Challenge texts); one per tier always: PLACEHOLDER |
 | Challenge won | removes a loss mark, otherwise a buff for the next boss: Brawler (an Arena Brawler in play), Charge (+2 charges), Health (+5 health), Resource (a resource in play) | HexCompendium, Video (Brawler) |
 | Uruunaz, Zakiir | rare encounters on the 4th fight of tier 2 and on the fights of tiers 3 and 4 but the bosses (Uruunaz seen at slot 13); chance 2% | HexCompendium, Video; chance PLACEHOLDER |
 | Which boss in which tier | tiers 2-3 share the 30-health bosses, tier 4 takes their elite versions and Hogarth (seen: Lanupaw tier 2, Uzume tier 3, Princess Cory Elite and Doombringer Kha Elite tier 4) | PLACEHOLDER, Video |
@@ -511,7 +513,9 @@ the end, and single fights).
 | Uruunaz | 100,000 gold | Steam2016-b (forum, April 2016) |
 | Sleeves | Frost Ring Arena Sleeve (run completed: seen), Perfect Sleeve (no loss), Hogarth, Uruunaz, Matriarch of Flames (Zakiir): each once | Game (their "Earned by ..." texts), Video |
 
-Not done: the buyout, Hogarth's dialogues, the arena's frozen game board.
+Not done: the buyout, Hogarth's dialogues, the opponents' equipment ("Tier 2: Champions in this Tier each use 2
+equipment", 3 in tier 3, 4 in tier 4, HexCodex; the game's arena decks carry none, the server chose it), the Resource
+buff's temporary resource ("1 temporary resource 1 permanent resource", HexCodex: the mod gives the permanent one).
 
 ## AI opponents
 
@@ -520,7 +524,8 @@ at the bottom right of each mode's screen (Battlegrounds: the selected event's m
 the defenses to attack, the defense screen the attackers):
 
 - **Ladder, constructed gauntlet, Frost Ring Arena**: tiers (ladder stars, gauntlet wins, arena tier), each listing
-  decks: shared decks (made for players or for the AI), the game's own AI decks, or its encounters. Each deck of a
+  decks: shared decks (made for players or for the AI), the game's own AI decks, decks players brought to tournaments,
+  or its encounters. Each deck of a
   tier has a frequency; in the arena, a role too: common, elite or boss (a tier's last fight is its boss, tiers 2 to
   4 have elite fights, Src.Video). Uruunaz and Zakiir, "extremely rare" (Src.Steam2016), are common decks with a low
   frequency (2% of the common fights where they can appear, PLACEHOLDER) and keep their own rewards.
@@ -528,14 +533,27 @@ the defenses to attack, the defense screen the attackers):
   own cards (its 6 boosters, or what it drafted at the player's table: the 7 seats are drawn from these players);
   the decks of the runs in progress are shown and can be copied.
 - **Siege, defenses to attack**: defenses set up like the game's defense screen (name, gold or platinum, starting
-  bounty, 3 decks with their style, message), PLACEHOLDER defaults of 40 gold and 10 platinum defenses of the game's
-  prebuilt decks. A defense taken comes back with its starting bounty.
-- **Siege, attackers**: tiers by the defense's bounty listing decks (PLACEHOLDER default: the game's prebuilt
+  bounty, 3 decks with their style, message), PLACEHOLDER defaults of 40 gold and 10 platinum defenses of players'
+  tournament decks. A defense taken comes back with its starting bounty.
+- **Siege, attackers**: tiers by the defense's bounty listing decks (PLACEHOLDER default: players' tournament
   decks). On the defense screen, "Launch an attack" makes one of them attack the player's defense: AI against AI,
   the player watching (a button speeds the game up x4 until pressed again or the game ends). As for a player's
   attack, the fee is paid (the defender's share to the player, the rest to the bounty) and the 3 defense decks must
   be beaten in turn; the defense decks play with the AI settings of the shared deck they come from (same name and
   champion), or the defaults.
+
+**Default opponents: players' tournament decks.** The ladder, the constructed gauntlet and Siege had players as
+opponents; by default they play decks real players brought to HEX constructed tournaments (HexCodex's database, era
+"Sets 9+", March 2018 - April 2020, the game's final card pool: 12,362 usable lists). 111 of them are bundled with
+the mod (`mods/HexRevival/assets/tournament_decks.txt`, built by `tools/gen_tournament_decks.py`; no player names):
+
+| Mode | Decks |
+|---|---|
+| Ladder | each player is rated by their whole record in the era (wins smoothed toward 50%) and the decks are split into 5 bands by their player's rating, Bronze (weakest) to Cosmic (strongest); each tier plays its band's 20 most played archetypes (champion + shards), Bronze and Silver a typical list of the band, the higher tiers the best record; each archetype as often as it was played in its band. That the ladder tiers match these bands is PLACEHOLDER (the original ladder matched players of a similar rank) |
+| Constructed gauntlet, Siege defenses and attackers | the era's 30 most played archetypes, the best record of each (Siege: players' constructed decks, not their Siege decks) |
+
+They are listed under "Tournaments" in "Configure the AIs" and in the practice menu's game decks; "Copy" makes an
+editable shared deck. Their socketable cards have no gems (the database has none).
 
 What a deck's AI does is set on the deck (deck editor):
 
@@ -637,9 +655,10 @@ legendary and 1 treasure chest (Game: the store's text). PLACEHOLDER: the top ca
 otherwise epic 1 time in 5 in the sets that have epics, otherwise rare. Primal pack: 13 rares, 2 legendaries,
 1 legendary chest (Game).
 
-**Treasure chests and the Wheel of Fate.** A booster's chest is common (Survey2015: 93 of 93). Before opening it,
+**Treasure chests and the Wheel of Fate.** A booster's chest is common (Survey2015: 93 of 93; the 2014 wiki says
+"of a random rarity", without odds). Before opening it,
 the chest can be spun on the Wheel of Fate for 1,200 / 3,100 / 8,500 / 30,000 gold (common / uncommon / rare /
-legendary; Game). Outcomes (Game payout table): 1 eye a paid re-spin, 2 eyes a free re-spin, 3 eyes an upgrade;
+legendary; Game, Wiki). An upgraded legendary chest becomes a primal chest, the only way to get one (Wiki). Outcomes (Game payout table): 1 eye a paid re-spin, 2 eyes a free re-spin, 3 eyes an upgrade;
 three stars a mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls
 an alternate art card, hearts two upgrades, spiders a PvP rare, each with a paid re-spin; 1 or 2 gold reels give
 500 / 2,500 gold (HexServer), 3 gold or 3 red reels an exclusive reward. How often (Survey2014, common chests, 1,807

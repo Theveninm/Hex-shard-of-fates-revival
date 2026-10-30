@@ -96,13 +96,13 @@ namespace HexRevival
         // Deck catalogue
         // ------------------------------------------------------------------
 
-        private const int CatPlayer = 0, CatAi = 1, CatGame = 2, CatEncounter = 3;
+        private const int CatPlayer = 0, CatAi = 1, CatGame = 2, CatTournament = 3, CatEncounter = 4, CatCount = 5;
 
         private List<Entry> List(int cat)
         {
             if (m_Lists == null)
             {
-                m_Lists = new List<Entry>[4];
+                m_Lists = new List<Entry>[CatCount];
                 m_Lists[CatPlayer] = new List<Entry>();
                 m_Lists[CatAi] = new List<Entry>();
                 TemplateManager tm = Singleton<TemplateManager>.Instance;
@@ -116,6 +116,7 @@ namespace HexRevival
                     });
                 }
                 m_Lists[CatGame] = GameDecks();
+                m_Lists[CatTournament] = TournamentEntries();
                 m_Lists[CatEncounter] = Encounters();
             }
             return m_Lists[cat];
@@ -143,6 +144,23 @@ namespace HexRevival
             s_GameDecks.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             return s_GameDecks;
         }
+
+        /// <summary>The decks players brought to HEX tournaments, bundled with the mod (TournamentDecks).</summary>
+        private static List<Entry> TournamentEntries()
+        {
+            if (s_Tournament != null) return s_Tournament;
+            s_Tournament = new List<Entry>();
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            foreach (TournamentDecks.Deck d in TournamentDecks.All())
+            {
+                Opponents.Opponent o = TournamentDecks.Opponent(d.Key);
+                ChampionTemplate ch = tm.GetChampionTemplate(Opponents.ChampionId(d.Champion));
+                s_Tournament.Add(new Entry { Kind = AiConfig.Tournament, Key = d.Key, Name = d.Name, Detail = d.Detail, Template = Opponents.DeckOf(o), Champion = ch });
+            }
+            return s_Tournament;
+        }
+
+        private static List<Entry> s_Tournament;
 
         /// <summary>The game's battles against an AI with its own deck (campaign, dungeons, arena).</summary>
         private static List<Entry> Encounters()
@@ -183,7 +201,7 @@ namespace HexRevival
             string k = r.Kind + ":" + r.Key;
             Entry e;
             if (m_Info.TryGetValue(k, out e)) return e;
-            for (int c = 0; c < 4 && e == null; c++) e = List(c).Find(x => x.Kind == r.Kind && x.Key == r.Key);
+            for (int c = 0; c < CatCount && e == null; c++) e = List(c).Find(x => x.Kind == r.Kind && x.Key == r.Key);
             if (e == null)
             {
                 Opponents.Opponent o = AiConfig.Resolve(r, null);
@@ -389,7 +407,8 @@ namespace HexRevival
 
         private static string KindName(string kind)
         {
-            return kind == AiConfig.Shared ? Loc.Get("ai_kind_shared") : kind == AiConfig.Encounter ? Loc.Get("ai_kind_enc") : Loc.Get("ai_kind_game");
+            return kind == AiConfig.Shared ? Loc.Get("ai_kind_shared") : kind == AiConfig.Encounter ? Loc.Get("ai_kind_enc")
+                : kind == AiConfig.Tournament ? Loc.Get("ai_kind_tournament") : Loc.Get("ai_kind_game");
         }
 
         /// <summary>
@@ -400,8 +419,8 @@ namespace HexRevival
         {
             float S = GameSkin.Scale;
             Controls.Frame(r, null);
-            string[] cats = { Loc.Get("ai_cat_player"), Loc.Get("ai_cat_ai"), Loc.Get("ai_cat_game"), Loc.Get("ai_cat_enc") };
-            int nCats = encounters ? 4 : 3;
+            string[] cats = { Loc.Get("ai_cat_player"), Loc.Get("ai_cat_ai"), Loc.Get("ai_cat_game"), Loc.Get("ai_cat_tournament"), Loc.Get("ai_cat_enc") };
+            int nCats = encounters ? CatCount : CatCount - 1;
             if (m_Category >= nCats) m_Category = CatPlayer;
             float x = r.x + 10 * S, w = r.width - 20 * S, cw = w / nCats, y = r.y + 10 * S;
             for (int i = 0; i < nCats; i++)

@@ -204,6 +204,8 @@ namespace HexRevival
             { "ai_cat_ai", new[] { "AI decks", "Decks IA", "KI-Decks", "Mazos de IA", "Mazzi dell'IA", "Baralhos da IA", "Talie SI", "Колоды ИИ", "Yapay zekâ desteleri", "AIデッキ", "AI 卡组" } },
             { "ai_cat_game", new[] { "Game AI", "IA du jeu", "KI des Spiels", "IA del juego", "IA del gioco", "IA do jogo", "SI gry", "ИИ игры", "Oyunun yapay zekâsı", "ゲームのAI", "游戏 AI" } },
             { "ai_cat_enc", new[] { "Encounters", "Rencontres", "Begegnungen", "Encuentros", "Incontri", "Encontros", "Spotkania", "Встречи", "Karşılaşmalar", "エンカウンター", "遭遇战" } },
+            { "ai_cat_tournament", new[] { "Tournaments", "Tournois", "Turniere", "Torneos", "Tornei", "Torneios", "Turnieje", "Турниры", "Turnuvalar", "トーナメント", "锦标赛" } },
+            { "ai_kind_tournament", new[] { "tournament deck", "deck de tournoi", "Turnierdeck", "mazo de torneo", "mazzo da torneo", "baralho de torneio", "talia turniejowa", "турнирная колода", "turnuva destesi", "トーナメントデッキ", "锦标赛卡组" } },
             { "ai_kind_shared", new[] { "custom deck", "deck perso", "eigenes Deck", "mazo propio", "mazzo personale", "baralho próprio", "własna talia", "своя колода", "özel deste", "カスタムデッキ", "自定义卡组" } },
             { "ai_kind_game", new[] { "game deck", "deck du jeu", "Spieldeck", "mazo del juego", "mazzo del gioco", "baralho do jogo", "talia z gry", "колода игры", "oyun destesi", "ゲームのデッキ", "游戏卡组" } },
             { "ai_edit", new[] { "Edit", "Modifier", "Bearbeiten", "Editar", "Modifica", "Editar", "Edytuj", "Изменить", "Düzenle", "編集", "编辑" } },
