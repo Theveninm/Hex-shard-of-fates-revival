@@ -166,6 +166,7 @@ namespace HexRevival
         {
             AddDiscordIcon();
             ShowFeaturedContent();
+            LayOutZoom();
             bool hover = false;
             if ((m_News == null || m_NewsFrame == null) && Time.realtimeSinceStartup > m_NextSearch)
             {
@@ -218,6 +219,53 @@ namespace HexRevival
             bool show = Checked && NewVersion != null;
             foreach (GameObject g in new[] { m_NewsBox, m_NewsBackdrop, m_NewsBar })
                 if (g != null && g.activeSelf != show) g.SetActive(show);
+        }
+
+        private bool m_ZoomLaidOut;
+
+        /// <summary>
+        /// The large view of the panel (NewsEventsVM/ZoomedView, opened by a click) shows the release notes: the picture
+        /// is hidden and the text box fills the frame under the title, in a bigger font (user, 2026-10-30: the game's
+        /// small box over a stretched picture was hard to read).
+        /// </summary>
+        private void LayOutZoom()
+        {
+            bool zoomed = m_News != null && m_News.Context != null && m_News.Context.ItemZoomed;
+            if (!zoomed) { m_ZoomLaidOut = false; return; }
+            if (m_ZoomLaidOut) return;
+            Transform view = m_News.transform.Find("ZoomedView");
+            if (view == null) return;
+            int done = 0;
+            foreach (string frame in new[] { "Frame_Ad_16x10/Panel_16x10", "Frame_Ad_4x3/Panel_Ad_4x3" })
+            {
+                Transform panel = view.Find(frame);
+                if (panel == null || !panel.gameObject.activeInHierarchy) continue;
+                UITexture image = null;
+                foreach (UITexture t in panel.GetComponentsInChildren<UITexture>(true)) if (t.name.StartsWith("Image_")) { image = t; break; }
+                if (image == null) continue;
+                image.alpha = 0f;   // still there: a click on it opens the release page, as before
+                Transform content = panel.Find("ContentText");
+                if (content == null) continue;
+                // Anchored to the panel (its clipped area, what is seen), not to the picture, which is wider.
+                foreach (UISprite plate in content.GetComponentsInChildren<UISprite>(true))
+                    if (plate.name.StartsWith("Backplate"))
+                    {
+                        plate.SetAnchor(panel.gameObject, 8, 8, -8, -4);
+                        plate.color = new Color(0.04f, 0.04f, 0.06f, 0.93f);
+                    }
+                foreach (UILabel label in content.GetComponentsInChildren<UILabel>(true))
+                {
+                    if (label.name != "DetailContentText") continue;
+                    label.SetAnchor(panel.gameObject, 40, 24, -40, -106);
+                    label.overflowMethod = UILabel.Overflow.ShrinkContent;
+                    label.alignment = NGUIText.Alignment.Left;
+                    label.fontSize = 30;   // the largest that fits (ShrinkContent)
+                    label.spacingY = 2;
+                    label.MarkAsChanged();
+                }
+                done++;
+            }
+            m_ZoomLaidOut = done > 0;
         }
 
         private void OnGUI()
@@ -402,7 +450,8 @@ namespace HexRevival
             {
                 string title = Loc.Get("news_update_title", NewVersion), text = Loc.Get("news_update_text", NewVersion, Version);
                 string notes = PlainNotes(NewVersionNotes);
-                string detail = text + (notes.Length > 0 ? "\n\n" + notes : "") + "\n\n" + NewVersionUrl;
+                // The large view: the release notes alone (the title says which version, "Go" opens its page).
+                string detail = notes.Length > 0 ? notes : text + "\n\n" + NewVersionUrl;
                 string key = Picture(UpdatePicture);
                 sb.Append('{')
                   .Append("\"ImageUrl\":").Append(Json(key)).Append(",\"ImageUrlHD\":").Append(Json(key)).Append(",\"ImageUrlHDWide\":").Append(Json(key))
@@ -415,7 +464,7 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// A release's notes as plain text for the large panel: Markdown marks removed, lists as bullets, the install
+        /// A release's notes as plain text for the large panel: Markdown marks removed, headings in gold, lists as bullets, the install
         /// instructions left out (the "Go" button opens the release page), at most about 1,500 characters.
         /// </summary>
         public static string PlainNotes(string md)
@@ -428,7 +477,7 @@ namespace HexRevival
                 string t = l.TrimStart();
                 if (t.StartsWith("#") && t.TrimStart('#').Trim().StartsWith("Install", StringComparison.OrdinalIgnoreCase)) break;
                 if (t.StartsWith("## ") && sb.Length == 0) continue;   // the release's own title ("HEX Revival x.y.z")
-                if (t.StartsWith("#")) l = t.TrimStart('#').Trim();
+                if (t.StartsWith("#")) l = "[e8c87a]" + t.TrimStart('#').Trim() + "[-]";   // headings in gold (NGUI color code)
                 else if (t.StartsWith("- ") || t.StartsWith("* ")) l = new string(' ', Math.Min(4, l.Length - t.Length)) + "\u2022 " + t.Substring(2);
                 l = l.Replace("**", "").Replace("__", "").Replace("`", "");
                 l = System.Text.RegularExpressions.Regex.Replace(l, @"\[([^\]]*)\]\([^)]*\)", "$1");   // [text](link) -> text
