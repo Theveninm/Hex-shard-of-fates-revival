@@ -943,7 +943,7 @@ namespace HexRevival
                             CardSetTemplate set = null;
                             if (cp != null) tm.CardSets.TryGetValue(cp.m_SetId, out set);
                             sb.Append(i.m_Name).Append(" | ").Append(i.GetType().Name).Append(cp != null ? " " + cp.m_CardPackType + " set=" + (set != null ? set.m_Name : cp.m_SetId.ToString()) : "")
-                              .Append(" price=").Append(i.m_BasePrice).Append(" buy=").Append(i.m_AvailableForPurchase).Append(" tag=").Append(i.m_BuildTag)
+                              .Append(" price=").Append(i.m_BasePrice).Append(" buy=").Append(i.m_AvailableForPurchase).Append(" tag=").Append(i.m_BuildTag).Append(" tex=").Append(i.m_TexturePath)
                               .Append(" | ").Append((i.Description ?? "").Replace("\n", " ")).Append('\n');
                         }
                         return sb.Length == 0 ? "none" : sb.ToString();
