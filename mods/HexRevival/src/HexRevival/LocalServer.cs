@@ -194,6 +194,10 @@ namespace HexRevival
             return r;
         }
 
-        public static string Root { get { return Path.GetFullPath(Application.dataPath + "/../"); } }
+        /// <summary>The game's folder: next to Hex.exe, or next to Hex.app on macOS (whose dataPath is Hex.app/Contents).</summary>
+        public static string Root
+        {
+            get { return Path.GetFullPath(Application.dataPath + (Application.platform == RuntimePlatform.OSXPlayer ? "/../../" : "/../")); }
+        }
     }
 }
