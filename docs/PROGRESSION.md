@@ -35,6 +35,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | HexTCG2018 | official article "Introducing Cosmic Coins and Siege Sacks", hextcg.com, May 10 2018 (archived copy) |
 | Zymmer | "Zymmer's notes": a player's hand-made catalogue of HEX (cards, equipment, mercenaries, champions), each entry with where it was obtained (a pack, a set's chest or Wheel of Fate, the Frost Ring Arena, a quest, an event...). Only those "where obtained" lines are used, matched to the game's ids by `tools/gen_zymmer.py` into `data/zymmer_sources.tsv`. They say which items a source held, never how often |
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
+| Survey2014 | players' Wheels of Fate survey, 2014: 2,167 spins by chest rarity and outcome (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw) |
+| Survey2015 | players' treasure chest survey, 2015: chests from boosters and what they held (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs) |
 
 ## New account
 
@@ -47,6 +49,15 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 
 Wiki2018 says new accounts got about 250 common and uncommon cards forming a deck per major race:
 the mod's starter collection may be smaller than that (to check).
+
+## Hometown (AZ0)
+
+A new champion starts in its race's hometown, a panorama with its characters (Game: the AZ0 conversations and
+encounters, the hometown panoramas; Video: Amaz part 2, MyHotStream Underworld and Ardent runs). The race's elder tells
+its story; the sparring partner trains it in a first card battle (**50 gold, 100 XP**, Video: Amaz part 2 9:15; a lost
+battle can be fought again); the quest giver then sends it to Castle Crayburn and takes its report afterwards (the
+castle's quest reward below); the elder finally sends it to the Feralroot Woods (AZ1). PLACEHOLDER: the quest giver
+shows up once the sparring match is won; the dwarves' elder stands at the Quarry's NodeA.
 
 ## Campaign (AZ1)
 
@@ -100,7 +111,7 @@ Collection" (+3% gold) and the Warrior talent "Deep Pockets" (both need checking
 ### Dungeons
 
 The AZ1 dungeons are played on their own map (the client's dungeon prefabs), entered from their AZ1
-node and replayable once finished: Castle Crayburn (the starting dungeon of every new champion),
+node and replayable once finished: Castle Crayburn (entered from the hometown, see above),
 the Tranquil Dream (Node040), Fort Romor (Node011, Underworld quest), The Usurper (Node008, Ardent
 quest), the Smoldering Dead (Node024) and Devonshire Keep (Node068). The game data only lists the
 rooms; each room is rebuilt as conversation → battle → success / fail conversation from the
@@ -174,7 +185,7 @@ The reward window right after the quest giver's last conversation.
 
 | Quest (giver) | Gold | XP | Items |
 |---|---|---|---|
-| Crayburn Castle (Margugram / Balthasar / Xarlot...) | 150 | 500 | Crayburn Castle Pack: 4 race cards (LootTables2016; Vennen: Entangling Webs) + the race's AZ1 rare (Iddi, Nerissa, Zilth seen), at the end of the castle |
+| Crayburn Castle (Margugram / Balthasar / Xarlot...) | 150 | 500 | Crayburn Castle Pack: 4 race cards (LootTables2016; Vennen: Entangling Webs) + the race's AZ1 rare (Iddi, Nerissa, Zilth seen), at the report to the hometown's quest giver |
 | Cross the Zila River (Weston) | 300 | 300 | AZ1 pack, race equipment |
 | Find the Cave-In (Fahrny) / Ambling Mesa (Feather Drifting) | 350 | 350 | AZ1 pack, race card |
 | Cross the Zodiac River (Wallace / Warren) | 400 | 300 | AZ1 pack, race card |
@@ -369,7 +380,7 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 | Augustine, Katsuhiro, Mayor Galway, Sister of the Herd | Alachian Sea campaign rewards (Video) | campaign rewards (see the AZ2 table) |
 | Sin'glar | account level 9 (wiki level table) | account level 9; accounts already past it get him after their next win |
 | Rosina Leckermaul, Angar Krad | Siege Pack | Siege Pack, 5% (PLACEHOLDER odds, see Store) |
-| The "<set> Chest" and "<set> WOF" mercenaries of Shards of Fate, Shattered Destiny, Armies of Myth, Primal Dawn, Herofall, Scars of War, Frostheart, Dead of Winter ("08 Chest Merc"), Doombringer | the set's chests and Wheel of Fate, opened with each booster (Forum2017); Zymmer lists the same 54 | PLACEHOLDER: 2% chance per store booster of that set; the chest ones also from the account level chests (5% of a rare chest) |
+| The "<set> Chest" and "<set> WOF" mercenaries of Shards of Fate, Shattered Destiny, Armies of Myth, Primal Dawn, Herofall, Scars of War, Frostheart, Dead of Winter ("08 Chest Merc"), Doombringer | the set's chests and Wheel of Fate, opened with each booster (Forum2017); Zymmer lists the same 54 | the booster chests and the Wheel of Fate (see Packs); the chest ones also from the account level chests (5% of a rare chest, PLACEHOLDER) |
 | G24A-19, Sister of the Herd | Alachian Sea Pack (Zymmer) | 1 time in 100 in an Alachian Sea pack (PLACEHOLDER odds); Sister of the Herd is also a campaign reward |
 | Clatterclank | Great Machine Graveyard Pack (Zymmer) | 1 time in 100 in a Great Machine Graveyard pack (PLACEHOLDER odds) |
 | Thokoht | Alachian Sea ("Adventure Zone II"), how is unknown (not in Zymmer's notes) | not obtainable |
@@ -578,8 +589,7 @@ What each reward becomes in the mod:
 A chest (Zymmer pools, PLACEHOLDER rules): 1 item (2 for a legendary chest); a mercenary not owned yet 5% of the
 time from a rare or better chest, a PvE card 15%, otherwise an equipment of the chest's rarity (common chest:
 common 70% / uncommon 30%; rare chest: rare 75% / legendary 25%), never twice the same piece in one chest. The
-original opened chests with a paid spin of the Wheel of Fate, not reproduced (Zymmer's notes list each set's
-12 Wheel of Fate items too: data ready in `data/zymmer_sources.tsv`).
+account level chests are opened at once; booster chests go through the Wheel of Fate (see Packs).
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
 | Exclusive deck sleeve, alternate arts | nothing | cosmetics not implemented |
 | Sin'glar (level 9) | the Sin'glar mercenary | — |
@@ -598,9 +608,9 @@ platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).
 
 | What | Value | Source |
 |---|---|---|
-| Bought packs | opened right away (the Open Pack screen is not wired) | mod choice |
+| Bought packs | to the inventory, opened with the Open Pack button (see Packs) | Game ("Booster Packs can be opened using the Open Pack button on the store screen") |
 | Bought decks | their cards go to the collection and the deck is ready to play | Game ("Decks are automatically added to your collection") |
-| Bonus primal pack | 2% chance per bought booster: 2 legendaries + 13 rares of the same set (its legendary chest is not given) | Forum2017 |
+| Bonus primal pack | 2% chance per bought booster: a primal pack of the same set to the inventory (2 legendaries, 13 rares, 1 legendary chest) | Forum2017; contents Game |
 | Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul or Angar Krad); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, equipment 10%, shard 20%, PvE card 40%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game), the 5 equipment pieces Zymmer lists under "Siege Pack" (once each). The second mercenary is Angar Krad (Game: his item description reads "Siege Pack") |
 | Kismet's Reserve packs | Oni, Boonberries, Vampire and the plain Kismet's Reserve Pack (Game items): each gives its theme, 2 PvE cards, the 4 equipment that equip them and a mercenary (Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing) | which items: Zymmer (all under "Kismet's Reserve Pack"), split by theme with the equipment's design notes and the mercenaries' descriptions (Game); the plain pack = the 2017 Convocation theme: inferred; the whole theme in one pack and the price: PLACEHOLDER |
 | Cosmic Coin Pack | one item: an alternate art card (at most 4 copies), nearly 1 in 3 a Doombringer booster, rarely one of the 3 sleeves marked "2018 Cosmic Coin Pack" | HexTCG2018; odds PLACEHOLDER (booster 30%, sleeve 5%) |
@@ -622,9 +632,22 @@ pieces in the sheet, or, when it has none, 30% of the equipment draws shared equ
 Tranquil Dream and Smoldering Dead packs, LootTables2016): PLACEHOLDER by analogy.
 The sheet's "cards 50%" only counted the zone cards and is not used as a per-pack chance any more.
 
-**Boosters** (store, current set): 17 cards per pack (Forum2017: 3 packs = 51 cards). Rarity split
-PLACEHOLDER: 1 top card (legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have
-epics, otherwise rare), 3 uncommons, 13 commons, no basic shards.
+**Boosters** (store): opened on the Pack Opening screen (card fountain). 12 commons, 4 uncommons, 1 rare or
+legendary and 1 treasure chest (Game: the store's text). PLACEHOLDER: the top card is legendary 1 time in 8,
+otherwise epic 1 time in 5 in the sets that have epics, otherwise rare. Primal pack: 13 rares, 2 legendaries,
+1 legendary chest (Game).
+
+**Treasure chests and the Wheel of Fate.** A booster's chest is common (Survey2015: 93 of 93). Before opening it,
+the chest can be spun on the Wheel of Fate for 1,200 / 3,100 / 8,500 / 30,000 gold (common / uncommon / rare /
+legendary; Game). Outcomes (Game payout table): 1 eye a paid re-spin, 2 eyes a free re-spin, 3 eyes an upgrade;
+three stars a mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls
+an alternate art card, hearts two upgrades, spiders a PvP rare, each with a paid re-spin; 1 or 2 gold reels give
+500 / 2,500 gold (HexServer), 3 gold or 3 red reels an exclusive reward. How often (Survey2014, common chests, 1,807
+spins): nothing 44%, paid re-spin 13%, upgrade 12%, free re-spin 6%, double upgrade 4%, PvP rare 4%, equipment 4%,
+alternate art 4%, PvE card 3%, mercenary 3%, sleeves 3% (uncommon and rare chests: their own counts). Prizes: the
+set's Wheel of Fate cards, equipment and mercenaries (Zymmer). PLACEHOLDER: the reel colors (red 20%, gold 5%);
+sleeves and alternate arts (not in the mod) give a rare of the set; an exclusive reward is one of the wheel's items.
+Opened, a chest gives the set's chest loot (see Account level: 1 item, 2 for a legendary chest, 3 for a primal one).
 
 **Alachian Sea packs** (AZ2 campaign and dungeon packs): no drop table found. The campaign pack layout
 above; which card and equipment: Zymmer. The Alachian Sea Pack: one of its 37 cards and 156 equipment pieces;

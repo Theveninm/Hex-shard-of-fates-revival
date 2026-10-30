@@ -24,9 +24,6 @@ using var stop = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop.Cancel(); };
 AppDomain.CurrentDomain.ProcessExit += (_, _) => stop.Cancel();
 
-// The main menu's "Featured Content", over HTTP on its own port (see News.cs).
-_ = News.RunAsync(Env("HEX_NEWS_PORT", 7780), dataDir, stop.Token);
-
 try
 {
     while (!stop.IsCancellationRequested)

@@ -1,4 +1,4 @@
-# Placeholder register (updated 2026-10-29: Zymmer's notes)
+# Placeholder register (updated 2026-10-30: hometown, booster chests and the Wheel of Fate)
 
 Every value or behaviour in the mod that is not backed by a source is tagged `PLACEHOLDER` in the code
 (or `Source = Src.Placeholder` in the reward tables). This file lists them so that, when a new source turns
@@ -54,6 +54,16 @@ Vandersveldt part N + time. Dialogue lines come from the dialogue pass (`_tools/
 Inferred from the game data only (no video shows them; check if a source turns up): White Hawk Step 2 after the
 Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta turn-in).
 
+## Settled in 1.2.10 (2026-10-30)
+| What | Was | Now | Source |
+|---|---|---|---|
+| Booster contents | 13 commons, 3 uncommons, 1 top card | 12 commons, 4 uncommons, 1 rare or legendary, 1 treasure chest | the client's store text (BoosterPack_Content_Combined) |
+| Primal pack | 2 legendaries + 13 rares, no chest | the same + 1 legendary chest | the client's text (PrimalPack_Contents) |
+| Store booster mercenary | 2% per booster (PLACEHOLDER) | none: set mercenaries come from chests and the wheel | the mercenaries' item descriptions ("<set> Chest", "<set> WOF") |
+| Wheel of Fate outcomes | no wheel | payout table and spin costs from the client; outcome frequencies per chest rarity from the players' 2014 survey (2,167 spins) | client texts and ChestUtils; survey sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw |
+| Booster chest rarity | no chest | common | players' 2015 chest survey (93 of 93 common) |
+| Hometown sparring reward | no hometown | 50 gold, 100 XP | Amaz, Let's Play part 2 9:15 |
+
 ## Campaign placeholders still open
 | Where | Placeholder | Why it stays |
 |---|---|---|
@@ -63,10 +73,12 @@ Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta t
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video |
 | Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen |
 | Fortunes.cs | which fortune is drawn | random in the runs |
+| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first |
+| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video |
 | Progression.cs TalentPointsPerLevel | 1 | the reward window only says "Leveled Up!" (Vandersveldt part 79 4:54) |
 
 ## Placeholders with no source expected (other modes, economy)
-Arena, Battlegrounds, Siege, Store, prize packs, loot weights, mercenary drop chance: the original values
+Arena, Battlegrounds, Siege, Store, prize packs, loot weights, the Wheel of Fate's reel colors and booster chest rarity: the original values
 were server-side or came from other players; only new sources (forums, wiki, data mining) can settle them.
 
 ## Full list (generated)
@@ -78,60 +90,65 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | AiConfig.cs:276 | PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 of the game's |
 | AiConfig.cs:335 | Which boss in which tier: PLACEHOLDER (tiers 2-3 share the bosses, tier 4 their elite versions and Hogarth). |
 | Arena.cs:262 | One fight of each tier but the boss may carry a challenge (Src.HexCompendium; PLACEHOLDER: always one). |
-| Arena.cs:411 | pouch, not always the same). The split by fight is PLACEHOLDER (it gives about 8,500 for such a run). |
-| Arena.cs:419 | "Boss Win" chests (1 in tier 1, 2 after, PLACEHOLDER from the counts seen), a "Perfect Tier Bonus" chest for a |
-| Arena.cs:420 | tier without a loss, a "Bonus" chest (seen twice, cause unknown: PLACEHOLDER, a tier whose challenge was won). |
-| Arena.cs:470 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
-| Arena.cs:471 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
-| Arena.cs:498 | A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights). |
+| Arena.cs:413 | pouch, not always the same). The split by fight is PLACEHOLDER (it gives about 8,500 for such a run). |
+| Arena.cs:421 | "Boss Win" chests (1 in tier 1, 2 after, PLACEHOLDER from the counts seen), a "Perfect Tier Bonus" chest for a |
+| Arena.cs:422 | tier without a loss, a "Bonus" chest (seen twice, cause unknown: PLACEHOLDER, a tier whose challenge was won). |
+| Arena.cs:472 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
+| Arena.cs:473 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
+| Arena.cs:500 | <summary>A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary> |
 | Battlegrounds.cs:28 | draft timer are PLACEHOLDER (not known). The client's own screens are driven through its TournamentManager: |
-| Battlegrounds.cs:48 | public int GoldFee;            // PLACEHOLDER |
-| Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product). |
-| Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them). |
-| Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card. |
-| Battlegrounds.cs:206 | PLACEHOLDER prize: one booster per match won. |
-| Battlegrounds.cs:951 | constructedIronStars = 10,   // past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:48 | PLACEHOLDER |
+| Battlegrounds.cs:62 | <summary>PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
+| Battlegrounds.cs:64 | <summary>PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
+| Battlegrounds.cs:66 | <summary>PLACEHOLDER: time to pick a draft card.</summary> |
+| Battlegrounds.cs:206 | <summary>PLACEHOLDER prize: one booster per match won.</summary> |
+| Battlegrounds.cs:951 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
 | Battlegrounds.cs:987 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:122 | 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage". |
-| Dungeons.cs:386 | "alert_gnolls", "Great Machine Graveyard F 2 - Roundabout (AI goes first)");   // PLACEHOLDER: the blast's victim plays second |
-| Dungeons.cs:705 | return Quests.Flag(r.Champ, "brutecrown:ally") ?? Gnolls[0];   // Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
-| Dungeons.cs:728 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
+| Dungeons.cs:387 | PLACEHOLDER: the blast's victim plays second |
+| Dungeons.cs:706 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
+| Dungeons.cs:729 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
+| Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |
 | Loot.cs:99 | the weights are a PLACEHOLDER. |
 | Loot.cs:112 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
-| Mercenaries.cs:117 | PLACEHOLDER chance that an opened booster also brings a mercenary of its set. In the original, every opened |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
+| Packs.cs:30 | for 1 / 2 gold reels. PLACEHOLDER: the reel colors' odds; the prizes the mod has no item for |
+| Packs.cs:132 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). |
+| Packs.cs:206 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:234 | sleeves and alternate arts: PLACEHOLDER, see the class |
+| Packs.cs:240 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:307 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
+| Packs.cs:315 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
-| PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9). |
+| PrizePacks.cs:34 | <summary>PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
-| Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1). |
+| Progression.cs:61 | <summary>Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
 | Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
-| Progression.cs:174 | { "usurper/NodeE", new Reward { Gold = 300, Xp = 225, Source = Src.Placeholder } },   // Finanif: not read |
-| Progression.cs:198 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:276 | { "kukatan/NodeQ", new Reward { Gold = 600, Xp = 525, Source = Src.Placeholder, Note = "Tomb of Omens never fought on video" } }, |
-| Progression.cs:525 | Gold of a quest whose reward is unknown. PLACEHOLDER. |
-| Progression.cs:540 | if (!QuestRewards.TryGetValue(script, out r)) r = new Reward { Gold = QuestGold, Source = Src.Placeholder }; |
-| Progression.cs:732 | if (drops.Count == 0) return GiveGold(rarity >= ERarity.Rare ? 1000 : 500);   // no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:768 | PLACEHOLDER (assumed): 1 top card (legendary 1 time in 8; otherwise epic 1 time in 5 in |
-| Progression.cs:771 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:880 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:961 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:964 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:967 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:993 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER). |
-| Progression.cs:1069 | if (Siege.OnGameEnded(won)) return;   // no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1070 | if (Battlegrounds.OnGameEnded(won) // Battlegrounds.OnLadderGameEnded(won)) return;   // same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:527 | <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:734 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:770 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:773 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:882 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:963 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:966 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:969 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:995 | <summary>Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1071 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1072 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:610 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
 | Store.cs:21 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
-| Store.cs:26 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016). |
-| Store.cs:45 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio. |
-| Store.cs:63 | PLACEHOLDER gold prices of products without a known price. |
-| Store.cs:65 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle). |
+| Store.cs:26 | <summary>Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
+| Store.cs:45 | <summary>Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
+| Store.cs:63 | <summary>PLACEHOLDER gold prices of products without a known price.</summary> |
+| Store.cs:65 | <summary>PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
 | Zymmer.cs:15 | PLACEHOLDER unless noted. |
 | Zymmer.cs:98 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
-| Zymmer.cs:174 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
-| Zymmer.cs:226 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |
+| Zymmer.cs:167 | <summary>An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |
+| Zymmer.cs:181 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
+| Zymmer.cs:233 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |

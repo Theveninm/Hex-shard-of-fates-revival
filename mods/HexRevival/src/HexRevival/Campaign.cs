@@ -1187,7 +1187,7 @@ namespace HexRevival
         private const ulong PanoBase = 1000000;
         private static bool IsPanoCamp(ulong id) { return id >= PanoBase && id < Dungeons.DunBase; }
 
-        private class PanoState { public Zone Z; public string Node; public string ALoc; }
+        private class PanoState { public Zone Z; public string Node; public string ALoc; public bool Home; }   // Home: the champion's hometown (see Hometown)
         private static readonly Dictionary<ulong, PanoState> s_Pano = new Dictionary<ulong, PanoState>();
 
         private class Npc { public string Name; public string ConvId; public string ConvName; public bool Give, TurnIn, Repeat; public string Champion; }
@@ -1203,8 +1203,28 @@ namespace HexRevival
             Enqueue(() => Quests.Invoke("HandleOnNotifyCampUpdate", new CampSysGeneral.Any.CampUpdateNotify(0, PanoBase + st.ChampId, st.ChampId, "area_panorama", "PANORAMA", true, gs, null)));
         }
 
+        /// <summary>Shows the champion's hometown (Hometown): a panorama of its own, as the hubs.</summary>
+        internal static void EnterHome(ulong champ, string reason)
+        {
+            s_Pano[champ] = new PanoState { Z = AZ1, Home = true };
+            try { GameClient.Instance.PlayerProfile.GetPvEChampionById(champ).SourceBits.LastCampaignID = PanoBase + champ; } catch { }
+            GameplayState gs = BuildPanoState(champ);
+            Notify(PanoBase + champ, champ, reason, "PANORAMA", gs);
+        }
+
+        /// <summary>The hometown's state for the client (QueryCurrentCampaign).</summary>
+        private static GameplayState HomeState(ulong champ)
+        {
+            PanoState ps;
+            if (!s_Pano.TryGetValue(champ, out ps) || !ps.Home) s_Pano[champ] = new PanoState { Z = AZ1, Home = true };
+            return BuildPanoState(champ);
+        }
+
         private static void LeavePanorama(ulong champ)
         {
+            // The hometown has no map to go back to: the champion stays until it leaves for the Feralroot Woods.
+            PanoState home;
+            if (s_Pano.TryGetValue(champ, out home) && home.Home) { AnswerPano(champ, null); return; }
             s_Pano.Remove(champ);
             CampState st = GetChamp(champ, false);
             if (st == null) return;
@@ -1278,7 +1298,8 @@ namespace HexRevival
             gs.VisLocs = new List<Location>();
             gs.LocNodes = new List<Node>();
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
-            if (ps != null)
+            if (ps != null && ps.Home) Hometown.Fill(champ, gs);
+            else if (ps != null)
                 foreach (Npc n in HubNpcs(champ, ps.Z, ps.Node))
                 {
                     Dictionary<string, object> d = new Dictionary<string, object>();
@@ -1297,7 +1318,8 @@ namespace HexRevival
         private static CampSummary PanoSummary(ulong champ)
         {
             PanoState ps;
-            string[] a = s_Pano.TryGetValue(champ, out ps) && ps.Z.Panoramas.ContainsKey(ps.Node) ? ps.Z.Panoramas[ps.Node] : new[] { "", "" };
+            string[] a = !s_Pano.TryGetValue(champ, out ps) ? new[] { "", "" } : ps.Home ? Hometown.Bundle(champ)
+                : ps.Z.Panoramas.ContainsKey(ps.Node) ? ps.Z.Panoramas[ps.Node] : new[] { "", "" };
             string zone = ps != null ? ps.Z.Key : AZ1.Key;
             TemplateTypeInfo info = new TemplateTypeInfo(zone, "PANORAMA", null, false, false, a[0], a[1],
                 "campaign/tutorial/prefabs/background1", "", "2f59b729-7cdf-4fb4-abc3-5654a644df65");
@@ -1392,10 +1414,17 @@ namespace HexRevival
         internal static IEnumerable<string> EventStrings(object[] args) { return Strings(args); }
         internal static string ConversationName(string id) { return ConvName(id); }
 
-        private static void PanoEvent(ulong champ, string evt, ClientCampaignManager.StateCallback callback)
+        private static void PanoEvent(ulong champ, string evt, ClientCampaignManager.StateCallback callback, object[] args = null)
         {
             PanoState ps;
             s_Pano.TryGetValue(champ, out ps);
+            if (ps != null && ps.Home)
+            {
+                string aloc = ps.ALoc;
+                if (evt == "conv_done" || evt == "accept" || evt == "cancel" || evt == "enc_cancel") ps.ALoc = null;
+                if (!Hometown.Event(champ, evt, aloc, args)) AnswerPano(champ, callback);
+                return;
+            }
             if (evt == "return_parent") { LeavePanorama(champ); return; }
             if (ps != null && (evt == "conv_done" || evt == "accept") && ps.ALoc != null)
             {
@@ -1417,12 +1446,21 @@ namespace HexRevival
 
         public static void QueryCurrentCampaign(ulong champId, ClientCampaignManager.StateCallback callback)
         {
-            // Inside a dungeon (or a new champion: Castle Crayburn first).
-            GameplayState dg = Dungeons.Current(champId, !HasProgress(champId));
+            // Inside a dungeon, in the hometown (a new champion, see Hometown), else the zone's map.
+            bool newChampion = !HasProgress(champId);
+            Hometown.MaybeStart(champId, newChampion);
+            GameplayState dg = Dungeons.Current(champId, newChampion && !Hometown.Begun(champId));
             if (dg != null)
             {
                 try { GameClient.Instance.PlayerProfile.GetPvEChampionById(champId).SourceBits.LastCampaignID = dg.CampID; } catch { }
                 Deliver(dg.CampID, dg, callback);
+                return;
+            }
+            if (Hometown.Active(champId))
+            {
+                GameplayState home = HomeState(champId);
+                try { GameClient.Instance.PlayerProfile.GetPvEChampionById(champId).SourceBits.LastCampaignID = home.CampID; } catch { }
+                Deliver(home.CampID, home, callback);
                 return;
             }
             CampState st = GetChamp(champId, true);
@@ -1534,7 +1572,7 @@ namespace HexRevival
         {
             if (Quests.IsQuestCamp(campId)) return;
             if (Dungeons.IsDunCamp(campId)) { Dungeons.SendEvent(campId, evt, args, callback); return; }
-            if (IsPanoCamp(campId)) { Debug.Log("[HexRevival] [Campaign] panorama event " + evt); PanoEvent(campId - PanoBase, evt, callback); return; }
+            if (IsPanoCamp(campId)) { Debug.Log("[HexRevival] [Campaign] panorama event " + evt); PanoEvent(campId - PanoBase, evt, callback, args); return; }
             CampState st = Get(campId, false);
             if (st == null) return;
             string arg0 = args != null && args.Length > 0 && args[0] != null ? args[0].ToString() : null;
@@ -1837,6 +1875,7 @@ namespace HexRevival
             s_Difficulty = 0;
             s_BattleChamp = 0;
             if (Dungeons.OnGameEnded(won)) return true;
+            if (Hometown.OnGameEnded(won)) return true;
             CampState st = s_Battle;
             // BattleDifficulty is read by the rewards below, then reset
             if (st == null) return false;
