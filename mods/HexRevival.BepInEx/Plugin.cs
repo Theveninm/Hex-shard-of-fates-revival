@@ -841,7 +841,7 @@ namespace HexRevival
             UnityEngine.Debug.Log("[HexRevival] [FailTx] " + line.Replace("\n", " | "));
             try
             {
-                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), Instance.Name("HexRevival.failtx.log")),
+                System.IO.File.AppendAllText(System.IO.Path.Combine(HexRevival.LocalServer.Root, Instance.Name("HexRevival.failtx.log")),
                     DateTime.Now.ToString("HH:mm:ss") + " " + line.Replace("\n", " | ") + "\r\n");
             }
             catch { }
@@ -932,7 +932,7 @@ namespace HexRevival
                         sb.Append("\n    ").Append(f.Name).Append(" = ").Append(Describe(v, 0));
                     }
                 }
-                System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/../"), "HexRevival.net.log"),
+                System.IO.File.AppendAllText(System.IO.Path.Combine(HexRevival.LocalServer.Root, "HexRevival.net.log"),
                     sb.ToString() + "\r\n");
             }
             catch { }
