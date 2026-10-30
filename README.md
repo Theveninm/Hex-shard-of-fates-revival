@@ -157,6 +157,10 @@ trust:
 3. **Community guides and wikis of the time**, and **Zymmer's notes**, a player's catalogue of every card,
    equipment and mercenary with where it was obtained (the Alachian Sea packs, the set chests, the arena's
    rewards, the Kismet's Reserve packs).
+4. **[Hex Codex](https://hex-codex.romosjr.workers.dev/)** by **RomoSJR**, a fan encyclopedia of the game: its
+   tournament deck database (the AI's tournament decks), its sleeve and equipment lists (where each was
+   obtained) and its pages on the Frost Ring Arena, Siege and the Dueling Pit. Also the
+   [HEX wiki](https://hextcg.fandom.com/wiki/Hex_Wiki).
 
 What is left is marked **PLACEHOLDER** (a value or behaviour chosen without a source). In short:
 
@@ -196,7 +200,8 @@ blockade, the faction locations of the campaign map, gems not saved in decks, eq
 taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns), **KrystoferRobin** (the mercenary slots of the battle
 panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
 champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
-from, and for the tutorial's last battle that froze. To **Criesener** for the macOS version.
+from, and for the tutorial's last battle that froze. To **Criesener** for the macOS version. To **RomoSJR** for
+Hex Codex, the source of the AI's tournament decks, the sleeves and much of the equipment.
 
 ## Building from source
 
