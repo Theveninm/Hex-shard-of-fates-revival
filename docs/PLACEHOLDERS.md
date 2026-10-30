@@ -166,26 +166,28 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
 | Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
 | Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:527 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:734 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:770 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:773 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:889 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:970 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:973 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:976 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:991 | level: PLACEHOLDER). |
-| Progression.cs:1004 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1080 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1081 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:351 | four others PLACEHOLDER: the other shards (as AZ1's), with AZ2 uncommons of that shard that are not already a |
+| Progression.cs:394 | AZ2 (Src.Video for nodes 17 and 39; the others PLACEHOLDER, see ShroomHauses). |
+| Progression.cs:540 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:747 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:783 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:786 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:902 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:983 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:986 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:989 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1004 | level: PLACEHOLDER). |
+| Progression.cs:1017 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1093 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1094 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
-| Sleeves.cs:18 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
-| Sleeves.cs:19 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
-| Sleeves.cs:21 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
-| Sleeves.cs:24 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
-| Sleeves.cs:26 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
-| Sleeves.cs:123 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
-| Sleeves.cs:212 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
+| Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:22 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
+| Sleeves.cs:25 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
+| Sleeves.cs:27 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
+| Sleeves.cs:153 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
+| Sleeves.cs:242 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
 | SpecialPacks.cs:15 | - Full sets (FullSet): one of every card of the set (PLACEHOLDER: one copy); |
 | SpecialPacks.cs:17 | Src.Game): 6 commons, 2 uncommons and 1 rare of the pack's set, of its race (PLACEHOLDER contents); |
 | SpecialPacks.cs:21 | legendaries, or chests" (Src.Game): 12 commons and 4 uncommons (PLACEHOLDER counts, a booster's); |
@@ -201,6 +203,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Store.cs:64 | PLACEHOLDER gold prices of products without a known price.</summary> |
 | Store.cs:66 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
 | Store.cs:323 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
+| StoreIcons.cs:22 | "PLACEHOLDER" picture: a related product's banner (see Related); the Random Previous Kismet Pack's missing model |
+| StoreIcons.cs:34 | Banners the game ships as a "PLACEHOLDER" picture (Src.Game, icons.ab): Dead of Winter Primal Pack's. Replaced |
+| StoreIcons.cs:219 | The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original |
 | Zymmer.cs:15 | PLACEHOLDER unless noted. |
 | Zymmer.cs:137 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
 | Zymmer.cs:206 | An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |

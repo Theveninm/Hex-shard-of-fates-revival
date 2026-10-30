@@ -46,7 +46,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 |---|---|---|
 | Starter collection | the game's two "new player" starter decks + 200 of each basic shard | Game (decks), SteamGuide2016 (shards) |
 | Starting gold and platinum | chosen when the account is created (0 by default; "unlock everything" accounts: 100,000 gold) | mod choice |
-| Platinum prices in gold | chosen when the account is created (on by default, always on with "unlock everything"): off, the store and the gauntlet entries cost platinum | mod choice |
+| Platinum prices in gold | chosen when the account is created (on by default, always on with "unlock everything"), changed later in the game's Settings, Account tab: off, the store and the gauntlet entries cost platinum | mod choice |
+| Every gem in the campaign | chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
 | New champion | its race's starter deck (added to the collection and used as the champion's deck) | Game |
 
 Wiki2018 says new accounts got about 250 common and uncommon cards forming a deck per major race:
@@ -281,7 +282,16 @@ Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot 
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
 quest start, then the "repeating until..." dialogue (Game logic; not filmed). Milosh at the Road of Acorns: first
 meeting, then the repeat dialogue with or without a fortune (Game names, not filmed). Bleakwind Highlands keeps its
-first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run).
+first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run). "The New Land" is offered
+once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
+
+Shroom Hauses (Game: conversation nodes "Shroom house"): the card choice window opens after the Shroomkin's dialogue,
+3 AZ2 uncommons of one shard. Fungal Hillock (node 17) Sapphire: Dancing Faeries, Bull Shark, Arcane Spritegang
+(Video: MHS 2017-04-21 5:52, KVC part 1); Vale of Fallen Apples (node 39) Wild: Aryndel Warden, Pippit's Gift, Shroom
+Swarm (Video: MHS 2017-09-14 0:22, KVC part 4 4:13). PLACEHOLDER, the other four (as AZ1's: one shard each, AZ2
+uncommons that are not already a campaign reward): Silvas Meadow (10) Blood: Chupacabra, Bone Goliath, Grub Crawler;
+Portabella Island (29) Diamond: Chimeerkat, Ghost Sentinel, Portsmeare Guard; Shroombottom Burrow (36) Ruby: Cinder
+Walker, Wool'vir Baa'serker, Blazemaw; Lake Hsieh (42) Artifact: Forge Flock, Junk Barrier, Dynamo Whistle.
 
 ### Sea voyages (Game)
 
@@ -648,7 +658,11 @@ The game has 425 sleeves; how each was obtained comes from HexCodex. The mod giv
 | Holidays (Ardor Day, The Sea Festival, Haunted Harvest, Feast of Abundance, Night of Bells, Questmas) | playing during the holiday: one of its sleeves (any year's) not owned yet, and one of its equipment pieces (Zymmer, HexCodex), once per holiday and year. Dates: Feb 7-21, Jul 15 - Aug 15, Oct 15 - Nov 5, Nov 15-30, Dec 10 - Jan 5 | HexCodex; dates PLACEHOLDER |
 
 Not obtainable offline: Kickstarter, conventions, tournaments, VIP, community and staff sleeves. An account with
-everything unlocked owns every sleeve, battleboard and coin.
+everything unlocked owns every sleeve, battleboard and coin, and every alternate art card (2,309, the talent cards'
+alternates excepted). 17 sleeves have no picture in the game's files (no texture, or none in the sleeve archive
+DeckSleeves.harc: Bounty of the Magus, the 2021 Season 6 ladder sleeves, the Courage, Dark, Dirge, Mastery of Time,
+Onslaught, The Transcended and Vennen deck sleeves, Prodigen, Sir Pies, Animated Emsee...): they would show blank
+(mornox), so they are never given.
 
 ## Store
 

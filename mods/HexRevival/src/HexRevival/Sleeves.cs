@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Game.Client;
 using Game.Shared;
 using Game.Shared.Domain;
+using Game.Shared.Utils;
 using Reckoning.Game;
 using UnityEngine;
 
@@ -41,7 +42,7 @@ namespace HexRevival
             foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {
                 InventoryDeckSleeve s = i as InventoryDeckSleeve;
-                if (s != null && !string.IsNullOrEmpty(s.m_Name) && !s_ByName.ContainsKey(s.m_Name.Trim())) s_ByName[s.m_Name.Trim()] = s;
+                if (s != null && !string.IsNullOrEmpty(s.m_Name) && HasPicture(s) && !s_ByName.ContainsKey(s.m_Name.Trim())) s_ByName[s.m_Name.Trim()] = s;
             }
             try
             {
@@ -60,7 +61,36 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Sleeves] " + e.Message); }
         }
 
-        /// <summary>Every sleeve of the game (for the "everything unlocked" accounts).</summary>
+        private static HashSet<string> s_Pictures;
+
+        /// <summary>
+        /// Whether the game has the sleeve's picture: its texture in the sleeve archive (AssetBundles/general/
+        /// DeckSleeves.harc, as "&lt;texture&gt;_s", "&lt;texture&gt;s" or "&lt;texture&gt;"; Src.Game). 18 sleeves have none
+        /// (no texture, or none in the archive: Bounty of the Magus, the 2021 Season 6 ladder sleeves, the Courage, Dark,
+        /// Dirge... deck sleeves): they showed blank (mornox, 2026-10-30), so they are never given.
+        /// </summary>
+        public static bool HasPicture(InventoryItemData sleeve)
+        {
+            if (sleeve == null) return false;
+            if (s_Pictures == null)
+            {
+                s_Pictures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                try
+                {
+                    string path = Path.Combine(Path.Combine(Path.Combine(Application.dataPath, ".."), "AssetBundles"), "general/DeckSleeves.harc");
+                    List<Harc.IndexItem> items = new List<Harc.IndexItem>();
+                    Harc.Location loc;
+                    if (new Harc(new Harc.FileSource(path)).ReadIndex(items, out loc) == Harc.ErrorCode.Ok)
+                        foreach (Harc.IndexItem it in items) s_Pictures.Add(Path.GetFileNameWithoutExtension(it.Name));
+                }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Sleeves] archive: " + e.Message); }
+            }
+            if (s_Pictures.Count == 0) return true;   // archive not readable: no sleeve left out
+            string tex = FolderUtils.GetFileNameWithoutPathOrExtension(sleeve.m_TexturePath ?? "");
+            return tex.Length > 0 && (s_Pictures.Contains(tex + "_s") || s_Pictures.Contains(tex + "s") || s_Pictures.Contains(tex));
+        }
+
+        /// <summary>Every sleeve of the game that has a picture (for the "everything unlocked" accounts).</summary>
         public static List<ResourceId> All()
         {
             Load();
@@ -261,6 +291,22 @@ namespace HexRevival
             int owned = 0;
             foreach (InventoryDeckSleeve s in s_ByName.Values) if (Owned(s.m_Id)) owned++;
             return s_ByName.Count + " sleeves in the game, " + s_Reasons.Count + " with a source, " + owned + " owned; seasons " + Seasons().Count;
+        }
+
+        /// <summary>
+        /// Dev "sleevecheck": the sleeves without a picture (see HasPicture).
+        /// </summary>
+        public static string DevCheck()
+        {
+            List<string> missing = new List<string>();
+            int all = 0;
+            foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                if (!(i is InventoryDeckSleeve)) continue;
+                all++;
+                if (!HasPicture(i)) missing.Add(i.m_Name.Trim() + " [" + (string.IsNullOrEmpty(i.m_TexturePath) ? "no texture" : FolderUtils.GetFileNameWithoutPathOrExtension(i.m_TexturePath)) + "]");
+            }
+            return all + " sleeves, " + missing.Count + " without a picture (never given):\n" + string.Join("\n", missing.ToArray());
         }
     }
 }

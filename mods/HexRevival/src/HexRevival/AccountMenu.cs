@@ -22,6 +22,7 @@ namespace HexRevival
         private bool m_Unlock;
         private bool m_Tutorial = true;
         private bool m_GoldPrices = true;
+        private bool m_AllGems;
         private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_Error;
         private readonly ProfileForm m_Profile = new ProfileForm();
@@ -177,7 +178,7 @@ namespace HexRevival
             {
                 m_Screen = Screen.Create;
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
-                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0";
+                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false;
             }
             y += newH + gap;
 
@@ -232,6 +233,8 @@ namespace HexRevival
             y += 84 * S;
             m_Tutorial = Checkbox(new Rect(area.x, y, area.width, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
             y += 96 * S;
+            m_AllGems = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
+            y += 80 * S;
             // Progression accounts only (an "unlock everything" account has its gold and gold prices).
             if (!m_Unlock)
             {
@@ -253,7 +256,7 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum)));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems));
             }
         }
 

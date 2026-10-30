@@ -707,6 +707,8 @@ namespace HexRevival
                 case "q_smoldering_dead": return IsFinished(champ, "q_army_of_myth");
                 case "q_devonshire_keep": return IsFinished(champ, "q_smoldering_dead");
                 case "q_go_to_az2": return IsFinished(champ, "az01_q_fort_romor") || IsFinished(champ, "az01_q_usurper");
+                // Src.Game: Blue Sparrow's and Renner's "The New Land Quest Start" thank the champion for the Kraken.
+                case "q_the_new_land": return IsFinished(champ, "q_kraken");
                 default: return true;
             }
         }

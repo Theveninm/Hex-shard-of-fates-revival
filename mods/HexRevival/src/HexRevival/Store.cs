@@ -239,7 +239,7 @@ namespace HexRevival
                 // Its sleeve (the deck's own, Src.Game; a collector deck's "Obtained in the [deck] Collector Deck",
                 // Src.HexCodex), if not owned yet.
                 List<ResourceId> sleeves = new List<ResourceId>();
-                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve) sleeves.Add(t.m_DeckSleeve);
+                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve && Sleeves.HasPicture(tm.GetInventoryItem(t.m_DeckSleeve))) sleeves.Add(t.m_DeckSleeve);
                 foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
                 {
                     string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");

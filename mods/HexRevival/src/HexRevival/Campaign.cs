@@ -142,12 +142,36 @@ namespace HexRevival
             public string Conversation;  // ConversationTemplate GUID
             public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
             public string Panorama;      // hub panorama scene (Cave-In, Ambling Mesa, Thunderfield): NPCs and quest givers
-            public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
+            /// <summary>A Shroomkin Haus: AZ1's by its scene ("Shroom Haus"), AZ2's by its conversation ("AZ2 - Node 17 - Shroom house - Pooot", Src.Game).</summary>
+            public bool IsHaus { get { return HausConversation || Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
+            public bool HausConversation;
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
             public string FightEncounter; // battle started by a dialogue choice "choice_fight" (Brink Ridge blockade)
             public string Dungeon;        // dungeon entered from this node (Dungeons key)
             public Dictionary<string, string> Variants; // battle by faction and dialogue choice ("UW:help", "AR"...), see FactionNodes
             public string FactionOnly;    // "AR" / "UW": the battle is that faction's only (the other one just talks)
+        }
+
+        /// <summary>Dev "hauses": every Shroom Haus node of both zones, with the cards it offers.</summary>
+        public static string DevHauses()
+        {
+            List<string> o = new List<string>();
+            foreach (Zone z in new[] { AZ1, AZ2 })
+            {
+                BuildMap(z);
+                foreach (MapNode n in z.Nodes)
+                {
+                    if (!n.IsHaus) continue;
+                    List<string> names = new List<string>();
+                    foreach (string id in Progression.ShroomHausChoices(n.Key))
+                    {
+                        CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(id));
+                        names.Add(t != null ? t.m_Name.Trim() : id);
+                    }
+                    o.Add(n.Key + " " + n.Name + ": " + string.Join(", ", names.ToArray()));
+                }
+            }
+            return string.Join("\n", o.ToArray());
         }
 
         private static MapNode FindNode(Zone z, string idOrName)
@@ -708,6 +732,7 @@ namespace HexRevival
             {
                 n.Type = "Convo";
                 n.Conversation = best.m_Id.ToString();
+                n.HausConversation = best.m_Name.IndexOf("Shroom house", StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 

@@ -173,6 +173,7 @@ namespace HexRevival
                 apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
                 apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
                 // The Dueling Pit's Versus AI (see DuelingPit.cs).
+                apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available")));
                 apply("Localization.Get", () => harmony.Patch(AccessTools.Method(typeof(Localization), "Get", new[] { typeof(string) }), postfix: new HarmonyMethod(typeof(Hooks), "Localization_Get")));
                 apply("UITournamentPendingViewModel.OnJoinTournamentClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnJoinTournamentClicked", Type.EmptyTypes, "Tournament_Join"));
                 apply("UITournamentPendingViewModel.OnTournamentDoubleClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnTournamentDoubleClicked", new[] { typeof(UITournamentDescContext) }, "Tournament_DoubleClick"));
@@ -508,6 +509,7 @@ namespace HexRevival
         public static void Icons_GetAsset(AssetBundleManager __instance, AssetBundleFile __0, string __1, string __2, AssetType __3, ref UnityEngine.Object __result) { if (__result == null || StoreIcons.IsPlaceholder(__0, __2)) { UnityEngine.Object r = StoreIcons.Missing(__instance, __0, __1, __2, __3); if (r != null) __result = r; } }
         public static void Arena_ChampionHud(UIArenaCampaignContext __instance, DeckCache __0) { Arena.OnAssignChampionHud(__instance, __0); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
+        public static void Gems_Available(UISocketCardViewModel __instance) { Gems.BeforeAvailableGems(__instance); }
         public static void Localization_Get(string key, ref string __result) { if (key != null && key.StartsWith("hexrevival-")) { string t = DuelingPit.Localize(key); if (t != null) __result = t; } }
         public static bool Tournament_Join(UITournamentPendingViewModel __instance) { return DuelingPit.OnJoin(__instance, null); }
         public static bool Tournament_DoubleClick(UITournamentPendingViewModel __instance, UITournamentDescContext __0) { return DuelingPit.OnJoin(__instance, __0); }
