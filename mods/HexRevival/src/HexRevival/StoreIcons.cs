@@ -82,7 +82,7 @@ namespace HexRevival
         /// its width). Four are card illustrations (matched with the card database: Bertram Cragraven, Prophet of
         /// Lodegan, Zoltog, Strength in Numbers); the others were painted for the pack. Which band: a mod choice.
         /// </summary>
-        private static readonly Dictionary<string, KeyValuePair<string, Vector3>> PackArt = new Dictionary<string, KeyValuePair<string, Vector3>>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, Layer[]> PackArt = new Dictionary<string, Layer[]>(StringComparer.OrdinalIgnoreCase)
         {
             { "a0005474", Art("BoosterPack_Set01_Dwarf", 0f, 0.85f, 0.05f) },      // Dwarf Starter Trials Pack
             { "a0005476", Art("BoosterPack_Set01_Human", 0f, 0.85f, 0f) },         // Human
@@ -102,26 +102,45 @@ namespace HexRevival
             { "a0008437", Art("BoosterPack_Set08_Primal", 0.14f, 0.86f, 0.22f) },  // Dead of Winter
             { "a0008803", Art("BoosterPack_Set09_Primal", 0.14f, 0.86f, 0.22f) },  // Doombringer
             { "a0008362", Art("BoosterPack_KismetDraft", 0f, 0.8f, 0.02f) },       // Kismet's Draft Pack
+            // Standard Format Gauntlet Pack: its icon (a black pack, the five shards above the HEX logo) has no texture of
+            // its own (its model wears the Common Only Booster Pack's); both are on that texture, in full size.
+            { "a0007459", new[] { new Layer("BoosterPack_Commons", new Rect(0.28f, 0.815f, 0.35f, 0.06f), new Rect(605, 22, 300, 51)),
+                                  new Layer("BoosterPack_Commons", new Rect(0.23f, 0.08f, 0.46f, 0.175f), new Rect(555, 88, 400, 152)) } },
+            // Random Previous Kismet Pack: only its icon (a "?" card box) shows it.
+            { "a0008551", new[] { new Layer("a0008551", new Rect(0f, 0f, 1f, 1f), new Rect(1024 - 30 - 256, 0, 256, 256), true) } },
         };
 
-        private static KeyValuePair<string, Vector3> Art(string wrapper, float x0, float x1, float y0) { return new KeyValuePair<string, Vector3>(wrapper, new Vector3(x0, x1, y0)); }
+        /// <summary>A piece of a texture (src: fractions from its top left) drawn on the banner (dst: pixels from its top left).</summary>
+        private class Layer
+        {
+            public readonly string Texture;
+            public readonly Rect Src, Dst;
+            public readonly bool Fade;
+            public Layer(string texture, Rect src, Rect dst, bool fade = false) { Texture = texture; Src = src; Dst = dst; Fade = fade; }
+        }
+
+        /// <summary>The band of a pack's art (2:1, x0 to x1 wide from y0) on the right half of the banner, its left half fading.</summary>
+        private static Layer[] Art(string wrapper, float x0, float x1, float y0)
+        {
+            return new[] { new Layer(wrapper, new Rect(x0, y0, x1 - x0, (x1 - x0) / 2f), new Rect(1024 - 30 - 512, 0, 512, 256), true) };
+        }
 
         private static readonly Dictionary<string, Texture2D> s_PackBanners = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// A banner like the game's (1024x256, the figure on the right fading into black on the left) from the pack's
+        /// A banner like the game's (1024x256, the art on the right fading into black on the left) from the pack's own
         /// art; null when the pack is not in PackArt or its art is not loaded.
         /// </summary>
         private static Texture2D PackBanner(AssetBundleManager m, AssetBundleFile bundle, string subBundle, string tex)
         {
-            KeyValuePair<string, Vector3> art;
-            if (!PackArt.TryGetValue(tex, out art)) return null;
+            Layer[] layers;
+            if (!PackArt.TryGetValue(tex, out layers)) return null;
             Texture2D b;
             if (s_PackBanners.TryGetValue(tex, out b) && b != null) return b;
-            Texture2D src = m.GetAsset(bundle, subBundle, art.Key, AssetType.Texture2D) as Texture2D;
-            if (src == null) return null;
-            float x0 = art.Value.x, x1 = art.Value.y, y0 = art.Value.z, y1 = y0 + (x1 - x0) / 2f;
-            const int W = 1024, H = 256, ArtW = 512, Right = 30;
+            Texture2D[] src = new Texture2D[layers.Length];
+            for (int i = 0; i < layers.Length; i++)
+                if ((src[i] = m.GetAsset(bundle, subBundle, layers[i].Texture, AssetType.Texture2D) as Texture2D) == null) return null;
+            const int W = 1024, H = 256;
             RenderTexture rt = RenderTexture.GetTemporary(W, H, 0, RenderTextureFormat.ARGB32);
             RenderTexture previous = RenderTexture.active;
             try
@@ -130,21 +149,29 @@ namespace HexRevival
                 GL.Clear(true, true, Color.black);
                 GL.PushMatrix();
                 GL.LoadPixelMatrix(0, W, H, 0);
-                // The source rect in uv (origin at the bottom left).
-                Graphics.DrawTexture(new Rect(W - Right - ArtW, 0, ArtW, H), src, new Rect(x0, 1f - y1, x1 - x0, y1 - y0), 0, 0, 0, 0);
+                // The source rects in uv (origin at the bottom left).
+                for (int i = 0; i < layers.Length; i++)
+                {
+                    Rect s0 = layers[i].Src;
+                    Graphics.DrawTexture(layers[i].Dst, src[i], new Rect(s0.x, 1f - s0.y - s0.height, s0.width, s0.height), 0, 0, 0, 0);
+                }
                 GL.PopMatrix();
                 b = new Texture2D(W, H, TextureFormat.RGB24, false);
                 b.ReadPixels(new Rect(0, 0, W, H), 0, 0);
-                // Its left half fades into black.
+                // A faded layer's left half fades into black.
                 Color32[] px = b.GetPixels32();
-                int fadeFrom = W - Right - ArtW, fadeW = ArtW / 2;
-                for (int y = 0; y < H; y++)
-                    for (int x = fadeFrom; x < fadeFrom + fadeW; x++)
-                    {
-                        float f = (x - fadeFrom) / (float)fadeW;
-                        int i = y * W + x;
-                        px[i] = new Color32((byte)(px[i].r * f), (byte)(px[i].g * f), (byte)(px[i].b * f), 255);
-                    }
+                foreach (Layer l in layers)
+                {
+                    if (!l.Fade) continue;
+                    int from = (int)l.Dst.x, fw = (int)(l.Dst.width / 2);
+                    for (int y = 0; y < H; y++)
+                        for (int x = Math.Max(0, from); x < Math.Min(W, from + fw); x++)
+                        {
+                            float f = (x - from) / (float)fw;
+                            int i = y * W + x;
+                            px[i] = new Color32((byte)(px[i].r * f), (byte)(px[i].g * f), (byte)(px[i].b * f), 255);
+                        }
+                }
                 b.SetPixels32(px);
                 b.Apply();
                 b.name = tex + Wallpaper;
