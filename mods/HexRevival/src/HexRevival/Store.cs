@@ -233,6 +233,17 @@ namespace HexRevival
                 DeckTemplate t = tm.GetDeckTemplate(deckPack.m_DeckTemplateId);
                 foreach (TemplateCardStack st in t.m_DeckResources) r.PurchasedCards.AddRange(Collection.GrantSilently(st.m_idTemplate, st.m_Count));
                 r.PurchasedDeckBits.Add(Decks.CreateFromTemplate(item.m_Name, t));
+                // Its sleeve (the deck's own, Src.Game; a collector deck's "Obtained in the [deck] Collector Deck",
+                // Src.HexCodex), if not owned yet.
+                List<ResourceId> sleeves = new List<ResourceId>();
+                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve) sleeves.Add(t.m_DeckSleeve);
+                foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
+                {
+                    string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
+                    if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
+                }
+                foreach (ResourceId id in sleeves)
+                    if (!Sleeves.Owned(id)) { inventory_bits sb = Inventory.GrantSilently(id); if (sb != null) r.GrantedInventory.Add(sb); }
                 return;
             }
             InventoryCardPack pack = item as InventoryCardPack;
@@ -278,6 +289,14 @@ namespace HexRevival
                 if (m != null) { Mercenaries.Grant(m, r); continue; }
                 inventory_bits inv = Inventory.GrantSilently(d.Item);
                 if (inv != null) r.GrantedInventory.Add(inv);
+            }
+            // "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER).
+            string short_ = item.m_Name.Replace("Kismet's Reserve Pack", "").Replace("Pack", "").Trim();
+            if (short_.Length > 0 && UnityEngine.Random.value < 0.2f)
+            {
+                InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching("^Available in the " + System.Text.RegularExpressions.Regex.Escape(short_) + " Kismet's Reserve Pack"));
+                inventory_bits sb = sl != null ? Inventory.GrantSilently(sl.m_Id) : null;
+                if (sb != null) r.GrantedInventory.Add(sb);
             }
         }
 

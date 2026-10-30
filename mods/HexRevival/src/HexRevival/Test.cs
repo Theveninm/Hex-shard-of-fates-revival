@@ -918,6 +918,19 @@ namespace HexRevival
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "tdecks": return TournamentDecks.Command(parts);
+                case "sleeves": return Sleeves.Command(parts);
+                case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
+                    {
+                        UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
+                        if (vm == null) return "no landing page";
+                        string r0 = "button " + (vm.MenuUI.DuelingPit != null) + ", view " + (vm.DuelingPit != null);
+                        if (parts.Length > 1 && parts[1] == "show")
+                        {
+                            if (vm.MenuUI.DuelingPit != null) vm.MenuUI.DuelingPit.gameObject.SetActive(true);
+                            if (vm.DuelingPit != null) { vm.DuelingPit.gameObject.SetActive(true); vm.DuelingPit.SetView(DuelingPitVM.EDuelingPitView.ChooseOpponent); }
+                        }
+                        return r0;
+                    }   // dev: "sleeves [state|holiday|season|give <pattern>]"
                 case "sleevedump":   // dev: "sleevedump [text]" = the game's sleeves whose description contains the text
                     {
                         string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
@@ -941,7 +954,8 @@ namespace HexRevival
                         foreach (ResourceId k in tm.Abilities.Keys)
                         {
                             AbilityTemplate at = tm.Abilities[k];
-                            if (at != null && at.m_GameText != null && at.m_GameText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) found.Add(k);
+                            // "=text": exactly that text.
+                            if (at != null && at.m_GameText != null && (q.StartsWith("=") ? at.m_GameText.Trim() == q.Substring(1) : at.m_GameText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)) found.Add(k);
                         }
                         sb.Append(found.Count).Append(" abilities\n");
                         int shownAb = 0;
@@ -1343,10 +1357,22 @@ namespace HexRevival
                         StandaloneSession ss = Server.CurrentSession;
                         if (ss == null) return "no game";
                         string name = string.Join(" ", parts, 1, parts.Length - 1);
+                        // "cardtext ai:<name>": the AI's cards ("ai:*" its champion's abilities and every troop's Rage).
+                        bool ai = name.StartsWith("ai:");
+                        if (ai) name = name.Substring(3);
                         System.Text.StringBuilder sb = new System.Text.StringBuilder();
                         foreach (Player p in ss.GetAllPlayers())
                         {
-                            if (p == null || p.IsAI()) continue;
+                            if (p == null || p.IsAI() != ai) continue;
+                            if (name == "*")
+                            {
+                                foreach (ResourceId a in p.m_ChampionCard.CurrentAbilities) { AbilityTemplate at = Singleton<TemplateManager>.Instance.GetAbilityTemplate(a); if (at != null) sb.Append("champion: ").Append(at.m_GameText).Append('\n'); }
+                                foreach (Player q in ss.GetAllPlayers())
+                                    foreach (Card c in q.GetAllCards())
+                                        if (c != null && c.m_CardTemplate != null && (c.m_CardTemplate.m_CardType & ECardTypes.Troop) != 0 && (c.m_CurrentCardCollection == ECardCollections.Warzone || c.m_CurrentCardCollection == ECardCollections.Hand))
+                                            sb.Append(q.IsAI() ? "AI " : "you ").Append(c.m_CardTemplate.m_Name).Append(" in ").Append(c.m_CurrentCardCollection).Append(" rage=").Append(c.GetCardContext().Get(IntAttrs.Rage)).Append('\n');
+                                continue;
+                            }
                             sb.Append("equipment: ").Append(string.Join(", ", p.m_Equipment.ConvertAll(e => { InventoryItemData it = Singleton<TemplateManager>.Instance.GetInventoryItem(e); return it != null ? it.m_Name : e.ToString(); }).ToArray())).Append(" slots=").Append(p.m_EquipmentSlotsEnabled).Append('\n');
                             foreach (Card c in p.GetAllCards())
                             {

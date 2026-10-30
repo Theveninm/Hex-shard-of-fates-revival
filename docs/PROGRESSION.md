@@ -37,7 +37,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
 | Survey2014 | players' Wheels of Fate survey, 2014: 2,167 spins by chest rarity and outcome (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw) |
 | Survey2015 | players' treasure chest survey, 2015: chests from boosters and what they held (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs) |
-| HexCodex | Hex Codex, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its tournament database (46,674 decks from 1,550 constructed events, 2016-2020) and its Frost Ring Arena page, which quotes the game's own arena texts |
+| HexCodex | Hex Codex, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its tournament database (46,674 decks from 1,550 constructed events, 2016-2020), its sleeve list (how each of the 425 sleeves was obtained, `assets/sleeve_sources.txt` by `tools/gen_sleeves.py`), and its Frost Ring Arena, Siege and Dueling Pit pages, which quote the game's own texts |
 | Wiki | HEX fandom wiki (hextcg.fandom.com), mostly 2014-2015 pages: "Treasure Chest", "Wheels of Fate" |
 
 ## New account
@@ -444,6 +444,7 @@ server; the mod answers the client's Siege requests itself (`Siege.cs`).
 
 | What | Value | Source |
 |---|---|---|
+| Attacking deck | Standard legal ("You must then select a Standard legal deck"), checked by the game's validator before the fee | HexCodex (the game's Siege rules) |
 | Minimum bounty | 1000 gold or 50 platinum | Video (rules screen, MyHotStream 2018-05-29 and 2018-06-03) |
 | Fee to attack | 40% of the bounty, rounded up | Video (rules screen; every row of the keep list) |
 | Fee split | 50% to the defender at once, 37.5% added to the bounty, the rest lost (all rounded up) | Video (rules screen; the defender's "-570" after two attacks on 1000) |
@@ -503,7 +504,7 @@ the end, and single fights).
 | Tier 1 | its own opponents, 7 less health (the game's 15-health arena decks), the Eternal Guardian as boss | HexCompendium, Game, Video |
 | Opponents | drawn at random for each run; an elite is a stronger version of a standard opponent | Video |
 | Loss marks | a lost fight is passed (red X) and its mark counts until the tier's boss is beaten; a lost boss is fought again and its mark stays; 3 marks end the run; a tier won without a loss takes off a boss's mark ("Remove strikes by Perfecting a Tier, or completing Hogarth's Challenges") | Video (the defeats counter of several runs); HexCompendium (3 marks); HexCodex (perfect tier) |
-| Challenges | one fight of each tier: Reflection (both players start with Locket of Reflection in play), Primordial (the opponent starts with Primordial Caves in play), Gooplasm (with a Gooplasm), Fulmination (with Cerebral Fulmination); Inferno (each champion starts with Inferno in play), The Pacts (each starts with Pact of Life or Pact of Pain); goal: win the game. Not done, rules the mod cannot set yet: Shards Aplenty, Swarm! Swarm!, Rage, Charge!, The Ol' Switcheroo, The Primal of Luck and Infernal Professor (an action played for free) | Video (the first four); Game (Hogarth's 10 challenges, ArenaPVE_Challenge texts); one per tier always: PLACEHOLDER |
+| Challenges | one fight of each tier: Reflection (both players start with Locket of Reflection in play), Primordial (the opponent starts with Primordial Caves in play), Gooplasm (with a Gooplasm), Fulmination (with Cerebral Fulmination); Inferno (each champion starts with Inferno in play), The Pacts (each starts with Pact of Life or Pact of Pain), Shards Aplenty (each gets at random 2 temporary, 2 permanent, or 1 and 1 resources: [2/0], [0/2], [1/1] read as temporary/permanent), The Ol' Switcheroo (the player plays the opponent's deck, champion and equipment, the AI the player's); goal: win the game | Video (the first four); Game (Hogarth's challenges, ArenaPVE_Challenge texts, shown in the game's words); one per tier always: PLACEHOLDER |
 | Challenge won | removes a loss mark, otherwise a buff for the next boss: Brawler (an Arena Brawler in play), Charge (+2 charges), Health (+5 health), Resource (a resource in play) | HexCompendium, Video (Brawler) |
 | Uruunaz, Zakiir | rare encounters on the 4th fight of tier 2 and on the fights of tiers 3 and 4 but the bosses (Uruunaz seen at slot 13); chance 2% | HexCompendium, Video; chance PLACEHOLDER |
 | Which boss in which tier | tiers 2-3 share the 30-health bosses, tier 4 takes their elite versions and Hogarth (seen: Lanupaw tier 2, Uzume tier 3, Princess Cory Elite and Doombringer Kha Elite tier 4) | PLACEHOLDER, Video |
@@ -513,9 +514,12 @@ the end, and single fights).
 | Uruunaz | 100,000 gold | Steam2016-b (forum, April 2016) |
 | Sleeves | Frost Ring Arena Sleeve (run completed: seen), Perfect Sleeve (no loss), Hogarth, Uruunaz, Matriarch of Flames (Zakiir): each once | Game (their "Earned by ..." texts), Video |
 
-Not done: the buyout, Hogarth's dialogues, the opponents' equipment ("Tier 2: Champions in this Tier each use 2
-equipment", 3 in tier 3, 4 in tier 4, HexCodex; the game's arena decks carry none, the server chose it), the Resource
-buff's temporary resource ("1 temporary resource 1 permanent resource", HexCodex: the mod gives the permanent one).
+| Opponents' equipment | "Tier 1: Champions in this Tier each use no equipment. Tier 2: [...] 2 equipment", 3 in tier 3, 4 in tier 4; pieces that modify cards of the opponent's deck (the cards' own equipment lists), one per slot, drawn once per run and fight | HexCodex (the arena's text); which pieces PLACEHOLDER (the game's arena decks carry none) |
+| Resource buff | 1 temporary resource (for the first turn) and 1 permanent resource | HexCodex |
+
+Not done: the buyout, Hogarth's dialogues, Hogarth's challenge window (the client's is the consoles' one, without
+buttons on PC: a challenge is told at the start of its fight), the challenges that change every card's values (Swarm!
+Swarm!, Rage, Charge!) or play an action for free (The Primal of Luck, Infernal Professor).
 
 ## AI opponents
 
@@ -549,8 +553,13 @@ the mod (`mods/HexRevival/assets/tournament_decks.txt`, built by `tools/gen_tour
 
 | Mode | Decks |
 |---|---|
-| Ladder | each player is rated by their whole record in the era (wins smoothed toward 50%) and the decks are split into 5 bands by their player's rating, Bronze (weakest) to Cosmic (strongest); each tier plays its band's 20 most played archetypes (champion + shards), Bronze and Silver a typical list of the band, the higher tiers the best record; each archetype as often as it was played in its band. That the ladder tiers match these bands is PLACEHOLDER (the original ladder matched players of a similar rank) |
-| Constructed gauntlet, Siege defenses and attackers | the era's 30 most played archetypes, the best record of each (Siege: players' constructed decks, not their Siege decks) |
+| Ladder | Bronze (0-9 stars): the game's prebuilt decks. Silver (10-24): prebuilt decks and the weakest players' lists, half each. Gold (25-44): the next two bands. Platinum (45-69): the strong band. Cosmic (70+): the strongest band, the AI with 5 more health and a card more. The bands: each player is rated by their whole record in the era (wins smoothed toward 50%) and the decks are split into 5 bands by their player's rating; each band gives its 20 most played archetypes (champion + shards), the two lowest a typical list of the band, the others the best record; each archetype as often as it was played in its band |
+| Constructed gauntlet | 0-1 wins as Silver; 2-3 wins the era's 30 most played archetypes (best record each); 4+ wins the same with the AI's modifiers |
+| Siege | defenses at the minimum bounty: prebuilt decks; higher: the 30 archetypes. Attackers of the player's defense: by its bounty, under 5,000 prebuilt decks, 5,000-19,999 the 30 archetypes, 20,000+ with the AI's modifiers |
+
+Which decks in which tier, and the modifiers, are PLACEHOLDER (user's choice, 2026-10-30: not the whole ladder at
+tournament level; the original opponents were players of a similar rank). Each tier of "Configure the AIs" has a
+"Modifiers" button: the AI's and the player's modifiers for every fight of that tier, added to the deck's own.
 
 They are listed under "Tournaments" in "Configure the AIs" and in the practice menu's game decks; "Copy" makes an
 editable shared deck. Their socketable cards have no gems (the database has none).
@@ -609,8 +618,36 @@ time from a rare or better chest, a PvE card 15%, otherwise an equipment of the 
 common 70% / uncommon 30%; rare chest: rare 75% / legendary 25%), never twice the same piece in one chest. The
 account level chests are opened at once; booster chests go through the Wheel of Fate (see Packs).
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
-| Exclusive deck sleeve, alternate arts | nothing | cosmetics not implemented |
+| Exclusive deck sleeve | one of the 24 "Awarded through Account Leveling" sleeves not owned yet | HexCodex; which one PLACEHOLDER |
+| Alternate arts | nothing | not implemented |
 | Sin'glar (level 9) | the Sin'glar mercenary | — |
+
+## Dueling Pit
+
+1-on-1 battles with the game's 5 prebuilt Dueling Pit decks (Ardent Fervor, Reckless Assault, Underworld Schemes,
+Dreadling Swarm, Valorous Victory), no deck to build or own (HexCodex; Game: the client's Dueling Pit screen, a
+console feature, shown on PC by the mod, a main menu button). Versus AI: the chosen deck against another of the five
+in its "- AI" version (which one: PLACEHOLDER, at random). Versus Player stays locked.
+
+## Deck sleeves
+
+The game has 425 sleeves; how each was obtained comes from HexCodex. The mod gives them where the original did:
+
+| Sleeves | How | Source |
+|---|---|---|
+| "Found in the Wheels of Fate for [set]" (27) | the Wheel of Fate's sleeves outcome (mushrooms): one of the set's not owned yet (a rare when none is left) | HexCodex |
+| "Found in Chests for [set]" (27) | in an opened chest of the set: 5% | HexCodex; chance PLACEHOLDER |
+| "Obtained by opening Doombringer Booster Packs" (10) | in an opened booster of the set: 2% | HexCodex; chance PLACEHOLDER |
+| Collector decks (9) | with the deck bought in the store, and every bought deck's own sleeve | HexCodex, Game |
+| Kismet's Reserve packs | in 1 pack in 5 of that name | HexCodex; chance PLACEHOLDER |
+| Account Leveling (24) | the account level "sleeve" rewards | HexCodex; which one PLACEHOLDER |
+| Ladder seasons (166) | reaching a tier (Bronze 0, Silver 10, Gold 25, Platinum 45, Cosmic 70 stars) in a season gives that season's tier sleeve, and those below; the seasons run in the sleeves' order (Season 1 ... 2021 Season 6), 2 months each from the account's first ranked game, then start over; the ladder bar shows the season's sleeves | HexCodex; season length and tier stars PLACEHOLDER |
+| Kismet's Draft (7) | a draft gauntlet run with 3 wins | HexCodex |
+| Gauntlet Tournaments (6) | a constructed gauntlet run with 3 wins | HexCodex; 3 wins PLACEHOLDER |
+| Holidays (Ardor Day, The Sea Festival, Haunted Harvest, Feast of Abundance, Night of Bells, Questmas) | playing during the holiday: one of its sleeves (any year's) not owned yet, once per holiday and year. Dates: Feb 7-21, Jul 15 - Aug 15, Oct 15 - Nov 5, Nov 15-30, Dec 10 - Jan 5 | HexCodex; dates PLACEHOLDER |
+
+Not obtainable offline: Kickstarter, conventions, tournaments, VIP, community and staff sleeves. An account with
+everything unlocked owns every sleeve, battleboard and coin.
 
 ## Store
 

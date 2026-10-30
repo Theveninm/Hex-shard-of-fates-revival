@@ -118,46 +118,6 @@ namespace HexRevival
             return c;
         }
 
-        /// <summary>The fights with a challenge carry one for the client (RoundChallenge), so that Hogarth offers it.</summary>
-        private static void MarkChallenges(Run r)
-        {
-            for (int i = 0; i < r.Fights.Count && i < r.Challenges.Count; i++)
-            {
-                ArenaFight f = r.Fights[i];
-                if (r.Challenges[i] == "" || !Challenges.ContainsKey(r.Challenges[i])) continue;
-                if (!f.RoundChallenge.IsValid) f.RoundChallenge = new ResourceId(Opponents.StableGuid("arena-challenge|" + r.Challenges[i]));
-                if (string.IsNullOrEmpty(f.ChallengeResponse)) f.ChallengeResponse = "NONE";
-            }
-        }
-
-        /// <summary>The current fight's challenge as Hogarth's window shows it (null if none); its texts already in the game's language.</summary>
-        private static ArenaMCChallenge McChallenge(Run r)
-        {
-            string key = r.Current < r.Challenges.Count ? r.Challenges[r.Current] : "";
-            Challenge c;
-            if (key == "" || !Challenges.TryGetValue(key, out c)) return null;
-            ArenaFight f = r.Fights[r.Current];
-            return new ArenaMCChallenge { ChallengeID = f.FightID, TemplateID = f.RoundChallenge, Header = c.Name, Body = c.Text };
-        }
-
-        /// <summary>
-        /// After the arena's data reached the screen: Hogarth offers the current fight's challenge (the client's own
-        /// window, UIArenaCampaignViewModel.CheckMCChallenge, which nothing in the client calls).
-        /// </summary>
-        private static void OfferChallenge(Run r)
-        {
-            if (r == null || r.Current >= r.Fights.Count || r.Fights[r.Current].ChallengeResponse != "NONE" || McChallenge(r) == null) return;
-            LocalServer.Later(() =>
-            {
-                try
-                {
-                    UIArenaCampaignViewModel vm = UnityEngine.Object.FindObjectOfType<UIArenaCampaignViewModel>();
-                    if (vm != null) typeof(UIArenaCampaignViewModel).GetMethod("CheckMCChallenge", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(vm, null);
-                }
-                catch (Exception e) { Debug.LogWarning("[HexRevival] [Arena] challenge window: " + e.Message); }
-            });
-        }
-
         /// <summary>A fight's challenger as the screens show it: with the equipment it plays in that fight.</summary>
         private static ArenaChallenger ChallengerOf(Run r, int fight)
         {
@@ -216,7 +176,6 @@ namespace HexRevival
         {
             foreach (Opponents.Opponent o in r.Opponents) Challenger(o);
             if (r.Challenges == null || r.Challenges.Count != r.Fights.Count) { r.Challenges = new List<string>(); foreach (ArenaFight f in r.Fights) r.Challenges.Add(""); }
-            MarkChallenges(r);
             if (r.Buffs == null) r.Buffs = new List<string>();
             r.Info.Buffs = r.Buffs.ConvertAll(b => Buff(b).Shown);
         }
@@ -256,11 +215,9 @@ namespace HexRevival
                 res.EncounterData = r.Fights[r.Current];
                 res.ChallengerData = ChallengerOf(r, r.Current);
                 res.FightHistory = r.Fights;
-                res.MCChallengeData = McChallenge(r);
             }
             Debug.Log("[HexRevival] [Arena] join: " + (r != null ? r.Info.Wins + " wins, " + r.Info.Loses + " losses, fight " + (r.Current + 1) : "no run"));
             LocalServer.Answer(typeof(CampaignService.JoinCampaignArena), res, handler);
-            OfferChallenge(r);
         }
 
         public static void Refresh(Delegate handler)
@@ -275,10 +232,8 @@ namespace HexRevival
                 res.EncounterData = r.Fights[r.Current];
                 res.ChallengerData = ChallengerOf(r, r.Current);
                 res.FightHistory = r.Fights;
-                res.MCChallengeData = McChallenge(r);
             }
             LocalServer.Answer(typeof(CampaignService.RefreshArenaInfo), res, handler);
-            OfferChallenge(r);
         }
 
         public static void MasterList(Delegate handler)
@@ -355,7 +310,6 @@ namespace HexRevival
             for (int i = 0; i < Fights; i++) r.Challenges.Add("");
             for (int t = 0; t < Fights / PerTier; t++)
                 r.Challenges[t * PerTier + UnityEngine.Random.Range(0, PerTier - 1)] = ChallengeKeys[UnityEngine.Random.Range(0, ChallengeKeys.Length)];
-            MarkChallenges(r);
             r.Info.FightId = r.Fights[0].FightID;
             st.Run = r;
             Save();
@@ -385,10 +339,7 @@ namespace HexRevival
             }
             bool boss = (r.Current + 1) % PerTier == 0;
             Opponents.Handicap ai = null, me = null;
-            // A challenge declined in Hogarth's window is not played (ArenaFight.ChallengeResponse: the client sets it
-            // on the fight the mod gave it).
             string ch = r.Challenges[r.Current];
-            if (ch != "" && r.Fights[r.Current].ChallengeResponse == "DECLINE") ch = "";
             UID playerDeck = new UID(UID.Type.Deck, r.Info.DeckId);
             if (ch != "")
             {
@@ -415,7 +366,7 @@ namespace HexRevival
             };
             s_InBattle = true;
             Patches.StartMatch(playerDeck, Opponents.SceneOf(o), deck,
-                "arena fight " + (r.Current + 1) + " vs " + o.Name, Opponents.PersonalityOf(o));
+                "arena fight " + (r.Current + 1) + " vs " + o.Name, Opponents.PersonalityOf(o), checkOwned: playerDeck.GetInstanceId() == r.Info.DeckId);
         }
 
         private static bool s_InBattle;
@@ -433,7 +384,6 @@ namespace HexRevival
             Opponents.Opponent o = r.Opponents[r.Current];
             bool boss = (r.Current + 1) % PerTier == 0;
             string challenge = r.Challenges[r.Current];
-            if (challenge != "" && f.ChallengeResponse == "DECLINE") challenge = "";
             List<ArenaReward> news = new List<ArenaReward>();
             if (won)
             {
@@ -679,7 +629,7 @@ namespace HexRevival
             {
                 get
                 {
-                    if (GameText > 0) return Localization.Get("ArenaPVE_Challenge_Body" + GameText).Replace("[b]", "").Replace("[/b]", "");
+                    if (GameText > 0) return Localization.Get("ArenaPVE_Challenge_Body" + GameText).Replace("[b]", "").Replace("[/b]", "").Replace("\\n", " ").Replace("\n", " ");
                     return Loc.Get(Player != null ? "arena_ch_reflection_text" : "arena_ch_opponent_text", CardName(Card));
                 }
             }
@@ -704,11 +654,11 @@ namespace HexRevival
         /// <summary>
         /// The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game"), and those
         /// of Hogarth's challenges in the game's texts (Src.Game: ArenaPVE_Challenge_Header/Body 1-10): Shards Aplenty (2),
-        /// Inferno (3), Rage (5), The Ol' Switcheroo (7), The Pacts (8). Not done: Swarm! Swarm! (troops cost -1) and
-        /// Charge! (an additional charge) have no ability in the game's data to give; The Primal of Luck and Infernal
-        /// Professor play an action for free. Cerebral Fulmination (1) is in both: "each champion" in the game's text,
-        /// the opponent only on video; the video's is kept. Each is offered with the game's own Hogarth window
-        /// (accept or decline, ArenaFight.ChallengeResponse); a declined challenge is not played and gives nothing.
+        /// Inferno (3), The Ol' Switcheroo (7), The Pacts (8). Not done: Swarm! Swarm! (troops cost -1), Rage (troops gain
+        /// Rage 1) and Charge! (an additional charge) change every card's values, which the engine only allows through
+        /// its own effects; The Primal of Luck and Infernal Professor play an action for free. Cerebral Fulmination (1) is in both: "each champion" in the game's text,
+        /// the opponent only on video; the video's is kept. The client's Hogarth window for challenges is the consoles'
+        /// (no buttons on PC): the challenge is told at the start of the fight, as before.
         /// </summary>
         private static readonly Dictionary<string, Challenge> Challenges = new Dictionary<string, Challenge>
         {
@@ -730,13 +680,9 @@ namespace HexRevival
                     int k = UnityEngine.Random.Range(0, 3);
                     return new Opponents.Handicap { TempResources = k == 0 ? 2 : k == 2 ? 1 : 0, Resources = k == 1 ? 2 : k == 2 ? 1 : 0 };
                 } } },
-            // "troops gain Rage 1 in all zones": the game's own ability "Troops in all zones have Rage 1." (on no card: the
-            // challenge's), given to the opponent's champion; it acts on every troop.
-            { "rage", new Challenge { Key = "rage", GameText = 5, AI = new Opponents.Handicap { Abilities = new List<string> { RageAbility } } } },
             { "switcheroo", new Challenge { Key = "switcheroo", GameText = 7, Swap = true } },
         };
-        private const string RageAbility = "f56878b1-91c4-7aef-bc3d-25c93b2ea02f";
-        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts", "shards", "rage", "switcheroo" };
+        private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts", "shards", "switcheroo" };
 
         private class BuffDef { public ArenaBuff Shown; public Opponents.Handicap Effect; }
 
@@ -851,6 +797,13 @@ namespace HexRevival
                 case "battle":
                     Battle();
                     return "ok";
+                case "challenge":   // dev: "arena challenge <key>" = that challenge on the current fight
+                    {
+                        if (r == null || parts.Length < 3 || !Challenges.ContainsKey(parts[2])) return "keys: " + string.Join(", ", ChallengeKeys);
+                        r.Challenges[r.Current] = parts[2];
+                        Save();
+                        return "fight " + (r.Current + 1) + ": " + Challenges[parts[2]].Name;
+                    }
                 case "reset":
                     Data.Run = null;
                     Save();

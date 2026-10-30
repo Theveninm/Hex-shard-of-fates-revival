@@ -980,7 +980,9 @@ namespace HexRevival
                     Saves.Current.Claims.Add("lvlmerc");
                     return m.m_Name;
                 }
-                // Not granted: cosmetic sleeves.
+                // One of the "Awarded through Account Leveling" sleeves not owned yet (Src.HexCodex; which one at which
+                // level: PLACEHOLDER).
+                case "sleeve": return Sleeves.Grant(Sleeves.Unowned(Sleeves.Matching("^Awarded through Account Leveling")), false);
                 default: return null;
             }
         }

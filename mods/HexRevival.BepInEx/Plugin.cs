@@ -170,6 +170,8 @@ namespace HexRevival
                 request("RefreshArenaInfo", new[] { ad, af, ac, handler("RefreshArenaInfo"), typeof(string), typeof(int), svc }, "Arena_Refresh");
                 apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
                 apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
+                // The Dueling Pit's Versus AI (see DuelingPit.cs).
+                apply("DuelingPitVM.FindMatch", () => Prefix(harmony, typeof(DuelingPitVM), "FindMatch", Type.EmptyTypes, "DuelingPit_FindMatch"));
                 // The buffs' conversations were the server's: clicking a buff shows nothing (its text is in its tooltip).
                 apply("UIArenaCampaignViewModel.OnBuff1Click", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "OnBuff1Click", Type.EmptyTypes, "Skip"));
                 apply("UIArenaCampaignViewModel.OnBuff2Click", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "OnBuff2Click", Type.EmptyTypes, "Skip"));
@@ -495,6 +497,7 @@ namespace HexRevival
         public static bool Arena_Refresh(Game.Client.Network.Campaign.CampaignService.RefreshArenaInfo.ResponseHandler __3) { Arena.Refresh(__3); return false; }
         public static void Arena_Start(UIArenaCampaignViewModel __instance) { Arena.OnScreenStart(__instance); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
+        public static bool DuelingPit_FindMatch(DuelingPitVM __instance) { return DuelingPit.FindMatch(__instance); }
 
         public static bool Ladder_Record(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Tournaments.Messages.Tournament.LadderRecord.Response>> __0)
         {

@@ -215,6 +215,8 @@ namespace HexRevival
                     m_NewsBackdrop = ads != null ? ads.gameObject : null;
                     m_NewsBar = bar != null ? bar.gameObject : null;
                 }
+                // Room for the main menu's Dueling Pit button (see DuelingPit).
+                foreach (GameObject g in new[] { m_NewsBox, m_NewsBackdrop, m_NewsBar }) UiClone.ShiftUp(g, DuelingPit.FeaturedShift);
             }
             bool show = Checked && NewVersion != null;
             foreach (GameObject g in new[] { m_NewsBox, m_NewsBackdrop, m_NewsBar })

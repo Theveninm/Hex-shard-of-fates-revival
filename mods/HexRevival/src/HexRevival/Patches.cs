@@ -321,12 +321,13 @@ namespace HexRevival
         public static Action<SessionStateEncounterData> PendingEncounterSetup;
 
         public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label,
-            EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null)
+            EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null, bool checkOwned = true)
         {
             try
             {
-                // A deck holding cards or equipment the account does not own cannot be played (see Decks.NotOwned).
-                List<string> missing = Decks.NotOwned(playerDeck);
+                // A deck holding cards or equipment the account does not own cannot be played (see Decks.NotOwned);
+                // except a deck lent for one match (the Dueling Pit's, the arena's Ol' Switcheroo).
+                List<string> missing = checkOwned ? Decks.NotOwned(playerDeck) : new List<string>();
                 if (missing.Count > 0)
                 {
                     Debug.Log("[HexRevival] [Menu] match refused, deck not owned: " + string.Join(", ", missing.ToArray()));

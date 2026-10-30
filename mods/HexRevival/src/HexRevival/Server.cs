@@ -402,6 +402,7 @@ namespace HexRevival
             SyncTurnPhase(self);
             Campaign.OnSessionTick(self);
             Opponents.OnSessionTick(self);
+            Opponents.OnFirstTurns(self);
             if (s_Outbox.Count == 0)
                 return;
             List<Outgoing> batch = new List<Outgoing>(s_Outbox);

@@ -55,13 +55,11 @@ namespace HexRevival
             public int Cards;       // cards drawn
             /// <summary>Resources for the player's first turn only (the arena's Resource buff, Shards Aplenty).</summary>
             public int TempResources;
-            /// <summary>Abilities of the game (template ids) given to the champion (an arena challenge's rule).</summary>
-            public List<string> Abilities = new List<string>();
             /// <summary>Cards in play from the start (names).</summary>
             public List<string> InPlay = new List<string>();
             /// <summary>Shards in play from the start, by color: Blood, Diamond, Ruby, Sapphire, Wild (resource and threshold).</summary>
             public int[] Shards = new int[5];
-            public bool IsEmpty { get { return Health == 0 && Resources == 0 && TempResources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0) && (Abilities == null || Abilities.Count == 0) && ShardCount == 0; } }
+            public bool IsEmpty { get { return Health == 0 && Resources == 0 && TempResources == 0 && Charges == 0 && Cards == 0 && (InPlay == null || InPlay.Count == 0) && ShardCount == 0; } }
             public int ShardCount { get { int n = 0; if (Shards != null) foreach (int x in Shards) n += x; return n; } }
 
             public static readonly ECardShards[] ShardColors = { ECardShards.Blood, ECardShards.Diamond, ECardShards.Ruby, ECardShards.Sapphire, ECardShards.Wild };
@@ -70,7 +68,6 @@ namespace HexRevival
             {
                 Handicap h = (Handicap)MemberwiseClone();
                 h.InPlay = InPlay != null ? new List<string>(InPlay) : new List<string>();
-                h.Abilities = Abilities != null ? new List<string>(Abilities) : new List<string>();
                 h.Shards = new int[5];
                 if (Shards != null) Array.Copy(Shards, h.Shards, Math.Min(5, Shards.Length));
                 return h;
@@ -85,8 +82,6 @@ namespace HexRevival
                 for (int i = 0; i < 5; i++) r.Shards[i] = (a.Shards != null && i < a.Shards.Length ? a.Shards[i] : 0) + (b.Shards != null && i < b.Shards.Length ? b.Shards[i] : 0);
                 if (a.InPlay != null) r.InPlay.AddRange(a.InPlay);
                 if (b.InPlay != null) r.InPlay.AddRange(b.InPlay);
-                if (a.Abilities != null) r.Abilities.AddRange(a.Abilities);
-                if (b.Abilities != null) r.Abilities.AddRange(b.Abilities);
                 return r;
             }
         }
@@ -308,14 +303,6 @@ namespace HexRevival
                 }
                 if (h.Resources > 0) Cheats.AddResourcesOnly(ss, p, h.Resources);
                 if (h.TempResources > 0) s_FirstTurn[p] = h.TempResources;
-                if (h.Abilities != null)
-                    foreach (string a in h.Abilities)
-                    {
-                        ResourceId id;
-                        try { id = new ResourceId(new Guid(a)); } catch { Debug.LogWarning("[HexRevival] [Opponents] bad ability id " + a); continue; }
-                        if (Singleton<TemplateManager>.Instance.GetAbilityTemplate(id) == null) { Debug.LogWarning("[HexRevival] [Opponents] unknown ability " + a); continue; }
-                        p.m_ChampionCard.AddDynamicAbility(id, ss, true, true);
-                    }
                 // Shards of a color: a resource and its threshold each.
                 if (h.Shards != null)
                     for (int i = 0; i < h.Shards.Length && i < 5; i++)
@@ -336,7 +323,7 @@ namespace HexRevival
                         ss.CreateEncounterCardsInZone(p, c.m_Id, 1, ECardCollections.Warzone, ECardLocations.Unknown);
                     }
                 Server.MarkDirty();
-                Debug.Log("[HexRevival] [Opponents] handicap " + p.m_PlayerId + ": health " + h.Health + ", resources " + h.Resources + ", charges " + h.Charges + ", cards " + h.Cards + ", in play " + (h.InPlay != null ? string.Join(", ", h.InPlay.ToArray()) : ""));
+                Debug.Log("[HexRevival] [Opponents] handicap " + p.m_PlayerId + ": health " + h.Health + ", resources " + h.Resources + ", charges " + h.Charges + ", cards " + h.Cards + ", in play " + (h.InPlay != null ? string.Join(", ", h.InPlay.ToArray()) : "") + ", temp " + h.TempResources);
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Opponents] handicap: " + e); }
         }

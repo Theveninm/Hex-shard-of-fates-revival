@@ -127,9 +127,14 @@ namespace HexRevival
 
         private static readonly List<KeyValuePair<ResourceId, int>> s_ToRemove = new List<KeyValuePair<ResourceId, int>>();
 
+        /// <summary>Sleeves found in the packs being opened, given once the opening's answer was delivered.</summary>
+        private static readonly List<InventoryDeckSleeve> s_AfterOpening = new List<InventoryDeckSleeve>();
+
         /// <summary>After an OpenCardPack answer was delivered (LocalServer.Pump): the opened packs leave the client's inventory.</summary>
         public static void OnPackAnswerDelivered()
         {
+            foreach (InventoryDeckSleeve sl in s_AfterOpening) Sleeves.Grant(sl);
+            s_AfterOpening.Clear();
             foreach (KeyValuePair<ResourceId, int> kv in s_ToRemove)
                 try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, kv.Value); }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
