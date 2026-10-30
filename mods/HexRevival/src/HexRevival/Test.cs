@@ -903,6 +903,7 @@ namespace HexRevival
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
                 case "dun": return Dungeons.Command(parts);
+                case "home": return Hometown.Command(parts, GameClient.Instance.PlayerProfile.GetCurrentChampion().Id);   // dev: hometown flags
                 case "sim": return QuestSim.Run(string.Join(" ", parts, 1, parts.Length - 1));
                 case "quest": return Quests.Command(parts);
                 case "siege": return Siege.Command(parts);

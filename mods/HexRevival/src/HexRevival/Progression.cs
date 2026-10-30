@@ -145,6 +145,8 @@ namespace HexRevival
 
             // ---- Dungeon battles (key "<dungeon>/<node>[/<fight>]", see Dungeons): Src.Video (MyHotStream
             // Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted.
+            // The hometown's sparring match (see Hometown). Src.Video: Amaz, Let's Play part 2 9:15 (Vennen, Zilth): 50 gold, 100 XP.
+            { "home/spar", R(50, 100) },
             // Castle Crayburn (the castle's own reward is the quest's, see OnCrayburnDone)
             { "crayburn/CastleGate", R(50, 100) },
             { "crayburn/TowerGate", R(50, 100) },

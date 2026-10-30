@@ -63,6 +63,8 @@ Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta t
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video |
 | Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen |
 | Fortunes.cs | which fortune is drawn | random in the runs |
+| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first |
+| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video |
 | Progression.cs TalentPointsPerLevel | 1 | the reward window only says "Leveled Up!" (Vandersveldt part 79 4:54) |
 
 ## Placeholders with no source expected (other modes, economy)

@@ -129,12 +129,13 @@ namespace HexRevival
             // conversations and "<race> Tutorial ..." battles; the tower's race guide gives the quest).
             const string cc = "Crayburn Castle - {R} - ";
             s_Defs.Add(new Def { Key = "crayburn", Id = CrayburnId, Name = "Castle Crayburn", Folder = "crayburncastle", Start = "WatchTower", Starter = true }
-                .Add("WatchTower", Talk(cc + "Quest Start"), Talk(cc + "The Watchtower"))
+                // The quest is given and turned in at the hometown (see Hometown): "Quest Start" / "Quest End" are said there.
+                .Add("WatchTower", Talk(cc + "The Watchtower"))
                 .Add("Drawbridge", Talk(cc + "The Drawbridge"))
                 .Add("CastleGate", Fight(cc, "Castle Gatehouse", "{R} Tutorial Castle Gatehouse", "crayburn/CastleGate"))
                 .Add("InnerBailey", Talk(cc + "Inner Bailey"))
                 .Add("TowerGate", Fight(cc, "Tower Gatehouse", "{R} Tutorial Tower Gatehouse", "crayburn/TowerGate"))
-                .Add("PenworthTower", Fight(cc, "Tower of Penworth", "{R} Tutorial Tower of Penworth", "crayburn/PenworthTower"), Talk(cc + "Quest End"))
+                .Add("PenworthTower", Fight(cc, "Tower of Penworth", "{R} Tutorial Tower of Penworth", "crayburn/PenworthTower"))
                 .Final("PenworthTower"));
 
             // The Tranquil Dream (Node 40): the Tipi, then Sister Midnight's dream; five dream creatures in
@@ -870,6 +871,9 @@ namespace HexRevival
             Campaign.Notify(r.CampId, champ, "area_dungeon", "DUNGEON", gs);
         }
 
+        /// <summary>The champion is inside a dungeon.</summary>
+        public static bool InRun(ulong champ) { return Get(champ) != null; }
+
         /// <summary>
         /// A champion who has not left the map's first node yet starts in Castle Crayburn (as in the original game).
         /// Returns the state of the run, or null if the champion plays the AZ1 map.
@@ -888,6 +892,7 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Dungeons] champion " + r.Champ + " leaves " + r.Def.Name + " (" + reason + ")");
             QuestSim.Note("  leaves " + r.Def.Name + " (" + reason + ")");
             EndRun(r);
+            if (r.Def.Starter && Hometown.Active(r.Champ)) { Campaign.EnterHome(r.Champ, "return_parent"); return; }
             Campaign.ReturnToArea(r.Champ, r.Def.Starter ? null : r.Def.Zone, r.Def.AZ1Node);
         }
 
@@ -895,7 +900,8 @@ namespace HexRevival
         {
             Def d = r.Def;
             Quests.OnDungeonDone(r.Champ, d.Id);
-            if (d.Key == "crayburn") Progression.OnCrayburnDone(r.Champ);
+            // The hometown's quest giver gives the castle's reward (Hometown); champions who started before it, here.
+            if (d.Key == "crayburn" && !Hometown.Active(r.Champ)) Progression.OnCrayburnDone(r.Champ);
             if (d.Key == "brutecrown") Quests.SetFlag(r.Champ, "brutecrown:ally", Ally(r));   // her spurned sister waits in the Graveyard
             Campaign.OnDungeonDone(r.Champ, d.Zone, d.AZ1Node);
             Leave(r, "finished");
