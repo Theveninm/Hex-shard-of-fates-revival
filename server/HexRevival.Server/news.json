@@ -8,36 +8,36 @@
       "url": "{latestUrl}"
     },
     {
-      "id": "release-1.2.8",
+      "id": "release-1.2.9",
       "when": "noupdate",
       "image": "card:Phoenix Guard Messenger",
       "title": {
-        "en": "HEX Revival 1.2.8",
-        "fr": "HEX Revival 1.2.8",
-        "de": "HEX Revival 1.2.8",
-        "es": "HEX Revival 1.2.8",
-        "it": "HEX Revival 1.2.8",
-        "pt": "HEX Revival 1.2.8",
-        "pl": "HEX Revival 1.2.8",
-        "ru": "HEX Revival 1.2.8",
-        "tr": "HEX Revival 1.2.8",
-        "ja": "HEX Revival 1.2.8",
-        "zh": "HEX Revival 1.2.8"
+        "en": "HEX Revival 1.2.9",
+        "fr": "HEX Revival 1.2.9",
+        "de": "HEX Revival 1.2.9",
+        "es": "HEX Revival 1.2.9",
+        "it": "HEX Revival 1.2.9",
+        "pt": "HEX Revival 1.2.9",
+        "pl": "HEX Revival 1.2.9",
+        "ru": "HEX Revival 1.2.9",
+        "tr": "HEX Revival 1.2.9",
+        "ja": "HEX Revival 1.2.9",
+        "zh": "HEX Revival 1.2.9"
       },
       "text": {
-        "en": "The tutorial's last battle no longer freezes (thanks to Zymmer for the report), and this news now comes from the project's server.",
-        "fr": "La dernière bataille du tutoriel ne se bloque plus (merci à Zymmer pour le signalement), et ces nouvelles viennent désormais du serveur du projet.",
-        "de": "Der letzte Kampf des Tutorials friert nicht mehr ein (danke an Zymmer für die Meldung), und diese Neuigkeiten kommen jetzt vom Server des Projekts.",
-        "es": "La última batalla del tutorial ya no se bloquea (gracias a Zymmer por el aviso), y estas noticias llegan ahora desde el servidor del proyecto.",
-        "it": "L'ultima battaglia del tutorial non si blocca più (grazie a Zymmer per la segnalazione), e queste notizie arrivano ora dal server del progetto.",
-        "pt": "A última batalha do tutorial não trava mais (obrigado ao Zymmer pelo aviso), e estas notícias agora vêm do servidor do projeto.",
-        "pl": "Ostatnia bitwa samouczka już się nie zawiesza (dzięki Zymmerowi za zgłoszenie), a te wiadomości pochodzą teraz z serwera projektu.",
-        "ru": "Последний бой обучения больше не зависает (спасибо Zymmer за сообщение), а эти новости теперь приходят с сервера проекта.",
-        "tr": "Eğitimin son savaşı artık donmuyor (bildirdiği için Zymmer'e teşekkürler) ve bu haberler artık projenin sunucusundan geliyor.",
-        "ja": "チュートリアル最後の戦闘で止まらなくなりました（報告してくれたZymmerに感謝）。このニュースはプロジェクトのサーバーから配信されるようになりました。",
-        "zh": "教程的最后一战不再卡住（感谢 Zymmer 的报告），这些新闻现在来自项目的服务器。"
+        "en": "HEX Revival now runs on the macOS version of the game too (thanks to Criesener): download HexRevival-1.2.9-macOS.zip from the release page.",
+        "fr": "HEX Revival fonctionne maintenant aussi sur la version macOS du jeu (merci à Criesener) : télécharge HexRevival-1.2.9-macOS.zip sur la page de la version.",
+        "de": "HEX Revival läuft jetzt auch mit der macOS-Version des Spiels (danke an Criesener): Lade HexRevival-1.2.9-macOS.zip von der Release-Seite herunter.",
+        "es": "HEX Revival ahora también funciona con la versión para macOS del juego (gracias a Criesener): descarga HexRevival-1.2.9-macOS.zip desde la página de la versión.",
+        "it": "HEX Revival ora funziona anche con la versione macOS del gioco (grazie a Criesener): scarica HexRevival-1.2.9-macOS.zip dalla pagina della versione.",
+        "pt": "O HEX Revival agora também funciona na versão macOS do jogo (obrigado ao Criesener): baixe HexRevival-1.2.9-macOS.zip na página da versão.",
+        "pl": "HEX Revival działa teraz także z wersją gry na macOS (dzięki Criesenerowi): pobierz HexRevival-1.2.9-macOS.zip ze strony wydania.",
+        "ru": "HEX Revival теперь работает и с версией игры для macOS (спасибо Criesener): скачайте HexRevival-1.2.9-macOS.zip на странице выпуска.",
+        "tr": "HEX Revival artık oyunun macOS sürümünde de çalışıyor (Criesener'a teşekkürler): sürüm sayfasından HexRevival-1.2.9-macOS.zip dosyasını indir.",
+        "ja": "HEX Revival がゲームの macOS 版でも動作するようになりました（Criesener に感謝）。リリースページから HexRevival-1.2.9-macOS.zip をダウンロードしてください。",
+        "zh": "HEX Revival 现在也支持游戏的 macOS 版本（感谢 Criesener）：请在发布页面下载 HexRevival-1.2.9-macOS.zip。"
       },
-      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.8"
+      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.9"
     },
     {
       "id": "discord",
