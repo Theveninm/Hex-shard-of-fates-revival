@@ -20,15 +20,15 @@ namespace HexRevival
     /// opened for its loot (OpenChest). Before 1.2.10 packs were opened at purchase, without chest (SirBeastmaster).
     ///
     /// Sources. Src.Game: the requests and their answers; the spin costs (ChestUtils.GetChestSpinCost: 1,200 / 3,100 /
-    /// 8,500 / 30,000 gold, Primal chests and free spins 0); the client's texts: a booster holds "1 Treasure Chest", a
+    /// 8,500 / 30,000 gold, Primal chests and free spins 0; the same on the wiki's "Wheels of Fate"); the client's texts: a booster holds "1 Treasure Chest", a
     /// primal pack "1 Legendary Treasure Chest", "Most chests contain a single item. Legendary and Primal chests will have
     /// additional items", and the payout table: 1 / 2 / 3 eyes = paid spin / free spin / upgrade chest; three stars a
     /// mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls an alternate
     /// art card, hearts two upgrades, spiders a PvP rare card, each with a paid spin; "1 or 2 gold icons gift Gold. 3 gold
     /// icons gift exclusive rewards", "3 Red Icons gift exclusive rewards". Src.Zymmer: what each set's wheel and chests
     /// held. Src.Survey2014: how often each outcome came, by chest rarity (see Survey). Src.HexServer: 500 / 2,500 gold
-    /// for 1 / 2 gold reels. PLACEHOLDER: the reel colors' odds; the prizes the mod has no item for
-    /// (sleeves, alternate arts: a rare of the set instead); "exclusive rewards" = one of the set's wheel items; a
+    /// for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the
+    /// reel colors' odds; the prizes the mod has no item for (alternate arts: a rare of the set instead); "exclusive rewards" = one of the set's wheel items; a
     /// legendary chest 2 items, a primal one 3.
     /// </summary>
     public static class Packs
@@ -107,13 +107,38 @@ namespace HexRevival
                 // The chest of the pack (a primal pack's is legendary, Src.HexServer).
                 Chest c = NewChest(primal ? ETreasureChestType.Legendary : RollRarity(), set.m_Id);
                 r.NewChestInstances.Add(Bits(c));
+                // "Obtained by opening [set] Booster Packs" (Src.HexCodex: Doombringer's): sometimes one of them
+                // (PLACEHOLDER chance), given when the opening is over.
+                if (!primal && UnityEngine.Random.value < BoosterSleeveChance)
+                {
+                    InventoryDeckSleeve sl = Sleeves.OfSet("booster", set.m_Name);
+                    if (sl != null) s_AfterOpening.Add(sl);
+                }
             }
             Inventory.Remove(item, n);
             Save();
-            // The client takes the cards and chests from the answer (PlayerProfile.HandleOpenCardPack); the packs are ours to take.
-            LocalServer.Later(() => { try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(item, n); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); } });
+            // The client takes the cards and chests from the answer (PlayerProfile.HandleOpenCardPack); the packs are
+            // ours to take, once the (delayed) answer is delivered: earlier, the screen's pack list is rebuilt before
+            // the opening animation (issue #25).
+            s_ToRemove.Add(new KeyValuePair<ResourceId, int>(item, n));
             Debug.Log("[HexRevival] [Packs] opened " + n + " x " + pack.m_Name + ": " + r.NewCardInstances.Count + " card(s), " + n + " chest(s)");
             return r;
+        }
+
+        private static readonly List<KeyValuePair<ResourceId, int>> s_ToRemove = new List<KeyValuePair<ResourceId, int>>();
+
+        /// <summary>Sleeves found in the packs being opened, given once the opening's answer was delivered.</summary>
+        private static readonly List<InventoryDeckSleeve> s_AfterOpening = new List<InventoryDeckSleeve>();
+
+        /// <summary>After an OpenCardPack answer was delivered (LocalServer.Pump): the opened packs leave the client's inventory.</summary>
+        public static void OnPackAnswerDelivered()
+        {
+            foreach (InventoryDeckSleeve sl in s_AfterOpening) Sleeves.Grant(sl);
+            s_AfterOpening.Clear();
+            foreach (KeyValuePair<ResourceId, int> kv in s_ToRemove)
+                try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, kv.Value); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
+            s_ToRemove.Clear();
         }
 
         /// <summary>A primal pack: 2 legendaries and 13 rares of the set (Src.Forum2017).</summary>
@@ -129,7 +154,9 @@ namespace HexRevival
         /// <summary>
         /// A booster's chest: common. Src.Survey2015, the players' chest survey (Google sheet
         /// 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs): all 93 chests recorded from boosters were common, 1 item each;
-        /// better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample).
+        /// better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki
+        /// (Src.Wiki, "Treasure Chest", 2014) says "of a random rarity (common, uncommon, rare or legendary)", without
+        /// odds; the later survey is kept.
         /// </summary>
         private static ETreasureChestType RollRarity() { return ETreasureChestType.Common; }
 
@@ -230,8 +257,14 @@ namespace HexRevival
                 case Outcome.Equipment: Prize(Zymmer.WheelEquipment(wheel), r, won); break;
                 case Outcome.PveCard: Prize(Zymmer.RandomCard(wheel), r, won); break;
                 case Outcome.Sleeves:
+                {
+                    // One of the set's Wheel of Fate sleeves not owned yet (Src.HexCodex, see Sleeves); none left: a rare.
+                    InventoryDeckSleeve sl = Sleeves.OfSet("wheel", set != null ? set.m_Name : null);
+                    Prize(sl != null ? new Loot.Drop { Item = sl.m_Id } : RareOf(set), r, won);
+                    break;
+                }
                 case Outcome.AltArt:
-                case Outcome.PvpRare: Prize(RareOf(set), r, won); break;   // sleeves and alternate arts: PLACEHOLDER, see the class
+                case Outcome.PvpRare: Prize(RareOf(set), r, won); break;   // alternate arts: PLACEHOLDER, see the class
             }
             if (golds == 1) r.GoldAward += 500;
             else if (golds == 2) r.GoldAward += 2500;
@@ -263,10 +296,14 @@ namespace HexRevival
             }
         }
 
+        /// <summary>
+        /// A chest's rarity goes up; an upgraded legendary chest "becomes a primal chest", the only way to get one
+        /// (Src.Wiki: hextcg.fandom.com "Treasure Chest"; the client knows primal chests and opens them).
+        /// </summary>
         private static void Upgrade(Chest c, int steps)
         {
-            int v = Math.Min((int)ETreasureChestType.Legendary, (int)c.Rarity + steps);
-            if (c.Rarity < ETreasureChestType.Legendary) c.Rarity = (ETreasureChestType)v;
+            int v = Math.Min((int)ETreasureChestType.Primal, (int)c.Rarity + steps);
+            if (c.Rarity < ETreasureChestType.Primal) c.Rarity = (ETreasureChestType)v;
         }
 
         /// <summary>A prize of the wheel: silently granted, the answer gives it to the client (PlayerProfile.HandleChestUpdate).</summary>
@@ -294,6 +331,9 @@ namespace HexRevival
         // Opening a chest
         // ------------------------------------------------------------------
 
+        /// <summary>PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary>
+        private const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
+
         private static OpenChestResponse OpenChests(List<ulong> ids)
         {
             OpenChestResponse r = Empty<OpenChestResponse>();
@@ -310,6 +350,13 @@ namespace HexRevival
                 int setNumber = Zymmer.SetNumber(set);
                 List<Loot.Drop> drops = Zymmer.OpenChest(setNumber, rarity);
                 if (c.Rarity == ETreasureChestType.Primal) drops.AddRange(Zymmer.OpenChest(setNumber, ERarity.Rare));
+                // "Found in Chests for [set]" (Src.HexCodex): one of the set's chest sleeves not owned yet, 5% of the
+                // chests (PLACEHOLDER chance).
+                if (UnityEngine.Random.value < ChestSleeveChance)
+                {
+                    InventoryDeckSleeve sl = Sleeves.OfSet("chest", set != null ? set.m_Name : null);
+                    if (sl != null) drops.Add(new Loot.Drop { Item = sl.m_Id });
+                }
                 if (drops.Count == 0)
                 {
                     // A set without a chest list: gold (the account chests' old PLACEHOLDER).

@@ -92,6 +92,8 @@ namespace HexRevival
             try { Packs.LoadClient(profile); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Profile] chests: " + e); }
             Progression.RefreshAccountUi();
+            // A holiday being held: one of its sleeves (see Sleeves), once the profile is in place.
+            LocalServer.Later(Sleeves.CheckHolidays);
             Debug.Log("[HexRevival] [Profile] local profile loaded: account '" + Saves.Current.Name + "', " + bits.Cards.Count + " cards, gold " + bits.Gold);
         }
 

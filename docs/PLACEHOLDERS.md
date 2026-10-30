@@ -1,4 +1,4 @@
-# Placeholder register (updated 2026-10-30: hometown, booster chests and the Wheel of Fate)
+# Placeholder register (updated 2026-10-30: Hex Codex and the HEX wiki checked)
 
 Every value or behaviour in the mod that is not backed by a source is tagged `PLACEHOLDER` in the code
 (or `Source = Src.Placeholder` in the reward tables). This file lists them so that, when a new source turns
@@ -64,6 +64,34 @@ Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta t
 | Booster chest rarity | no chest | common | players' 2015 chest survey (93 of 93 common) |
 | Hometown sparring reward | no hometown | 50 gold, 100 XP | Amaz, Let's Play part 2 9:15 |
 
+## Checked against Hex Codex and the HEX wiki (2026-10-30)
+Two new sources: Hex Codex (hex-codex.romosjr.workers.dev, Src.HexCodex: a tournament database of 46,674 decks, and an
+arena page quoting the game's own texts) and the HEX fandom wiki (hextcg.fandom.com, Src.Wiki: 1,227 pages, mostly
+2014-2015). Every placeholder was checked against both; they give rules and item lists, never odds or gold amounts.
+
+| What | Was | Now | Source |
+|---|---|---|---|
+| Opponents of the ladder, constructed gauntlet, Siege defenses and attackers | the game's prebuilt decks | prebuilt decks in the low tiers, 111 decks players brought to tournaments (2018-2020) above, with AI modifiers at the top (which decks where and the modifiers stay PLACEHOLDER, user's choice) | HexCodex (AiConfig.cs, TournamentDecks.cs) |
+| Arena opponents' equipment | none | 2 / 3 / 4 pieces in tiers 2 / 3 / 4, modifying cards of their deck (which pieces PLACEHOLDER) | HexCodex arena page (Arena.cs) |
+| Arena Resource buff | a permanent resource | 1 temporary and 1 permanent resource | HexCodex arena page (Arena.cs, Opponents.cs) |
+| Siege attack | any deck | a Standard legal deck | HexCodex Siege rules (Siege.cs) |
+| Wheel of Fate sleeves outcome | a rare of the set | one of the set's Wheel of Fate sleeves | HexCodex sleeve list (Packs.cs, Sleeves.cs) |
+| Deck sleeves | only the arena's, the Siege Pack's and a few campaign ones | 425 sleeves with how each was obtained; chests, boosters, collector decks, Kismet's Reserve packs, account levels, ladder seasons, draft and gauntlet wins, holidays (chances, dates, seasons PLACEHOLDER) | HexCodex sleeve list (Sleeves.cs) |
+| Dueling Pit | absent (a console screen) | its 5 prebuilt decks against the AI, from the main menu (the AI's deck PLACEHOLDER) | HexCodex, Game (DuelingPit.cs) |
+| Wheel of Fate: upgrading a legendary chest | stays legendary | becomes a primal chest, "the only way to get a primal chest" | Wiki "Treasure Chest" (Packs.cs) |
+| Arena: a tier won without a loss | a chest only | also takes off a loss mark ("Remove strikes by Perfecting a Tier") | HexCodex arena page (Arena.cs) |
+| Arena challenges | the 4 seen on video | + Inferno, The Pacts, Shards Aplenty and The Ol' Switcheroo, from Hogarth's 10 challenges in the game's texts | Game, ArenaPVE_Challenge_Header/Body (Arena.cs) |
+| Spin costs 1,200 / 3,100 / 8,500 / 30,000 / primal 0 | Game | confirmed | Wiki "Wheels of Fate" |
+
+Conflicts kept as they are: the wiki's booster chests "of a random rarity" (the 2015 survey's 93 chests were all
+common); the wiki's 2014 wheel (3 gold reels = 5,000 gold, the same odds for every chest rarity) against the later
+client's payout table and the 2014 survey's counts; the wiki's "primal packs are not sold in the store" (the mod sells
+them for gold); Cerebral Fulmination "each champion" in the game's challenge text, the opponent only on video.
+
+Found, not done: the arena challenges that change every card's values (Swarm! Swarm!, Rage, Charge!: the engine
+only allows that through its own effects) or play an action for free (The Primal of Luck, Infernal Professor);
+Hogarth's challenge window (the client's is the consoles', without buttons on PC).
+
 ## Campaign placeholders still open
 | Where | Placeholder | Why it stays |
 |---|---|---|
@@ -84,27 +112,32 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 ## Full list (generated)
 | File:line | Comment |
 |---|---|
-| AiConfig.cs:217 | rank rises: PLACEHOLDER, the original opponents were players), and the game's own arena decks for the arena. |
-| AiConfig.cs:244 | Uruunaz and Zakiir, "extremely rare" (Src.Steam2016; PLACEHOLDER 2% of the common fights where they can |
-| AiConfig.cs:257 | The attackers of the player's defense: the game's prebuilt decks (PLACEHOLDER: the attackers were players). |
-| AiConfig.cs:276 | PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 of the game's |
-| AiConfig.cs:335 | Which boss in which tier: PLACEHOLDER (tiers 2-3 share the bosses, tier 4 their elite versions and Hogarth). |
-| Arena.cs:262 | One fight of each tier but the boss may carry a challenge (Src.HexCompendium; PLACEHOLDER: always one). |
-| Arena.cs:413 | pouch, not always the same). The split by fight is PLACEHOLDER (it gives about 8,500 for such a run). |
-| Arena.cs:421 | "Boss Win" chests (1 in tier 1, 2 after, PLACEHOLDER from the counts seen), a "Perfect Tier Bonus" chest for a |
-| Arena.cs:422 | tier without a loss, a "Bonus" chest (seen twice, cause unknown: PLACEHOLDER, a tier whose challenge was won). |
-| Arena.cs:472 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
-| Arena.cs:473 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
-| Arena.cs:500 | <summary>A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary> |
+| AiConfig.cs:221 | top those with modifiers for the AI. Which decks in which tier, and the modifiers: PLACEHOLDER (the original |
+| AiConfig.cs:260 | Uruunaz and Zakiir, "extremely rare" (Src.Steam2016; PLACEHOLDER 2% of the common fights where they can |
+| AiConfig.cs:274 | decks above, with modifiers for a large one (PLACEHOLDER: the attackers were players). |
+| AiConfig.cs:284 | The AI's modifiers of the top tiers ("upgraded" decks): 5 more health, a card more (PLACEHOLDER).</summary> |
+| AiConfig.cs:333 | PLACEHOLDER defenses (the original ones were other players'): 40 for gold, 10 for platinum, each 3 decks with an |
+| AiConfig.cs:394 | Which boss in which tier: PLACEHOLDER (tiers 2-3 share the bosses, tier 4 their elite versions and Hogarth). |
+| Arena.cs:133 | run and fight (which pieces: PLACEHOLDER). |
+| Arena.cs:331 | One fight of each tier but the boss may carry a challenge (Src.HexCompendium; PLACEHOLDER: always one). |
+| Arena.cs:499 | pouch, not always the same). The split by fight is PLACEHOLDER (it gives about 8,500 for such a run). |
+| Arena.cs:507 | "Boss Win" chests (1 in tier 1, 2 after, PLACEHOLDER from the counts seen), a "Perfect Tier Bonus" chest for a |
+| Arena.cs:508 | tier without a loss, a "Bonus" chest (seen twice, cause unknown: PLACEHOLDER, a tier whose challenge was won). |
+| Arena.cs:558 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
+| Arena.cs:559 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
+| Arena.cs:586 | A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary> |
 | Battlegrounds.cs:28 | draft timer are PLACEHOLDER (not known). The client's own screens are driven through its TournamentManager: |
 | Battlegrounds.cs:48 | PLACEHOLDER |
-| Battlegrounds.cs:62 | <summary>PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
-| Battlegrounds.cs:64 | <summary>PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
-| Battlegrounds.cs:66 | <summary>PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:206 | <summary>PLACEHOLDER prize: one booster per match won.</summary> |
-| Battlegrounds.cs:951 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:987 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
+| Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
+| Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
+| Battlegrounds.cs:210 | PLACEHOLDER prize: one booster per match won.</summary> |
+| Battlegrounds.cs:867 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:958 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:996 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1042 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:122 | 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage". |
+| DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:387 | PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:706 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
 | Dungeons.cs:729 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
@@ -115,40 +148,62 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Loot.cs:112 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
-| Packs.cs:30 | for 1 / 2 gold reels. PLACEHOLDER: the reel colors' odds; the prizes the mod has no item for |
-| Packs.cs:132 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). |
-| Packs.cs:206 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:234 | sleeves and alternate arts: PLACEHOLDER, see the class |
-| Packs.cs:240 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:307 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
-| Packs.cs:315 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:30 | for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the |
+| Packs.cs:111 | (PLACEHOLDER chance), given when the opening is over. |
+| Packs.cs:157 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:233 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:267 | alternate arts: PLACEHOLDER, see the class |
+| Packs.cs:273 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:334 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
+| Packs.cs:347 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
+| Packs.cs:354 | chests (PLACEHOLDER chance). |
+| Packs.cs:362 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
-| PrizePacks.cs:34 | <summary>PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
+| PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
-| Progression.cs:61 | <summary>Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
+| Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
 | Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
 | Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:527 | <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:527 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
 | Progression.cs:734 | no list for that set: the old PLACEHOLDER gold |
 | Progression.cs:770 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
 | Progression.cs:773 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:882 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:963 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:966 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:969 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:995 | <summary>Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1071 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1072 | same for the Battlegrounds: PLACEHOLDER |
-| Siege.cs:610 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
-| Store.cs:21 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
-| Store.cs:26 | <summary>Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
-| Store.cs:45 | <summary>Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
-| Store.cs:63 | <summary>PLACEHOLDER gold prices of products without a known price.</summary> |
-| Store.cs:65 | <summary>PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
+| Progression.cs:889 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:970 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:973 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:976 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:991 | level: PLACEHOLDER). |
+| Progression.cs:1004 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1080 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1081 | same for the Battlegrounds: PLACEHOLDER |
+| Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
+| Sleeves.cs:18 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:19 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:21 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
+| Sleeves.cs:24 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
+| Sleeves.cs:26 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
+| Sleeves.cs:123 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
+| Sleeves.cs:212 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
+| SpecialPacks.cs:15 | - Full sets (FullSet): one of every card of the set (PLACEHOLDER: one copy); |
+| SpecialPacks.cs:17 | Src.Game): 6 commons, 2 uncommons and 1 rare of the pack's set, of its race (PLACEHOLDER contents); |
+| SpecialPacks.cs:21 | legendaries, or chests" (Src.Game): 12 commons and 4 uncommons (PLACEHOLDER counts, a booster's); |
+| SpecialPacks.cs:23 | shards drawn at random (and shardless cards), no chest (PLACEHOLDER: a booster's counts); |
+| SpecialPacks.cs:24 | - Kismet's Draft Pack (KismetPack): a booster's counts drawn from every booster set (PLACEHOLDER); |
+| SpecialPacks.cs:25 | - GenCon 2016 Booster Pack (GenconPack, Herofall): a Herofall booster's cards (PLACEHOLDER); |
+| SpecialPacks.cs:29 | equipment pieces not owned yet (Src.HexCodex, Src.Zymmer; PLACEHOLDER contents). |
+| SpecialPacks.cs:30 | Prices: PLACEHOLDER (see GoldPrice). |
+| SpecialPacks.cs:55 | PLACEHOLDER gold prices.</summary> |
+| Store.cs:22 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
+| Store.cs:27 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
+| Store.cs:46 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
+| Store.cs:64 | PLACEHOLDER gold prices of products without a known price.</summary> |
+| Store.cs:66 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
+| Store.cs:323 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
 | Zymmer.cs:15 | PLACEHOLDER unless noted. |
-| Zymmer.cs:98 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
-| Zymmer.cs:167 | <summary>An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |
-| Zymmer.cs:181 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
-| Zymmer.cs:233 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |
+| Zymmer.cs:137 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
+| Zymmer.cs:206 | An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |
+| Zymmer.cs:220 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
+| Zymmer.cs:272 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |
+

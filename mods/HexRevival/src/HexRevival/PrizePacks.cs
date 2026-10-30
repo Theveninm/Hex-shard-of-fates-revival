@@ -90,7 +90,7 @@ namespace HexRevival
             return inv != null;
         }
 
-        /// <summary>The Siege Pack's equipment, once each: the 5 pieces Zymmer's notes list under "Siege Pack" (Src.Zymmer).</summary>
+        /// <summary>The Siege Pack's equipment, once each: the pieces Zymmer's notes and Hex Codex list under "Siege Pack" (Src.Zymmer, Src.HexCodex: 15).</summary>
         private static bool SiegeEquipment(System.Random rng, PurchaseItemResponse r)
         {
             List<InventoryItemData> left = Zymmer.Equipment("Siege Pack").FindAll(i => Inventory.Count(i.m_Id) == 0);

@@ -42,5 +42,18 @@ namespace HexRevival
             UITable t = parent.GetComponent<UITable>();
             if (t != null) t.Reposition();
         }
-    }
+    
+        /// <summary>Moves a UI element up by dy pixels: through its anchors when it is an anchored widget (they would put it back), otherwise its position.</summary>
+        public static void ShiftUp(GameObject g, int dy)
+        {
+            if (g == null) return;
+            UIRect w = g.GetComponent<UIRect>();
+            if (w != null && w.isAnchored)
+            {
+                foreach (UIRect.AnchorPoint a in new[] { w.topAnchor, w.bottomAnchor }) if (a.target != null) a.absolute += dy;
+                w.ResetAndUpdateAnchors();
+            }
+            else g.transform.localPosition += new Vector3(0f, dy, 0f);
+        }
+}
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Game.Client;
 using Game.Client.Network.Escrow;
@@ -123,6 +124,8 @@ namespace HexRevival
                     : item.m_Name.StartsWith("Collector's Deck") ? CollectorDeckGold : OtherDeckGold;
                 return new Product { Item = item, Price = gold, Tab = "collectordeck" };
             }
+            string special = SpecialPacks.KindOf(item);
+            if (special != null) return new Product { Item = item, Price = SpecialPacks.GoldPrice(special), Tab = special == "common" || special == "fullset" ? "cardpack" : "special" };
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack != null)
             {
@@ -233,8 +236,20 @@ namespace HexRevival
                 DeckTemplate t = tm.GetDeckTemplate(deckPack.m_DeckTemplateId);
                 foreach (TemplateCardStack st in t.m_DeckResources) r.PurchasedCards.AddRange(Collection.GrantSilently(st.m_idTemplate, st.m_Count));
                 r.PurchasedDeckBits.Add(Decks.CreateFromTemplate(item.m_Name, t));
+                // Its sleeve (the deck's own, Src.Game; a collector deck's "Obtained in the [deck] Collector Deck",
+                // Src.HexCodex), if not owned yet.
+                List<ResourceId> sleeves = new List<ResourceId>();
+                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve) sleeves.Add(t.m_DeckSleeve);
+                foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
+                {
+                    string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
+                    if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
+                }
+                foreach (ResourceId id in sleeves)
+                    if (!Sleeves.Owned(id)) { inventory_bits sb = Inventory.GrantSilently(id); if (sb != null) r.GrantedInventory.Add(sb); }
                 return;
             }
+            if (SpecialPacks.Deliver(item, r)) return;
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack != null)
             {
@@ -268,8 +283,34 @@ namespace HexRevival
             return o.Count + " product(s)" + (o.Count > 0 ? ":\n" + string.Join("\n", o.ToArray()) : "");
         }
 
+        /// <summary>Dev: "store open <product id>" = delivers one product without paying (as bought), and lists what it gave.</summary>
+        public static string DevOpen(ulong id)
+        {
+            Items();
+            Product p;
+            if (!s_Products.TryGetValue(id, out p)) return "no product " + id;
+            PurchaseItemResponse r = LocalServer.Ok<PurchaseItemResponse>();
+            r.PurchasedInventory = new List<inventory_bits>(); r.PurchasedDeckBits = new List<deck_bits>(); r.PurchasedCards = new List<card_instance_bits>();
+            r.GrantedInventory = new List<inventory_bits>(); r.GrantedDeckBits = new List<deck_bits>(); r.GrantedCards = new List<card_instance_bits>();
+            Deliver(p.Item, r);
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<string> o = new List<string>();
+            foreach (card_instance_bits c in r.PurchasedCards.Concat(r.GrantedCards))
+            {
+                CardTemplate t = tm.GetCardTemplate(c.TemplateID);
+                o.Add(t != null ? t.m_Name.Trim() + " (" + t.m_CardRarity + ", " + t.CardShards + ")" : c.TemplateID.ToString());
+            }
+            foreach (inventory_bits i in r.PurchasedInventory.Concat(r.GrantedInventory))
+            {
+                InventoryItemData d = tm.GetInventoryItem(i.TemplateID);
+                o.Add(d != null ? d.m_Name.Trim() + " [" + d.GetType().Name + "]" : i.TemplateID.ToString());
+            }
+            Saves.SaveCurrent();
+            return p.Item.m_Name.Trim() + ": " + o.Count + " item(s)\n" + string.Join("\n", o.ToArray());
+        }
+
         /// <summary>A Kismet's Reserve pack: its theme's cards, equipment and mercenary (Src.Zymmer + Src.Game, see Zymmer.KismetBundle).</summary>
-        private static void DeliverKismet(InventoryItemData item, PurchaseItemResponse r)
+        internal static void DeliverKismet(InventoryItemData item, PurchaseItemResponse r)
         {
             foreach (Loot.Drop d in Zymmer.KismetBundle(item.m_Name))
             {
@@ -278,6 +319,14 @@ namespace HexRevival
                 if (m != null) { Mercenaries.Grant(m, r); continue; }
                 inventory_bits inv = Inventory.GrantSilently(d.Item);
                 if (inv != null) r.GrantedInventory.Add(inv);
+            }
+            // "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER).
+            string short_ = item.m_Name.Replace("Kismet's Reserve Pack", "").Replace("Pack", "").Trim();
+            if (short_.Length > 0 && UnityEngine.Random.value < 0.2f)
+            {
+                InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching("^Available in the " + System.Text.RegularExpressions.Regex.Escape(short_) + " Kismet's Reserve Pack"));
+                inventory_bits sb = sl != null ? Inventory.GrantSilently(sl.m_Id) : null;
+                if (sb != null) r.GrantedInventory.Add(sb);
             }
         }
 
