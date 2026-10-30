@@ -64,6 +64,15 @@ namespace HexRevival
             return NewInstance(template);
         }
 
+        /// <summary>Takes n of this item from the save (opened packs).</summary>
+        public static void Remove(ResourceId template, int n)
+        {
+            int have;
+            if (!s_Counts.TryGetValue(template, out have)) return;
+            if (have <= n) s_Counts.Remove(template); else s_Counts[template] = have - n;
+            SaveFile();
+        }
+
         /// <summary>How many of this item the save owns.</summary>
         public static int Count(ResourceId template)
         {

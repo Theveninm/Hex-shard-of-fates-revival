@@ -14,7 +14,7 @@ namespace HexRevival
     /// <summary>
     /// Local store (replaces the escrow server's catalog and purchases): the game's booster packs, decks,
     /// primal packs and battleboards for gold, and the Prize Exchange for Siege Sacks and Cosmic Coins.
-    /// Packs are opened as soon as they are bought.
+    /// Bought packs go to the inventory, opened on the game's Pack Opening screen with their chest (Packs).
     ///
     /// Prices: the original store sold boosters for platinum, 200 platinum ($2) for a current set
     /// pack (Progression.Src.Forum2017). Platinum cannot be earned offline, so the mod sells them
@@ -222,8 +222,6 @@ namespace HexRevival
             return true;
         }
 
-        private static readonly System.Random s_Rng = new System.Random();
-
         /// <summary>One bought product, into the response (opened packs as granted cards: the loot window).</summary>
         private static void Deliver(InventoryItemData item, PurchaseItemResponse r)
         {
@@ -240,14 +238,14 @@ namespace HexRevival
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack != null)
             {
-                CardSetTemplate set = tm.CardSets[pack.m_SetId];
-                if (pack.m_CardPackType == ECardPackType.PrimalPack) { GrantPrimal(set, r.GrantedCards); return; }
-                foreach (CardTemplate t in Progression.OpenPack(set)) r.GrantedCards.AddRange(Collection.GrantSilently(t.m_Id, 1));
-                Mercenaries.BoosterDrop(set.m_Name, r, s_Rng);
-                if (UnityEngine.Random.value < PrimalChance)
+                // To the inventory: opened on the Pack Opening screen, with its chest (see Packs).
+                inventory_bits bought = Inventory.GrantSilently(pack.m_Id);
+                if (bought != null) r.PurchasedInventory.Add(bought);
+                if (pack.m_CardPackType == ECardPackType.BoosterPack && UnityEngine.Random.value < PrimalChance)
                 {
-                    GrantPrimal(set, r.GrantedCards);
-                    Notices.Show(Loc.Get("primal_pack"));
+                    ResourceId primal = PrimalOf(pack.m_SetId);
+                    inventory_bits bonus = primal.IsValid ? Inventory.GrantSilently(primal) : null;
+                    if (bonus != null) { r.GrantedInventory.Add(bonus); Notices.Show(Loc.Get("primal_pack")); }
                 }
                 return;
             }
@@ -283,11 +281,15 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Primal pack: 2 legendaries and 13 rares of the set (Src.Forum2017; its legendary chest is not given).</summary>
-        private static void GrantPrimal(CardSetTemplate set, List<card_instance_bits> into)
+        /// <summary>The set's primal pack item (invalid if it has none).</summary>
+        private static ResourceId PrimalOf(ResourceId set)
         {
-            for (int k = 0; k < 2; k++) AddRandom(set, Game.Shared.Mechanics.ERarity.Legendary, into);
-            for (int k = 0; k < 13; k++) AddRandom(set, Game.Shared.Mechanics.ERarity.Rare, into);
+            foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                InventoryCardPack p = i as InventoryCardPack;
+                if (p != null && p.m_SetId == set && p.m_CardPackType == ECardPackType.PrimalPack) return p.m_Id;
+            }
+            return ResourceId.Invalid;
         }
 
         // ------------------------------------------------------------------
@@ -311,12 +313,6 @@ namespace HexRevival
             inv.EscrowStatus = "";
             inv.OwnerReckId = owner.GetInstanceId();
             return inv;
-        }
-
-        private static void AddRandom(CardSetTemplate set, Game.Shared.Mechanics.ERarity rarity, List<card_instance_bits> into)
-        {
-            CardTemplate t = Progression.RandomCard(set, rarity, null);
-            if (t != null) into.AddRange(Collection.GrantSilently(t.m_Id, 1));
         }
 
         private static void SetError(PurchaseItemResponse r, string name)

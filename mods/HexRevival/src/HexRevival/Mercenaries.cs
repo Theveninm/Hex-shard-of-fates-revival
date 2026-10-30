@@ -16,7 +16,7 @@ namespace HexRevival
     /// Campaign mercenaries (AZ2 rewards: Augustine, Katsuhiro, Mayor Galway, Sister of the Herd; Sin'glar at account
     /// level 9; Rosina Leckermaul in Siege Packs; from Zymmer's notes (Src.Zymmer): G24A-19 and Sister of the Herd in
     /// Alachian Sea Packs, Clatterclank in Great Machine Graveyard Packs (Loot), the four Kismet's Reserve mercenaries
-    /// in the store's Kismet packs (Store), the set chest mercenaries in account level chests (Progression); all of
+    /// in the store's Kismet packs (Store), the set chest mercenaries in account level and booster chests, the Wheel of Fate ones on the wheel (Packs); all of
     /// them on "unlock everything" saves). A mercenary is
     /// an inventory item (InventoryMercenaryData); the reward window's "MERCPAC" line makes the client put it in
     /// the champion's party with its starter deck, saved as a profile deck template (see DeckTemplates). The party
@@ -113,14 +113,6 @@ namespace HexRevival
             return true;
         }
 
-        /// <summary>
-        /// PLACEHOLDER chance that an opened booster also brings a mercenary of its set. In the original, every opened
-        /// pack came with a chest, opened with gold on the Wheel of Fate (Src.Forum2017), and the set mercenaries came
-        /// from those chests and from the wheel (Src.Game: their item descriptions, "Herofall WOF", "Herofall Chest"...).
-        /// The mod has no chests: the booster itself may bring one. Odds unknown.
-        /// </summary>
-        public const double BoosterChance = 0.02;
-
         /// <summary>The mercenaries of a card set's chests and Wheel of Fate (by their item description; Zymmer's notes list the same 54, Src.Zymmer).</summary>
         public static List<InventoryMercenaryData> OfSet(string setName)
         {
@@ -137,13 +129,6 @@ namespace HexRevival
             return res;
         }
 
-        /// <summary>An opened booster of this set: maybe one of its mercenaries not owned yet (see BoosterChance).</summary>
-        public static void BoosterDrop(string setName, Game.Client.Network.Escrow.PurchaseItemResponse r, System.Random rng)
-        {
-            if (Saves.Current == null || Saves.Current.UnlockAll || rng.NextDouble() >= BoosterChance) return;
-            List<InventoryMercenaryData> left = OfSet(setName).FindAll(m => Inventory.Count(m.m_Id) == 0);
-            if (left.Count > 0) Grant(left[rng.Next(left.Count)], r);
-        }
 
         /// <summary>
         /// An owned mercenary with a starter deck gets it as a party deck template, if it has none: the party screen

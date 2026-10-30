@@ -89,6 +89,8 @@ namespace HexRevival
                 // cards/decks/gold are already loaded at this point.
                 Debug.Log("[HexRevival] [Profile] end of GetUserProfileInfoResponse ignored: " + (e.InnerException != null ? e.InnerException.Message : e.Message));
             }
+            try { Packs.LoadClient(profile); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Profile] chests: " + e); }
             Progression.RefreshAccountUi();
             Debug.Log("[HexRevival] [Profile] local profile loaded: account '" + Saves.Current.Name + "', " + bits.Cards.Count + " cards, gold " + bits.Gold);
         }

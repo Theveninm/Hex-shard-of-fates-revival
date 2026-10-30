@@ -23,7 +23,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 
 - **Start screen**: online play, or an offline account (create one: everything unlocked or earned by playing,
   tutorial, starting gold).
-- **Campaign**: your campaign champions on the game's own world maps, the Howling Plains (AZ1) and
+- **Campaign**: a new champion starts in its race's hometown (story, sparring match, the quest to Castle Crayburn),
+  then your campaign champions play on the game's own world maps, the Howling Plains (AZ1) and
   the Alachian Sea (AZ2, reached by boat), with their quests, hubs and dialogues, the ten dungeons
   (Castle Crayburn to the Ruins of Kukatan), mercenaries, and the sea voyages of your own ship.
   Rewards follow what gameplay videos of the original game show (see [docs/PROGRESSION.md](docs/PROGRESSION.md));
@@ -47,7 +48,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   button of the top bar opens the [Discord server](https://discord.gg/4TWeErkhe), where players meet to talk about
   the game and find opponents.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
-  primal packs and battleboards, sold for gold.
+  primal packs and battleboards, sold for gold. Boosters are opened on the game's Pack Opening screen, each with a
+  treasure chest you can spin on the Wheel of Fate.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
   progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
@@ -166,11 +168,12 @@ What is left is marked **PLACEHOLDER** (a value or behaviour chosen without a so
 - **Inferred from the game data only** (never filmed): White Hawk's second dialogue, Milosh's repeat visits on
   the Road of Acorns, the order of the Brutecrown Delta quest giver's dialogues.
 - **Still PLACEHOLDER**:
-  - **Campaign:** the Sapphire Gate key (the gate is open), when exactly Scylla and Charybdis start attacking,
+  - **Campaign:** when the hometown's quest giver appears, the Sapphire Gate key (the gate is open), when exactly Scylla and Charybdis start attacking,
     two battle rewards never seen on video (Finanif, the Tomb of Omens), Sister Midnight's two unseen forms,
     which gaal fortune is drawn, talent points per level, the AZ2 map battles without a reward on video.
-  - **Account and loot:** the starting gold and collection of a new account, and the rarity weights of campaign
-    packs (AZ1 packs follow a community loot table of 2016).
+  - **Account and loot:** the starting gold and collection of a new account, the rarity weights of campaign
+    packs (AZ1 packs follow a community loot table of 2016), and the Wheel of Fate's reel colors (its outcomes
+    follow a players' survey of 2,167 spins).
 - **Not reproduced (information not found)**: the dungeons' optional "Challenge Completed" bonus, the rare "Pappy
   Jasper's Whip", the Kraken's Dark Chamber (+1 charge), mercenary leveling, the source of some mercenaries, sea
   weather effects.

@@ -145,6 +145,8 @@ namespace HexRevival
 
             // ---- Dungeon battles (key "<dungeon>/<node>[/<fight>]", see Dungeons): Src.Video (MyHotStream
             // Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted.
+            // The hometown's sparring match (see Hometown). Src.Video: Amaz, Let's Play part 2 9:15 (Vennen, Zilth): 50 gold, 100 XP.
+            { "home/spar", R(50, 100) },
             // Castle Crayburn (the castle's own reward is the quest's, see OnCrayburnDone)
             { "crayburn/CastleGate", R(50, 100) },
             { "crayburn/TowerGate", R(50, 100) },
@@ -707,7 +709,7 @@ namespace HexRevival
         }
 
         /// <summary>Same, given to the client right away (account level rewards, outside the campaign map).</summary>
-        private static void GiveDrop(Loot.Drop d)
+        internal static void GiveDrop(Loot.Drop d)
         {
             if (d == null) return;
             if (d.Card != null) { Collection.Grant(d.Card.m_Id, 1); return; }
@@ -764,9 +766,9 @@ namespace HexRevival
         // ==================================================================
 
         /// <summary>
-        /// Booster content. 17 cards per pack (Src.Forum2017: 3 packs = 51 cards). Rarity split
-        /// PLACEHOLDER (assumed): 1 top card (legendary 1 time in 8; otherwise epic 1 time in 5 in
-        /// the sets that have epics, from Frostheart; otherwise rare), 3 uncommons, 13 commons;
+        /// Booster content. 17 cards per pack: 12 commons, 4 uncommons, 1 rare or legendary (Src.Game: the store's
+        /// "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is
+        /// legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have epics (from Frostheart), else rare;
         /// basic shards are not included. The campaign sets (AZ1, AZ2) have no commons (Src.Game):
         /// their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown).
         /// </summary>
@@ -778,8 +780,8 @@ namespace HexRevival
             CardTemplate top = v < 0.125f ? RandomCard(set, ERarity.Legendary, null)
                 : v < 0.125f + 0.875f * 0.2f ? RandomCard(set, ERarity.Epic, null) : null;
             res.Add(top ?? RandomCard(set, ERarity.Rare, null));
-            for (int i = 0; i < 3; i++) res.Add(RandomCard(set, ERarity.Uncommon, null));
-            for (int i = 0; i < 13; i++) res.Add(RandomCard(set, ERarity.Common, null) ?? RandomCard(set, ERarity.Uncommon, null));
+            for (int i = 0; i < 4; i++) res.Add(RandomCard(set, ERarity.Uncommon, null));
+            for (int i = 0; i < 12; i++) res.Add(RandomCard(set, ERarity.Common, null) ?? RandomCard(set, ERarity.Uncommon, null));
             res.RemoveAll(c => c == null);
             return res;
         }
