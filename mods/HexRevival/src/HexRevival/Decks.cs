@@ -727,6 +727,8 @@ namespace HexRevival
         {
             object champ = Champions.Handle(args);
             if (champ != null) return champ;
+            object packs = Packs.Handle(args);   // pack opening, chests, Wheel of Fate
+            if (packs != null) return packs;
             AddNewDeckRequestArgs add = args as AddNewDeckRequestArgs;
             if (add != null)
             {

@@ -164,6 +164,13 @@ namespace HexRevival
             { "Shards of Fate", "Shattered Destiny", "Armies of Myth", "Primal Dawn", "Herofall", "Scars of War", "Frostheart", "Dead of Winter", "Doombringer" };
 
         /// <summary>The set's number (1-9) for a PvP set, 0 otherwise.</summary>
+        /// <summary>An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary>
+        public static Loot.Drop WheelEquipment(string source)
+        {
+            List<InventoryItemData> l = Equipment(source);
+            return l.Count > 0 ? new Loot.Drop { Item = l[UnityEngine.Random.Range(0, l.Count)].m_Id } : null;
+        }
+
         public static int SetNumber(CardSetTemplate set)
         {
             return set == null ? 0 : Array.IndexOf(PvPSets, set.m_Name) + 1;
