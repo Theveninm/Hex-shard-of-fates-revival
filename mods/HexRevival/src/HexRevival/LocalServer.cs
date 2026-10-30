@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using Game.Client.Network.Profile;
 using Game.Shared;
 using Game.Shared.Domain;
 using Game.Shared.Network;
+using Game.Shared.Network.Profile;
 using UnityEngine;
 
 namespace HexRevival
@@ -24,7 +26,16 @@ namespace HexRevival
             public int TransactionId;
             public object Response;
             public MessageHandler Callback;
+            /// <summary>Time.realtimeSinceStartup at which the answer is delivered.</summary>
+            public float Due;
         }
+
+        /// <summary>
+        /// Delay of an opened pack's answer, in seconds, like the real servers' few hundred milliseconds: a pack
+        /// dropped into the fountain only starts its camera move and drop animation once the drag is over, and an
+        /// answer on the next frame ended the opening before it began (cards scattered, issue #25).
+        /// </summary>
+        public const float PackAnswerDelay = 1f;
 
         private static readonly Queue<Pending> s_Pending = new Queue<Pending>();
         private static Dictionary<int, Type> s_TxTypes;
@@ -61,8 +72,10 @@ namespace HexRevival
                 return false;
             }
             Debug.Log("[HexRevival] [LocalServer] " + args.GetType().Name + " -> " + resp.GetType().Name);
+            OpenCardPackResponse pack = resp as OpenCardPackResponse;
+            float delay = pack != null && pack.Error == EOpenCardPackError.Ok ? PackAnswerDelay : 0f;
             lock (s_Pending)
-                s_Pending.Enqueue(new Pending { TransactionId = dw.DataType, Response = resp, Callback = callback });
+                s_Pending.Enqueue(new Pending { TransactionId = dw.DataType, Response = resp, Callback = callback, Due = Time.realtimeSinceStartup + delay });
             return true;
         }
 
@@ -111,7 +124,7 @@ namespace HexRevival
             });
         }
 
-        /// <summary>Delivers pending responses (main thread, one frame after the request).</summary>
+        /// <summary>Delivers pending responses (main thread, one frame after the request, or when due), in order.</summary>
         public static void Pump()
         {
             while (true)
@@ -130,7 +143,8 @@ namespace HexRevival
                 Pending p;
                 lock (s_Pending)
                 {
-                    if (s_Pending.Count == 0) return;
+                    // In order: a later answer waits behind a delayed one.
+                    if (s_Pending.Count == 0 || s_Pending.Peek().Due > Time.realtimeSinceStartup) return;
                     p = s_Pending.Dequeue();
                 }
                 try
@@ -143,6 +157,7 @@ namespace HexRevival
                         if (d != null) d.DynamicInvoke(p.Response);
                     }
                     if (p.Callback != null) p.Callback(p.Response);
+                    if (p.Response is OpenCardPackResponse) Packs.OnPackAnswerDelivered();
                 }
                 catch (Exception e)
                 {
