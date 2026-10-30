@@ -8,36 +8,36 @@
       "url": "{latestUrl}"
     },
     {
-      "id": "release-1.2.9",
+      "id": "release-1.2.10",
       "when": "noupdate",
       "image": "card:Phoenix Guard Messenger",
       "title": {
-        "en": "HEX Revival 1.2.9",
-        "fr": "HEX Revival 1.2.9",
-        "de": "HEX Revival 1.2.9",
-        "es": "HEX Revival 1.2.9",
-        "it": "HEX Revival 1.2.9",
-        "pt": "HEX Revival 1.2.9",
-        "pl": "HEX Revival 1.2.9",
-        "ru": "HEX Revival 1.2.9",
-        "tr": "HEX Revival 1.2.9",
-        "ja": "HEX Revival 1.2.9",
-        "zh": "HEX Revival 1.2.9"
+        "en": "HEX Revival 1.2.10",
+        "fr": "HEX Revival 1.2.10",
+        "de": "HEX Revival 1.2.10",
+        "es": "HEX Revival 1.2.10",
+        "it": "HEX Revival 1.2.10",
+        "pt": "HEX Revival 1.2.10",
+        "pl": "HEX Revival 1.2.10",
+        "ru": "HEX Revival 1.2.10",
+        "tr": "HEX Revival 1.2.10",
+        "ja": "HEX Revival 1.2.10",
+        "zh": "HEX Revival 1.2.10"
       },
       "text": {
-        "en": "HEX Revival now runs on the macOS version of the game too (thanks to Criesener): download HexRevival-1.2.9-macOS.zip from the release page.",
-        "fr": "HEX Revival fonctionne maintenant aussi sur la version macOS du jeu (merci à Criesener) : télécharge HexRevival-1.2.9-macOS.zip sur la page de la version.",
-        "de": "HEX Revival läuft jetzt auch mit der macOS-Version des Spiels (danke an Criesener): Lade HexRevival-1.2.9-macOS.zip von der Release-Seite herunter.",
-        "es": "HEX Revival ahora también funciona con la versión para macOS del juego (gracias a Criesener): descarga HexRevival-1.2.9-macOS.zip desde la página de la versión.",
-        "it": "HEX Revival ora funziona anche con la versione macOS del gioco (grazie a Criesener): scarica HexRevival-1.2.9-macOS.zip dalla pagina della versione.",
-        "pt": "O HEX Revival agora também funciona na versão macOS do jogo (obrigado ao Criesener): baixe HexRevival-1.2.9-macOS.zip na página da versão.",
-        "pl": "HEX Revival działa teraz także z wersją gry na macOS (dzięki Criesenerowi): pobierz HexRevival-1.2.9-macOS.zip ze strony wydania.",
-        "ru": "HEX Revival теперь работает и с версией игры для macOS (спасибо Criesener): скачайте HexRevival-1.2.9-macOS.zip на странице выпуска.",
-        "tr": "HEX Revival artık oyunun macOS sürümünde de çalışıyor (Criesener'a teşekkürler): sürüm sayfasından HexRevival-1.2.9-macOS.zip dosyasını indir.",
-        "ja": "HEX Revival がゲームの macOS 版でも動作するようになりました（Criesener に感謝）。リリースページから HexRevival-1.2.9-macOS.zip をダウンロードしてください。",
-        "zh": "HEX Revival 现在也支持游戏的 macOS 版本（感谢 Criesener）：请在发布页面下载 HexRevival-1.2.9-macOS.zip。"
+        "en": "New champions start in their hometown with a sparring match before Castle Crayburn. Boosters open on the Pack Opening screen with a treasure chest to spin on the Wheel of Fate. Battles use the scenario's battleboard.",
+        "fr": "Les nouveaux champions commencent dans leur ville natale avec un combat d'entraînement avant le château de Crayburn. Les boosters s'ouvrent sur l'écran d'ouverture de paquets, avec un coffre à faire tourner sur la Roue du Destin. Les combats utilisent le plateau du scénario.",
+        "de": "Neue Champions beginnen in ihrer Heimatstadt mit einem Übungskampf vor Burg Crayburn. Booster werden auf dem Pack-Öffnungsbildschirm geöffnet, mit einer Schatztruhe für das Schicksalsrad. Kämpfe nutzen das Spielbrett des Szenarios.",
+        "es": "Los nuevos campeones empiezan en su ciudad natal con un combate de entrenamiento antes del castillo de Crayburn. Los sobres se abren en la pantalla de apertura de sobres, con un cofre para girar en la Rueda del Destino. Las batallas usan el tablero del escenario.",
+        "it": "I nuovi campioni iniziano nella loro città natale con un incontro di allenamento prima del castello di Crayburn. Le buste si aprono nella schermata di apertura, con uno scrigno da far girare sulla Ruota del Destino. Le battaglie usano il tabellone dello scenario.",
+        "pt": "Novos campeões começam na sua cidade natal com uma luta de treino antes do Castelo Crayburn. Os boosters abrem na tela de abertura de pacotes, com um baú para girar na Roda do Destino. As batalhas usam o tabuleiro do cenário.",
+        "pl": "Nowi czempioni zaczynają w swoim rodzinnym mieście od walki treningowej przed zamkiem Crayburn. Boostery otwiera się na ekranie otwierania paczek, ze skrzynią do zakręcenia na Kole Losu. Bitwy używają planszy scenariusza.",
+        "ru": "Новые чемпионы начинают в родном городе с тренировочного боя перед замком Крейберн. Бустеры открываются на экране открытия наборов, с сундуком для Колеса судьбы. В боях используется поле сценария.",
+        "tr": "Yeni şampiyonlar Crayburn Kalesi'nden önce memleketlerinde bir antrenman maçıyla başlar. Boosterlar paket açma ekranında, Kader Çarkı'nda çevrilecek bir hazine sandığıyla açılır. Savaşlar senaryonun oyun tahtasını kullanır.",
+        "ja": "新しいチャンピオンはクレイバーン城の前に故郷での練習試合から始まります。ブースターはパック開封画面で開封され、運命の輪で回せる宝箱が付きます。バトルはシナリオのバトルボードを使用します。",
+        "zh": "新英雄会先在家乡进行一场练习赛，然后前往克雷伯恩城堡。补充包在开包界面打开，并附带一个可在命运之轮上转动的宝箱。战斗使用剧情指定的战场。"
       },
-      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.9"
+      "url": "https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/tag/1.2.10"
     },
     {
       "id": "discord",

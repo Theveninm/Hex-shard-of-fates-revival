@@ -182,7 +182,7 @@ namespace HexRevival
         /// 1 item (2 for a legendary chest); a mercenary 5% of the time from a rare or better chest (only one not owned),
         /// a PvE card 15% of the time, otherwise an equipment whose rarity follows the chest's (common chest: common 70% /
         /// uncommon 30%; uncommon: uncommon 70 / rare 30; rare: rare 75 / legendary 25; legendary: legendary).
-        /// The original chests were opened by a paid spin of the Wheel of Fate, which the mod does not have.
+        /// Booster chests can first be spun on the Wheel of Fate (see Packs).
         /// </summary>
         public static List<Loot.Drop> OpenChest(int setNumber, ERarity chest)
         {
