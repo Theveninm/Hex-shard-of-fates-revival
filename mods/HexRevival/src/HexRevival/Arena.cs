@@ -309,6 +309,8 @@ namespace HexRevival
         }
 
         private static bool s_InBattle;
+        /// <summary>True while an arena battle is being fought (see Boards).</summary>
+        public static bool InBattle { get { return s_InBattle; } }
 
         /// <summary>End of a match. Returns true if it was an arena battle.</summary>
         public static bool OnGameEnded(bool won)

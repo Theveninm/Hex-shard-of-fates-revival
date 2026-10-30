@@ -211,6 +211,9 @@ namespace HexRevival
             apply("GoHUDPlayer.UpdateAbilityButtons", () => Finalizer(harmony, typeof(GoHUDPlayer), "UpdateAbilityButtons"));
             // Equipment tray of the battle HUD: the session sets the equipment while it loads the decks, before the battle
             // screen listens to EquipmentSet, so the tray stayed closed (the equipment itself works). Shown at game start.
+            // Battleboard: the battle's scene (campaign, dungeons) or the arena's frozen lake, before the decks' boards.
+            apply("UIBattle.Start (battleboard)", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIBattle), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "UIBattle_Start")));
             apply("UIBattle.OnGameStarted (equipment tray)", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnGameStarted"), postfix: new HarmonyMethod(typeof(Hooks), "UIBattle_OnGameStarted")));
 
@@ -665,6 +668,7 @@ namespace HexRevival
             catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] [Taming] tame: " + e.Message); }
         }
 
+        public static void UIBattle_Start(UIBattle __instance) { Boards.OnBattleStart(__instance); }
         public static void UIBattle_OnGameStarted(UIBattle __instance)
         {
             try
