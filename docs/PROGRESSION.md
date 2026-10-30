@@ -37,7 +37,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
 | Survey2014 | players' Wheels of Fate survey, 2014: 2,167 spins by chest rarity and outcome (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw) |
 | Survey2015 | players' treasure chest survey, 2015: chests from boosters and what they held (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs) |
-| HexCodex | Hex Codex, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its tournament database (46,674 decks from 1,550 constructed events, 2016-2020), its sleeve list (how each of the 425 sleeves was obtained, `assets/sleeve_sources.txt` by `tools/gen_sleeves.py`), and its Frost Ring Arena, Siege and Dueling Pit pages, which quote the game's own texts |
+| HexCodex | Hex Codex, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its equipment list (where each piece was obtained: 138 pieces Zymmer's notes miss are added to the same pools, `assets/codex_equipment.txt` by `tools/gen_codex_equipment.py`; its mercenary list agrees with the notes), its tournament database (46,674 decks from 1,550 constructed events, 2016-2020), its sleeve list (how each of the 425 sleeves was obtained, `assets/sleeve_sources.txt` by `tools/gen_sleeves.py`), and its Frost Ring Arena, Siege and Dueling Pit pages, which quote the game's own texts |
 | Wiki | HEX fandom wiki (hextcg.fandom.com), mostly 2014-2015 pages: "Treasure Chest", "Wheels of Fate" |
 
 ## New account
@@ -644,7 +644,7 @@ The game has 425 sleeves; how each was obtained comes from HexCodex. The mod giv
 | Ladder seasons (166) | reaching a tier (Bronze 0, Silver 10, Gold 25, Platinum 45, Cosmic 70 stars) in a season gives that season's tier sleeve, and those below; the seasons run in the sleeves' order (Season 1 ... 2021 Season 6), 2 months each from the account's first ranked game, then start over; the ladder bar shows the season's sleeves | HexCodex; season length and tier stars PLACEHOLDER |
 | Kismet's Draft (7) | a draft gauntlet run with 3 wins | HexCodex |
 | Gauntlet Tournaments (6) | a constructed gauntlet run with 3 wins | HexCodex; 3 wins PLACEHOLDER |
-| Holidays (Ardor Day, The Sea Festival, Haunted Harvest, Feast of Abundance, Night of Bells, Questmas) | playing during the holiday: one of its sleeves (any year's) not owned yet, once per holiday and year. Dates: Feb 7-21, Jul 15 - Aug 15, Oct 15 - Nov 5, Nov 15-30, Dec 10 - Jan 5 | HexCodex; dates PLACEHOLDER |
+| Holidays (Ardor Day, The Sea Festival, Haunted Harvest, Feast of Abundance, Night of Bells, Questmas) | playing during the holiday: one of its sleeves (any year's) not owned yet, and one of its equipment pieces (Zymmer, HexCodex), once per holiday and year. Dates: Feb 7-21, Jul 15 - Aug 15, Oct 15 - Nov 5, Nov 15-30, Dec 10 - Jan 5 | HexCodex; dates PLACEHOLDER |
 
 Not obtainable offline: Kickstarter, conventions, tournaments, VIP, community and staff sleeves. An account with
 everything unlocked owns every sleeve, battleboard and coin.

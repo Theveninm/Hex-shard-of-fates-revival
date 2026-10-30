@@ -184,6 +184,28 @@ namespace HexRevival
         // Requests
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// UIArenaCampaignContext.AssignChampionHUD (postfix): the player's portrait and name for a campaign deck. The
+        /// client looks the champion up by the deck's PvP champion only; an arena run is played with a campaign champion
+        /// (a PvE deck), so the portrait stayed empty. As the client's own deck list does (UIDeckContext), the campaign
+        /// champion's template is used.
+        /// </summary>
+        public static void OnAssignChampionHud(UIArenaCampaignContext ctx, DeckCache deckData)
+        {
+            try
+            {
+                if (ctx == null || deckData == null || deckData.m_DeckBits == null || ctx.PlayerChampion != null || deckData.m_DeckBits.PVEChampionId == 0) return;
+                PlayerChampion pc = GameClient.Instance.PlayerProfile.GetPvEChampionById(deckData.m_DeckBits.PVEChampionId);
+                ChampionTemplate t;
+                if (pc == null || !Singleton<TemplateManager>.Instance.Champions.TryGetValue(pc.TemplateId, out t)) return;
+                typeof(UIArenaCampaignContext).GetField("playerChampion", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).SetValue(ctx, t);
+                ctx.ChampionName = pc.Name;
+                ctx.PlayerDeckName = deckData.m_DeckName;
+                ctx.PlayerChampion = t;
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Arena] portrait: " + e.Message); }
+        }
+
         /// <summary>The arena screen starts: the client's reconnection check, never answered offline, lets it join.</summary>
         public static void OnScreenStart(object viewModel)
         {

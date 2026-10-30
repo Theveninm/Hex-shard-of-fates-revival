@@ -11,7 +11,7 @@ namespace HexRevival
     /// What "Zymmer's notes" say each card, equipment and mercenary came from (Progression.Src.Zymmer): a player's
     /// hand-made catalogue of the game, every entry with the pack, chest, Wheel of Fate, arena or quest that gave it.
     /// Generated into ZymmerData.cs by tools/gen_zymmer.py (data/zymmer_sources.tsv, names matched to the game's ids).
-    /// The notes say WHICH items a source held, never how often: every weight and count drawn from these pools is a
+    /// Hex Codex's equipment list adds the pieces the notes miss (see AddCodexEquipment). The notes say WHICH items a source held, never how often: every weight and count drawn from these pools is a
     /// PLACEHOLDER unless noted.
     ///
     /// Used for: the AZ2 pack and dungeon pack contents (Loot), the AZ1 dungeon packs' own equipment missing from the
@@ -32,6 +32,44 @@ namespace HexRevival
 
         private static Dictionary<string, List<Entry>> s_Sources;
 
+        /// <summary>
+        /// The equipment Hex Codex lists for a source and the notes do not (Src.HexCodex: its equipment list with where each
+        /// piece was obtained; assets/codex_equipment.txt, built by tools/gen_codex_equipment.py): added to the same pools,
+        /// matched to the game's items by name.
+        /// </summary>
+        private static void AddCodexEquipment()
+        {
+            try
+            {
+                Dictionary<string, InventoryEquipmentData> byName = new Dictionary<string, InventoryEquipmentData>(StringComparer.OrdinalIgnoreCase);
+                foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                {
+                    InventoryEquipmentData e = i as InventoryEquipmentData;
+                    if (e != null && !string.IsNullOrEmpty(e.m_Name) && !byName.ContainsKey(e.m_Name.Trim())) byName[e.m_Name.Trim()] = e;
+                }
+                int added = 0;
+                using (System.IO.Stream st = typeof(Zymmer).Assembly.GetManifestResourceStream("HexRevival.codex_equipment.txt"))
+                using (System.IO.StreamReader r = new System.IO.StreamReader(st))
+                {
+                    string line;
+                    while ((line = r.ReadLine()) != null)
+                    {
+                        if (line.Length == 0 || line[0] == '#') continue;
+                        string[] p = line.Split('\t');
+                        InventoryEquipmentData e;
+                        if (p.Length < 2 || !byName.TryGetValue(p[1].Trim(), out e)) continue;
+                        List<Entry> l;
+                        if (!s_Sources.TryGetValue(p[0], out l)) s_Sources[p[0]] = l = new List<Entry>();
+                        if (l.Exists(x => x.Id == e.m_Id)) continue;
+                        l.Add(new Entry { Kind = 'e', Id = e.m_Id, Name = e.m_Name.Trim(), Parent = "" });
+                        added++;
+                    }
+                }
+                Debug.Log("[HexRevival] [Zymmer] " + added + " equipment pieces added from Hex Codex");
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Zymmer] Hex Codex equipment: " + e.Message); }
+        }
+
         /// <summary>Every entry of a source, as named in the notes ("Alachian Sea Pack", "Set 6 Chest Loot"...).</summary>
         public static List<Entry> Source(string source)
         {
@@ -49,6 +87,7 @@ namespace HexRevival
                     }
                     s_Sources[s[0]] = l;
                 }
+                AddCodexEquipment();
             }
             List<Entry> res;
             return s_Sources.TryGetValue(source, out res) ? res : new List<Entry>();

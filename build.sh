@@ -20,5 +20,6 @@ mcs -target:library -nostdlib -noconfig -langversion:7 -debug:portable -nowarn:6
  -resource:mods/HexRevival/assets/discord_badge.png,HexRevival.discord_badge.png \
  -resource:mods/HexRevival/assets/tournament_decks.txt,HexRevival.tournament_decks.txt \
  -resource:mods/HexRevival/assets/sleeve_sources.txt,HexRevival.sleeve_sources.txt \
+ -resource:mods/HexRevival/assets/codex_equipment.txt,HexRevival.codex_equipment.txt \
  mods/HexRevival.BepInEx/Plugin.cs $S/*.cs
 echo "OK -> $OUT"

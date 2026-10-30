@@ -23,7 +23,8 @@ namespace HexRevival
     /// - "Awarded for getting 3 wins in Kismet's Draft events": a draft gauntlet run with 3 wins (Battlegrounds);
     /// - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the
     ///   number of wins, Battlegrounds);
-    /// - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER).
+    /// - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one
+    ///   of the holiday's equipment pieces;
     /// The others (Kickstarter, conventions, tournaments, VIP, staff...) cannot be earned offline. An account with
     /// everything unlocked owns every sleeve (Inventory).
     /// </summary>
@@ -166,10 +167,30 @@ namespace HexRevival
                     InventoryDeckSleeve s = Unowned(Matching("^Awarded during the [0-9]{4} " + Regex.Escape(h) + " Holiday"));
                     Saves.Current.Claims.Add(claim);
                     if (s != null) Grant(s);
+                    GrantHolidayEquipment(h);
                     Saves.SaveCurrent();
                 }
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Sleeves] holidays: " + e.Message); }
+        }
+
+        /// <summary>
+        /// The holiday's equipment as well: one piece not owned yet of its events ("Events - Haunted Harvest 2016"...,
+        /// Src.Zymmer, Src.HexCodex), any year's.
+        /// </summary>
+        private static void GrantHolidayEquipment(string holiday)
+        {
+            string name = holiday.StartsWith("The ") ? holiday.Substring(4) : holiday;   // "Sea Festival" in the equipment lists
+            List<InventoryItemData> pool = new List<InventoryItemData>();
+            for (int y = 2014; y <= 2020; y++)
+                foreach (InventoryItemData i in Zymmer.Equipment("Events - " + name + " " + y))
+                    if (Inventory.Count(i.m_Id) == 0 && !pool.Contains(i)) pool.Add(i);
+            if (pool.Count == 0) return;
+            InventoryItemData e = pool[UnityEngine.Random.Range(0, pool.Count)];
+            inventory_bits b = Inventory.GrantSilently(e.m_Id);
+            if (b == null) return;
+            try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception x) { Debug.LogWarning("[HexRevival] [Sleeves] " + x.Message); }
+            Notices.Show(Loc.Get("holiday_item", e.m_Name.Trim()));
         }
 
         // ------------------------------------------------------------------
