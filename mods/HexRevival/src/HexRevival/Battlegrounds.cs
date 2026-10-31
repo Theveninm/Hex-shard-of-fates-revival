@@ -138,6 +138,30 @@ namespace HexRevival
             catch (Exception e) { Debug.LogError("[HexRevival] [Battlegrounds] save: " + e); }
         }
 
+        /// <summary>
+        /// Whether a deck is a sealed or draft run's (by its id, or the deck builder of such a run): its cards are the
+        /// tournament's pool and its basic shards the mod's (AddBasicShards), not the collection's, so the ownership check
+        /// (Decks.NotOwned) does not apply. Until 1.2.12 it refused them ("You don't own everything in this deck: 20x Blood
+        /// Shard...") and the draft could not be played.
+        /// </summary>
+        public static bool IsLimitedPool(deck_bits b)
+        {
+            if (b == null) return false;
+            Run r = Data.Runs.Find(x => x.Deck != null && b.Id != 0 && x.Deck.Id == b.Id);
+            if (r == null)
+            {
+                try
+                {
+                    TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+                    EGameState state = GameClient.Instance.StateManager.CurrentGameState;
+                    if (cur != null && (state == EGameState.TournamentSideboarding || state == EGameState.TournamentLobby)) r = RunOf(cur.TournamentID);
+                }
+                catch { }
+            }
+            Gauntlet g = r != null ? Find(r.TournamentId) : null;
+            return g != null && (g.Kind == Kind.Draft || g.Kind == Kind.Sealed);
+        }
+
         private static Run RunOf(ulong tournamentId) { return Data.Runs.Find(r => r.TournamentId == tournamentId); }
 
         private static ulong NewInstanceId() { return Data.NextInstance++; }

@@ -1000,12 +1000,14 @@ namespace HexRevival
         /// owns everything. Such a deck is invalid (deck editor, deck choice, mercenary party) and cannot be played: the
         /// original server refused it; the game's own validator does not check ownership (its card check is never
         /// called and its equipment check skips PvE decks). Nothing is removed from the deck. Not checked: "unlock
-        /// everything" accounts (they own everything), the online account, decks made for the AI and other accounts' decks.
+        /// everything" accounts (they own everything), the online account, decks made for the AI and other accounts' decks,
+        /// and the Battlegrounds sealed and draft pools (Battlegrounds.IsLimitedPool).
         /// </summary>
         public static List<string> NotOwned(deck_bits b)
         {
             List<string> res = new List<string>();
             if (b == null || Saves.Current == null || Saves.Current.UnlockAll || Saves.IsOnline) return res;
+            if (Battlegrounds.IsLimitedPool(b)) return res;   // a sealed or draft pool: the tournament's cards
             StoredDeck d;
             if (b.Id != 0 && s_Decks.TryGetValue(b.Id, out d) && (d.Common || d.Foreign || IsForAI(d))) return res;
             Dictionary<ResourceId, int> need = new Dictionary<ResourceId, int>();
