@@ -18,7 +18,7 @@ namespace HexRevival
         /// <summary>
         /// Adds "Show the cheat menu" to the game's display options, as a copy of the "Enable hints" row, and the offline
         /// account's settings to its Account tab (user, 2026-10-30: changed there without making a new account):
-        /// "Platinum prices in gold" (progression accounts) and "Every gem in the campaign" (Saves.Info.AllGems), in place
+        /// "Platinum prices in gold" and "Crafting" (progression accounts) and "Every gem in the campaign" (Saves.Info.AllGems), in place
         /// of "Change Password" and "Enable Authenticator", which do nothing offline. Applied immediately (they do not wait
         /// for the options' Apply button; neither needs a new session: the store and the gem list read them when shown).
         /// Called every frame; does nothing when the options are closed.
@@ -47,6 +47,8 @@ namespace HexRevival
             }
             EnsureRow(row, grid, "HexRevival_GoldPrices", "opt_goldprices", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.GoldPrices, v => { if (Saves.Current != null) { Saves.Current.GoldPrices = v; Saves.SaveCurrent(); } });
+            EnsureRow(row, grid, "HexRevival_Crafting", "opt_crafting", offline && !Saves.Current.UnlockAll,
+                () => Saves.Current != null && Saves.Current.Crafting, v => { if (Saves.Current != null) { Saves.Current.Crafting = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
                 () => Saves.Current != null && Saves.Current.AllGems, v => { if (Saves.Current != null) { Saves.Current.AllGems = v; Saves.SaveCurrent(); } });
         }
