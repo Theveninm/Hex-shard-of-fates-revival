@@ -30,6 +30,17 @@ namespace HexRevival
         private void Awake()
         {
             Log = Logger;
+            HexRevival.Crafting.Enabled = Config.Bind("Crafting", "Enabled", true,
+                "Surplus cards (above 4) and equipment (above 1) break down into gems, ores and parts; missing ones are crafted from them and stardust.").Value;
+            HexRevival.Crafting.GemsPerCard = Math.Max(1, Config.Bind("Crafting", "GemsPerCard", 2, "Gems (or Magical Ore) of the card's rarity and color to craft a card.").Value);
+            HexRevival.Crafting.PartsPerEquipment = Math.Max(1, Config.Bind("Crafting", "PartsPerEquipment", 1, "Parts of the equipment's slot and rarity to craft an equipment.").Value);
+            {
+                string dust = Config.Bind("Crafting", "DustCost", "1,1,1,1", "Stardust to craft, for Common, Uncommon, Rare, Legendary (epic and promo cards: Legendary).").Value;
+                string[] d = dust.Split(',');
+                for (int i = 0; i < 4 && i < d.Length; i++) { int v; if (int.TryParse(d[i].Trim(), out v) && v >= 0) HexRevival.Crafting.DustCost[i] = v; }
+            }
+            Hooks.HideAuctionHouse = Config.Bind("UI", "HideAuctionHouse", true,
+                "No Auction House button in the top bar (offline there is nobody to trade with).").Value;
             Harmony harmony = new Harmony("hexrevival");
             int ok = 0, failed = 0;
 
@@ -101,6 +112,9 @@ namespace HexRevival
                 new[] { typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_GetStoreItemsEvent"));
             apply("EscrowService.PurchaseItem.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItemEvent"));
+            // "Unlock extended art" (ExtendedArt): answered here, it waited for the dead server.
+            apply("ProfileService.UpgradeExtendedArtOnCard.Request", () => Prefix(harmony, typeof(Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard), "Request",
+                new[] { typeof(ulong), typeof(ulong), typeof(Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "ExtendedArt_Upgrade"));
             apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
             // End-of-battle campaign events of the game's rules (princess saved, creatures tamed...).
@@ -339,6 +353,25 @@ namespace HexRevival
                 harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "Initialize"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
             apply("UITournamentDeckEditorViewModel.OnAsynchPlayerUpdated", () =>
                 harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "OnAsynchPlayerUpdated"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
+            // Breaking down and crafting on the zoomed card, next to "Unlock extended art" (see CraftUi).
+            apply("UIExtendedArtViewModel.ShowExtendedArtUI", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIExtendedArtViewModel), "ShowExtendedArtUI"), postfix: new HarmonyMethod(typeof(Hooks), "ExtendedArt_Show")));
+            apply("UIExtendedArtViewModel.HideExtendedArtUI", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIExtendedArtViewModel), "HideExtendedArtUI"), postfix: new HarmonyMethod(typeof(Hooks), "ExtendedArt_Hide")));
+            // Shards (not the basic ones): the game shows no extended art panel for resources; ours, without "Unlock".
+            apply("UICardStackPagingViewModel.SetSelectedStack", () =>
+                harmony.Patch(AccessTools.Method(typeof(UICardStackPagingViewModel), "SetSelectedStack",
+                    new[] { typeof(UICardContainerContext), typeof(DeckCache), typeof(bool), typeof(bool), typeof(ulong) }),
+                    postfix: new HarmonyMethod(typeof(Hooks), "CardStack_Shown")));
+            apply("UICardStackPagingViewModel.SetCurrentCard", () =>
+                harmony.Patch(AccessTools.Method(typeof(UICardStackPagingViewModel), "SetCurrentCard"), postfix: new HarmonyMethod(typeof(Hooks), "CardStack_Shown")));
+            apply("GoInventoryIcon.SetIconFromData", () =>
+                harmony.Patch(AccessTools.Method(typeof(GoInventoryIcon), "SetIconFromData"), postfix: new HarmonyMethod(typeof(Hooks), "InventoryIcon_Set")));
+            apply("UIPlayerEquipmentViewModel.OnItemRightClick", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIPlayerEquipmentViewModel), "OnItemRightClick"), postfix: new HarmonyMethod(typeof(Hooks), "Equipment_RightClick")));
+            // The top bar's Auction House button ([UI] HideAuctionHouse): after the game sets its visibility.
+            apply("UIGameMenu.UpdateButtonVisibility", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIGameMenu), "UpdateButtonVisibility"), postfix: new HarmonyMethod(typeof(Hooks), "GameMenu_Buttons")));
             // Featured Content of the main menu: the mod's panels instead of the HEX website's news (see Community).
             apply("UINewsEventsViewModel.Start", () =>
                 harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
@@ -501,6 +534,7 @@ namespace HexRevival
         public static bool Store_GetStoreItems(Game.Client.Network.Escrow.EscrowService.GetStoreItems.ResponseHandler __0) { Store.GetStoreItems(__0); return false; }
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
+        public static bool ExtendedArt_Upgrade(ulong __1, Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard.ResponseHandler __2) { ExtendedArt.Upgrade(__1, __2); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Tournament_OnEntry() { Battlegrounds.OnHubEntered(); }
         public static bool Tournament_TestEntry(ulong __0, Game.Client.Network.Tournaments.TournamentsService.TestTournamentEntry.ResponseHandler __2) { Battlegrounds.TestEntry(__0, __2); return false; }
@@ -708,6 +742,19 @@ namespace HexRevival
         }
 
         public static void UIBattle_Start(UIBattle __instance) { Boards.OnBattleStart(__instance); }
+
+        public static void ExtendedArt_Show(UIExtendedArtViewModel __instance, ICard __0) { CraftUi.OnShow(__instance, __0); }
+        public static void ExtendedArt_Hide() { CraftUi.OnHide(); }
+        public static void CardStack_Shown(UICardStackPagingViewModel __instance) { CraftUi.OnCardShown(__instance); }
+        public static void Equipment_RightClick(object __0) { CraftUi.OnEquipmentRightClick(__0); }
+        public static void InventoryIcon_Set(GoInventoryIcon __instance, Reckoning.Game.InventoryItemData __0) { Crafting.OnIcon(__instance, __0); }
+
+        /// <summary>BepInEx config [UI] HideAuctionHouse.</summary>
+        public static bool HideAuctionHouse = true;
+        public static void GameMenu_Buttons(UIGameMenu __instance)
+        {
+            if (HideAuctionHouse && __instance != null && __instance.Context != null) __instance.Context.AuctionButtonVisible = false;
+        }
         public static void UIBattle_OnGameStarted(UIBattle __instance)
         {
             try
