@@ -523,7 +523,8 @@ namespace HexRevival
             {
                 DrawCard(pr, card);
                 title = card.m_Name;
-                body = Loc.Get("d_card", card.m_ResourceCost, card.m_CardType, RarityName(card.m_CardRarity)) + "\n\n" + Plain(card.m_GameText, card.m_Name)
+                string rules = Plain(card.m_GameText, card.m_Name);   // empty for a card without rules text
+                body = Loc.Get("d_card", card.m_ResourceCost, card.m_CardType, RarityName(card.m_CardRarity)) + (rules.Length > 0 ? "\n\n" + rules : "")
                     + "\n\n" + Loc.Get("pc_owned", Collection.Count(card.m_Id));
             }
             else
