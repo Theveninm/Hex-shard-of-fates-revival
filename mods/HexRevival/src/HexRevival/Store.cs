@@ -27,7 +27,7 @@ namespace HexRevival
         /// <summary>Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary>
         public const int BoosterGoldPrice = 2000;
         /// <summary>Chance of a bonus primal pack with a bought pack. Src.Forum2017 ("about a 2% chance").</summary>
-        private const float PrimalChance = 0.02f;
+        internal const float PrimalChance = 0.02f;
 
         private static List<StoreItem> s_Items;
         private static bool s_ItemsInGold;
@@ -331,7 +331,7 @@ namespace HexRevival
         }
 
         /// <summary>The set's primal pack item (invalid if it has none).</summary>
-        private static ResourceId PrimalOf(ResourceId set)
+        internal static ResourceId PrimalOf(ResourceId set)
         {
             foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {

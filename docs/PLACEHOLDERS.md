@@ -123,6 +123,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 ## Full list (generated)
 | File:line | Comment |
 |---|---|
+| AccountRewards.cs:109 | PLACEHOLDER (see GrantLevelReward) |
 | AiConfig.cs:221 | top those with modifiers for the AI. Which decks in which tier, and the modifiers: PLACEHOLDER (the original |
 | AiConfig.cs:260 | Uruunaz and Zakiir, "extremely rare" (Src.Steam2016; PLACEHOLDER 2% of the common fights where they can |
 | AiConfig.cs:274 | decks above, with modifiers for a large one (PLACEHOLDER: the attackers were players). |
@@ -142,11 +143,11 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:210 | PLACEHOLDER prize: one booster per match won.</summary> |
-| Battlegrounds.cs:867 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:958 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:996 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1042 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:236 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
+| Battlegrounds.cs:995 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:1105 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:1143 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1189 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
@@ -160,16 +161,17 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Loot.cs:112 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
+| PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:30 | for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the |
-| Packs.cs:111 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:157 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:233 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:267 | alternate arts: PLACEHOLDER, see the class |
-| Packs.cs:273 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:334 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
-| Packs.cs:347 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
-| Packs.cs:354 | chests (PLACEHOLDER chance). |
-| Packs.cs:362 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:113 | (PLACEHOLDER chance), given when the opening is over. |
+| Packs.cs:159 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:235 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:269 | alternate arts: PLACEHOLDER, see the class |
+| Packs.cs:275 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:336 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
+| Packs.cs:365 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
+| Packs.cs:372 | chests (PLACEHOLDER chance). |
+| Packs.cs:380 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
@@ -177,18 +179,18 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
 | Progression.cs:150 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
 | Progression.cs:203 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:544 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:751 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:787 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:790 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:906 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:987 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:990 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:993 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1008 | level: PLACEHOLDER). |
-| Progression.cs:1021 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1111 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1112 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:550 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:764 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:800 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:803 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:919 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:1001 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:1004 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:1007 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1022 | level: PLACEHOLDER). |
+| Progression.cs:1035 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1125 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1126 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
 | Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
@@ -196,7 +198,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Sleeves.cs:25 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
 | Sleeves.cs:27 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
 | Sleeves.cs:153 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
-| Sleeves.cs:242 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
+| Sleeves.cs:253 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
 | SpecialPacks.cs:15 | - Full sets (FullSet): one of every card of the set (PLACEHOLDER: one copy); |
 | SpecialPacks.cs:17 | Src.Game): 6 commons, 2 uncommons and 1 rare of the pack's set, of its race (PLACEHOLDER contents); |
 | SpecialPacks.cs:21 | legendaries, or chests" (Src.Game): 12 commons and 4 uncommons (PLACEHOLDER counts, a booster's); |
@@ -220,4 +222,3 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Zymmer.cs:206 | An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |
 | Zymmer.cs:220 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
 | Zymmer.cs:272 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |
-

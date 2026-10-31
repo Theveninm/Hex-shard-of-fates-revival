@@ -66,7 +66,11 @@ shows up once the sparring match is won; the dwarves' elder stands at the Quarry
 
 Rewards are fixed per encounter: the same fight gave the same gold, XP and items to the three champions
 followed on video (Video); only pack contents are random. Gold and XP are given on every win (fights
-replayed on video paid again), the items on the first win only. A campaign battle without a known reward
+replayed on video paid again), the items on the first win only, except a dungeon battle's packs: given on
+every win (Video: Vandersveldt's Tranquil Dream replay; Zymmer 2026-10-31). Packs are given as packs: the reward
+window reads "You received 1 Howling Plains Pack(s)" with an Open button (Video: MHS Ardent 2017-01-15
+[D1m-I19keFw] 2:14), and an unopened pack waits in the inventory (Pack Opening screen). Until 1.2.12 they were
+opened at once. A campaign battle without a known reward
 gives **100 gold + 100 champion XP** (HexServer). Battle rewards (Video unless noted):
 
 | Node | Encounter | Gold | XP | Items (first win) |
@@ -234,6 +238,9 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
 - Gates: the Brink Ridge blockade (fight, sneak, or bribe for 1,000 gold: Game, the guard's answer),
   the Blood Gate (open once "The Blood Beneath" is started: the Blood Key), the Masked Army at the
   Vale of Oberon (open once Usurper / Fort Romor is started).
+- Drawbridges (Game: the "Winston - Step 1/2" and "Wallace - Step 1/2" conversations of the Zila and Zodiac rivers):
+  the river's far bank (Node015, Node038) stays hidden until the bridge quest is done; talking to the bridge keeper
+  starts it. Until 1.2.12 the far bank was revealed with the rest of the map (Zymmer 2026-10-31).
 - Sapphire Gate: open (PLACEHOLDER). No run on video found it locked: every one had the key at its first visit,
   and every one had finished Gnomes Come Home before (Vincent: "Here, take this with you"), which may be where
   the key came from.
@@ -495,8 +502,11 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Constructed Gauntlet | your own deck (60+ cards, a champion, up to 15 reserves); matches best of 3; until 5 wins or 3 losses | Game ("gauntlet-constructed-description") |
 | Sealed Gauntlet | 6 boosters opened (kept), a 40-card deck; single-game matches; until 5 wins or 3 losses | Game ("gauntlet-sealed-description") |
 | Draft Gauntlet | 3 boosters drafted at a table of 8 (cards kept); matches best of 3; 3 matches | Game ("gauntlet-draft-description") |
+| Draft RECORD boxes (deck builder) | one box per match, won or lost, in the order played (the client put every win first, then the losses; runs started before 1.2.13 keep that order); updated as soon as the player is back from a game (they only changed when the screen was opened again); best-of-3 gauntlets show the match in progress next to them ("Match 2: games 1-0") | Zymmer 2026-10-31 |
+| Forfeit (deck builder) | the run ends, the prize of the matches won is given, and the game goes back to the tournament list with its results window (until 1.2.12 the screen stayed dark behind a loading circle: the client waits for the server to send it back) | Game (UIDeckBuilderVM.LeaveTournamentViaForfeit) |
+| Ownership check | sealed and draft decks are the tournament's pool and the mod's basic shards: not checked against the collection (until 1.2.12 they were refused: "You don't own everything in this deck: 20x Blood Shard..."); the constructed gauntlet's deck is checked as any deck | - |
 | Entry fees | constructed 2,000 gold, sealed 12,000 (6 boosters), draft 6,000 (3 boosters) | PLACEHOLDER |
-| Prizes | one booster (opened) per match won | PLACEHOLDER |
+| Prizes | one booster per match won, unopened in the inventory (until 1.2.12 opened at once, their cards listed in the results window, which read as the drafted cards); the drafted or sealed cards are the player's from the end of the draft / the entry and are not shown as a prize | PLACEHOLDER |
 | Boosters of sealed and draft | Doombringer (the last set) | PLACEHOLDER: the server chose the product |
 | Basic shards in a limited pool | 20 of each | PLACEHOLDER |
 | Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (see AI opponents) | PLACEHOLDER (timer); the passing order is the usual one |
@@ -613,17 +623,19 @@ rewarded with some new cards!", Game) with 3 cards: these cards are given, once 
   the period resets 20 hours after its first win.
 - XP per level: 1,000 (level 2) rising to 7,000 (level 41 and up); maximum level 100.
 - Rewards by level: levels 2-40 as listed by the wiki, then the 10-level cycle the game used.
-  The XP bar at the bottom left of the main menu shows level and daily XP; rewards are given
-  automatically on level up (the game made you claim them).
+  The XP bar at the bottom left of the main menu shows level and daily XP. As in the game, a level's
+  rewards are claimed on the account panel (a click on the XP bar: "Rewards Earned", then Claim Rewards);
+  the bar shows "Rewards available" meanwhile. Until 1.2.12 they were given at once on level up; saves
+  from those versions count every level reached as claimed (Zymmer 2026-10-31).
 
 What each reward becomes in the mod:
 
 | Wiki reward | In the mod | Status |
 |---|---|---|
 | Gold | gold | sourced |
-| Howling Plains pack | opened right away (see campaign packs) | sourced |
-| Alachian Sea pack | opened right away (AZ2 cards) | sourced, contents PLACEHOLDER (see packs) |
-| Current set booster | Doombringer booster, opened right away | "current set" = last set: assumption |
+| Howling Plains pack | the campaign's Howling Plains Pack, opened when the player chooses (a second one claimed at the same time is opened right away) | sourced |
+| Alachian Sea pack | the campaign's Alachian Sea Pack, same | sourced, contents PLACEHOLDER (see packs) |
+| Current set booster | a Doombringer Booster Pack in the inventory | "current set" = last set: assumption |
 | 6 fixed commons | 6 random commons of the current set | PLACEHOLDER |
 | 3 random cards | 3 random cards of the current set (common/uncommon/rare weighted 10/3/1) | weights PLACEHOLDER |
 | Stardust | 300 gold | PLACEHOLDER (no stardust yet) |
@@ -691,9 +703,10 @@ platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).
 | Bonus primal pack | 2% chance per bought booster: a primal pack of the same set to the inventory (2 legendaries, 13 rares, 1 legendary chest) | Forum2017; contents Game |
 | Siege Pack | one item: PvE card (at most 4 copies), alternate art card, alternate art shard, sleeve, mercenary (Leckermaul or Angar Krad); smart drops (no sleeve or mercenary twice) | HexTCG2018. Odds PLACEHOLDER: mercenary 5%, sleeve 15%, alternate art card 10%, equipment 10%, shard 20%, PvE card 40%. Pools: Set09_PvE_Promo cards, Set09_PvP_alternates (the game data has no alternate art shard there, so that draw gives an alternate art card), the 9 sleeves marked "Available in the 2018 Siege Pack" (Game), the 5 equipment pieces Zymmer lists under "Siege Pack" (once each). The second mercenary is Angar Krad (Game: his item description reads "Siege Pack") |
 | Kismet's Reserve packs | Oni, Boonberries, Vampire and the plain Kismet's Reserve Pack (Game items): each gives its theme, 2 PvE cards, the 4 equipment that equip them and a mercenary (Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing) | which items: Zymmer (all under "Kismet's Reserve Pack"), split by theme with the equipment's design notes and the mercenaries' descriptions (Game); the plain pack = the 2017 Convocation theme: inferred; the whole theme in one pack and the price: PLACEHOLDER |
-| Cosmic Coin Pack | one item: an alternate art card (at most 4 copies), nearly 1 in 3 a Doombringer booster, rarely one of the 3 sleeves marked "2018 Cosmic Coin Pack" | HexTCG2018; odds PLACEHOLDER (booster 30%, sleeve 5%) |
+| Cosmic Coin Pack | one item: an alternate art card (at most 4 copies), nearly 1 in 3 a Doombringer booster (unopened, since 1.2.13), rarely one of the 3 sleeves marked "2018 Cosmic Coin Pack" | HexTCG2018; odds PLACEHOLDER (booster 30%, sleeve 5%) |
 | Pictures the game lacks (StoreIcons.cs) | the list's small pictures of the Starter Trials packs, the Gauntlet pack, the gift boxes and the Random Previous Kismet Pack: their full icon; Frostlock and Dream Forest battleboards: banner cut from their picture, 3D board = the Badlands model with their picture; gift boxes: the outline put on the chest, no "Bonus chance!" | Game (icons.ab has no thumbnail, banner or model for them) |
 | Other products (SpecialPacks.cs) | opened at purchase, shown in the store's loot window. Full set: one of every ownable card of the set. Starter Trials pack: 6 commons, 2 uncommons, 1 rare of its set and race, all different while there are enough. Common Only Booster Pack: 10 commons of the Standard sets. Standard Format Gauntlet Pack: 12 commons, 4 uncommons of the Standard sets. Doombringer Sharded Draft Pack: a Doombringer booster's 12/4/1 in 2 random shards (and shardless cards). Kismet's Draft Pack: 12/4/1 from all 9 sets. GenCon 2016 Booster Pack: a Herofall booster. Random Previous Kismet Pack: one of the four Kismet's Reserve packs. Gift boxes (Harvest of Souls = Haunted Harvest, Night of Bells, Feast of Abundance): a sleeve and an equipment piece of that holiday not owned yet (the price back in gold when none is left) | the products, their pack types and sets: Game (item data); "10 common cards that are Standard Format legal", "Does not include rares, legendaries, or chests", "Only Generates 2 colors", "A random previously released Kismet Pack": Game (item texts); the Starter Trials earned "free cards for your deck": Game; holiday sleeves and equipment: HexCodex, Zymmer. Every count and the gift boxes' contents: PLACEHOLDER |
+| Store details (PackContents.cs) | for every product the mod describes (boosters, primal packs, the special packs, the Kismet's Reserve packs, the gift boxes, the Siege and Cosmic Coin Packs). Boosters (the game has a card count and a Details window): "All items" under the card count and in the Details window, whose "Drops and rates" button shows the drops in place of its card grid. The other products: a bar in place of the card count ("Cards" as the game would count them, "All items") with a Details button. "Cards" counts what the game's card count counts (the set's commons to legendaries, not the epics); "All items" everything the product can give (also the epics, the chest's cards, equipment, mercenaries, sleeves, packs). The drops are grouped by loot kind with their rate as the mod opens them ("Rare slot: 1 per pack", "Uncommon: 4 per pack", "Common chest: one item among these", sleeves 2%, bonus primal pack 2%...), each pool with its chance and each card's or item's own chance per pack (1 - (1 - chance / pool size) ^ draws). Miniatures: cards with the copies owned; equipment with its slot, rarity and the card it changes; mercenaries with their shards. A right click shows everything: the card's cost, type and text; the equipment's effect; the mercenary's health, shards, party bonus, champion power and deck rules; the drop chance. Not in the original game (Zymmer 2026-10-31 asked for it); the odds shown are the mod's own (PLACEHOLDER as listed above) | - |
 | Cosmic Coins | not earned offline yet (they were a ladder prize); dev command `store cosmic <n>` | - |
 
 The set chests, Stardust (no system for it offline), the Convocation boxes and VIP are not sold.

@@ -39,6 +39,8 @@ namespace HexRevival
             public ETreasureChestType Rarity;
             public EChestSpinStatus Spin;
             public ResourceId Set;   // the booster's card set
+            public ResourceId Template = ResourceId.Invalid;   // a campaign pack's item (Howling Plains Pack...), else invalid
+            public string LootPack;                             // a campaign pack's loot table (Loot.Open), else null
         }
 
         /// <summary>Chest instance ids: apart from the inventory's (numbered from 1 at each login).</summary>
@@ -332,7 +334,7 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary>
-        private const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
+        internal const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
 
         private static OpenChestResponse OpenChests(List<ulong> ids)
         {
@@ -342,6 +344,22 @@ namespace HexRevival
             {
                 Chest c;
                 if (!s_Chests.TryGetValue(id, out c)) { r.Error = EOpenChestError.InvalidChestID; continue; }
+                if (c.LootPack != null)
+                {
+                    // A campaign pack (Howling Plains Pack, Tranquil Dream Pack...): its table's cards and equipment.
+                    List<Loot.Drop> loot = Loot.Open(c.LootPack);
+                    foreach (Loot.Drop d in loot)
+                    {
+                        Progression.GiveDrop(d);
+                        if (d.Card != null) r.cardTemplateIDs.Add(d.Card.m_Id); else r.inventoryTemplateIDs.Add(d.Item);
+                    }
+                    s_Chests.Remove(id);
+                    r.validChestIds.Add(id);
+                    ulong taken = id;
+                    LocalServer.Later(() => { try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(new UID(UID.Type.InventoryItem, taken)); } catch { } });
+                    Debug.Log("[HexRevival] [Packs] campaign pack " + c.LootPack + " opened: " + loot.Count + " item(s)");
+                    continue;
+                }
                 CardSetTemplate set;
                 Singleton<TemplateManager>.Instance.CardSets.TryGetValue(c.Set, out set);
                 // The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER).
@@ -386,7 +404,7 @@ namespace HexRevival
 
         private static chest_bits Bits(Chest c)
         {
-            return new chest_bits { InventoryId = c.Id, ChestRarity = (int)c.Rarity, WOFSpinStatus = (int)c.Spin, BoosterPackType = c.Set, TempateID = BuiltInResources.CommonTreasureChest };
+            return new chest_bits { InventoryId = c.Id, ChestRarity = (int)c.Rarity, WOFSpinStatus = (int)c.Spin, BoosterPackType = c.Set, TempateID = c.Template.IsValid ? c.Template : BuiltInResources.CommonTreasureChest };
         }
 
         private static Chest NewChest(ETreasureChestType rarity, ResourceId set)
@@ -394,6 +412,35 @@ namespace HexRevival
             Chest c = new Chest { Id = s_NextChest++, Rarity = rarity, Spin = EChestSpinStatus.PaidSpin, Set = set };
             s_Chests[c.Id] = c;
             return c;
+        }
+
+        /// <summary>
+        /// A campaign pack won (Src.Video: the reward window read "You received 1 Howling Plains Pack(s)" with an Open
+        /// button, MHS Ardent 2017-01-15 [D1m-I19keFw] 2:14; Zymmer 2026-10-31: packs were opened automatically): a chest of
+        /// the pack's item, given to the client now, opened later (the window's Open button, or the Pack Opening screen)
+        /// for the loot table's cards. Returns the inventory line for the reward window, null if the game has no such item.
+        /// </summary>
+        public static inventory_bits GiveCampaignPack(string lootPack)
+        {
+            InventoryItemData item = null;
+            string name = Loot.PackItemName(lootPack);
+            foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                if (i is InventoryTreasureChest && i.m_Name != null && i.m_Name.Trim() == name) { item = i; break; }
+            if (item == null) return null;
+            Load();
+            Chest c = new Chest { Id = s_NextChest++, Rarity = ETreasureChestType.Common, Spin = EChestSpinStatus.NoSpin, Set = ResourceId.Invalid, Template = item.m_Id, LootPack = lootPack };
+            s_Chests[c.Id] = c;
+            Save();
+            // The client registers the chest itself from the reward's inventory line (CacheRewards: adding it here too
+            // threw "same key").
+            inventory_bits inv = new inventory_bits();
+            inv.Id = c.Id;
+            inv.TemplateID = item.m_Id;
+            inv.ItemQuantity = 1;
+            inv.ClaimDate = DateTime.MinValue;
+            inv.EscrowStatus = "";
+            inv.OwnerReckId = GameClient.Instance.PlayerProfile.ReckoningID.GetInstanceId();
+            return inv;
         }
 
         private static string s_Loaded;
@@ -412,6 +459,8 @@ namespace HexRevival
                     string[] p = line.Split(' ');
                     if (p.Length < 4) continue;
                     Chest c = new Chest { Id = ulong.Parse(p[0]), Rarity = (ETreasureChestType)int.Parse(p[1]), Spin = (EChestSpinStatus)int.Parse(p[2]), Set = new ResourceId(p[3]) };
+                    // A campaign pack: its item, then its loot table (the rest of the line, it may hold spaces).
+                    if (p.Length >= 6) { c.Template = new ResourceId(p[4]); c.LootPack = string.Join(" ", p, 5, p.Length - 5); }
                     s_Chests[c.Id] = c;
                     if (c.Id >= s_NextChest) s_NextChest = c.Id + 1;
                 }
@@ -424,7 +473,8 @@ namespace HexRevival
             try
             {
                 List<string> lines = new List<string>();
-                foreach (Chest c in s_Chests.Values) lines.Add(c.Id + " " + (int)c.Rarity + " " + (int)c.Spin + " " + c.Set);
+                foreach (Chest c in s_Chests.Values)
+                    lines.Add(c.Id + " " + (int)c.Rarity + " " + (int)c.Spin + " " + c.Set + (c.LootPack != null ? " " + c.Template + " " + c.LootPack : ""));
                 File.WriteAllLines(FilePath, lines.ToArray());
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Packs] save: " + e); }
@@ -438,7 +488,7 @@ namespace HexRevival
             foreach (Chest c in s_Chests.Values)
             {
                 profile.AddChestItem(c.Id, Bits(c));
-                profile.AddInventoryItem(new UID(UID.Type.InventoryItem, c.Id), BuiltInResources.CommonTreasureChest, 1);
+                profile.AddInventoryItem(new UID(UID.Type.InventoryItem, c.Id), c.Template.IsValid ? c.Template : BuiltInResources.CommonTreasureChest, 1);
             }
             if (s_Chests.Count > 0) Debug.Log("[HexRevival] [Packs] " + s_Chests.Count + " chest(s) waiting");
         }
