@@ -329,10 +329,12 @@ Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
   Stormwatch 500 / 1000 + AZ2 pack; Lobster Tale 500 / 1000 + Hardshell Sealord; the three done: Alachian
   Sea Sleeve. A sea battle won again pays half its gold and a fifth of its XP (KVC: Overseer 200 / 130).
 - Scylla (NodeB04) and Charybdis (NodeB10) only lurk ("you feel a disturbing presence from beneath your
-  ship", no battle) until one of the three sea quests is done; then they attack (Video: KVC part 14, two
-  "Pre-" passes, the pirates quest turned in, then both attack; MyHotStream Ardent's first voyages show the
-  "Pre-" line, its Underworld run fought both after its sea quests). PLACEHOLDER in part: the same runs also
-  fit "from the third voyage".
+  ship", no battle) until they wake; then they attack on every voyage. Video (quest tracker read on every sea video,
+  its objectives reset when a voyage ends): MyHotStream Ardent was calm on its 3rd and 5th voyages and was attacked on
+  2017-11-21 with no sea quest finished; KVC part 14 was calm on a voyage after Stormwatch was turned in, then attacked
+  on the next one. So neither "after a sea quest" nor "from the 3rd voyage". Once awake, never calm again in any run.
+  The game data holds no condition (server side): they wake for good at the start of a voyage, 1 time in 3
+  (PLACEHOLDER chance).
 - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
   Land".
 

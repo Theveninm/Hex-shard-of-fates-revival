@@ -119,7 +119,7 @@ namespace HexRevival
             // 2017-04-21 [CE1XOa4TyVw] 7:11) and still after it (MHS UW 2017-08-16 [H_u0T4fd7eE] 0:25; the Kraken died on
             // 2017-06-16 [gqA50QebO1w]). "post-Kraken defeated" is in no run: not used (what armed it is unknown).
             { "AZ2/Node016", new[] { R("Bleakwind Highlands", c => true) } },
-            // Scylla and Charybdis: the "Pre-" line and no battle until a sea quest is done, then the attack and the battle
+            // Scylla and Charybdis: the "Pre-" line and no battle until they wake, then the attack and the battle
             // (sources: CampaignBoat.SeaMonstersAwake). Before 1.2.6 either line could be picked and the battle was always on.
             { "AZ2/NodeB04", new[] { R("Pre-Scylla", c => !Campaign.SeaMonstersAwake(c)), R("- Scylla", c => true) } },
             { "AZ2/NodeB10", new[] { R("Pre-Charybdis", c => !Campaign.SeaMonstersAwake(c)), R("- Charybdis", c => true) } },

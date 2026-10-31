@@ -378,7 +378,7 @@ namespace HexRevival
             string f = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
             // The desert's wormoids attack only gnomes in tow (and stay as one-time battles once all are home), see Gnomes.
             if (n.Z == AZ1 && !Gnomes.IsFight(champ, n.Id)) return null;
-            // Scylla and Charybdis only lurk ("Pre-Scylla") until a sea quest is done, see CampaignBoat.SeaMonstersAwake.
+            // Scylla and Charybdis only lurk ("Pre-Scylla") until they wake, see CampaignBoat.SeaMonstersAwake.
             if (n.Z == AZ2 && (n.Id == "NodeB04" || n.Id == "NodeB10") && !SeaMonstersAwake(champ)) return null;
             return EncFor(n, f, Quests.Flag(champ, "choice:" + n.Key));
         }

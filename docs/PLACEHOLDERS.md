@@ -96,7 +96,7 @@ Hogarth's challenge window (the client's is the consoles', without buttons on PC
 | Where | Placeholder | Why it stays |
 |---|---|---|
 | NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit. Not The Blood Beneath (still in the tracker at both visits); no dialogue or item names the key's source (checked 2026-10-31) |
-| CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage"; MHS Ardent (Pre-Scylla 2017-10-31, Scylla after the lobster quest 2017-11-21) fits both too: one video per battle, the voyages cannot be counted |
+| CampaignBoat.cs SeaMonstersAwake | wake chance 1 in 3 per voyage | the trigger was server-side: the quest tracker shows MHS Ardent attacked with no sea quest done after calm 3rd and 5th voyages, and KVC still calm after a quest turn-in; only the chance is a guess (2026-10-31) |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video (checked 2026-10-31: KVC parts 4, 9, 15 and MHS's 2019 Kukatan run go from the Mausoleum to the Black Hall and the Forgotten Crypt) |
 | Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen (Vandersveldt parts 27, 28, 35: the 2016 client shows no form on the board) |
@@ -147,7 +147,8 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:958 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
 | Battlegrounds.cs:996 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
 | Battlegrounds.cs:1042 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
-| CampaignBoat.cs:122 | 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage". |
+| CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
+| CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:387 | PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:706 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
