@@ -225,6 +225,23 @@ namespace HexRevival
             return true;
         }
 
+        /// <summary>
+        /// A store deck's sleeves (given if not owned yet): the deck's own (Src.Game) and a collector deck's "Obtained in
+        /// the [deck] Collector Deck" (Src.HexCodex).
+        /// </summary>
+        internal static List<ResourceId> DeckSleeves(InventoryItemData item, DeckTemplate t)
+        {
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<ResourceId> sleeves = new List<ResourceId>();
+            if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve && Sleeves.HasPicture(tm.GetInventoryItem(t.m_DeckSleeve))) sleeves.Add(t.m_DeckSleeve);
+            foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
+            {
+                string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
+                if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
+            }
+            return sleeves;
+        }
+
         /// <summary>One bought product, into the response (opened packs as granted cards: the loot window).</summary>
         private static void Deliver(InventoryItemData item, PurchaseItemResponse r)
         {
@@ -236,16 +253,7 @@ namespace HexRevival
                 DeckTemplate t = tm.GetDeckTemplate(deckPack.m_DeckTemplateId);
                 foreach (TemplateCardStack st in t.m_DeckResources) r.PurchasedCards.AddRange(Collection.GrantSilently(st.m_idTemplate, st.m_Count));
                 r.PurchasedDeckBits.Add(Decks.CreateFromTemplate(item.m_Name, t));
-                // Its sleeve (the deck's own, Src.Game; a collector deck's "Obtained in the [deck] Collector Deck",
-                // Src.HexCodex), if not owned yet.
-                List<ResourceId> sleeves = new List<ResourceId>();
-                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve && Sleeves.HasPicture(tm.GetInventoryItem(t.m_DeckSleeve))) sleeves.Add(t.m_DeckSleeve);
-                foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
-                {
-                    string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
-                    if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
-                }
-                foreach (ResourceId id in sleeves)
+                foreach (ResourceId id in DeckSleeves(item, t))
                     if (!Sleeves.Owned(id)) { inventory_bits sb = Inventory.GrantSilently(id); if (sb != null) r.GrantedInventory.Add(sb); }
                 return;
             }

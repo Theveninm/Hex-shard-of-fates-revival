@@ -13,13 +13,12 @@ namespace HexRevival
     /// the store"), as the mod opens it (Progression.OpenPack, Packs, SpecialPacks, PrizePacks, Zymmer), grouped by loot
     /// kind with its rate ("Uncommons: 4 per pack", "Common chest: one item among these"), each pool with its chance and
     /// each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are).
-    /// - Products with the game's card count and Details window (boosters): a line under the card count with "All
-    ///   items"; in the Details window, the same figure and a "Drops and rates" button that shows the grouped view in
-    ///   place of its card grid (paginated: nothing can be added under it).
-    /// - The other products: a bar in place of the card count ("Cards" as the game would count them, "All items") with
-    ///   a Details button opening the grouped view.
-    /// - Cards and items are miniatures; equipment shows its slot and the card it changes, mercenaries their shards; a
-    ///   right click shows everything (effect, party bonus, deck rules, card text, drop chance).
+    /// - Every store product: one bar in place of the game's card count ("Cards" as the game counts them, when the
+    ///   product has cards; "All items": everything it can give) with a Details button. The game's own card count and
+    ///   Details window are hidden (one Details for everything, Zymmer and the user 2026-10-31).
+    /// - The Details window: the drops grouped by loot kind, the cards as the game draws them (GoCardSnapshotTaker),
+    ///   the items as their icons; equipment shows its slot and the card it changes, mercenaries their shards; a right
+    ///   click shows everything (effect, party bonus, deck rules, card text, drop chance).
     /// </summary>
     public class PackContents : MonoBehaviour
     {
@@ -36,6 +35,7 @@ namespace HexRevival
             public bool Counted, Once;
             public List<CardTemplate> Cards;
             public List<InventoryItemData> Items;
+            public Dictionary<ResourceId, int> Copies;   // a deck: how many of each card
             public int Count { get { return Cards != null ? Cards.Count : Items != null ? Items.Count : 0; } }
 
             /// <summary>One card's or item's chance per pack (Once: everything is given).</summary>
@@ -52,6 +52,7 @@ namespace HexRevival
         {
             public readonly List<Group> Groups = new List<Group>();
             public int CardsOwned, CardsTotal, AllOwned, AllTotal, ItemCount;
+            public bool Generic;   // a product the mod gives as it is (a ticket, a deck, a currency): itself
         }
 
         // ------------------------------------------------------------------
@@ -71,12 +72,6 @@ namespace HexRevival
         private Contents m_Contents;
         private readonly Grouped m_View = new Grouped();
 
-        // The game's Details window: the grouped view in place of its cards.
-        private bool m_GameItems;
-        private Transform m_GameDetails;
-        private readonly Grouped m_GameView = new Grouped();
-        private Rect m_GameButton, m_GameArea;
-
         // The right click's detail panel.
         private object m_Detail;
         private Pool m_DetailPool;
@@ -84,24 +79,41 @@ namespace HexRevival
         private static PackContents s_Instance;
         private void Awake() { s_Instance = this; }
 
-        /// <summary>Dev "packlist [scroll]": the Details view of the store's selected item (the game's when it has one).</summary>
+        /// <summary>Dev "packlist [scroll]": the Details window of the store's selected item; "packlist close" closes it.</summary>
         public static string DevOpen(float scroll)
         {
             if (s_Instance == null || s_Instance.m_Store == null) return "no store";
-            if (scroll < 0)
-            {
-                // "packlist close": the mod's windows closed (the game's Details window back to its cards).
-                s_Instance.m_Open = false; s_Instance.m_Detail = null;
-                if (s_Instance.m_GameItems) s_Instance.ShowGame(s_Instance.m_GameDetails, false);
-                return "closed";
-            }
+            if (scroll < 0) { s_Instance.m_Open = false; s_Instance.m_Detail = null; return "closed"; }
             InventoryItemData item = s_Instance.Selected();
             Contents c = item != null ? Describe(item) : null;
-            if (c == null) return "no described item selected";
-            Transform d = s_Instance.GameDetails();
-            if (d != null) { s_Instance.ShowGame(d, true); s_Instance.m_GameView.Scroll.y = scroll; }
-            else { s_Instance.Show(item, c); s_Instance.m_View.Scroll.y = scroll; }
+            if (c == null) return "nothing selected";
+            s_Instance.Show(item, c);
+            s_Instance.m_View.Scroll.y = scroll;
             return item.m_Name.Trim() + ": cards " + c.CardsOwned + "/" + c.CardsTotal + ", all " + c.AllOwned + "/" + c.AllTotal + ", " + c.Groups.Count + " group(s)";
+        }
+
+        /// <summary>Dev "packcheck": every product of the store's tab, its type and what the Details window shows.</summary>
+        public static string DevCheck()
+        {
+            if (s_Instance == null || s_Instance.m_Store == null || s_Instance.m_Store.Context == null) return "no store";
+            List<string> l = new List<string>();
+            var cat = s_Instance.m_Store.Context.Catalog;
+            for (int i = 0; i < cat.Count; i++)
+            {
+                UIPremiumStoreItemContext it = cat.GetItem(i);
+                InventoryItemData d = it != null ? it.ItemData : null;
+                if (d == null) { l.Add((it != null ? it.Name : "?") + ": no item"); continue; }
+                Contents c = Describe(d);
+                l.Add(d.m_Name.Trim() + " [" + d.GetType().Name + "]: " + (c == null ? "-" : c.Generic ? "generic" : c.Groups.Count + " group(s), all " + c.AllTotal));
+            }
+            return string.Join("\n", l.ToArray());
+        }
+
+        /// <summary>Dev "packsnap": the card pictures made so far and their size.</summary>
+        public static string DevSnaps()
+        {
+            foreach (Texture2D t in s_Snaps.Values) if (t != null) return s_Snaps.Count + " picture(s), " + t.width + "x" + t.height + ", " + s_Pending.Count + " pending";
+            return s_Snaps.Count + " picture(s), " + s_Pending.Count + " pending";
         }
 
         /// <summary>Dev "packdetail &lt;name&gt;": the right click's panel of a card or item of the shown product.</summary>
@@ -138,18 +150,17 @@ namespace HexRevival
             }
             if (m_Store == null || !m_Store.isActiveAndEnabled)
             {
-                // The store closed with the game's Details window on the drops: its cards shown again for the next time.
-                if (m_GameItems) SetCardsVisible(m_GameDetails, true);
-                m_GameItems = false; m_GameButton = new Rect(); m_GameArea = new Rect();
+                if (m_Open || s_Snaps.Count > 0) ClearSnaps();
                 m_Open = false; m_Detail = null; m_BarRect = new Rect(); m_Checked = null; m_Block.Release();
                 return;
             }
             InventoryItemData item = Selected();
             if (item != m_Checked) { m_Checked = item; m_CheckedContents = item != null ? Describe(item) : null; }
-            Transform d = GameDetails();
-            if (d == null && m_GameItems) { SetCardsVisible(m_GameDetails, true); m_GameItems = false; m_Detail = null; }
-            if (d == null) { m_GameButton = new Rect(); m_GameArea = new Rect(); }
-            m_Block.Update(m_Open || m_Detail != null, m_BarRect, m_GameButton, m_GameArea);
+            // The game's card count (and its Details button) hidden: the mod's bar takes its place for every product.
+            Transform frame = m_Store.transform.Find("Panel_R/Panel_Overlay/Frame_Details");
+            UIWidget fw = frame != null ? frame.GetComponent<UIWidget>() : null;
+            if (fw != null && fw.alpha > 0f) fw.alpha = 0f;
+            m_Block.Update(m_Open || m_Detail != null, m_BarRect);
         }
 
         private InventoryItemData Selected()
@@ -168,12 +179,8 @@ namespace HexRevival
             float S = GameSkin.Scale;
             GUI.depth = -850;
             if (m_Open) DrawWindow(S);
-            else
-            {
-                DrawGameDetails(S);
-                if (m_CheckedContents != null && !GamePopupOpen()) DrawBar(S, m_Checked, m_CheckedContents);
-                else m_BarRect = new Rect();
-            }
+            else if (m_CheckedContents != null && !GamePopupOpen()) DrawBar(S, m_Checked, m_CheckedContents);
+            else m_BarRect = new Rect();
             if (m_Detail != null) DrawDetail(S);
         }
 
@@ -203,26 +210,14 @@ namespace HexRevival
 
         private void DrawBar(float S, InventoryItemData item, Contents c)
         {
+            // Where the game's card count is (hidden, or inactive for the products without one: its last place).
             Transform frame = m_Store.transform.Find("Panel_R/Panel_Overlay/Frame_Details");
-            bool gameBar = frame != null && frame.gameObject.activeInHierarchy;
-            // The game's card count frame, shown or hidden: its widget keeps its place on the screen.
-            UIWidget fw = frame != null ? frame.GetComponent<UIWidget>() : null;
+            UIWidget fw = frame != null && frame.gameObject.activeInHierarchy ? frame.GetComponent<UIWidget>() : null;
             Rect f = fw != null ? WidgetRect(fw) : new Rect();
             if (f.width > 0) m_LastFrame = f; else f = m_LastFrame;
             if (f.width <= 0) f = new Rect(Screen.width * 0.625f, Screen.height * 0.15f, 392 * S, 34 * S);
-            float h = 34 * S;
-            if (gameBar)
-            {
-                // The game has its card count and Details window: only the "All items" figure under them.
-                float w = Mathf.Max(f.width, 300 * S);
-                Rect line = new Rect(f.center.x - w / 2f, f.yMax + 4 * S, w, 28 * S);
-                m_BarRect = new Rect();
-                if (!GameSkin.Sprite(line, "A_Shared_Atlas", "Dropdown_Panel")) GUI.DrawTexture(line, GameSkin.Solid(new Color(0.05f, 0.06f, 0.09f, 0.9f)));
-                GameSkin.Label(line, Loc.Get("pc_all_items", Pct(c.AllOwned, c.AllTotal)), GameSkin.Style("bold", 15, GameSkin.Gold, TextAnchor.MiddleCenter));
-                return;
-            }
-            float bw = 150 * S, barW = 620 * S;
-            Rect bar = new Rect(f.center.x - barW / 2f, f.y, barW, h);
+            float h = 34 * S, bw = 150 * S, barW = 620 * S;
+            Rect bar = new Rect(f.center.x - barW / 2f, f.center.y - h / 2f, barW, h);
             m_BarRect = bar;
             if (!GameSkin.Sprite(bar, "A_Shared_Atlas", "Dropdown_Panel")) GUI.DrawTexture(bar, GameSkin.Solid(new Color(0.05f, 0.06f, 0.09f, 0.9f)));
             Rect details = new Rect(bar.xMax - bw - 4 * S, bar.y + 2 * S, bw, h - 4 * S);
@@ -275,63 +270,7 @@ namespace HexRevival
         private void OpenDetail(object o, Pool p) { m_Detail = o; m_DetailPool = p; }
 
         // ------------------------------------------------------------------
-        // The game's Details window
-        // ------------------------------------------------------------------
-
-        private Transform GameDetails()
-        {
-            Transform d = m_Store != null ? m_Store.transform.Find("Panel_Popup_Details") : null;
-            return d != null && Shown(d) ? d.Find("Frame_Details") : null;
-        }
-
-        /// <summary>The card grid hidden while the grouped view is shown in its frame (its cards would show through).</summary>
-        private static void SetCardsVisible(Transform details, bool visible)
-        {
-            if (details == null) return;
-            Transform panel = details.Find("Frame_Scroll/Panel_Cards");
-            UIPanel p = panel != null ? panel.GetComponent<UIPanel>() : null;
-            if (p != null) p.alpha = visible ? 1f : 0f;
-            Transform bar = details.Find("Frame_Scroll/ScrollBar_New");
-            if (bar != null) bar.gameObject.SetActive(visible);
-            Transform toggle = details.Find("Button_Toggle");   // "Show cards not owned": about the cards only
-            if (toggle != null) toggle.gameObject.SetActive(visible);
-        }
-
-        private void ShowGame(Transform d, bool on)
-        {
-            m_GameItems = on;
-            m_GameDetails = d;
-            m_GameView.Reset();
-            SetCardsVisible(d, !on);
-        }
-
-        private void DrawGameDetails(float S)
-        {
-            Transform d = GameDetails();
-            if (d == null || m_CheckedContents == null) return;
-            Transform close = d.Find("Button_Close"), frame = d.Find("Frame_Scroll"), inset = d.Find("Frame_Inset");
-            UIWidget cw = close != null ? close.GetComponent<UIWidget>() : null, fw = frame != null ? frame.GetComponent<UIWidget>() : null;
-            UIWidget iw = inset != null ? inset.GetComponent<UIWidget>() : null;
-            if (cw == null || fw == null) return;
-            // "All items" in the window's top frame, right of the game's own "collected" box.
-            if (iw != null)
-            {
-                Rect ir = WidgetRect(iw);
-                Rect line = new Rect(ir.xMax - 520 * S, ir.y + ir.height * 0.5f - 18 * S, 500 * S, 36 * S);
-                GameSkin.Label(line, Loc.Get("pc_all_items", Pct(m_CheckedContents.AllOwned, m_CheckedContents.AllTotal)), GameSkin.Style("title", 22, GameSkin.Gold, TextAnchor.MiddleRight));
-            }
-            Rect cr = WidgetRect(cw);
-            m_GameButton = new Rect(cr.x - 300 * S, cr.y, 290 * S, cr.height);
-            if (GameSkin.GoldButton(m_GameButton, m_GameItems ? Loc.Get("pc_back_cards") : Loc.Get("pc_rates"), m_Detail == null, 17)) ShowGame(d, !m_GameItems);
-            if (!m_GameItems) { m_GameArea = new Rect(); return; }
-            Rect fr = WidgetRect(fw);
-            m_GameArea = fr;
-            GUI.DrawTexture(new Rect(fr.x + 6 * S, fr.y + 6 * S, fr.width - 12 * S, fr.height - 12 * S), GameSkin.Solid(new Color(0.03f, 0.035f, 0.05f, 1f)));
-            m_GameView.Draw(new Rect(fr.x + 14 * S, fr.y + 12 * S, fr.width - 28 * S, fr.height - 24 * S), m_CheckedContents, S, m_Detail == null, OpenDetail);
-        }
-
-        // ------------------------------------------------------------------
-        // The grouped view (both windows)
+        // The grouped view
         // ------------------------------------------------------------------
 
         private const float TileW = 136f, CardH = 214f, ItemH = 236f, TileGap = 10f;
@@ -387,7 +326,7 @@ namespace HexRevival
                 GUIStyle gTitle = GameSkin.Style("title", 21, GameSkin.Gold, TextAnchor.MiddleLeft);
                 GUIStyle gNote = GameSkin.Style("body", 14, GameSkin.Text, TextAnchor.UpperLeft, true);
                 GUIStyle pTitle = GameSkin.Style("bold", 16, GameSkin.Text, TextAnchor.MiddleLeft);
-                GUIStyle pRate = GameSkin.Style("body", 15, GameSkin.GoldDim, TextAnchor.MiddleRight);
+                GUIStyle pRate = GameSkin.Style("body", 15, GameSkin.GoldDim, TextAnchor.MiddleLeft);
                 foreach (Row r in m_Rows)
                 {
                     if (r.Y + r.Height < visible.y || r.Y > visible.yMax) continue;   // only the rows in sight
@@ -400,15 +339,18 @@ namespace HexRevival
                     else if (r.Start < 0)
                     {
                         Rect pr = new Rect(16 * S, r.Y, width - 16 * S, r.Height);
-                        GUI.Label(pr, r.Pool.Title + "  (" + r.Pool.Count + ")", pTitle);
-                        GUI.Label(pr, PoolRate(r.Pool), pRate);
+                        // The rate right after the pool's name.
+                        string title = r.Pool.Title + "  (" + r.Pool.Count + ")";
+                        float tw = pTitle.CalcSize(new GUIContent(title)).x;
+                        GUI.Label(pr, title, pTitle);
+                        GUI.Label(new Rect(pr.x + tw + 18 * S, pr.y, pr.width - tw - 18 * S, pr.height), PoolRate(r.Pool), pRate);
                     }
                     else
                         for (int i = 0; i < r.Length; i++)
                         {
                             Rect tile = new Rect(x0 + i * (TileW + TileGap) * S, r.Y, TileW * S, r.Height);
                             object o = r.Pool.Cards != null ? (object)r.Pool.Cards[r.Start + i] : r.Pool.Items[r.Start + i];
-                            if (o is CardTemplate) CardTile(tile, (CardTemplate)o, S);
+                            if (o is CardTemplate) CardTile(tile, (CardTemplate)o, r.Pool, S);
                             else ItemTile(tile, (InventoryItemData)o, visible, S);
                             // A right click: the detail panel (a left click on a card does nothing either).
                             Event e = Event.current;
@@ -427,12 +369,14 @@ namespace HexRevival
             return p.Count > 1 ? Loc.Get("r_each", head, Rate(p.Each)) : head;
         }
 
-        private static void CardTile(Rect tile, CardTemplate c, float S)
+        private static void CardTile(Rect tile, CardTemplate c, Pool p, float S)
         {
             Rect card = new Rect(tile.x, tile.y, tile.width, tile.height - 20 * S);
-            CardArt.Tile(card, c);
-            int n = Collection.Count(c.m_Id);
-            GUI.Label(new Rect(tile.x, card.yMax, tile.width, 20 * S), Loc.Get("pc_owned", n),
+            DrawCard(card, c);
+            int n = Collection.Count(c.m_Id), copies;
+            string owned = Loc.Get("pc_owned", n);
+            if (p.Copies != null && p.Copies.TryGetValue(c.m_Id, out copies)) owned = "x" + copies + "  ·  " + owned;
+            GUI.Label(new Rect(tile.x, card.yMax, tile.width, 20 * S), owned,
                 n > 0 ? GameSkin.Style("bold", 12, GameSkin.Gold, TextAnchor.MiddleCenter) : GameSkin.Style("body", 12, GameSkin.Muted, TextAnchor.MiddleCenter));
         }
 
@@ -560,7 +504,7 @@ namespace HexRevival
             InventoryItemData item = m_Detail as InventoryItemData;
             if (card != null)
             {
-                CardArt.Tile(new Rect(pr.x, pr.y, pr.width, pr.width * 1.45f > pr.height ? pr.height : pr.width * 1.45f), card);
+                DrawCard(pr, card);
                 title = card.m_Name;
                 body = Loc.Get("d_card", card.m_ResourceCost, card.m_CardType, RarityName(card.m_CardRarity)) + "\n\n" + Plain(card.m_GameText, card.m_Name)
                     + "\n\n" + Loc.Get("pc_owned", Collection.Count(card.m_Id));
@@ -573,7 +517,7 @@ namespace HexRevival
                 title = item.m_Name.Trim();
                 body = ItemText(item) + "\n\n" + Loc.Get("pc_owned", Inventory.Count(item.m_Id));
             }
-            if (m_DetailPool != null)
+            if (m_DetailPool != null && !m_DetailPool.Once)
                 body += "\n" + Loc.Get("d_drop", m_DetailPool.Title, m_DetailPool.Once ? Loc.Get("r_all") : Rate(m_DetailPool.Each));
             GameSkin.Label(new Rect(text.x, text.y, text.width, 36 * S), title, GameSkin.Style("title", 24, GameSkin.Gold));
             // The game font has no bold face (IMGUI squeezes the letters): bold as gold.
@@ -622,6 +566,79 @@ namespace HexRevival
             parts.Add(Kind(item));
             if (!string.IsNullOrEmpty(item.m_Description)) parts.Add(Plain(item.m_Description, item.m_Name));
             return string.Join("\n\n", parts.ToArray());
+        }
+
+        // ------------------------------------------------------------------
+        // Card pictures: the whole card as the game draws it (its Details window and collection use the same snapshots)
+        // ------------------------------------------------------------------
+
+        private static readonly Dictionary<ResourceId, Texture2D> s_Snaps = new Dictionary<ResourceId, Texture2D>();
+        private static readonly Dictionary<ResourceId, float> s_Pending = new Dictionary<ResourceId, float>();
+        private static readonly HashSet<ResourceId> s_SnapFailed = new HashSet<ResourceId>();
+        private static readonly Dictionary<ResourceId, float> s_SnapUsed = new Dictionary<ResourceId, float>();
+        /// <summary>At most this many kept (367x512 each, about 0.75 MB): the least recently shown are let go.</summary>
+        private const int MaxPending = 16, MaxSnaps = 160;
+
+        /// <summary>A card drawn whole (its snapshot, asked for when first shown); its art tile until the snapshot is made.</summary>
+        private static void DrawCard(Rect r, CardTemplate c)
+        {
+            Texture2D t = Snap(c);
+            if (t == null) { CardArt.Tile(r, c); return; }
+            if (Event.current.type == EventType.Repaint) GUI.DrawTexture(r, t, ScaleMode.ScaleToFit, true);
+        }
+
+        private static Texture2D Snap(CardTemplate c)
+        {
+            Texture2D t;
+            if (s_Snaps.TryGetValue(c.m_Id, out t) && t != null) { s_SnapUsed[c.m_Id] = Time.realtimeSinceStartup; return t; }
+            if (s_SnapFailed.Contains(c.m_Id)) return null;
+            float asked;
+            if (s_Pending.TryGetValue(c.m_Id, out asked))
+            {
+                // No answer (the error callback does not say which card): the art tile for this one.
+                if (Time.realtimeSinceStartup - asked > 15f) { s_Pending.Remove(c.m_Id); s_SnapFailed.Add(c.m_Id); }
+                return null;
+            }
+            if (s_Pending.Count >= MaxPending || Event.current.type != EventType.Repaint) return null;
+            s_Pending[c.m_Id] = Time.realtimeSinceStartup;
+            try
+            {
+                GoCardSnapshotTaker.RequestCardTexture(c, null, ECardExtensionMode.Normal, OnSnap,
+                    msg => Debug.LogWarning("[HexRevival] [PackContents] card picture: " + msg), c.m_Id);
+            }
+            catch (Exception e)
+            {
+                s_Pending.Remove(c.m_Id); s_SnapFailed.Add(c.m_Id);
+                Debug.LogWarning("[HexRevival] [PackContents] card picture " + c.m_Name + ": " + e.Message);
+            }
+            return null;
+        }
+
+        private static void OnSnap(Texture2D t, int hash, object id)
+        {
+            if (!(id is ResourceId)) return;
+            ResourceId rid = (ResourceId)id;
+            s_Pending.Remove(rid);
+            if (t == null) { s_SnapFailed.Add(rid); return; }
+            s_Snaps[rid] = t;
+            s_SnapUsed[rid] = Time.realtimeSinceStartup;
+            while (s_Snaps.Count > MaxSnaps)
+            {
+                ResourceId oldest = rid;
+                float when = float.MaxValue;
+                foreach (KeyValuePair<ResourceId, float> kv in s_SnapUsed) if (kv.Value < when) { when = kv.Value; oldest = kv.Key; }
+                if (oldest.Equals(rid)) break;
+                Texture2D o;
+                if (s_Snaps.TryGetValue(oldest, out o) && o != null) Destroy(o);
+                s_Snaps.Remove(oldest); s_SnapUsed.Remove(oldest);
+            }
+        }
+
+        /// <summary>The store closed: the pictures let go (made for this window only).</summary>
+        private static void ClearSnaps()
+        {
+            foreach (Texture2D t in s_Snaps.Values) if (t != null) Destroy(t);
+            s_Snaps.Clear(); s_SnapUsed.Clear(); s_Pending.Clear(); s_SnapFailed.Clear();
         }
 
         // ------------------------------------------------------------------
@@ -732,10 +749,16 @@ namespace HexRevival
         private static Contents Describe(InventoryItemData item)
         {
             Contents c = new Contents();
-            try { if (!Fill(item, c)) return null; }
-            catch (Exception e) { Debug.LogWarning("[HexRevival] [PackContents] " + item.m_Name + ": " + e); return null; }
+            bool filled = false;
+            try { filled = Fill(item, c); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [PackContents] " + item.m_Name + ": " + e); }
             c.Groups.RemoveAll(g => { g.Pools.RemoveAll(p => p.Count == 0); return g.Pools.Count == 0; });
-            if (c.Groups.Count == 0) return null;
+            if (!filled || c.Groups.Count == 0)
+            {
+                // Not a pack: the product itself, with its description on a right click.
+                c = new Contents { Generic = true };
+                G(c, Loc.Get("g_item")).Pools.Add(new Pool { Title = Loc.Get("pc_items_title"), Items = new List<InventoryItemData> { item }, Once = true });
+            }
             HashSet<ResourceId> counted = new HashSet<ResourceId>(), cards = new HashSet<ResourceId>(), items = new HashSet<ResourceId>();
             foreach (Group g in c.Groups)
                 foreach (Pool p in g.Pools)
@@ -798,6 +821,29 @@ namespace HexRevival
                 InventoryItemData booster = PrizePacks.LatestBoosterItem();
                 if (booster != null) Items(g, Loc.Get("pc_packs"), new List<InventoryItemData> { booster }, 0.30f);
                 Items(g, Loc.Get("pc_sleeves"), PrizePacks.CosmicSleeveItems(), 0.05f);
+                return true;
+            }
+            InventoryStarterPack deck = item as InventoryStarterPack;
+            if (deck != null)
+            {
+                // Store.Deliver: the deck's cards, the deck ready to play, its sleeves if not owned yet.
+                DeckTemplate t = Singleton<TemplateManager>.Instance.GetDeckTemplate(deck.m_DeckTemplateId);
+                if (t == null) return false;
+                Group g = G(c, Loc.Get("g_everything"));
+                Pool cards = new Pool { Title = Loc.Get("pc_cards_title"), Cards = new List<CardTemplate>(), Copies = new Dictionary<ResourceId, int>(), Once = true, Counted = true };
+                foreach (TemplateCardStack st in t.m_DeckResources)
+                {
+                    CardTemplate ct = Singleton<TemplateManager>.Instance.GetCardTemplate(st.m_idTemplate);
+                    if (ct == null) continue;
+                    int had;
+                    cards.Copies.TryGetValue(ct.m_Id, out had);
+                    if (had == 0) cards.Cards.Add(ct);
+                    cards.Copies[ct.m_Id] = had + st.m_Count;
+                }
+                cards.Cards = Sorted(cards.Cards);
+                g.Pools.Add(cards);
+                List<InventoryItemData> sleeves = Store.DeckSleeves(item, t).ConvertAll(id => Singleton<TemplateManager>.Instance.GetInventoryItem(id));
+                if (sleeves.Count > 0) g.Pools.Add(new Pool { Title = Loc.Get("pc_sleeves"), Items = SortedItems(sleeves), Once = true });
                 return true;
             }
             if (Zymmer.IsKismetPack(item))

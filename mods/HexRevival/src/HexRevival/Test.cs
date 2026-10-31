@@ -1677,6 +1677,8 @@ namespace HexRevival
                     }
                     catch (Exception e) { return "AIUpdate exception: " + e; }
                 case "packlist": return PackContents.DevOpen(parts.Length > 1 ? (parts[1] == "close" ? -1f : float.Parse(parts[1])) : 0f);
+                case "packcheck": return PackContents.DevCheck();
+                case "packsnap": return PackContents.DevSnaps();
                 case "packdetail": return PackContents.DevDetail(string.Join(" ", parts, 1, parts.Length - 1));
                 case "iconcheck": return PackContents.IconCheck(parts.Length > 1 && parts[1] == "all");
                 case "cards": return CardsDump(gc, session, parts.Length > 1 && parts[1] == "all");
