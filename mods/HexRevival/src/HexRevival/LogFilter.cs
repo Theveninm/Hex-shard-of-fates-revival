@@ -1,11 +1,11 @@
 namespace HexRevival
 {
     /// <summary>
-    /// The game's connection to the official servers (HConnect, closed since 2019) never connects and retries every
-    /// 30 seconds, each time with "Failed to connect.", "Sleeping for connection retry", "SES_STATE CONNECTING ->
-    /// CONNECTING" and "Asked for player name, but no info yet.": about two thirds of the log after an hour. The first
-    /// failure is kept, the rest is left out. Nothing else is filtered:
-    /// the mod answers the client's requests itself (LocalServer) and plays online through its own connection (NetClient).
+    /// The game's connection to the official servers (HConnect, closed since 2019) is no longer attempted (Plugin:
+    /// Connector.tryConnect). It retried every 30 seconds, each time with "Failed to connect.", "Sleeping for connection
+    /// retry" and "SES_STATE CONNECTING -> CONNECTING", and the client asks it for the player's name ("Asked for player
+    /// name, but no info yet."): about two thirds of the log after an hour. Those messages are left out (one failure kept,
+    /// should a connection be tried anyway). Nothing else is filtered.
     /// </summary>
     public static class LogFilter
     {

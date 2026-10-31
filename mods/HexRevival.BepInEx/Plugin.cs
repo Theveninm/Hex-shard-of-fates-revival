@@ -337,8 +337,12 @@ namespace HexRevival
             // connector again and again (Session.onConnectorState in LOGOUT -> Connector.Terminate -> DISCONNECTED ->
             // onConnectorState...) until a stack overflow, which left the logout half done: dim screen and an endless
             // loading wheel. A Terminate already running is not started again.
-            // The game's connection to the official servers (closed since 2019) retries every 30 seconds: its messages
-            // made most of the log (see LogFilter).
+            // The game's connection to the official servers (closed since 2019): never attempted. It retried every
+            // 30 seconds; the mod answers the client's requests itself (LocalServer) and plays online through its own
+            // connection (NetClient). The connector stays in its "connect" state, which does nothing more.
+            apply("HConnect.Connector.tryConnect (official servers)", () => Prefix(harmony, typeof(Game.Shared.Network.HConnect.Connector), "tryConnect",
+                Type.EmptyTypes, "Connector_TryConnect"));
+            // What is left of its messages (see LogFilter).
             // Cards without art (choices such as "Pain" and "Suffering") drawn with the art of the card linking to them.
             apply("GoCardBuilder.UpdateArtOverride", () =>
                 harmony.Patch(AccessTools.Method(typeof(GoCardBuilder), "UpdateArtOverride"), postfix: new HarmonyMethod(typeof(Hooks), "GoCardBuilder_UpdateArtOverride")));
@@ -512,6 +516,7 @@ namespace HexRevival
         }
 
         public static void GoCardBuilder_UpdateArtOverride(GoCardBuilder __instance) { ChoiceArt.AfterUpdate(__instance); }
+        public static bool Connector_TryConnect() { return false; }
         public static bool LogBase_Debug(string __0, string __1, object[] __2) { return !LogFilter.DropDebug(__1, __2); }
         public static bool LogBase_Error(string __0, string __1) { return !LogFilter.DropError(__0, __1); }
 
