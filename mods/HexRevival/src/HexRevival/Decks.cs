@@ -187,6 +187,30 @@ namespace HexRevival
             s_Collection[c.Id] = c;
         }
 
+        /// <summary>A copy taken from the collection (broken down, see Crafting).</summary>
+        public static void RemoveFromCollection(ulong id)
+        {
+            s_Collection.Remove(id);
+        }
+
+        /// <summary>
+        /// The most copies of a card one of the account's own decks holds (main deck and sideboard): breaking cards down
+        /// never goes below it. The decks made for the AI, the shared ones and other accounts' decks do not count.
+        /// </summary>
+        public static int MostInOneDeck(ResourceId template)
+        {
+            int most = 0;
+            foreach (StoredDeck d in s_Decks.Values)
+            {
+                if (d.Common || d.Foreign || IsForAI(d)) continue;
+                int n = 0;
+                foreach (ResourceId t in d.Cards) if (t == template) n++;
+                foreach (ResourceId t in d.Side) if (t == template) n++;
+                if (n > most) most = n;
+            }
+            return most;
+        }
+
         /// <summary>Deck of a new campaign champion, filled with a starter deck (or empty).</summary>
         public static deck_bits CreateForChampion(string name, ulong championId, Reckoning.Game.DeckTemplate starter)
         {

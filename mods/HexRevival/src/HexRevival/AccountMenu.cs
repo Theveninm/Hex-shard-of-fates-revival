@@ -23,6 +23,7 @@ namespace HexRevival
         private bool m_Tutorial = true;
         private bool m_GoldPrices = true;
         private bool m_AllGems;
+        private bool m_Crafting;
         private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_Error;
         private readonly ProfileForm m_Profile = new ProfileForm();
@@ -121,7 +122,9 @@ namespace HexRevival
             GUI.DrawTexture(new Rect(0, 0, UnityEngine.Screen.width, UnityEngine.Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            float w = Mathf.Min(720f * S, UnityEngine.Screen.width - 24f), h = Mathf.Min(640f * S, UnityEngine.Screen.height - 24f);
+            // The new account form of a progression account is taller (gold prices, crafting, starting gold).
+            float fullH = m_Screen == Screen.Create && !m_Unlock ? 780f : 640f;
+            float w = Mathf.Min(720f * S, UnityEngine.Screen.width - 24f), h = Mathf.Min(fullH * S, UnityEngine.Screen.height - 24f);
             Rect win = new Rect((UnityEngine.Screen.width - w) / 2f, (UnityEngine.Screen.height - h) / 2f + 10f * S, w, h);
             if (!GameSkin.Sprite(win, "A_Frames", "Frame_With_Header_Hard_Corner"))
                 GUI.DrawTexture(win, GameSkin.Solid(new Color(0.06f, 0.07f, 0.1f, 0.97f)));
@@ -178,7 +181,7 @@ namespace HexRevival
             {
                 m_Screen = Screen.Create;
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
-                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false;
+                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false;
             }
             y += newH + gap;
 
@@ -235,10 +238,12 @@ namespace HexRevival
             y += 96 * S;
             m_AllGems = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
             y += 80 * S;
-            // Progression accounts only (an "unlock everything" account has its gold and gold prices).
+            // Progression accounts only (an "unlock everything" account has its gold and gold prices, and no crafting).
             if (!m_Unlock)
             {
                 m_GoldPrices = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc"));
+                y += 80 * S;
+                m_Crafting = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));
                 y += 80 * S;
                 float half = (area.width - 20 * S) / 2f;
                 m_StartGold = NumberField(new Rect(area.x, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
@@ -256,7 +261,7 @@ namespace HexRevival
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems, m_Crafting));
             }
         }
 

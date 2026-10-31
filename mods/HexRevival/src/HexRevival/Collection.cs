@@ -17,7 +17,9 @@ namespace HexRevival
     /// "Unlock everything" saves own every collectible card (4 copies, one version per name).
     /// Progression saves own what is listed in collection.txt (one "template count" line per card):
     /// a starter collection when the save is created, then the cards earned by playing.
-    /// Card instance ids are not stored: they are numbered again at each login.
+    /// Card instance ids are not stored: they are numbered again at each login. How many copies of a card have their
+    /// extended art (unlocked with stardust, see ExtendedArt) is kept apart, in collection_extended.txt ("template
+    /// count" lines too), so that collection.txt stays readable by older builds.
     /// </summary>
     public static class Collection
     {
@@ -28,8 +30,13 @@ namespace HexRevival
         private static ulong s_NextId = 1;
         private static UID s_Owner;
         private static readonly Dictionary<ResourceId, int> s_Counts = new Dictionary<ResourceId, int>();
+        /// <summary>Copies with their extended art, per card (at most its count).</summary>
+        private static readonly Dictionary<ResourceId, int> s_Extended = new Dictionary<ResourceId, int>();
+        /// <summary>The instances handed out since the login, by instance id.</summary>
+        private static readonly Dictionary<ulong, card_instance_bits> s_Instances = new Dictionary<ulong, card_instance_bits>();
 
         private static string FilePath { get { return Saves.File("collection.txt"); } }
+        private static string ExtendedPath { get { return Saves.File("collection_extended.txt"); } }
 
         /// <summary>Card instances of the current save, for the profile sent at login.</summary>
         public static List<card_instance_bits> Build(UID owner)
@@ -37,11 +44,22 @@ namespace HexRevival
             s_Owner = owner;
             s_NextId = 1;
             s_Counts.Clear();
+            s_Extended.Clear();
+            s_Instances.Clear();
             if (Saves.Current.UnlockAll) AddEverything();
             else if (!LoadFile()) { AddStarter(); SaveFile(); }
+            ReadCounts(ExtendedPath, s_Extended);
             List<card_instance_bits> res = new List<card_instance_bits>();
             foreach (KeyValuePair<ResourceId, int> kv in s_Counts)
-                for (int i = 0; i < kv.Value; i++) res.Add(NewInstance(kv.Key));
+            {
+                int ext = ExtendedCount(kv.Key);
+                for (int i = 0; i < kv.Value; i++)
+                {
+                    card_instance_bits c = NewInstance(kv.Key);
+                    c.IsExtended = i < ext;
+                    res.Add(c);
+                }
+            }
             Debug.Log("[HexRevival] [Collection] " + s_Counts.Count + " cards, " + res.Count + " copies" + (Saves.Current.UnlockAll ? " (unlock all)" : ""));
             return res;
         }
@@ -68,6 +86,28 @@ namespace HexRevival
             }
         }
 
+        /// <summary>Grant for many cards at once, saved once (dev "craft dupall").</summary>
+        public static void Grant(IDictionary<ResourceId, int> cards)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll) return;
+            PlayerProfile profile = GameClient.Instance.PlayerProfile;
+            foreach (KeyValuePair<ResourceId, int> kv in cards)
+            {
+                if (kv.Value <= 0) continue;
+                int n;
+                s_Counts.TryGetValue(kv.Key, out n);
+                s_Counts[kv.Key] = n + kv.Value;
+                for (int i = 0; i < kv.Value; i++)
+                {
+                    card_instance_bits c = NewInstance(kv.Key);
+                    Decks.AddToCollection(c);
+                    try { profile.AddNewCardToCollection(c); }
+                    catch (Exception e) { Debug.LogWarning("[HexRevival] [Collection] AddNewCardToCollection: " + e.Message); }
+                }
+            }
+            SaveFile();
+        }
+
         /// <summary>
         /// Same as Grant, but the client is not told: the instances are returned to be handed to
         /// it another way (campaign rewards, see Progression).
@@ -88,6 +128,73 @@ namespace HexRevival
             }
             return res;
         }
+
+        /// <summary>An instance handed out since the login (null if unknown or taken away).</summary>
+        public static card_instance_bits Instance(ulong id)
+        {
+            card_instance_bits c;
+            return s_Instances.TryGetValue(id, out c) ? c : null;
+        }
+
+        /// <summary>Copies of a card with their extended art (at most its count).</summary>
+        public static int ExtendedCount(ResourceId template)
+        {
+            int n;
+            return s_Extended.TryGetValue(template, out n) ? Math.Min(n, Count(template)) : 0;
+        }
+
+        /// <summary>One copy gets its extended art (saved); false if it is unknown or has it already.</summary>
+        public static bool MarkExtended(ulong id)
+        {
+            card_instance_bits c = Instance(id);
+            if (c == null || c.IsExtended || Saves.Current == null) return false;
+            c.IsExtended = true;
+            int n;
+            s_Extended.TryGetValue(c.TemplateID, out n);
+            s_Extended[c.TemplateID] = n + 1;
+            WriteCounts(ExtendedPath, s_Extended);
+            return true;
+        }
+
+        /// <summary>
+        /// Takes n copies of a card from the save and the client (cards broken down, see Crafting): copies without
+        /// extended art first, the last ones handed out first (the decks take the first ones). Returns how many.
+        /// </summary>
+        public static int Take(ResourceId template, int n, bool save = true)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll || n <= 0) return 0;
+            List<card_instance_bits> plain = new List<card_instance_bits>(), extended = new List<card_instance_bits>();
+            foreach (card_instance_bits c in s_Instances.Values) if (c.TemplateID == template) (c.IsExtended ? extended : plain).Add(c);
+            plain.Reverse();
+            extended.Reverse();
+            List<card_instance_bits> copies = plain;
+            copies.AddRange(extended);
+            n = Math.Min(n, Math.Min(copies.Count, Count(template)));
+            PlayerProfile profile = GameClient.Instance.PlayerProfile;
+            int ext = 0;
+            for (int i = 0; i < n; i++)
+            {
+                card_instance_bits c = copies[i];
+                if (c.IsExtended) ext++;
+                s_Instances.Remove(c.Id);
+                Decks.RemoveFromCollection(c.Id);
+                try { profile.RemoveCardFromCollection(c.CardId.UID); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Collection] RemoveCardFromCollection: " + e.Message); }
+            }
+            int left = Count(template) - n;
+            if (left > 0) s_Counts[template] = left; else s_Counts.Remove(template);
+            if (ext > 0)
+            {
+                int e = ExtendedCount(template) - ext;
+                if (e > 0) s_Extended[template] = e; else s_Extended.Remove(template);
+                WriteCounts(ExtendedPath, s_Extended);
+            }
+            if (save) SaveFile();
+            return n;
+        }
+
+        /// <summary>The cards the save owns (templates).</summary>
+        public static List<ResourceId> Owned() { return new List<ResourceId>(s_Counts.Keys); }
 
         /// <summary>Copies of a card the save owns (4 on "unlock everything" saves).</summary>
         public static int Count(ResourceId template)
@@ -117,6 +224,7 @@ namespace HexRevival
             c.CardStats = new Dictionary<ECardStatType, int>();
             c.OwnerReckId = s_Owner.GetInstanceId();
             c.EscrowStatus = "";
+            s_Instances[c.Id] = c;
             return c;
         }
 
@@ -198,29 +306,42 @@ namespace HexRevival
 
         private static bool LoadFile()
         {
-            if (!File.Exists(FilePath)) return false;
+            return File.Exists(FilePath) && ReadCounts(FilePath, s_Counts);
+        }
+
+        /// <summary>Writes the collection (after Take with save false).</summary>
+        public static void Save() { SaveFile(); }
+
+        private static void SaveFile()
+        {
+            WriteCounts(FilePath, s_Counts);
+        }
+
+        private static bool ReadCounts(string path, Dictionary<ResourceId, int> into)
+        {
+            if (!File.Exists(path)) return false;
             try
             {
-                foreach (string line in File.ReadAllLines(FilePath))
+                foreach (string line in File.ReadAllLines(path))
                 {
                     string[] p = line.Split(' ');
                     int n;
-                    if (p.Length == 2 && int.TryParse(p[1], out n) && n > 0) s_Counts[new ResourceId(p[0])] = n;
+                    if (p.Length == 2 && int.TryParse(p[1], out n) && n > 0) into[new ResourceId(p[0])] = n;
                 }
                 return true;
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Collection] read: " + e); return false; }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Collection] read " + Path.GetFileName(path) + ": " + e); return false; }
         }
 
-        private static void SaveFile()
+        private static void WriteCounts(string path, Dictionary<ResourceId, int> counts)
         {
             try
             {
                 List<string> lines = new List<string>();
-                foreach (KeyValuePair<ResourceId, int> kv in s_Counts) lines.Add(kv.Key + " " + kv.Value);
-                File.WriteAllLines(FilePath, lines.ToArray());
+                foreach (KeyValuePair<ResourceId, int> kv in counts) lines.Add(kv.Key + " " + kv.Value);
+                File.WriteAllLines(path, lines.ToArray());
             }
-            catch (Exception e) { Debug.LogError("[HexRevival] [Collection] save: " + e); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Collection] save " + Path.GetFileName(path) + ": " + e); }
         }
     }
 }

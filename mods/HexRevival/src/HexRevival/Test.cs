@@ -920,6 +920,7 @@ namespace HexRevival
                 case "profile": return AccountMenu.Command(parts);
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
+                case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
                 case "sleeves": return Sleeves.Command(parts);
                 case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
