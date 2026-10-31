@@ -143,11 +143,11 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:212 | PLACEHOLDER prize: one booster per match won.</summary> |
-| Battlegrounds.cs:888 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:983 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:1021 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1067 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:236 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
+| Battlegrounds.cs:995 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:1105 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:1143 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1189 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
@@ -161,7 +161,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Loot.cs:112 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
-| PackContents.cs:14 | card and item of each pool with the copies owned. The odds shown are the mod's own (PLACEHOLDER where they are). |
+| PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:30 | for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the |
 | Packs.cs:113 | (PLACEHOLDER chance), given when the opening is over. |
 | Packs.cs:159 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
@@ -198,7 +198,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Sleeves.cs:25 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
 | Sleeves.cs:27 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
 | Sleeves.cs:153 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
-| Sleeves.cs:242 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
+| Sleeves.cs:253 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
 | SpecialPacks.cs:15 | - Full sets (FullSet): one of every card of the set (PLACEHOLDER: one copy); |
 | SpecialPacks.cs:17 | Src.Game): 6 commons, 2 uncommons and 1 rare of the pack's set, of its race (PLACEHOLDER contents); |
 | SpecialPacks.cs:21 | legendaries, or chests" (Src.Game): 12 commons and 4 uncommons (PLACEHOLDER counts, a booster's); |

@@ -334,7 +334,7 @@ namespace HexRevival
         // ------------------------------------------------------------------
 
         /// <summary>PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary>
-        private const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
+        internal const float ChestSleeveChance = 0.05f, BoosterSleeveChance = 0.02f;
 
         private static OpenChestResponse OpenChests(List<ulong> ids)
         {
