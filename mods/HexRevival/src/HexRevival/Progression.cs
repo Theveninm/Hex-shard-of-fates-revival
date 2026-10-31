@@ -58,7 +58,10 @@ namespace HexRevival
             return level;
         }
 
-        /// <summary>Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary>
+        /// <summary>
+        /// Talent points per champion level gained: 1. Src.Video: KVC part 5, Vash's talent tree with 0 unspent points,
+        /// 2 one-point talents at level 3 (30:45) and 3 at level 4 (38:19).
+        /// </summary>
         private const int TalentPointsPerLevel = 1;
 
         // ==================================================================
@@ -346,6 +349,17 @@ namespace HexRevival
             { "Sapphire", new[] { "Morphology", "Chaotic Murmurs", "Heroic Echo" } },
             { "Ruby",     new[] { "Skittering Skarn", "Fuel for the Fire", "Emberbrute" } },
             { "Wild",     new[] { "Feralroot Jaguar", "Walking Hive", "Thornsprout" } },
+            // AZ2's Hauses: 3 AZ2 cards of one shard, all Src.Video: Sapphire (Fungal Hillock, MHS 2017-04-21 5:52, KVC part 1
+            // 1:46:26), Wild (Vale of Fallen Apples, MHS 2017-09-14 0:22, KVC part 4 4:13), Blood (Silvas Meadow, KVC part 1
+            // 1:31:59, between Katsuhiro (node 9) and Hired Horn Picaroon (node 11)), Diamond (Portabella Island, MHS
+            // 2017-03-31 [niGkEpHUyb0] 0:26), Ruby (Shroombottom Burrow, MHS 2017-09-07 [vaN3Tqrje6g] 0:31) and Artifact
+            // (Lake Hsieh, MHS 2017-10-19 0:33). The map's location panel names the node in the last three.
+            { "AZ2 Sapphire", new[] { "Dancing Faeries", "Bull Shark", "Arcane Spritegang" } },
+            { "AZ2 Wild",     new[] { "Aryndel Warden", "Pippit's Gift", "Shroom Swarm" } },
+            { "AZ2 Blood",    new[] { "Bone Goliath", "Grub Crawler", "Chupacabra" } },
+            { "AZ2 Diamond",  new[] { "Quicksand", "Ghost Sentinel", "Chimeerkat" } },
+            { "AZ2 Ruby",     new[] { "Wool'vir Baa'serker", "Cinderclone Offensive", "Cinder Walker" } },
+            { "AZ2 Artifact", new[] { "Hex Battery", "Forge Flock", "Junk Barrier" } },
         };
 
         /// <summary>Every fixed reward name (for the "loot check" dev command).</summary>
@@ -381,6 +395,9 @@ namespace HexRevival
         {
             { "Node004", "Artifact" }, { "Node042", "Sapphire" }, { "Node025", "Diamond" },
             { "Node077", "Blood" }, { "Node029", "Wild" }, { "Node035", "Ruby" },
+            // AZ2 (Src.Video, see ShroomHauses).
+            { "AZ2/Node017", "AZ2 Sapphire" }, { "AZ2/Node039", "AZ2 Wild" }, { "AZ2/Node010", "AZ2 Blood" },
+            { "AZ2/Node029", "AZ2 Diamond" }, { "AZ2/Node036", "AZ2 Ruby" }, { "AZ2/Node042", "AZ2 Artifact" },
         };
 
         /// <summary>Card template ids offered by a Shroom Haus (the game's choice window).</summary>
@@ -1058,6 +1075,19 @@ namespace HexRevival
 
         private static object s_EndedSession;
 
+        /// <summary>Every AI champion of the match is dead (a won battle, not one survived or escaped).</summary>
+        private static bool AiChampionsDead(StandaloneSession ss)
+        {
+            bool any = false;
+            foreach (Player p in ss.GetAllPlayers())
+            {
+                if (p == null || !Server.IsAIId(p.m_PlayerId) || p.m_ChampionCard == null) continue;
+                any = true;
+                if (p.m_ChampionCard.CurrentHealthValue > 0) return false;
+            }
+            return any;
+        }
+
         /// <summary>
         /// A match ended. EndGame can run several times for one match: only the first call counts.
         /// </summary>
@@ -1076,6 +1106,7 @@ namespace HexRevival
             if (winners != null)
                 foreach (UID u in winners)
                     if (!Server.IsAIId(u)) won = true;
+            Campaign.OpponentDefeated = won && ss != null && AiChampionsDead(ss);
             if (Arena.OnGameEnded(won)) return;   // the arena's own rewards (see Arena)
             if (Siege.OnGameEnded(won)) return;   // no account XP for Siege battles: PLACEHOLDER, not known
             if (Battlegrounds.OnGameEnded(won) || Battlegrounds.OnLadderGameEnded(won)) return;   // same for the Battlegrounds: PLACEHOLDER

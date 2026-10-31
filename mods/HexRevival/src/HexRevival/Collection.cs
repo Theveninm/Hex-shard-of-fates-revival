@@ -4,6 +4,7 @@ using System.IO;
 using Game.Client;
 using Game.Shared;
 using Game.Shared.Domain;
+using Game.Shared.Mechanics;
 using Game.Shared.Resources;
 using Reckoning.Game;
 using UnityEngine;
@@ -172,6 +173,26 @@ namespace HexRevival
                     byName[t.m_Name] = t;
             }
             foreach (CardTemplate t in byName.Values) s_Counts[t.m_Id] = CopiesPerCard;
+            // The alternate arts too (sets "Set09_PvP_alternates"..., Src.Game): the same cards with another picture, which
+            // the Siege Pack, the Cosmic Coin Pack and account levels give (mornox, 2026-10-30). The game lists their sets as
+            // not ownable (BuiltInResources.NotOwnable_Sets) and flags every alternate as a modified card
+            // (m_EquipmentModifiedCard): the other rules of CardTemplate.IsOwnable are checked here. The talent cards'
+            // alternates (PvE_Talents) are champion talents, not collectibles: left out.
+            var sets = Singleton<TemplateManager>.Instance.CardSets;
+            int alternates = 0;
+            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+            {
+                CardSetTemplate set;
+                if (t == null || s_Counts.ContainsKey(t.m_Id) || !sets.TryGetValue(t.m_SetId, out set) || set == null || set.m_Name == null
+                    || set.m_Name.IndexOf("alternates", StringComparison.OrdinalIgnoreCase) < 0 || set.m_Name.IndexOf("Talents", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                bool collectible;
+                try { collectible = (t.CardRarity > ERarity.Land || t.IsBasicResource()) && t.m_ImplStage == ECardImplStage.Done && !t.IsChoiceCard(); }
+                catch { collectible = false; }
+                if (!collectible) continue;
+                s_Counts[t.m_Id] = CopiesPerCard;
+                alternates++;
+            }
+            Debug.Log("[HexRevival] [Collection] unlock all: " + byName.Count + " cards, " + alternates + " alternate arts");
             AddBasicShards();
         }
 

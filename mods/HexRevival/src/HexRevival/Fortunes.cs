@@ -15,7 +15,9 @@ namespace HexRevival
     /// champion at the start of the next campaign battle, which uses it up.
     /// Duration, Src.Video: the window reads "Gaal Camp - Your fortune for the next battle" (MHS UW 2017-01-25
     /// [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show
-    /// different fortunes at different visits, no pattern known).
+    /// different fortunes at different visits, no pattern known: the same gaal, Gyorgy, before the same Pale Moon battle
+    /// read Ruby (MHS UW 2016-10-24 [DeQ3uQpnnEE] 1:42) and Diamond (MHS Ardent 2017-01-25); the Ardent champion drew
+    /// Ruby (2017-01-04 [EXvODvsTTSo] 1:47) then Diamond; MHS UW's 2017-06-24 stream drew Wild then Fury).
     /// </summary>
     public static class Fortunes
     {

@@ -46,7 +46,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 |---|---|---|
 | Starter collection | the game's two "new player" starter decks + 200 of each basic shard | Game (decks), SteamGuide2016 (shards) |
 | Starting gold and platinum | chosen when the account is created (0 by default; "unlock everything" accounts: 100,000 gold) | mod choice |
-| Platinum prices in gold | chosen when the account is created (on by default, always on with "unlock everything"): off, the store and the gauntlet entries cost platinum | mod choice |
+| Platinum prices in gold | chosen when the account is created (on by default, always on with "unlock everything"), changed later in the game's Settings, Account tab: off, the store and the gauntlet entries cost platinum | mod choice |
+| Every gem in the campaign | chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
 | New champion | its race's starter deck (added to the collection and used as the champion's deck) | Game |
 
 Wiki2018 says new accounts got about 250 common and uncommon cards forming a deck per major race:
@@ -281,7 +282,21 @@ Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot 
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
 quest start, then the "repeating until..." dialogue (Game logic; not filmed). Milosh at the Road of Acorns: first
 meeting, then the repeat dialogue with or without a fortune (Game names, not filmed). Bleakwind Highlands keeps its
-first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run).
+first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run). "The New Land" is offered
+once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
+
+Whisper Delta (node 3), Chumspike's first attack: surviving until the "Row Faster" terrain effect lets the champion row
+away ends with "Player successfully escaped" (Video: every run, e.g. KVC part 1 20:34); killing Chumspike (30 health)
+ends with the game's "Player wins battle" conversation instead (Game; never seen on video).
+
+Shroom Hauses (Game: conversation nodes "Shroom house"): the card choice window opens after the Shroomkin's dialogue,
+3 AZ2 cards of one shard, all from the videos. Fungal Hillock (node 17) Sapphire: Dancing Faeries, Bull Shark, Arcane
+Spritegang (MHS 2017-04-21 5:52, KVC part 1); Vale of Fallen Apples (39) Wild: Aryndel Warden, Pippit's Gift, Shroom
+Swarm (MHS 2017-09-14 0:22, KVC part 4 4:13); Silvas Meadow (10) Blood: Bone Goliath, Grub Crawler, Chupacabra (KVC
+part 1 1:31:59, between Katsuhiro, node 9, and Hired Horn Picaroon, node 11); Portabella Island (29) Diamond: Quicksand,
+Ghost Sentinel, Chimeerkat (MHS 2017-03-31 0:26, before the Puke Troll); Shroombottom Burrow (36) Ruby: Wool'vir
+Baa'serker, Cinderclone Offensive, Cinder Walker (MHS 2017-09-07 0:31, before the Wandering Totem); Lake Hsieh (42)
+Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
 
 ### Sea voyages (Game)
 
@@ -314,10 +329,12 @@ first text (Video: still shown after the Kraken; its "post-Kraken" text appears 
   Stormwatch 500 / 1000 + AZ2 pack; Lobster Tale 500 / 1000 + Hardshell Sealord; the three done: Alachian
   Sea Sleeve. A sea battle won again pays half its gold and a fifth of its XP (KVC: Overseer 200 / 130).
 - Scylla (NodeB04) and Charybdis (NodeB10) only lurk ("you feel a disturbing presence from beneath your
-  ship", no battle) until one of the three sea quests is done; then they attack (Video: KVC part 14, two
-  "Pre-" passes, the pirates quest turned in, then both attack; MyHotStream Ardent's first voyages show the
-  "Pre-" line, its Underworld run fought both after its sea quests). PLACEHOLDER in part: the same runs also
-  fit "from the third voyage".
+  ship", no battle) until they wake; then they attack on every voyage. Video (quest tracker read on every sea video,
+  its objectives reset when a voyage ends): MyHotStream Ardent was calm on its 3rd and 5th voyages and was attacked on
+  2017-11-21 with no sea quest finished; KVC part 14 was calm on a voyage after Stormwatch was turned in, then attacked
+  on the next one. So neither "after a sea quest" nor "from the 3rd voyage". Once awake, never calm again in any run.
+  The game data holds no condition (server side): they wake for good at the start of a voyage, 1 time in 3
+  (PLACEHOLDER chance).
 - Zodiac Docks (NodeB0X): disembark at the Mouth of the Zodiac River (Node033), the end of "The New
   Land".
 
@@ -648,7 +665,11 @@ The game has 425 sleeves; how each was obtained comes from HexCodex. The mod giv
 | Holidays (Ardor Day, The Sea Festival, Haunted Harvest, Feast of Abundance, Night of Bells, Questmas) | playing during the holiday: one of its sleeves (any year's) not owned yet, and one of its equipment pieces (Zymmer, HexCodex), once per holiday and year. Dates: Feb 7-21, Jul 15 - Aug 15, Oct 15 - Nov 5, Nov 15-30, Dec 10 - Jan 5 | HexCodex; dates PLACEHOLDER |
 
 Not obtainable offline: Kickstarter, conventions, tournaments, VIP, community and staff sleeves. An account with
-everything unlocked owns every sleeve, battleboard and coin.
+everything unlocked owns every sleeve, battleboard and coin, and every alternate art card (2,309, the talent cards'
+alternates excepted). 17 sleeves have no picture in the game's files (no texture, or none in the sleeve archive
+DeckSleeves.harc: Bounty of the Magus, the 2021 Season 6 ladder sleeves, the Courage, Dark, Dirge, Mastery of Time,
+Onslaught, The Transcended and Vennen deck sleeves, Prodigen, Sir Pies, Animated Emsee...): they would show blank
+(mornox), so they are never given.
 
 ## Store
 

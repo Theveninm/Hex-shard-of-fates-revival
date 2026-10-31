@@ -95,15 +95,26 @@ Hogarth's challenge window (the client's is the consoles', without buttons on PC
 ## Campaign placeholders still open
 | Where | Placeholder | Why it stays |
 |---|---|---|
-| NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit |
-| CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage" |
+| NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit. Not The Blood Beneath (still in the tracker at both visits); no dialogue or item names the key's source (checked 2026-10-31) |
+| CampaignBoat.cs SeaMonstersAwake | wake chance 1 in 3 per voyage | the trigger was server-side: the quest tracker shows MHS Ardent attacked with no sea quest done after calm 3rd and 5th voyages, and KVC still calm after a quest turn-in; only the chance is a guess (2026-10-31) |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
-| Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video |
-| Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen |
-| Fortunes.cs | which fortune is drawn | random in the runs |
-| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first |
-| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video |
-| Progression.cs TalentPointsPerLevel | 1 | the reward window only says "Leveled Up!" (Vandersveldt part 79 4:54) |
+| Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video (checked 2026-10-31: KVC parts 4, 9, 15 and MHS's 2019 Kukatan run go from the Mausoleum to the Black Hall and the Forgotten Crypt) |
+| Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen (Vandersveldt parts 27, 28, 35: the 2016 client shows no form on the board) |
+| Fortunes.cs | which fortune is drawn | random in the runs: 7 readings, the same gaal before the same battle gave Ruby and Diamond, one champion drew Ruby then Diamond |
+| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first. Other hometown videos checked 2026-10-31: none (KVC part 16's "Vennen intro" hit is a PvP deck screen) |
+| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video (rechecked 2026-10-31: no dwarf champion in any source) |
+
+## Game content the mod does not place (audit of 2026-10-31)
+Every conversation (2,297) and encounter scene (362) of the game files was checked against the map nodes, the dungeons
+and the mod's code (dev commands `camp nodes`, `camp nodes AZ2`, `camp battleaudit`, `camp nodeaudit`, `camp convs -`,
+`camp scene <filter>`). What is left out, and why:
+| Content | Why it is not placed |
+|---|---|
+| Wild Heist, Wooly Bully, Yeti Family, Corrupted Pool (Pool of Corruption), Clan Oni, Ambush: 46 battles and their conversations | tagged `FutureRelease` in the game data: never released; no dungeon map or quest for them in the client |
+| Doomsday Dwarf, Chaos Key, Sphinx, Skullzzor, Primal of Pain, Garden of Corruption, Frankie the Swine, Spear of Madness, Stolen Offerings, Master's Workshop, King Ook-Bok, Killing Time, The Depths of Blood, The Battle of Quash Ridge, Fury of Oberon, Rise of Slaughtergear, The Eye of Zakiir, A Friend In Need / In Deed, The Samurai / Sapper / Gladiator, Cave of the Dream Bear, Hunted, Wendigo Hunt, Battle of Daventry, Zodiac Bells, the RAIDs, GenCon 2015 Demo and other small sets | conversations only: no battle, map, deck or quest in the client (never released). No video shows them (the one OCR hit, JBStevenson part 11 1:54, is the AZ1 map) |
+| AZ1 Node 72 / 76 "Blacksmith 3 / 4 - Reward" scenes | no such nodes on the AZ1 map prefab (Node 20's Blacksmith 2 is used) |
+| "AZ2 - Node B0 - CUT - See Node 00B A" | marked cut in its own name |
+| Horwich Sea: "Hag - Princess Revert" and the "06 B - Sea Witch - No Frog" battle | released data, but no run shows them: every fight (Vandersveldt parts 18-30, MHS Ardent 2017-02-07) opens with "Hag" and plays "Daphne in Distress", and MHS's win shows no dialogue during the battle. Its text ("you saw through my little transformation spell") fits the moment Daphne is saved; left out rather than guessed |
 
 ## Placeholders with no source expected (other modes, economy)
 Arena, Battlegrounds, Siege, Store, prize packs, loot weights, the Wheel of Fate's reel colors and booster chest rarity: the original values
@@ -136,7 +147,8 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:958 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
 | Battlegrounds.cs:996 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
 | Battlegrounds.cs:1042 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
-| CampaignBoat.cs:122 | 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage". |
+| CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
+| CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:387 | PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:706 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
@@ -163,29 +175,28 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
-| Progression.cs:61 | Talent points per champion level gained. PLACEHOLDER (assumed 1).</summary> |
-| Progression.cs:147 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
-| Progression.cs:200 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:527 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:734 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:770 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:773 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:889 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:970 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:973 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:976 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:991 | level: PLACEHOLDER). |
-| Progression.cs:1004 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1080 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1081 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:150 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
+| Progression.cs:203 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:544 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:751 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:787 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:790 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:906 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:987 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:990 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:993 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1008 | level: PLACEHOLDER). |
+| Progression.cs:1021 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1111 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1112 | same for the Battlegrounds: PLACEHOLDER |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
-| Sleeves.cs:18 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
-| Sleeves.cs:19 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
-| Sleeves.cs:21 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
-| Sleeves.cs:24 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
-| Sleeves.cs:26 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
-| Sleeves.cs:123 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
-| Sleeves.cs:212 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
+| Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
+| Sleeves.cs:22 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
+| Sleeves.cs:25 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
+| Sleeves.cs:27 | - "Awarded during the [year] [holiday] Holiday": playing during that holiday (Holidays, dates PLACEHOLDER), with one |
+| Sleeves.cs:153 | The game's holidays and when the mod holds them (PLACEHOLDER dates: the sleeves name the holidays, not their |
+| Sleeves.cs:242 | after the other, a season every two months (6 a year, as the sleeves of 2017-2021; PLACEHOLDER: their dates), |
 | SpecialPacks.cs:15 | - Full sets (FullSet): one of every card of the set (PLACEHOLDER: one copy); |
 | SpecialPacks.cs:17 | Src.Game): 6 commons, 2 uncommons and 1 rare of the pack's set, of its race (PLACEHOLDER contents); |
 | SpecialPacks.cs:21 | legendaries, or chests" (Src.Game): 12 commons and 4 uncommons (PLACEHOLDER counts, a booster's); |
@@ -201,6 +212,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Store.cs:64 | PLACEHOLDER gold prices of products without a known price.</summary> |
 | Store.cs:66 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
 | Store.cs:323 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
+| StoreIcons.cs:22 | "PLACEHOLDER" picture: a related product's banner (see Related); the Random Previous Kismet Pack's missing model |
+| StoreIcons.cs:34 | Banners the game ships as a "PLACEHOLDER" picture (Src.Game, icons.ab): Dead of Winter Primal Pack's. Replaced |
+| StoreIcons.cs:219 | The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original |
 | Zymmer.cs:15 | PLACEHOLDER unless noted. |
 | Zymmer.cs:137 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
 | Zymmer.cs:206 | An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |

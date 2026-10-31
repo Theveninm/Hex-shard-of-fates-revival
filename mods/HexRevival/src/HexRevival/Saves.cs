@@ -37,6 +37,12 @@ namespace HexRevival
             /// creation). Chosen when the account is created; always on for "unlock everything" accounts.
             /// </summary>
             public bool GoldPrices = true;
+            /// <summary>
+            /// Every gem in PvE decks (campaign, dungeons), not only the Standard and class gems the PvE format allows
+            /// (Src.Game: GemHelper.IsGemLegalInFormat); the arena already allows every gem (mornox, 2026-10-30). Off by
+            /// default, as in the original game.
+            /// </summary>
+            public bool AllGems;
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -95,13 +101,14 @@ namespace HexRevival
         /// A new account. On progression accounts, the player chooses the gold and platinum to start with (0 by
         /// default) and whether platinum prices are converted to gold.
         /// </summary>
-        public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0)
+        public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
             Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
             i.Gold = unlockAll ? UnlockedGold : Math.Max(0, gold);
             i.Platinum = unlockAll ? 0 : Math.Max(0, platinum);
             i.GoldPrices = unlockAll || goldPrices;
+            i.AllGems = allGems;
             Write(i);
             return i;
         }
@@ -186,6 +193,7 @@ namespace HexRevival
                     else if (k == "tutorial") i.TutorialPending = v == "1";
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "goldprices") i.GoldPrices = v != "0";
+                    else if (k == "allgems") i.AllGems = v == "1";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -211,6 +219,7 @@ namespace HexRevival
                     "tutorial=" + (i.TutorialPending ? "1" : "0"),
                     "cosmic=" + i.CosmicCoins,
                     "goldprices=" + (i.GoldPrices ? "1" : "0"),
+                    "allgems=" + (i.AllGems ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

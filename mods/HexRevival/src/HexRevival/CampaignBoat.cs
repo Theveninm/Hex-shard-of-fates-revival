@@ -114,18 +114,30 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Scylla (NodeB04) and Charybdis (NodeB10) attack once one of the harbor master's sea quests is done; before, their
-        /// node only shows the "Pre-" line ("you feel a disturbing presence from beneath your ship") and no battle.
-        /// Src.Video: KVC part 14: Pre-Scylla 6:36 (1st voyage), Pre-Charybdis 32:51 and Pre-Scylla 34:54 (2nd voyage),
-        /// the pirates quest turned in at the port 35:11, then Scylla attacks 35:27 and Charybdis 45:55; MHS Ardent
-        /// 2017-10-31 [gxLgn727nbo] 0:31 Pre-Scylla on its first sea battles; MHS UW attacked 2017-08-18 [PMOIGQyKfLo] and
-        /// 2017-08-24 [Z_41L6_4N0A], after its sea quests. PLACEHOLDER in part: the runs also fit "from the 3rd voyage".
+        /// Scylla (NodeB04) and Charybdis (NodeB10): their node only shows the "Pre-" line ("you feel a disturbing presence
+        /// from beneath your ship") and no battle until they wake; once awake they attack on every voyage.
+        /// Src.Video (2026-10-31, quest tracker read on every sea video; its objectives reset when a voyage ends):
+        /// - MHS Ardent: calm on its 3rd voyage (2017-10-31 [gxLgn727nbo] 0:31) and 5th (2017-11-06 [MKxdTz8QqI0] 0:31),
+        ///   Scylla on 2017-11-21 [DOpK1hegy6Y] with the three sea quests still unfinished (tracker at 0:02), Charybdis on
+        ///   2017-11-27. Neither "a sea quest done" nor "from the 3rd voyage" holds.
+        /// - KVC part 14: calm on 2 voyages, the second (34:54) after Stormwatch was turned in (24:39); Scylla 33 s later,
+        ///   on the next voyage (35:27), Charybdis on the one after (45:55). No Kraken Guard Captain fought.
+        /// - Once awake, they never were calm again in a run (also MHS UW 2017-08-18 and 08-24).
+        /// No condition in the game data (conversations, map items): the server's. Here: they wake for good at the start
+        /// of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was
+        /// done before 1.2.12 (the old rule) keep them awake.
         /// </summary>
         internal static bool SeaMonstersAwake(ulong champ)
         {
-            foreach (string q in SeaQuests) if (Quests.IsFinished(champ, q)) return true;
+            if (Quests.Flag(champ, MonstersFlag) != null) return true;
+            foreach (string q in SeaQuests) if (Quests.IsFinished(champ, q)) { Quests.SetFlag(champ, MonstersFlag, "1"); return true; }
             return false;
         }
+
+        private const string MonstersFlag = "boat:monsters";
+
+        /// <summary>PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary>
+        private const float MonstersWakeChance = 1f / 3f;
 
         /// <summary>Location of a harbor or sea node (d: the location being built).</summary>
         private static void ShipLocation(CampState st, MapNode n, Dictionary<string, object> d)
@@ -242,6 +254,11 @@ namespace HexRevival
             st.ALoc = null;
             st.LastNode = Port;
             Quests.SetFlag(champ, "boat:warp", Port);
+            if (!SeaMonstersAwake(champ) && UnityEngine.Random.value < MonstersWakeChance)
+            {
+                Quests.SetFlag(champ, MonstersFlag, "1");
+                Debug.Log("[HexRevival] [Campaign] " + champ + ": Scylla and Charybdis wake");
+            }
             Debug.Log("[HexRevival] [Campaign] " + champ + " sets sail on " + Quests.Flag(champ, "boat:name"));
         }
 

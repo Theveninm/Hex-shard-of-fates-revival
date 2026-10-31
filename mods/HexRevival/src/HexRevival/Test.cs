@@ -949,6 +949,35 @@ namespace HexRevival
                         }
                         return sb.Length == 0 ? "none" : sb.ToString();
                     }
+                case "altcheck":   // dev: card sets with "alternate" in their name, their cards and how many are ownable; m_HasAlternateArt cards
+                    {
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        Dictionary<string, int[]> bySet = new Dictionary<string, int[]>();
+                        int hasAlt = 0, rar = 0, eqm = 0, choice = 0, owned = 0;
+                        foreach (CardTemplate t in tm.Cards.Values)
+                        {
+                            if (t == null) continue;
+                            if (t.m_HasAlternateArt) hasAlt++;
+                            CardSetTemplate set;
+                            string n = tm.CardSets.TryGetValue(t.m_SetId, out set) && set != null ? set.m_Name : "?" + t.m_SetId;
+                            if (n == null || n.IndexOf("altern", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            int[] c;
+                            if (!bySet.TryGetValue(n, out c)) bySet[n] = c = new int[3];
+                            c[0]++;
+                            bool own; try { own = t.IsOwnable(); } catch { own = false; }
+                            if (own) c[1]++;
+                            if (t.m_ImplStage == ECardImplStage.Done) c[2]++;
+                            try { if (t.CardRarity > ERarity.Land || t.IsBasicResource()) rar++; } catch { }
+                            if (t.m_EquipmentModifiedCard) eqm++;
+                            try { if (t.IsChoiceCard()) choice++; } catch { }
+                            if (Collection.Count(t.m_Id) > 0) owned++;
+                        }
+                        List<string> o = new List<string>();
+                        foreach (KeyValuePair<string, int[]> kv in bySet) o.Add(kv.Key + ": " + kv.Value[0] + " cards, " + kv.Value[1] + " ownable, " + kv.Value[2] + " done");
+                        return hasAlt + " cards with m_HasAlternateArt; alternates: rarity ok " + rar + ", equipment-modified " + eqm + ", choice " + choice + ", owned " + owned + "; sets:\n" + string.Join("\n", o.ToArray());
+                    }
+                case "hauses": return Campaign.DevHauses();   // dev: the Shroom Haus nodes and their cards
+                case "sleevecheck": return Sleeves.DevCheck();   // dev: sleeves whose picture is not in the game's sleeve archive
                 case "sleevedump":   // dev: "sleevedump [text]" = the game's sleeves whose description contains the text
                     {
                         string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";

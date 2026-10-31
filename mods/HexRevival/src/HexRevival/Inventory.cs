@@ -35,7 +35,7 @@ namespace HexRevival
             {
                 // Everything unlocked: every equipment, sleeve, battleboard and coin.
                 foreach (InventoryItemData item in Singleton<TemplateManager>.Instance.InventoryItems.Values)
-                    if (item is InventoryEquipmentData || item is InventoryDeckSleeve || item is InventoryGameboardData || item is InventoryCoinData) s_Counts[item.m_Id] = 1;
+                    if (item is InventoryEquipmentData || (item is InventoryDeckSleeve && Sleeves.HasPicture(item)) || item is InventoryGameboardData || item is InventoryCoinData) s_Counts[item.m_Id] = 1;
                 foreach (InventoryMercenaryData m in Mercenaries.Obtainable()) s_Counts[m.m_Id] = 1;
             }
             List<inventory_bits> res = new List<inventory_bits>();

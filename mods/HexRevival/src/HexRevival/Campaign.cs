@@ -142,12 +142,36 @@ namespace HexRevival
             public string Conversation;  // ConversationTemplate GUID
             public string Scenes = "";   // names and titles of every scene of the node (reward lookups, e.g. "Shroom Haus")
             public string Panorama;      // hub panorama scene (Cave-In, Ambling Mesa, Thunderfield): NPCs and quest givers
-            public bool IsHaus { get { return Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
+            /// <summary>A Shroomkin Haus: AZ1's by its scene ("Shroom Haus"), AZ2's by its conversation ("AZ2 - Node 17 - Shroom house - Pooot", Src.Game).</summary>
+            public bool IsHaus { get { return HausConversation || Scenes.ToUpperInvariant().Contains("SHROOM HAUS"); } }
+            public bool HausConversation;
             public string RepeatConversation; // "... - Repeat Encounters" conversation, offered once the node is completed (Army of Myth)
             public string FightEncounter; // battle started by a dialogue choice "choice_fight" (Brink Ridge blockade)
             public string Dungeon;        // dungeon entered from this node (Dungeons key)
             public Dictionary<string, string> Variants; // battle by faction and dialogue choice ("UW:help", "AR"...), see FactionNodes
             public string FactionOnly;    // "AR" / "UW": the battle is that faction's only (the other one just talks)
+        }
+
+        /// <summary>Dev "hauses": every Shroom Haus node of both zones, with the cards it offers.</summary>
+        public static string DevHauses()
+        {
+            List<string> o = new List<string>();
+            foreach (Zone z in new[] { AZ1, AZ2 })
+            {
+                BuildMap(z);
+                foreach (MapNode n in z.Nodes)
+                {
+                    if (!n.IsHaus) continue;
+                    List<string> names = new List<string>();
+                    foreach (string id in Progression.ShroomHausChoices(n.Key))
+                    {
+                        CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(id));
+                        names.Add(t != null ? t.m_Name.Trim() : id);
+                    }
+                    o.Add(n.Key + " " + n.Name + ": " + string.Join(", ", names.ToArray()));
+                }
+            }
+            return string.Join("\n", o.ToArray());
         }
 
         private static MapNode FindNode(Zone z, string idOrName)
@@ -354,7 +378,7 @@ namespace HexRevival
             string f = c != null && c.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
             // The desert's wormoids attack only gnomes in tow (and stay as one-time battles once all are home), see Gnomes.
             if (n.Z == AZ1 && !Gnomes.IsFight(champ, n.Id)) return null;
-            // Scylla and Charybdis only lurk ("Pre-Scylla") until a sea quest is done, see CampaignBoat.SeaMonstersAwake.
+            // Scylla and Charybdis only lurk ("Pre-Scylla") until they wake, see CampaignBoat.SeaMonstersAwake.
             if (n.Z == AZ2 && (n.Id == "NodeB04" || n.Id == "NodeB10") && !SeaMonstersAwake(champ)) return null;
             return EncFor(n, f, Quests.Flag(champ, "choice:" + n.Key));
         }
@@ -490,7 +514,8 @@ namespace HexRevival
         private static bool IsOutcome(string name)
         {
             string u = name.ToUpperInvariant();
-            return u.Contains("SUCCESS") || u.Contains("FAIL") || u.Contains("REPEAT ENCOUNTERS");
+            // Whisper Delta: "Player wins battle" is an outcome too, and the "Narration" ones are said during the battle.
+            return u.Contains("SUCCESS") || u.Contains("FAIL") || u.Contains("REPEAT ENCOUNTERS") || u.Contains("WINS BATTLE") || u.Contains("NARRATION");
         }
 
         /// <summary>Conversation of a non-battle node for this champion: quest step rules first, else the best matching one.</summary>
@@ -570,7 +595,15 @@ namespace HexRevival
             return best != null ? best.m_Id.ToString() : null;
         }
 
-        /// <summary>Conversation shown after a node's battle ("... Success" / "... Fail", by the choice made before it).</summary>
+        /// <summary>The AI's champion died in the battle just won (set by Progression.OnMatchEnded before OnGameEnded).</summary>
+        public static bool OpponentDefeated;
+
+        /// <summary>
+        /// Conversation shown after a node's battle ("... Success" / "... Fail", by the choice made before it).
+        /// Whisper Delta's first Chumspike attack (AZ2 Node 3) is won by surviving until the "Row Faster" terrain
+        /// effect lets the champion row away: "Player successfully escaped" (Src.Video: every run, e.g. KVC part 1
+        /// 20:34), or by killing Chumspike: "Player wins battle" (Src.Game: its own conversations, never seen on video).
+        /// </summary>
         private static string Outcome(ulong champ, MapNode n, bool won)
         {
             string choice = Quests.Flag(champ, "choice:" + n.Key);
@@ -579,8 +612,11 @@ namespace HexRevival
             foreach (ConversationTemplate c in NodeConvs(n))
             {
                 string u = c.m_Name.ToUpperInvariant();
-                if (!Quests.MatchesChampion(c.m_Name, champ) || !(won ? u.Contains("SUCCESS") : u.Contains("FAIL"))) continue;
+                bool winsBattle = u.Contains("WINS BATTLE"), escaped = u.Contains("ESCAPED");
+                if (!Quests.MatchesChampion(c.m_Name, champ) || !(won ? u.Contains("SUCCESS") || winsBattle : u.Contains("FAIL"))) continue;
                 int score = 1;
+                if (winsBattle) score = OpponentDefeated ? 3 : 0;
+                else if (escaped) score = OpponentDefeated ? 0 : 2;
                 // Harp Rock: the outcome of the demon fought (dialogue event "swaptosuccubus" / "swaptomancubus")
                 string fought = choice != null && choice.StartsWith("swapto") ? choice.Substring(6).ToUpperInvariant() : n.Variants != null && n.Variants.ContainsKey("swaptomancubus") ? "MANCUBUS" : null;
                 if (fought != null) score = u.Contains(fought) ? 3 : 0;
@@ -708,6 +744,7 @@ namespace HexRevival
             {
                 n.Type = "Convo";
                 n.Conversation = best.m_Id.ToString();
+                n.HausConversation = best.m_Name.IndexOf("Shroom house", StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 

@@ -119,7 +119,7 @@ namespace HexRevival
             // 2017-04-21 [CE1XOa4TyVw] 7:11) and still after it (MHS UW 2017-08-16 [H_u0T4fd7eE] 0:25; the Kraken died on
             // 2017-06-16 [gqA50QebO1w]). "post-Kraken defeated" is in no run: not used (what armed it is unknown).
             { "AZ2/Node016", new[] { R("Bleakwind Highlands", c => true) } },
-            // Scylla and Charybdis: the "Pre-" line and no battle until a sea quest is done, then the attack and the battle
+            // Scylla and Charybdis: the "Pre-" line and no battle until they wake, then the attack and the battle
             // (sources: CampaignBoat.SeaMonstersAwake). Before 1.2.6 either line could be picked and the battle was always on.
             { "AZ2/NodeB04", new[] { R("Pre-Scylla", c => !Campaign.SeaMonstersAwake(c)), R("- Scylla", c => true) } },
             { "AZ2/NodeB10", new[] { R("Pre-Charybdis", c => !Campaign.SeaMonstersAwake(c)), R("- Charybdis", c => true) } },
@@ -127,6 +127,8 @@ namespace HexRevival
             // it locked; "Step 2 - Player has Sapphire Key" at the first visit in MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26 and MHS
             // Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt part 63 already past it. Every run had finished Gnomes Come
             // Home before (Vincent: "Here, take this with you"), so the key may be that reward: not enough to lock the gate.
+            // Not The Blood Beneath (the Blood Key's quest): the quest tracker still shows it at both visits (MHS maplabels
+            // 0:40 / 0:46). No dialogue and no item of the game data names where the Sapphire Key comes from.
             { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {
