@@ -366,7 +366,9 @@ namespace HexRevival
         {
             if (p.Once) return Loc.Get("r_all");
             string head = p.Draws > 1 ? Loc.Get("r_draws", p.Draws) : Rate(p.Chance);
-            return p.Count > 1 ? Loc.Get("r_each", head, Rate(p.Each)) : head;
+            if (p.Count <= 1) return head;
+            // Several draws: each draw's chance, and the chance to get it at least once.
+            return p.Draws > 1 ? Loc.Get("r_each_multi", head, p.Draws, Rate(p.Chance / p.Count), Rate(p.Each)) : Loc.Get("r_each", head, Rate(p.Each));
         }
 
         private static void CardTile(Rect tile, CardTemplate c, Pool p, float S)
@@ -518,7 +520,9 @@ namespace HexRevival
                 body = ItemText(item) + "\n\n" + Loc.Get("pc_owned", Inventory.Count(item.m_Id));
             }
             if (m_DetailPool != null && !m_DetailPool.Once)
-                body += "\n" + Loc.Get("d_drop", m_DetailPool.Title, m_DetailPool.Once ? Loc.Get("r_all") : Rate(m_DetailPool.Each));
+                body += "\n" + (m_DetailPool.Draws > 1
+                    ? Loc.Get("d_drop_multi", m_DetailPool.Title, m_DetailPool.Draws, Rate(m_DetailPool.Chance / Math.Max(1, m_DetailPool.Count)), Rate(m_DetailPool.Each))
+                    : Loc.Get("d_drop", m_DetailPool.Title, Rate(m_DetailPool.Each)));
             GameSkin.Label(new Rect(text.x, text.y, text.width, 36 * S), title, GameSkin.Style("title", 24, GameSkin.Gold));
             // The game font has no bold face (IMGUI squeezes the letters): bold as gold.
             body = body.Replace("<b>", "<color=#E8C56A>").Replace("</b>", "</color>");
