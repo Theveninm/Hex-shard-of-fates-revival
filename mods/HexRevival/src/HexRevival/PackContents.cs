@@ -52,12 +52,13 @@ namespace HexRevival
         private void Awake() { s_Instance = this; }
 
         /// <summary>Dev "packlist": opens the window for the store's selected item.</summary>
-        public static string DevOpen()
+        public static string DevOpen(float scroll = 0f)
         {
             InventoryItemData item = s_Instance != null && s_Instance.m_Store != null ? s_Instance.Selected() : null;
             Contents c = item != null ? Describe(item) : null;
             if (c == null) return "no described item selected";
             s_Instance.Show(item, c);
+            s_Instance.m_Scroll.y = scroll;   // dev: "packlist 99999" = the end of the list
             return item.m_Name + ": cards " + c.CardsOwned + "/" + c.CardsTotal + ", all " + (c.CardsOwned + c.ItemsOwned) + "/" + (c.CardsTotal + c.ItemsTotal);
         }
 
@@ -102,15 +103,11 @@ namespace HexRevival
         {
             Transform frame = m_Store.transform.Find("Panel_R/Panel_Overlay/Frame_Details");
             bool gameBar = frame != null && frame.gameObject.activeInHierarchy;
-            if (gameBar) m_LastFrame = ScreenRect(frame);
-            Rect f = m_LastFrame;
-            if (f.width <= 0)
-            {
-                // Never seen yet: where the game puts it (the top middle of the item panel).
-                Transform panel = m_Store.transform.Find("Panel_R");
-                Rect p = panel != null ? ScreenRect(panel) : new Rect(Screen.width * 0.5f, Screen.height * 0.12f, Screen.width * 0.48f, Screen.height * 0.7f);
-                f = new Rect(p.center.x - 196 * S, p.y + 30 * S, 392 * S, 38 * S);
-            }
+            // The game's card count frame, shown or hidden: its widget keeps its place on the screen.
+            UIWidget fw = frame != null ? frame.GetComponent<UIWidget>() : null;
+            Rect f = fw != null ? WidgetRect(fw) : new Rect();
+            if (f.width > 0) m_LastFrame = f; else f = m_LastFrame;
+            if (f.width <= 0) f = new Rect(Screen.width * 0.625f, Screen.height * 0.15f, 392 * S, 34 * S);
             float h = 34 * S, w = 660 * S;
             // Under the game's card count when it shows one, in its place otherwise.
             Rect bar = new Rect(f.center.x - w / 2f, gameBar ? f.yMax + 6 * S : f.y, w, h);
@@ -216,25 +213,69 @@ namespace HexRevival
                 Rect pr = new Rect(tile.center.x - pic / 2f, tile.y + 8 * S, pic, pic);
                 Texture2D t = Icon(it);
                 bool owned = Inventory.Count(it.m_Id) > 0;
-                if (t != null)
-                {
-                    Color old = GUI.color;
-                    if (!owned) GUI.color = new Color(1f, 1f, 1f, 0.45f);   // greyed out as the collection shows what is missing
-                    GUI.DrawTexture(pr, t, ScaleMode.ScaleToFit);
-                    GUI.color = old;
-                }
+                if (t != null) DrawIcon(pr, t, it);
                 else GUI.DrawTexture(pr, GameSkin.Solid(new Color(0.1f, 0.1f, 0.13f, 1f)));
                 string kind = it is InventoryMercenaryData ? Loc.Get("pc_mercenary") : it is InventoryEquipmentData ? RarityName(((InventoryEquipmentData)it).m_Rarity) : "";
                 GUI.Label(new Rect(tile.x + 4 * S, pr.yMax + 4 * S, w - 8 * S, 40 * S), it.m_Name.Trim(), nameStyle);
+                // Owned items in gold, the others muted.
+                GUIStyle os = owned ? GameSkin.Style("bold", 12, GameSkin.Gold, TextAnchor.UpperCenter) : ownedStyle;
                 GUI.Label(new Rect(tile.x + 4 * S, tile.yMax - 22 * S, w - 8 * S, 20 * S),
-                    (kind.Length > 0 ? kind + " · " : "") + Loc.Get("pc_owned", Inventory.Count(it.m_Id)), ownedStyle);
+                    (kind.Length > 0 ? kind + " · " : "") + Loc.Get("pc_owned", Inventory.Count(it.m_Id)), os);
             }
+        }
+
+        private static Material s_IconMaterial;
+        private static bool s_IconMaterialTried;
+
+        /// <summary>
+        /// An item's picture drawn as the game's inventory icons are (GoInventoryIcon.CreateTexture / SetEquipmentFromData):
+        /// with the game's "M_Inventory_Icon" material and the item's m_HueSat as the color (the equipment pictures are
+        /// silhouettes the material fills and colors). Without the material: the texture as is.
+        /// </summary>
+        private static void DrawIcon(Rect r, Texture2D t, InventoryItemData it)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            if (!s_IconMaterialTried)
+            {
+                s_IconMaterialTried = true;
+                Material m = Resources.Load("M_Inventory_Icon", typeof(Material)) as Material;
+                if (m != null) s_IconMaterial = new Material(m);
+                if (m == null) Debug.LogWarning("[HexRevival] [PackContents] M_Inventory_Icon not found");
+            }
+            // Square, centered (the pictures are square).
+            float side = Mathf.Min(r.width, r.height);
+            Rect sq = new Rect(r.center.x - side / 2f, r.center.y - side / 2f, side, side);
+            if (s_IconMaterial == null) { GUI.DrawTexture(sq, t, ScaleMode.ScaleToFit); return; }
+            Graphics.DrawTexture(sq, t, new Rect(0, 0, 1, 1), 0, 0, 0, 0, HueSat(it.m_HueSat), s_IconMaterial);
+        }
+
+        /// <summary>m_HueSat ("RRGGBB" or "RRGGBBAA", with or without "#") as a color; white if empty or unreadable. NGUI passes
+        /// widget colors at half intensity to its shaders (0.5 = full), as Graphics.DrawTexture's color is.</summary>
+        private static Color HueSat(string hex)
+        {
+            Color c = Color.white;
+            if (!string.IsNullOrEmpty(hex))
+            {
+                string h = hex.Trim().TrimStart('#');
+                try
+                {
+                    if (h.Length >= 6)
+                    {
+                        c.r = Convert.ToInt32(h.Substring(0, 2), 16) / 255f;
+                        c.g = Convert.ToInt32(h.Substring(2, 2), 16) / 255f;
+                        c.b = Convert.ToInt32(h.Substring(4, 2), 16) / 255f;
+                        c.a = h.Length >= 8 ? Convert.ToInt32(h.Substring(6, 2), 16) / 255f : 1f;
+                    }
+                }
+                catch { c = Color.white; }
+            }
+            return new Color(c.r * 0.5f, c.g * 0.5f, c.b * 0.5f, c.a * 0.5f);
         }
 
         private static readonly Dictionary<ResourceId, Texture2D> s_Icons = new Dictionary<ResourceId, Texture2D>();
 
         /// <summary>An item's picture from the game's icon bundle (icons.ab: the item's texture, or its "_Thumb"); null if none.</summary>
-        private static Texture2D Icon(InventoryItemData item)
+        internal static Texture2D Icon(InventoryItemData item)
         {
             Texture2D t;
             if (s_Icons.TryGetValue(item.m_Id, out t)) return t;
@@ -249,6 +290,29 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [PackContents] icon " + item.m_Name + ": " + e.Message); }
             s_Icons[item.m_Id] = t;
             return t;
+        }
+
+        /// <summary>
+        /// Dev "iconcheck [all]": per item type, how many have a picture in the icon bundle; the missing ones listed
+        /// (FutureRelease items, never given, left out unless "all").
+        /// </summary>
+        public static string IconCheck(bool all)
+        {
+            Dictionary<string, int[]> byType = new Dictionary<string, int[]>();
+            List<string> missing = new List<string>();
+            foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                if (i == null || (!all && i.m_BuildTag == "FutureRelease")) continue;
+                string type = i.GetType().Name;
+                int[] n;
+                if (!byType.TryGetValue(type, out n)) byType[type] = n = new int[2];
+                n[0]++;
+                if (Icon(i) != null) { n[1]++; continue; }
+                if (missing.Count < 60) missing.Add(type + ": " + (i.m_Name ?? "?").Trim() + " [" + (i.m_TexturePath ?? "-") + "] " + i.m_BuildTag);
+            }
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, int[]> kv in byType) lines.Add(kv.Key + " " + kv.Value[1] + "/" + kv.Value[0]);
+            return string.Join("\n", lines.ToArray()) + "\n--- missing:\n" + string.Join("\n", missing.ToArray());
         }
 
         // ------------------------------------------------------------------
@@ -411,6 +475,16 @@ namespace HexRevival
                 });
                 c.Items.Add(new KeyValuePair<string, List<InventoryItemData>>(title + " · " + Loc.Get("pc_other_items"), items));
             }
+        }
+
+        /// <summary>An NGUI widget's area on the screen (GUI coordinates), from its own corners (also while hidden).</summary>
+        private static Rect WidgetRect(UIWidget w)
+        {
+            Camera cam = NGUITools.FindCameraForLayer(w.gameObject.layer);
+            if (cam == null) return new Rect();
+            Vector3[] c = w.worldCorners;
+            Vector3 a = cam.WorldToScreenPoint(c[0]), b = cam.WorldToScreenPoint(c[2]);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Screen.height - Mathf.Max(a.y, b.y), Mathf.Max(a.x, b.x), Screen.height - Mathf.Min(a.y, b.y));
         }
 
         /// <summary>Screen rectangle (GUI coordinates) of an NGUI object.</summary>

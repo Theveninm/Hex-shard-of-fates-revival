@@ -1676,7 +1676,8 @@ namespace HexRevival
                             + " active=" + player.IsActivePlayer() + " prio=" + player.IsPriorityPlayer();
                     }
                     catch (Exception e) { return "AIUpdate exception: " + e; }
-                case "packlist": return PackContents.DevOpen();
+                case "packlist": return PackContents.DevOpen(parts.Length > 1 ? float.Parse(parts[1]) : 0f);
+                case "iconcheck": return PackContents.IconCheck(parts.Length > 1 && parts[1] == "all");
                 case "cards": return CardsDump(gc, session, parts.Length > 1 && parts[1] == "all");
                 case "clitext":   // dev: "clitext <n>" = the text the client writes on card SessionCardId(Card.n), from its ability list
                     {
