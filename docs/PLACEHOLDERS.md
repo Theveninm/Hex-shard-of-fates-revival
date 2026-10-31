@@ -95,14 +95,14 @@ Hogarth's challenge window (the client's is the consoles', without buttons on PC
 ## Campaign placeholders still open
 | Where | Placeholder | Why it stays |
 |---|---|---|
-| NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit |
-| CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage" |
+| NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit. Not The Blood Beneath (still in the tracker at both visits); no dialogue or item names the key's source (checked 2026-10-31) |
+| CampaignBoat.cs SeaMonstersAwake | "a sea quest done" | the runs also fit "from the 3rd voyage"; MHS Ardent (Pre-Scylla 2017-10-31, Scylla after the lobster quest 2017-11-21) fits both too: one video per battle, the voyages cannot be counted |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video (checked 2026-10-31: KVC parts 4, 9, 15 and MHS's 2019 Kukatan run go from the Mausoleum to the Black Hall and the Forgotten Crypt) |
 | Dungeons.cs (Sister Midnight) | Cunning / Instinct totals | never seen (Vandersveldt parts 27, 28, 35: the 2016 client shows no form on the board) |
-| Fortunes.cs | which fortune is drawn | random in the runs |
-| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first |
-| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video |
+| Fortunes.cs | which fortune is drawn | random in the runs: 7 readings, the same gaal before the same battle gave Ruby and Diamond, one champion drew Ruby then Diamond |
+| Hometown.cs | quest giver shown once the sparring match is won | the client's quest hint follows the partner's success line and the video shows that order (Amaz part 2), but no run tried the giver first. Other hometown videos checked 2026-10-31: none (KVC part 16's "Vennen intro" hit is a PvP deck screen) |
+| Hometown.cs (dwarves) | the elder at the Quarry's NodeA | the client names the dwarf nodes NodeA..D: NodeB is the sparring partner, NodeC the quest giver (Src.Game); no dwarf run on video (rechecked 2026-10-31: no dwarf champion in any source) |
 
 ## Game content the mod does not place (audit of 2026-10-31)
 Every conversation (2,297) and encounter scene (362) of the game files was checked against the map nodes, the dungeons

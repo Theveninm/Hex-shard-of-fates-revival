@@ -127,6 +127,8 @@ namespace HexRevival
             // it locked; "Step 2 - Player has Sapphire Key" at the first visit in MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26 and MHS
             // Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt part 63 already past it. Every run had finished Gnomes Come
             // Home before (Vincent: "Here, take this with you"), so the key may be that reward: not enough to lock the gate.
+            // Not The Blood Beneath (the Blood Key's quest): the quest tracker still shows it at both visits (MHS maplabels
+            // 0:40 / 0:46). No dialogue and no item of the game data names where the Sapphire Key comes from.
             { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {
