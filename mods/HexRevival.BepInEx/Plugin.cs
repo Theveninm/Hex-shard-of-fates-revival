@@ -335,6 +335,10 @@ namespace HexRevival
                 harmony.Patch(AccessTools.Method(typeof(DeckBuilder.UIDeckBuilderVM), "SetupTournamentUI"), postfix: new HarmonyMethod(typeof(Hooks), "DeckBuilder_Record")));
             apply("UIDeckBuilderVM.OnAsynchPlayerUpdated", () =>
                 harmony.Patch(AccessTools.Method(typeof(DeckBuilder.UIDeckBuilderVM), "OnAsynchPlayerUpdated"), postfix: new HarmonyMethod(typeof(Hooks), "DeckBuilder_Record")));
+            apply("UITournamentDeckEditorViewModel.Initialize", () =>
+                harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "Initialize"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
+            apply("UITournamentDeckEditorViewModel.OnAsynchPlayerUpdated", () =>
+                harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "OnAsynchPlayerUpdated"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
             // Featured Content of the main menu: the mod's panels instead of the HEX website's news (see Community).
             apply("UINewsEventsViewModel.Start", () =>
                 harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
@@ -727,6 +731,12 @@ namespace HexRevival
         }
 
         public static void Battle_ChampionCardPlayed(UIBattle __instance, ChampionCardPlayedSessionEventArgs __0) { OnlineMatch.ShowPlayerNames(__instance, __0); }
+
+        public static void DeckEditor_Record(UITournamentDeckEditorViewModel __instance)
+        {
+            try { HexRevival.Battlegrounds.ShowRecord(Traverse.Create(__instance).Field("m_Context").GetValue<UITournamentDeckEditorContext>()); }
+            catch (Exception e) { Plugin.Log.LogError("Gauntlet record: " + e); }
+        }
 
         public static void DeckBuilder_Record(DeckBuilder.UIDeckBuilderVM __instance)
         {

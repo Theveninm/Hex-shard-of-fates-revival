@@ -864,31 +864,105 @@ namespace HexRevival
             Manager.CurrentlyInMatch = r.GameWins + r.GameLosses > 0;
             Debug.Log("[HexRevival] [Battlegrounds] " + g.Name + ": " + text);
             Notices.Show(text);
+            s_RefreshRecord = true;
             if (r.Wins >= g.MaxWins || r.Losses >= g.MaxLosses || r.Wins + r.Losses >= g.MaxMatches) s_Finished = r;
             Save();
             return true;
         }
 
         /// <summary>
-        /// The draft's RECORD boxes (postfix of UIDeckBuilderVM.SetupTournamentUI and OnAsynchPlayerUpdated): the client
-        /// fills them with every win first, then the losses, so a loss then a win showed as won, lost. Here they follow the
-        /// order of the matches. Runs saved before 1.2.13 have no order: left to the client.
+        /// The draft's RECORD boxes: the client fills them with every win first, then the losses, so a loss then a win
+        /// showed as won, lost. Here they follow the order of the matches (Run.Results). Runs saved before 1.2.13 have no
+        /// order: left to the client. Returns the three boxes (1 won, 2 lost, 0 empty), or null.
         /// </summary>
-        public static void ShowRecord(DeckBuilder.UITournamentContext t)
+        private static int[] RecordBoxes()
         {
-            TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
-            Run r = cur != null ? RunOf(cur.TournamentID) : null;
-            if (t == null || r == null || r.Results == null || r.Results.Count != r.Wins + r.Losses) return;
+            Run r = CurrentRun();
+            if (r == null || r.Results == null || r.Results.Count != r.Wins + r.Losses) return null;
             int[] box = new int[3];
             for (int i = 0; i < box.Length && i < r.Results.Count; i++) box[i] = r.Results[i];
-            t.ResultOne = box[0];
-            t.ResultTwo = box[1];
-            t.ResultThree = box[2];
+            return box;
+        }
+
+        private static Run CurrentRun()
+        {
+            TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+            return cur != null ? RunOf(cur.TournamentID) : null;
+        }
+
+        /// <summary>Postfix of UIDeckBuilderVM.SetupTournamentUI and OnAsynchPlayerUpdated.</summary>
+        public static void ShowRecord(DeckBuilder.UITournamentContext t)
+        {
+            int[] box = RecordBoxes();
+            if (t == null || box == null) return;
+            t.ResultOne = box[0]; t.ResultTwo = box[1]; t.ResultThree = box[2];
+        }
+
+        /// <summary>
+        /// Postfix of UITournamentDeckEditorViewModel.Initialize and OnAsynchPlayerUpdated: the deck screen of the
+        /// asynchronous gauntlets (draft, sealed, constructed).
+        /// </summary>
+        public static void ShowRecord(UITournamentDeckEditorContext t)
+        {
+            int[] box = RecordBoxes();
+            if (t == null || box == null) return;
+            t.ResultOne = box[0]; t.ResultTwo = box[1]; t.ResultThree = box[2];
+        }
+
+        /// <summary>
+        /// Back from a game, the gauntlet's deck screen is the one left for the battle: it read the record when it opened
+        /// and the server's update (OnAsynchPlayerUpdated) never came, so RECORD / WINS / LOSSES stayed as they were until
+        /// the screen was opened again (2026-10-31). The update is given to it here.
+        /// </summary>
+        private static void RefreshDeckScreen()
+        {
+            Run r = CurrentRun();
+            TournamentPlayerInfo me;
+            if (r == null || !Manager.AsynchPlayerOverrides.TryGetValue(r.TournamentId, out me)) return;
+            me.Wins = r.Wins;
+            me.Losses = r.Losses;
+            UITournamentDeckEditorViewModel vm = UnityEngine.Object.FindObjectOfType<UITournamentDeckEditorViewModel>();
+            if (vm == null) return;
+            System.Reflection.MethodInfo m = typeof(UITournamentDeckEditorViewModel).GetMethod("OnAsynchPlayerUpdated", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (m != null) m.Invoke(vm, new object[] { r.TournamentId, me });   // the postfix puts the boxes in order
+        }
+
+        private static bool s_RefreshRecord;
+
+        /// <summary>
+        /// The score of the match in progress of a best-of-3 gauntlet ("Match 2 - games 1-0"), shown next to RECORD: the
+        /// boxes only count whole matches, and the game score was only a notice after each game (2026-10-31). Null when
+        /// there is nothing to show.
+        /// </summary>
+        public static string MatchScore()
+        {
+            try
+            {
+                if (GameClient.Instance.StateManager.CurrentGameState != EGameState.TournamentSideboarding) return null;
+                Run r = CurrentRun();
+                Gauntlet g = r != null ? Find(r.TournamentId) : null;
+                if (g == null || g.GamesPerMatch < 2 || (g.Kind == Kind.Draft && r.Round < g.Boosters)) return null;
+                return Loc.Get("bg_score", r.Wins + r.Losses + 1, r.GameWins, r.GameLosses);
+            }
+            catch { return null; }
         }
 
         /// <summary>Called every frame: the prizes of a finished run, once back from the battle.</summary>
         public static void Tick()
         {
+            if (s_RefreshRecord && s_Battle == null)
+            {
+                try
+                {
+                    if (GameClient.Instance.StateManager.CurrentGameState == EGameState.TournamentSideboarding
+                        && UnityEngine.Object.FindObjectOfType<UITournamentDeckEditorViewModel>() != null)
+                    {
+                        s_RefreshRecord = false;
+                        RefreshDeckScreen();
+                    }
+                }
+                catch (Exception e) { s_RefreshRecord = false; Debug.LogError("[HexRevival] [Battlegrounds] record: " + e); }
+            }
             if (s_Finished == null || s_Battle != null) return;
             EGameState state = GameClient.Instance.StateManager.CurrentGameState;
             if (state != EGameState.TournamentSideboarding && state != EGameState.TournamentLobby && state != EGameState.Tournament) return;
@@ -1117,6 +1191,40 @@ namespace HexRevival
             Notices.Show(Loc.Get("ladder_stars", l.ConstructedStars));
             LadderSleeves();
             return true;
+        }
+    }
+
+    /// <summary>Draws Battlegrounds.MatchScore left of the gauntlet deck screen's RECORD / WINS-LOSSES frame.</summary>
+    public class BattlegroundsScore : MonoBehaviour
+    {
+        private float m_Next;
+        private Transform m_Frame;
+        private string m_Text;
+
+        private void Update()
+        {
+            if (Time.realtimeSinceStartup < m_Next) return;
+            m_Next = Time.realtimeSinceStartup + 0.5f;
+            m_Text = Battlegrounds.MatchScore();
+            if (m_Text == null) { m_Frame = null; return; }
+            if (m_Frame == null)
+            {
+                UITournamentDeckEditorViewModel vm = FindObjectOfType<UITournamentDeckEditorViewModel>();
+                m_Frame = vm != null ? vm.transform.Find("Asynchronous_Elements/Frame_Progress_Win_Loss") : null;
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (m_Text == null || m_Frame == null || !m_Frame.gameObject.activeInHierarchy) return;
+            Bounds b = NGUIMath.CalculateAbsoluteWidgetBounds(m_Frame);
+            Camera cam = NGUITools.FindCameraForLayer(m_Frame.gameObject.layer);
+            if (cam == null) return;
+            Vector3 lo = cam.WorldToScreenPoint(b.min), hi = cam.WorldToScreenPoint(b.max);
+            float S = GameSkin.Scale;
+            float left = Mathf.Min(lo.x, hi.x), top = Screen.height - Mathf.Max(lo.y, hi.y), h = Mathf.Abs(hi.y - lo.y);
+            Rect r = new Rect(left - 330 * S, top, 316 * S, h);
+            GameSkin.Label(r, m_Text, GameSkin.Style("title", 17, GameSkin.Gold, TextAnchor.MiddleRight));
         }
     }
 }
