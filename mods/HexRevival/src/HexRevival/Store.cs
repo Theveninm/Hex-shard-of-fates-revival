@@ -331,7 +331,7 @@ namespace HexRevival
         }
 
         /// <summary>The set's primal pack item (invalid if it has none).</summary>
-        private static ResourceId PrimalOf(ResourceId set)
+        internal static ResourceId PrimalOf(ResourceId set)
         {
             foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {

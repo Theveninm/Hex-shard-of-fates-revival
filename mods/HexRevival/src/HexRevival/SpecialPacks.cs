@@ -66,7 +66,7 @@ namespace HexRevival
             }
         }
 
-        private static readonly string[] Races = { "Coyotle", "Dwarf", "Elf", "Human", "Necrotic", "Orc", "Shin'hare", "Vennen" };
+        internal static readonly string[] Races = { "Coyotle", "Dwarf", "Elf", "Human", "Necrotic", "Orc", "Shin'hare", "Vennen" };
 
         /// <summary>One bought product: its cards and items into the response. False if it is not one of these.</summary>
         public static bool Deliver(InventoryItemData item, PurchaseItemResponse r)
@@ -168,7 +168,7 @@ namespace HexRevival
         private static CardSetTemplate Any(List<CardSetTemplate> sets) { return sets.Count > 0 ? sets[UnityEngine.Random.Range(0, sets.Count)] : null; }
 
         /// <summary>The 9 booster sets (Shards of Fate ... Doombringer).</summary>
-        private static List<CardSetTemplate> BoosterSets()
+        internal static List<CardSetTemplate> BoosterSets()
         {
             List<CardSetTemplate> res = new List<CardSetTemplate>();
             foreach (CardSetTemplate s in Singleton<TemplateManager>.Instance.CardSets.Values)
@@ -177,7 +177,7 @@ namespace HexRevival
         }
 
         /// <summary>The cards of a rarity of the Standard format's sets (the game's format rules).</summary>
-        private static List<CardTemplate> StandardPool(ERarity rarity)
+        internal static List<CardTemplate> StandardPool(ERarity rarity)
         {
             List<CardTemplate> res = new List<CardTemplate>();
             Format standard = DeckValidator.DeckFormatToNormalFormat(EDeckFormat.Standard);

@@ -165,6 +165,7 @@ namespace HexRevival
                 go.AddComponent<AiButton>();
                 go.AddComponent<OnlineLobby>();
                 go.AddComponent<Community>();
+                go.AddComponent<PackContents>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -1583,6 +1584,14 @@ namespace HexRevival
                     Progression.AddAccountXp(parts.Length > 1 ? int.Parse(parts[1]) : 50); return "account level " + Saves.Current.AccountLevel + ", xp " + Saves.Current.AccountXp + ", gold " + Saves.Current.Gold;
                 case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
+                case "panonpcs":   // dev: the characters of the panorama shown (object, identifier, active, location given by the mod)
+                    {
+                        List<string> l = new List<string>();
+                        foreach (GoPanoramaInteractable go in Resources.FindObjectsOfTypeAll<GoPanoramaInteractable>())
+                            l.Add(go.name + " id=" + go.m_Identifier + " active=" + go.gameObject.activeInHierarchy
+                                + " loc=" + (go.Context != null && go.Context.Location != null ? go.Context.Location.Node : "-"));
+                        return string.Join("\n", l.ToArray());
+                    }
                 case "hover":   // dev: "hover <GameObject path>" = NGUI's OnHover(true) on it, as the mouse entering it would
                     {
                         GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
@@ -1666,7 +1675,22 @@ namespace HexRevival
                             + " active=" + player.IsActivePlayer() + " prio=" + player.IsPriorityPlayer();
                     }
                     catch (Exception e) { return "AIUpdate exception: " + e; }
+                case "packlist": return PackContents.DevOpen();
                 case "cards": return CardsDump(gc, session, parts.Length > 1 && parts[1] == "all");
+                case "clitext":   // dev: "clitext <n>" = the text the client writes on card SessionCardId(Card.n), from its ability list
+                    {
+                        if (session == null || parts.Length < 2) return "usage: clitext <n>";
+                        foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in session.Cache.Cards)
+                        {
+                            if (kv.Key.ToString() != "SessionCardId(Card." + parts[1] + ")") continue;
+                            CardRepresentation rep = kv.Value;
+                            CardTemplate ct = Singleton<TemplateManager>.Instance.GetCardTemplate(rep.TemplateId);
+                            List<AbilityTemplate> act = new List<AbilityTemplate>();
+                            foreach (ResourceId id in rep.Abilities) { AbilityTemplate a = Singleton<TemplateManager>.Instance.GetAbilityTemplate(id); if (a != null) act.Add(a); }
+                            return rep.Abilities.Count + " abilities: " + (ct != null ? ct.BuildGameText(rep, act, XLIFFLocalization.instance) : "?");
+                        }
+                        return "not found";
+                    }
                 default: return Repl.Execute(gc, parts, Repl.BuildRefs(gc));
             }
         }

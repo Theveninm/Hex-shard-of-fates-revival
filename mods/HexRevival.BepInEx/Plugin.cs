@@ -89,6 +89,9 @@ namespace HexRevival
             // Campaign mercenary parties (see Mercenaries.cs).
             apply("ClientCampaignManager.SaveChampionParty", () => Prefix(harmony, typeof(ClientCampaignManager), "SaveChampionParty", null, "Campaign_SaveChampionParty"));
             // Profile deck templates (the AZ2 boat's deck, see DeckTemplates.cs).
+            // Account level rewards claimed on the account panel (see AccountRewards).
+            apply("Profile.Network.ProfileAccountXpState", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "ProfileAccountXpState", null, "Profile_AccountXpState"));
+            apply("Profile.Network.ProfileAccountXpClaim", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "ProfileAccountXpClaim", null, "Profile_AccountXpClaim"));
             apply("Profile.Network.DeckTemplateSave", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "DeckTemplateSave", null, "Profile_DeckTemplateSave"));
             // Local store (see Store.cs).
             apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
@@ -327,6 +330,11 @@ namespace HexRevival
             // Online: the players' names in the battle instead of their champions' (see OnlineMatch).
             apply("UIBattle.OnChampionCardPlayed", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIBattle), "OnChampionCardPlayed"), postfix: new HarmonyMethod(typeof(Hooks), "Battle_ChampionCardPlayed")));
+            // Battlegrounds draft: the RECORD boxes in the order the matches were played (see Battlegrounds.ShowRecord).
+            apply("UIDeckBuilderVM.SetupTournamentUI", () =>
+                harmony.Patch(AccessTools.Method(typeof(DeckBuilder.UIDeckBuilderVM), "SetupTournamentUI"), postfix: new HarmonyMethod(typeof(Hooks), "DeckBuilder_Record")));
+            apply("UIDeckBuilderVM.OnAsynchPlayerUpdated", () =>
+                harmony.Patch(AccessTools.Method(typeof(DeckBuilder.UIDeckBuilderVM), "OnAsynchPlayerUpdated"), postfix: new HarmonyMethod(typeof(Hooks), "DeckBuilder_Record")));
             // Featured Content of the main menu: the mod's panels instead of the HEX website's news (see Community).
             apply("UINewsEventsViewModel.Start", () =>
                 harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
@@ -555,6 +563,10 @@ namespace HexRevival
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
         { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
+        public static bool Profile_AccountXpState(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __2, ref IAsyncResult __result)
+        { __result = null; AccountRewards.OnState(__2); return false; }
+        public static bool Profile_AccountXpClaim(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __2, ref IAsyncResult __result)
+        { __result = null; AccountRewards.OnClaim(__2); return false; }
         public static bool Siege_IssueRequest(byte[] __3, Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Campaign.Siege.Messaging.Response>> __5, ref IAsyncResult __result)
         { __result = null; Siege.OnRequest(__3, __5); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
@@ -715,6 +727,12 @@ namespace HexRevival
         }
 
         public static void Battle_ChampionCardPlayed(UIBattle __instance, ChampionCardPlayedSessionEventArgs __0) { OnlineMatch.ShowPlayerNames(__instance, __0); }
+
+        public static void DeckBuilder_Record(DeckBuilder.UIDeckBuilderVM __instance)
+        {
+            try { Battlegrounds.ShowRecord(Traverse.Create(__instance).Field("m_Context").Property("Tournament").GetValue<DeckBuilder.UITournamentContext>()); }
+            catch (Exception e) { Plugin.Log.LogError("Draft record: " + e); }
+        }
 
         /// <summary>A URL is needed for the carousel to ask for its panels (the game's config has none offline).</summary>
         public static void News_Start(UINewsEventsViewModel __instance)

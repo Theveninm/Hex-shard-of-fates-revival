@@ -46,12 +46,38 @@ namespace HexRevival
             FailuresByCard.Clear();
         }
 
+        /// <summary>A troop in play that could block now (exhaustion, "can't block" effects: the engine's CanBlock).</summary>
+        private static bool AbleToBlock(Card c)
+        {
+            try { return c.IsInPlay() && c.IsTroop() && c.CanBlock() == ECombatantStatus.Ok; }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// The abilities the client writes on the card (CardTemplate.BuildGameText takes them from this list): without the
+        /// "ONE-SHOT" style abilities already used up (Card.m_PerGameUses: uses so far). The engine keeps them on the card.
+        /// Before 1.2.13 their text stayed on the card (Zymmer 2026-10-31, the Cockatrice).
+        /// </summary>
+        private static List<ResourceId> VisibleAbilities(Card card)
+        {
+            List<ResourceId> all = new List<ResourceId>(card.CurrentAbilities.ToList());
+            if (card.m_PerGameUses == null || card.m_PerGameUses.Count == 0) return all;
+            all.RemoveAll(id =>
+            {
+                int used;
+                if (!card.m_PerGameUses.TryGetValue(id, out used)) return false;
+                AbilityTemplate t = Singleton<TemplateManager>.Instance.GetAbilityTemplate(id);
+                return t != null && t.UsesPerGame > 0 && used >= t.UsesPerGame;
+            });
+            return all;
+        }
+
         private static string CardSig(Card c)
         {
             return string.Concat(
                 (int)c.m_CurrentCardCollection, "|", (c.m_ControllingPlayer != null ? c.m_ControllingPlayer.m_PlayerId.ToString() : "?"), "|",
-                c.CastingCost, "|", c.CurrentAttackValue, "|", c.CurrentDefenseValue, "|", (int)c.CurrentCardState, "|", (int)c.CurrentType, "|",
-                (int)c.CurrentAttributeFlags, "|", c.CurrentAbilities.Count, "|", c.EscalationCount, "|", (int)c.ActiveGem, "|", c.Counters.Count, "|",
+                c.CastingCost, "|", c.CurrentAttackValue, "|", c.CurrentDefenseValue, "|", c.CurrentHealthValue, "|", AbleToBlock(c) ? "B" : "-", "|", (int)c.CurrentCardState, "|", (int)c.CurrentType, "|",
+                (int)c.CurrentAttributeFlags, "|", c.CurrentAbilities.Count, "|", VisibleAbilities(c).Count, "|", c.EscalationCount, "|", (int)c.ActiveGem, "|", c.Counters.Count, "|",
                 c.CurrentSubtype ?? "", "|", ExtraSig(c));
         }
 
@@ -1172,7 +1198,10 @@ namespace HexRevival
             e.SessionCardId = card.m_SessionCardId;
             e.Cost = card.CastingCost;
             e.Attack = card.CurrentAttackValue;
-            e.Defense = card.CurrentDefenseValue;
+            // Health left (defense minus damage taken): the client draws it, red when below the card's defense, and
+            // white again once the damage is cleared at the end of the turn (Zymmer 2026-10-31: troops' numbers no
+            // longer went down; the defense alone was sent). The client AI reads it too.
+            e.Defense = card.CurrentHealthValue;
             e.Armor = card.GetCardContext().Get(IntAttrs.Armor);
             e.CurrentArmor = e.Armor;
             e.Rage = card.GetCardContext().Get(IntAttrs.Rage);
@@ -1191,10 +1220,12 @@ namespace HexRevival
             e.AffectedId = card.m_AffectedId;
             e.Type = card.CurrentType;
             e.State = card.CurrentCardState;
-            e.AICardStates = EAICardStates.None;
+            // The client AI counts a troop as a possible blocker only with AbleToBlock (Src.Game: AITactical.GetCanBlock);
+            // without it, it saw no blocker and always attacked (Zymmer 2026-10-31).
+            e.AICardStates = AbleToBlock(card) ? EAICardStates.AbleToBlock : EAICardStates.None;
             e.Attributes = card.CurrentAttributeFlags;
             e.Collection = card.m_CurrentCardCollection;
-            e.Abilities = new List<ResourceId>(card.CurrentAbilities.ToList());
+            e.Abilities = VisibleAbilities(card);
             e.Escalation = card.EscalationCount;
             e.Gems = card.ActiveGem;
 

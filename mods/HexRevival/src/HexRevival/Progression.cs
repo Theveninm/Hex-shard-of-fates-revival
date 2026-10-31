@@ -453,7 +453,13 @@ namespace HexRevival
             if (special == null) give = DefaultBattle;
             // A sea battle won again (Src.Video, KVC): half the gold, a fifth of the XP (Overseer 200 / 130, Bloodhorn 300 / 135).
             else if (seaRepeat) give = new Reward { Gold = special.Gold / 2, Xp = special.Xp / 5, Source = Src.Video };
-            else if (!special.HasItems || Saves.Current.Claims.Contains(key)) give = special.GoldXpOnly();
+            else if (!special.HasItems || Saves.Current.Claims.Contains(key))
+            {
+                give = special.GoldXpOnly();
+                // A dungeon battle won again also gives its pack again (Src.Video: Vandersveldt's Tranquil Dream replay,
+                // Sister Midnight's pack again; Zymmer 2026-10-31: replays gave no pack). Its other items stay once.
+                if (node.Contains("/") && !node.StartsWith("AZ2/")) give.Packs = special.Packs;
+            }
             else if (special.NeedsEvent != null && !Campaign.BattleEvents.Contains(special.NeedsEvent))
             {
                 // Condition not met: gold and XP only, the items stay to win.
@@ -632,7 +638,14 @@ namespace HexRevival
                 return;
             }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
-            for (int i = 0; i < r.Packs; i++) foreach (Loot.Drop d in Loot.Open(r.PackName ?? Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
+            for (int i = 0; i < r.Packs; i++)
+            {
+                // The pack itself, opened later with its Open button (Packs.GiveCampaignPack); its contents if the game
+                // has no item for it.
+                inventory_bits pack = Packs.GiveCampaignPack(r.PackName ?? Loot.AZ1Pack);
+                if (pack != null) { items.Add(pack); shown.Add(Action("ITEM", 1, pack.TemplateID.ToString())); }
+                else foreach (Loot.Drop d in Loot.Open(r.PackName ?? Loot.AZ1Pack)) AddDrop(d, cards, items, shown);
+            }
             for (int i = 0; i < r.RandomEquipment; i++) AddDrop(Loot.RandomEquipment(Loot.AZ1Pack), cards, items, shown);
             // Racial talents add their bonus as a second line, as the game showed it (Src.Video, Src.Game)
             int xpPct, goldPct;
@@ -885,7 +898,7 @@ namespace HexRevival
         private static int DailyCap { get { return Saves.Current.AccountLevel >= 20 ? 8000 : 4000; } }
         /// <summary>The daily period resets 20 hours after its first win. Src.Wiki2019.</summary>
         private const int PeriodHours = 20;
-        private const int MaxAccountLevel = 100;
+        internal const int MaxAccountLevel = 100;
 
         /// <summary>XP needed to go from level n-1 to level n (index = n). Src.Wiki2019; 7000 from level 41.</summary>
         private static readonly int[] LevelXp = { 0, 0, 1000, 1000, 1000, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1700, 1900, 2100, 2300, 2500, 2800,
@@ -893,7 +906,7 @@ namespace HexRevival
 
         private static int XpForLevel(int level) { return level < LevelXp.Length ? LevelXp[level] : 7000; }
 
-        private static int TotalXpForLevel(int level)
+        internal static int TotalXpForLevel(int level)
         {
             int total = 0;
             for (int l = 2; l <= level; l++) total += XpForLevel(l);
@@ -927,7 +940,7 @@ namespace HexRevival
             new[] { "pack:cur" }, new[] { "chests" }, new[] { "sleeve" }, new[] { "gold:4000" }, new[] { "cards:3" },
         };
 
-        private static string[] RewardsForLevel(int level)
+        internal static string[] RewardsForLevel(int level)
         {
             return level < LevelRewards.Length ? LevelRewards[level] : CycleRewards[level % 10];
         }
@@ -945,28 +958,29 @@ namespace HexRevival
             int bonus = Math.Max(0, Math.Min(xp, BonusXp - s.XpInPeriod));   // doubled part
             int gain = Math.Min(xp + bonus, Math.Max(0, DailyCap - s.XpInPeriod));
             if (gain <= 0) { Notices.Show(Loc.Get("xp_capped")); return; }
+            // The levels reached before this gain are claimed or not (saves of 1.2.12 and earlier: all were given).
+            AccountRewards.ClaimedLevel(s);
             s.XpInPeriod += gain;
             s.AccountXp += gain;
-            List<string> got = new List<string>();
-            while (s.AccountLevel < MaxAccountLevel && s.AccountXp >= TotalXpForLevel(s.AccountLevel + 1))
-            {
-                s.AccountLevel++;
-                foreach (string code in RewardsForLevel(s.AccountLevel)) got.Add(GrantLevelReward(code));
-            }
+            int before = s.AccountLevel;
+            while (s.AccountLevel < MaxAccountLevel && s.AccountXp >= TotalXpForLevel(s.AccountLevel + 1)) s.AccountLevel++;
             // Accounts past level 9 before 1.2.2 never got Sin'glar (the reward was not implemented): given now.
-            if (!s.UnlockAll && s.AccountLevel >= 9 && !s.Claims.Contains("lvlmerc"))
+            string merc = null;
+            if (!s.UnlockAll && AccountRewards.ClaimedLevel(s) >= 9 && !s.Claims.Contains("lvlmerc"))
             {
                 s.Claims.Add("lvlmerc");
-                if (!got.Exists(x => x != null && x.StartsWith("Sin"))) got.Add(GrantLevelReward("merc"));
+                merc = GrantLevelReward("merc");
             }
             Saves.SaveCurrent();
             RefreshAccountUi();
             Notices.Show(Loc.Get("account_xp", gain));
-            if (got.Count > 0) Notices.Show(Loc.Get("account_level", s.AccountLevel) + "  " + string.Join(", ", got.FindAll(x => x != null).ToArray()));
+            // The level's rewards are claimed on the account panel (click on the XP bar), see AccountRewards.
+            if (s.AccountLevel > before) Notices.Show(Loc.Get("account_level", s.AccountLevel) + "  " + Loc.Get("account_claim"));
+            if (merc != null) Notices.Show(merc);
         }
 
         /// <summary>Gives one level reward; returns its description (null if nothing was given).</summary>
-        private static string GrantLevelReward(string code)
+        internal static string GrantLevelReward(string code)
         {
             string[] p = code.Split(':');
             int n = 0;
@@ -1045,7 +1059,7 @@ namespace HexRevival
                 cap.TimerDurHours = PeriodHours;
                 cap.XpForCurrentLevel = TotalXpForLevel(s.AccountLevel);
                 cap.XpForNextLevel = TotalXpForLevel(Math.Min(MaxAccountLevel, s.AccountLevel + 1));
-                cap.HasUnClaimed = false; // rewards are given automatically
+                cap.HasUnClaimed = AccountRewards.ClaimedLevel(s) < s.AccountLevel;   // the bar shows "Rewards available"
                 SetProperty(profile, "CapInfo", cap);
                 SetProperty(profile, "AccountLevel", s.AccountLevel);
                 SetProperty(profile, "Experience", s.AccountXp);

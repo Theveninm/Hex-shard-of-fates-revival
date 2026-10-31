@@ -79,6 +79,8 @@ namespace HexRevival
             public ulong PlayerId;
             public int Wins, Losses;                 // matches
             public int GameWins, GameLosses;         // games of the match in progress
+            /// <summary>Each match played, in order: 1 won, 2 lost (the values of the deck builder's RECORD boxes).</summary>
+            public List<int> Results = new List<int>();
             public deck_bits Deck;                   // the tournament deck: the pool in its reserves for a limited run
             public bool DeckBuilt;                   // the pool was handed to the deck builder
             // Draft: the packs at the table (seat 0 is the player), round 0..2, pick 0..16.
@@ -827,6 +829,8 @@ namespace HexRevival
             {
                 bool matchWon = r.GameWins >= needed;
                 if (matchWon) r.Wins++; else r.Losses++;
+                if (r.Results == null) r.Results = new List<int>();
+                r.Results.Add(matchWon ? 1 : 2);
                 text = Loc.Get(matchWon ? "bg_match_won" : "bg_match_lost", r.Wins, r.Losses);
                 r.GameWins = r.GameLosses = 0;
             }
@@ -839,6 +843,23 @@ namespace HexRevival
             if (r.Wins >= g.MaxWins || r.Losses >= g.MaxLosses || r.Wins + r.Losses >= g.MaxMatches) s_Finished = r;
             Save();
             return true;
+        }
+
+        /// <summary>
+        /// The draft's RECORD boxes (postfix of UIDeckBuilderVM.SetupTournamentUI and OnAsynchPlayerUpdated): the client
+        /// fills them with every win first, then the losses, so a loss then a win showed as won, lost. Here they follow the
+        /// order of the matches. Runs saved before 1.2.13 have no order: left to the client.
+        /// </summary>
+        public static void ShowRecord(DeckBuilder.UITournamentContext t)
+        {
+            TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+            Run r = cur != null ? RunOf(cur.TournamentID) : null;
+            if (t == null || r == null || r.Results == null || r.Results.Count != r.Wins + r.Losses) return;
+            int[] box = new int[3];
+            for (int i = 0; i < box.Length && i < r.Results.Count; i++) box[i] = r.Results[i];
+            t.ResultOne = box[0];
+            t.ResultTwo = box[1];
+            t.ResultThree = box[2];
         }
 
         /// <summary>Called every frame: the prizes of a finished run, once back from the battle.</summary>
@@ -935,12 +956,16 @@ namespace HexRevival
                     if (r == null || r.PackShown == null) return "no pack shown";
                     SelectDraftCard(id, r.PackId, r.PackShown[0].Id);
                     return "picked " + r.PackShown[0].TemplateID + " (round " + r.Round + " pick " + r.Pick + ")";
+                case "resume":
+                    if (r == null) return "no run " + id;
+                    Resume(id);
+                    return "resumed " + id;
                 case "play":
                     if (r == null) return "no run " + id;
                     GameEntrance(id, null, true, null);
                     return "match started";
             }
-            return "usage: bg [state] | autodeck <id> | pick <id> | play <id>";
+            return "usage: bg [state] | autodeck <id> | pick <id> | resume <id> | play <id>";
         }
 
         // ------------------------------------------------------------------
