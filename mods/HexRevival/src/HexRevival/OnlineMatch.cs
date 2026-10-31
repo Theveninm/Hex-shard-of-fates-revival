@@ -43,7 +43,6 @@ namespace HexRevival
         private static NetClient s_Net;
         private static UID s_MyDeck;
         private static bool s_Started, s_SeenBattle;
-        private static float s_StartedAt;
 
         // Guest: the host's session state and events wait until the game client is ready for them.
         private static StandaloneGameClient s_GuestClient;
@@ -97,7 +96,6 @@ namespace HexRevival
             s_MyDeck = myDeck;
             Format = string.IsNullOrEmpty(format) ? "free" : format;
             RemoteDeck = UID.Invalid;
-            s_StartedAt = Time.realtimeSinceStartup;
             Debug.Log("[HexRevival] [Online] match against " + opponent + (host ? " (host)" : " (guest)") + ", deck " + myDeck);
             if (!host) SendRelay(MsgDeck, Encoding.UTF8.GetBytes(Decks.Export(myDeck).ToString(Newtonsoft.Json.Formatting.None)));
         }

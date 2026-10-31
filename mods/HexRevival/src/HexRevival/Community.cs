@@ -116,11 +116,13 @@ namespace HexRevival
             Checked = true;
         }
 
+#pragma warning disable 0649   // filled by the JSON reader (GitHub's release fields)
         private class Release
         {
             public string tag_name, html_url, body;
             public bool draft, prerelease;
         }
+#pragma warning restore 0649
 
         /// <summary>"1.10.0" is newer than "1.9.2": numbers compared one by one ("v" prefix and suffixes ignored).</summary>
         public static bool IsNewer(string tag, string current)

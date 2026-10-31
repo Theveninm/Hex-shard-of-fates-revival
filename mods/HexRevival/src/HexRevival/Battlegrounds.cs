@@ -82,7 +82,9 @@ namespace HexRevival
             /// <summary>Each match played, in order: 1 won, 2 lost (the values of the deck builder's RECORD boxes).</summary>
             public List<int> Results = new List<int>();
             public deck_bits Deck;                   // the tournament deck: the pool in its reserves for a limited run
+#pragma warning disable 0649   // read back from older saves (JSON); no longer set
             public bool DeckBuilt;                   // the pool was handed to the deck builder
+#pragma warning restore 0649
             // Draft: the packs at the table (seat 0 is the player), round 0..2, pick 0..16.
             public List<List<ResourceId>> Packs;
             public List<List<ResourceId>> BotPicks;
@@ -1097,7 +1099,9 @@ namespace HexRevival
         private class LadderRecord
         {
             public int ConstructedStars, ConstructedMax, ConstructedStreak;
+#pragma warning disable 0649   // no limited ladder offline: 0, kept in the save (JSON)
             public int LimitedStars, LimitedMax, LimitedStreak;
+#pragma warning restore 0649
             /// <summary>When the account played its first ranked game (DateTime ticks): the seasons count from it.</summary>
             public long SeasonsFrom;
         }

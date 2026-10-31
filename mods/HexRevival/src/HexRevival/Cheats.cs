@@ -523,7 +523,6 @@ namespace HexRevival
         /// <summary>Diagnostics: every second where a holder has priority (main phase,
         /// empty chain), records whether the engine considers its card playable.</summary>
         private static LocalPlayer s_ClientPlayer;
-        private static bool s_ForcedThisTick;
         private static bool ForceMode() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.force")); }
 
         /// <summary>
@@ -637,7 +636,6 @@ namespace HexRevival
         {
             try
             {
-                s_ForcedThisTick = false;
                 Player prio = ss.GetPriorityPlayer();
                 if (prio == null || !ss.CurrentTurnPhase.IsMainPhasePriorityWindow() || !ss.Chain.IsEmpty)
                     return;

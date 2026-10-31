@@ -153,7 +153,7 @@ namespace HexRevival
 
         private static bool Add(TemplateManager tm, ResourceId id, string name, string desc, string texture)
         {
-            if (tm.GetInventoryItem(id) != null) return false;
+            if (tm.InventoryItems.ContainsKey(id)) return false;   // GetInventoryItem logs a warning for each unknown id
             // The stardust's type shows it in the Stash; not an InventoryStardust, which would replace the game's stardust
             // of its rarity (TemplateManager.StardustLookup).
             InventoryIngredientData d = new InventoryIngredientData();

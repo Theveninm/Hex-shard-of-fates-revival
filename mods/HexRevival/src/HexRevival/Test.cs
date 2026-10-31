@@ -142,7 +142,6 @@ namespace HexRevival
         private float m_LastLoginAttempt;
         private float m_LastActionTime;
         private float m_LastStateLog;
-        private int m_LastPhase = -1;
         private string m_StatePath;
         private string m_CmdPath;
         private string m_RespPath;
@@ -1679,6 +1678,22 @@ namespace HexRevival
                     }
                     catch (Exception e) { return "AIUpdate exception: " + e; }
                 case "packlist": return PackContents.DevOpen(parts.Length > 1 ? (parts[1] == "close" ? -1f : float.Parse(parts[1])) : 0f);
+                case "artcheck":
+                    if (parts.Length > 1)
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+                            if (t != null && t.m_Name == q) return t.m_Id + " text: " + t.m_GameText + "\nlayout: " + t.m_CardLayoutId;
+                        return "not found";
+                    }
+                    return ChoiceArt.Check();
+                case "showcard":   // dev: "showcard <name>" = the card viewer a card link opens (UISystem.DisplayLinkedCard)
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+                            if (t != null && t.m_Name == q) { UISystem.DisplayLinkedCard(t, true, false, false); return "shown " + t.m_Name + " image='" + t.m_CardImagePath + "' parent=" + (ChoiceArt.Parent(t.m_Id) != null ? ChoiceArt.Parent(t.m_Id).m_Name : "-"); }
+                        return "not found";
+                    }
                 case "packcheck": return PackContents.DevCheck();
                 case "packsnap": return PackContents.DevSnaps();
                 case "packdetail": return PackContents.DevDetail(string.Join(" ", parts, 1, parts.Length - 1));

@@ -66,6 +66,8 @@ namespace HexRevival
             {
                 MethodInfo m = AccessTools.Method(typeof(StandaloneSession), "AddPlayer", new[] { typeof(Player) });
                 if (m == null) throw new MissingMethodException("AddPlayer");
+                // Declared by Session (StandaloneSession does not override it): patched there, as HarmonyX asks.
+                m = AccessTools.Method(m.DeclaringType, "AddPlayer", new[] { typeof(Player) });
                 harmony.Patch(m, postfix: new HarmonyMethod(typeof(Hooks), "Session_AddPlayer"));
             });
             // The local AI has an AIPlayer-type id: its "server"-side copy (RemotePlayer)
@@ -335,6 +337,18 @@ namespace HexRevival
             // connector again and again (Session.onConnectorState in LOGOUT -> Connector.Terminate -> DISCONNECTED ->
             // onConnectorState...) until a stack overflow, which left the logout half done: dim screen and an endless
             // loading wheel. A Terminate already running is not started again.
+            // The game's connection to the official servers (closed since 2019) retries every 30 seconds: its messages
+            // made most of the log (see LogFilter).
+            // Cards without art (choices such as "Pain" and "Suffering") drawn with the art of the card linking to them.
+            apply("GoCardBuilder.UpdateArtOverride", () =>
+                harmony.Patch(AccessTools.Method(typeof(GoCardBuilder), "UpdateArtOverride"), postfix: new HarmonyMethod(typeof(Hooks), "GoCardBuilder_UpdateArtOverride")));
+            apply("LogBase.Debug/Error (dead server noise)", () =>
+            {
+                harmony.Patch(AccessTools.Method(typeof(LogBase), "Debug", new[] { typeof(string), typeof(string), typeof(object[]) }),
+                    prefix: new HarmonyMethod(typeof(Hooks), "LogBase_Debug"));
+                harmony.Patch(AccessTools.Method(typeof(LogBase), "Error", new[] { typeof(string), typeof(string), typeof(object[]) }),
+                    prefix: new HarmonyMethod(typeof(Hooks), "LogBase_Error"));
+            });
             apply("Connector.Terminate (logout recursion)", () =>
                 harmony.Patch(AccessTools.Method(typeof(Game.Shared.Network.HConnect.Connector), "Terminate"),
                     prefix: new HarmonyMethod(typeof(Hooks), "Connector_TerminateEnter"),
@@ -496,6 +510,10 @@ namespace HexRevival
         {
             if (!__result && __instance.m_PlayerId.GetUIDType() == UID.Type.AIPlayer) __result = true;
         }
+
+        public static void GoCardBuilder_UpdateArtOverride(GoCardBuilder __instance) { ChoiceArt.AfterUpdate(__instance); }
+        public static bool LogBase_Debug(string __0, string __1, object[] __2) { return !LogFilter.DropDebug(__1, __2); }
+        public static bool LogBase_Error(string __0, string __1) { return !LogFilter.DropError(__0, __1); }
 
         public static void Session_AddPlayer(Session __instance, Player __0)
         {

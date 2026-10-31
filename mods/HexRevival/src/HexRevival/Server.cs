@@ -34,7 +34,6 @@ namespace HexRevival
             s_RevealPhase.Clear();
             s_PlayerSig.Clear();
             s_Dirty = true;
-            s_LastOptionsSig = null;
             s_LastGreenLightSig = null;
             s_SuppressNextGreenLight = false;
             s_InDispatch = false;
@@ -247,8 +246,6 @@ namespace HexRevival
         }
 
         private static FieldInfo s_GameClientField;
-        private static MethodInfo s_OnSyncMethod;
-        private static MethodInfo s_OnSyncPlayerMethod;
         private static FieldInfo s_MapField;
         private static FieldInfo s_RespondedField;
 
@@ -256,7 +253,6 @@ namespace HexRevival
         private static bool s_InDispatch;
         /// <summary>True if a "narrative" event (other than options/greenlight) went out since the last options were sent.</summary>
         private static bool s_Dirty = true;
-        private static string s_LastOptionsSig;
         private static bool s_SuppressNextGreenLight;
         private static string s_LastGreenLightSig;
         private static EPriorityContext s_LastGreenLightContext;
