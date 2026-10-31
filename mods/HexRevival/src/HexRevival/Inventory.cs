@@ -29,6 +29,7 @@ namespace HexRevival
             s_Owner = owner;
             s_NextId = 1;
             s_Counts.Clear();
+            Crafting.Register();   // the crafting materials' templates, before the client reads the items
             // Items earned or bought (sleeves, coins, battleboards; equipment on progression saves).
             LoadFile();
             if (Saves.Current.UnlockAll)
@@ -40,7 +41,10 @@ namespace HexRevival
             }
             List<inventory_bits> res = new List<inventory_bits>();
             foreach (KeyValuePair<ResourceId, int> kv in s_Counts)
+            {
+                if (!Crafting.Active && Crafting.IsMaterial(kv.Key)) continue;   // crafting off: its materials kept, not shown
                 for (int i = 0; i < kv.Value; i++) res.Add(NewInstance(kv.Key));
+            }
             inventory_bits sacks = Siege.SackItem(owner);   // Siege Sacks and Cosmic Coins, inventory currencies
             if (sacks != null) res.Add(sacks);
             inventory_bits coins = Store.CosmicCoinItem(owner);
@@ -65,6 +69,27 @@ namespace HexRevival
             return NewInstance(template);
         }
 
+        /// <summary>n of an item (crafting materials), saved once; the instances to hand to the client.</summary>
+        public static List<inventory_bits> GrantMany(ResourceId template, int n)
+        {
+            List<inventory_bits> res = new List<inventory_bits>();
+            if (Saves.Current == null || n <= 0) return res;
+            int had;
+            s_Counts.TryGetValue(template, out had);
+            s_Counts[template] = had + n;
+            for (int i = 0; i < n; i++) res.Add(NewInstance(template));
+            SaveFile();
+            return res;
+        }
+
+        /// <summary>Removes up to n of an item from the save (stardust, crafting materials); returns how many were removed.</summary>
+        public static int Consume(ResourceId template, int n)
+        {
+            int taken = Math.Min(n, Count(template));
+            if (taken > 0) Remove(template, taken);
+            return Math.Max(0, taken);
+        }
+
         /// <summary>Takes n of this item from the save (opened packs).</summary>
         public static void Remove(ResourceId template, int n)
         {
@@ -73,6 +98,9 @@ namespace HexRevival
             if (have <= n) s_Counts.Remove(template); else s_Counts[template] = have - n;
             SaveFile();
         }
+
+        /// <summary>The items the save owns (templates).</summary>
+        public static List<ResourceId> Owned() { return new List<ResourceId>(s_Counts.Keys); }
 
         /// <summary>How many of this item the save owns.</summary>
         public static int Count(ResourceId template)

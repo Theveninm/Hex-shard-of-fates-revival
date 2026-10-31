@@ -137,9 +137,12 @@ namespace HexRevival
         {
             foreach (InventoryDeckSleeve sl in s_AfterOpening) Sleeves.Grant(sl);
             s_AfterOpening.Clear();
+            // One at a time: RemoveInventoryItem(template, n) lowers the quantity of the first matching item only, and the
+            // packs are items of 1 each (bought or given one by one): opening 10 at once took 1 off the list.
             foreach (KeyValuePair<ResourceId, int> kv in s_ToRemove)
-                try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, kv.Value); }
-                catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
+                for (int i = 0; i < kv.Value; i++)
+                    try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, 1); }
+                    catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
             s_ToRemove.Clear();
         }
 

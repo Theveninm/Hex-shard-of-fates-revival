@@ -920,6 +920,7 @@ namespace HexRevival
                 case "profile": return AccountMenu.Command(parts);
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
+                case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
                 case "sleeves": return Sleeves.Command(parts);
                 case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
@@ -1026,6 +1027,7 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }   // dev: "tdecks [check]" = the bundled tournament decks
+                case "redeem": return Redeem.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 1 && parts[1] == "products") return Store.Products(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : "");

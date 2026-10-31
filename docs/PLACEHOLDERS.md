@@ -164,14 +164,14 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:30 | for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the |
 | Packs.cs:113 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:159 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:235 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:269 | alternate arts: PLACEHOLDER, see the class |
-| Packs.cs:275 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:336 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
-| Packs.cs:365 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
-| Packs.cs:372 | chests (PLACEHOLDER chance). |
-| Packs.cs:380 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:162 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:238 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:272 | alternate arts: PLACEHOLDER, see the class |
+| Packs.cs:278 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:339 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
+| Packs.cs:368 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
+| Packs.cs:375 | chests (PLACEHOLDER chance). |
+| Packs.cs:383 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
@@ -208,12 +208,13 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | SpecialPacks.cs:29 | equipment pieces not owned yet (Src.HexCodex, Src.Zymmer; PLACEHOLDER contents). |
 | SpecialPacks.cs:30 | Prices: PLACEHOLDER (see GoldPrice). |
 | SpecialPacks.cs:55 | PLACEHOLDER gold prices.</summary> |
-| Store.cs:22 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
-| Store.cs:27 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
-| Store.cs:46 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
-| Store.cs:64 | PLACEHOLDER gold prices of products without a known price.</summary> |
-| Store.cs:66 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
-| Store.cs:331 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
+| Store.cs:23 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
+| Store.cs:28 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
+| Store.cs:47 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
+| Store.cs:65 | PLACEHOLDER gold prices of products without a known price.</summary> |
+| Store.cs:68 | Gold prices of stardust (Common, Uncommon, Rare, Legendary, Promo; PLACEHOLDER: a player's memory of the original store (Criesener), which |
+| Store.cs:75 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
+| Store.cs:352 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
 | StoreIcons.cs:22 | "PLACEHOLDER" picture: a related product's banner (see Related); the Random Previous Kismet Pack's missing model |
 | StoreIcons.cs:34 | Banners the game ships as a "PLACEHOLDER" picture (Src.Game, icons.ab): Dead of Winter Primal Pack's. Replaced |
 | StoreIcons.cs:219 | The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original |
