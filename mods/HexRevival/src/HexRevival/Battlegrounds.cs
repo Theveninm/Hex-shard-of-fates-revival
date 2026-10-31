@@ -233,7 +233,7 @@ namespace HexRevival
             return d;
         }
 
-        /// <summary>PLACEHOLDER prize: one booster per match won.</summary>
+        /// <summary>PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary>
         private static int PrizeBoosters(int wins) { return wins; }
 
         private static InventoryItemData Booster()
@@ -977,14 +977,22 @@ namespace HexRevival
             Gauntlet g = Find(r.TournamentId);
             Data.Runs.Remove(r);
             Save();
+            // The prize boosters unopened, in the inventory (Open Pack in the store); until 1.2.12 they were opened at
+            // once and the prize window listed their cards, read as the drafted cards (2026-10-31). The drafted and
+            // sealed cards are the player's since the draft / the entry (Keep), not shown as a prize.
             List<ResourceId> cards = new List<ResourceId>();
-            CardSetTemplate set = BoosterSet();
-            for (int i = 0; i < PrizeBoosters(r.Wins); i++)
-                foreach (CardTemplate t in Progression.OpenPack(set)) { cards.Add(t.m_Id); Collection.Grant(t.m_Id, 1); }
-            Debug.Log("[HexRevival] [Battlegrounds] " + (g != null ? g.Name : "?") + " over: " + r.Wins + "-" + r.Losses + ", " + cards.Count + " cards");
+            List<ResourceId> items = new List<ResourceId>();
+            InventoryItemData booster = Booster();
+            for (int i = 0; booster != null && i < PrizeBoosters(r.Wins); i++)
+            {
+                inventory_bits b = Inventory.GrantSilently(booster.m_Id);
+                if (b == null) continue;
+                try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Battlegrounds] prize: " + e.Message); }
+                items.Add(booster.m_Id);
+            }
+            Debug.Log("[HexRevival] [Battlegrounds] " + (g != null ? g.Name : "?") + " over: " + r.Wins + "-" + r.Losses + ", " + items.Count + " booster(s)");
             // Sleeves (Src.HexCodex): "Awarded for getting 3 wins in Kismet's Draft events"; "Obtained through Gauntlet
             // Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet.
-            List<ResourceId> items = new List<ResourceId>();
             if (g != null && r.Wins >= 3 && (g.Kind == Kind.Draft || g.Kind == Kind.Constructed))
             {
                 InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching(g.Kind == Kind.Draft ? "^Awarded for getting 3 wins in Kismet's Draft" : "^Obtained through Gauntlet Tournaments"));
@@ -1067,6 +1075,9 @@ namespace HexRevival
                     if (r == null || r.PackShown == null) return "no pack shown";
                     SelectDraftCard(id, r.PackId, r.PackShown[0].Id);
                     return "picked " + r.PackShown[0].TemplateID + " (round " + r.Round + " pick " + r.Pick + ")";
+                case "prize":   // dev: "bg prize <wins>" = the prize of a draft run with that record (nothing else changes)
+                    Finish(new Run { TournamentId = 90000003, Wins = parts.Length > 2 ? int.Parse(parts[2]) : 2 });
+                    return "prize given";
                 case "resume":
                     if (r == null) return "no run " + id;
                     Resume(id);

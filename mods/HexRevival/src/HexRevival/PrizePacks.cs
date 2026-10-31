@@ -58,13 +58,10 @@ namespace HexRevival
             if (x < 0.05 && Sleeve(CosmicSleeves, rng, r)) return;
             if (x < 0.35)
             {
+                // The booster itself, unopened (until 1.2.12 its cards; 2026-10-31: rewards as unopened packs).
                 InventoryCardPack pack = Find(LatestBooster) as InventoryCardPack;
-                CardSetTemplate set;
-                if (pack != null && Singleton<TemplateManager>.Instance.CardSets.TryGetValue(pack.m_SetId, out set))
-                {
-                    foreach (CardTemplate t in Progression.OpenPack(set)) r.GrantedCards.AddRange(Collection.GrantSilently(t.m_Id, 1));
-                    return;
-                }
+                inventory_bits b = pack != null ? Inventory.GrantSilently(pack.m_Id) : null;
+                if (b != null) { r.GrantedInventory.Add(b); return; }
             }
             Card(AltCards(false), rng, 4, r);
         }
