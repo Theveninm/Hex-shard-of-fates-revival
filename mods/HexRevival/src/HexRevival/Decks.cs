@@ -431,6 +431,13 @@ namespace HexRevival
 
         public static bool Exists(ulong id) { return Find(id) != null; }
 
+        /// <summary>Whether the player has a deck of this name (redeemed starter decks come once, see Redeem).</summary>
+        public static bool HasNamed(string name)
+        {
+            foreach (StoredDeck d in s_Decks.Values) if (d.Name == name) return true;
+            return false;
+        }
+
         public static EDeckPersonality PersonalityOf(ulong id)
         {
             StoredDeck d;

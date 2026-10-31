@@ -72,10 +72,23 @@ namespace HexRevival
         public static void Grant(ResourceId template, int count)
         {
             if (Saves.Current == null || Saves.Current.UnlockAll || count <= 0) return;
+            Add(template, count);
+            SaveFile();
+        }
+
+        /// <summary>Grant for many cards at once, saved once (redeem codes with every PvP card, see Redeem; dev "craft dupall").</summary>
+        public static void Grant(IDictionary<ResourceId, int> cards)
+        {
+            if (Saves.Current == null || Saves.Current.UnlockAll) return;
+            foreach (KeyValuePair<ResourceId, int> kv in cards) if (kv.Value > 0) Add(kv.Key, kv.Value);
+            SaveFile();
+        }
+
+        private static void Add(ResourceId template, int count)
+        {
             int n;
             s_Counts.TryGetValue(template, out n);
             s_Counts[template] = n + count;
-            SaveFile();
             PlayerProfile profile = GameClient.Instance.PlayerProfile;
             for (int i = 0; i < count; i++)
             {
@@ -86,27 +99,6 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Grant for many cards at once, saved once (dev "craft dupall").</summary>
-        public static void Grant(IDictionary<ResourceId, int> cards)
-        {
-            if (Saves.Current == null || Saves.Current.UnlockAll) return;
-            PlayerProfile profile = GameClient.Instance.PlayerProfile;
-            foreach (KeyValuePair<ResourceId, int> kv in cards)
-            {
-                if (kv.Value <= 0) continue;
-                int n;
-                s_Counts.TryGetValue(kv.Key, out n);
-                s_Counts[kv.Key] = n + kv.Value;
-                for (int i = 0; i < kv.Value; i++)
-                {
-                    card_instance_bits c = NewInstance(kv.Key);
-                    Decks.AddToCollection(c);
-                    try { profile.AddNewCardToCollection(c); }
-                    catch (Exception e) { Debug.LogWarning("[HexRevival] [Collection] AddNewCardToCollection: " + e.Message); }
-                }
-            }
-            SaveFile();
-        }
 
         /// <summary>
         /// Same as Grant, but the client is not told: the instances are returned to be handed to

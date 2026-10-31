@@ -115,6 +115,11 @@ namespace HexRevival
             // "Unlock extended art" (ExtendedArt): answered here, it waited for the dead server.
             apply("ProfileService.UpgradeExtendedArtOnCard.Request", () => Prefix(harmony, typeof(Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard), "Request",
                 new[] { typeof(ulong), typeof(ulong), typeof(Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "ExtendedArt_Upgrade"));
+            // Redeem codes of the store (Redeem).
+            apply("EscrowService.RedeemCode.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.RedeemCode), "Request",
+                new[] { typeof(string), typeof(Game.Client.Network.Escrow.EscrowService.RedeemCode.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Redeem_Request"));
+            apply("EscrowService.RedeemCode.Request(event)", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.RedeemCode), "Request",
+                new[] { typeof(string), typeof(string), typeof(Game.Shared.Network.SFS.IService) }, "Redeem_RequestEvent"));
             apply("EscrowService.PurchaseItem.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem), "Request",
                 new[] { typeof(int), typeof(ulong), typeof(bool), typeof(Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler), typeof(string), typeof(int), typeof(Game.Shared.Network.SFS.IService) }, "Store_PurchaseItem"));
             // End-of-battle campaign events of the game's rules (princess saved, creatures tamed...).
@@ -535,6 +540,8 @@ namespace HexRevival
         public static bool Store_GetStoreItemsEvent() { Store.GetStoreItems(null); return false; }
         public static bool Store_PurchaseItemEvent(int __0, ulong __1) { Store.PurchaseItem(__0, __1, null); return false; }
         public static bool ExtendedArt_Upgrade(ulong __1, Game.Client.Network.Profile.ProfileService.UpgradeExtendedArtOnCard.ResponseHandler __2) { ExtendedArt.Upgrade(__1, __2); return false; }
+        public static bool Redeem_Request(string __0, Game.Client.Network.Escrow.EscrowService.RedeemCode.ResponseHandler __1) { HexRevival.Redeem.Request(__0, __1); return false; }
+        public static bool Redeem_RequestEvent(string __0) { HexRevival.Redeem.Request(__0, null); return false; }
         public static bool Store_PurchaseItem(int __0, ulong __1, Game.Client.Network.Escrow.EscrowService.PurchaseItem.ResponseHandler __3) { Store.PurchaseItem(__0, __1, __3); return false; }
         public static void Tournament_OnEntry() { Battlegrounds.OnHubEntered(); }
         public static bool Tournament_TestEntry(ulong __0, Game.Client.Network.Tournaments.TournamentsService.TestTournamentEntry.ResponseHandler __2) { Battlegrounds.TestEntry(__0, __2); return false; }
