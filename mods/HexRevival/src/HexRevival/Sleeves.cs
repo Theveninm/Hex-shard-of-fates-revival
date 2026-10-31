@@ -218,6 +218,17 @@ namespace HexRevival
             Notices.Show(Loc.Get("holiday_item", e.m_Name.Trim()));
         }
 
+        /// <summary>Every piece of the holiday's equipment (any year's events), owned or not.</summary>
+        public static List<InventoryItemData> HolidayEquipmentPool(string holiday)
+        {
+            string name = holiday.StartsWith("The ") ? holiday.Substring(4) : holiday;
+            List<InventoryItemData> pool = new List<InventoryItemData>();
+            for (int y = 2014; y <= 2020; y++)
+                foreach (InventoryItemData i in Zymmer.Equipment("Events - " + name + " " + y))
+                    if (!pool.Contains(i)) pool.Add(i);
+            return pool;
+        }
+
         /// <summary>A piece of the holiday's equipment not owned yet (null: none left).</summary>
         public static InventoryItemData HolidayEquipment(string holiday)
         {

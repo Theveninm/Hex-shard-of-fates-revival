@@ -129,10 +129,8 @@ namespace HexRevival
                 }
                 case "giftbox":
                 {
-                    // Harvest of Souls: the Haunted Harvest's (the game's autumn holiday).
-                    string holiday = item.m_Name.Replace("Gift Box", "").Trim();
-                    if (holiday == "Harvest of Souls") holiday = "Haunted Harvest";
-                    InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching("^Awarded during the [0-9]{4} " + System.Text.RegularExpressions.Regex.Escape(holiday) + " Holiday"));
+                    string holiday = GiftBoxHoliday(item);
+                    InventoryDeckSleeve sl = Sleeves.Unowned(HolidaySleeves(holiday));
                     inventory_bits sb = sl != null ? Inventory.GrantSilently(sl.m_Id) : null;
                     if (sb != null) r.GrantedInventory.Add(sb);
                     InventoryItemData eq = Sleeves.HolidayEquipment(holiday);
@@ -166,6 +164,19 @@ namespace HexRevival
         }
 
         private static CardSetTemplate Any(List<CardSetTemplate> sets) { return sets.Count > 0 ? sets[UnityEngine.Random.Range(0, sets.Count)] : null; }
+
+        /// <summary>A gift box's holiday (Harvest of Souls: the Haunted Harvest, the game's autumn holiday).</summary>
+        internal static string GiftBoxHoliday(InventoryItemData item)
+        {
+            string holiday = item.m_Name.Replace("Gift Box", "").Trim();
+            return holiday == "Harvest of Souls" ? "Haunted Harvest" : holiday;
+        }
+
+        /// <summary>A holiday's gift box sleeves (the sleeves "Awarded during the [year] [holiday] Holiday").</summary>
+        internal static List<InventoryDeckSleeve> HolidaySleeves(string holiday)
+        {
+            return Sleeves.Matching("^Awarded during the [0-9]{4} " + System.Text.RegularExpressions.Regex.Escape(holiday) + " Holiday");
+        }
 
         /// <summary>The 9 booster sets (Shards of Fate ... Doombringer).</summary>
         internal static List<CardSetTemplate> BoosterSets()

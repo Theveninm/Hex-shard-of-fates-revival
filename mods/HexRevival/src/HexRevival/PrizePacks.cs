@@ -139,6 +139,24 @@ namespace HexRevival
             return ResourceId.Invalid;
         }
 
+        // ---- What each pack can give (the store's drop list, PackContents) ----
+
+        public static List<CardTemplate> PveCards() { return SetCards(PvESet); }
+        public static List<CardTemplate> AltArtCards() { return AltCards(false); }
+        public static List<CardTemplate> AltArtShards() { return AltCards(true); }
+        public static List<InventoryItemData> SiegeEquipmentPool() { return Zymmer.Equipment("Siege Pack"); }
+        public static List<InventoryItemData> SiegeSleeveItems() { return Items(SiegeSleeves); }
+        public static List<InventoryItemData> CosmicSleeveItems() { return Items(CosmicSleeves); }
+        public static List<InventoryItemData> SiegeMercenaryItems() { return Items(SiegeMercenaries); }
+        public static InventoryItemData LatestBoosterItem() { return Find(LatestBooster); }
+
+        private static List<InventoryItemData> Items(string[] names)
+        {
+            List<InventoryItemData> res = new List<InventoryItemData>();
+            foreach (string n in names) { InventoryItemData i = Find(n); if (i != null) res.Add(i); }
+            return res;
+        }
+
         /// <summary>Dev: "store pools" = the size of each pool.</summary>
         public static string Describe()
         {
