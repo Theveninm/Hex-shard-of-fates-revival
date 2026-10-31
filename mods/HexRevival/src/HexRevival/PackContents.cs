@@ -33,13 +33,27 @@ namespace HexRevival
             public float Chance = 1f;
             public int Draws = 1;
             public bool Counted, Once;
+            /// <summary>Drawn without repeats (SpecialPacks.Draw: all different while the pool has enough).</summary>
+            public bool Distinct;
             public List<CardTemplate> Cards;
             public List<InventoryItemData> Items;
             public Dictionary<ResourceId, int> Copies;   // a deck: how many of each card
             public int Count { get { return Cards != null ? Cards.Count : Items != null ? Items.Count : 0; } }
 
             /// <summary>One card's or item's chance per pack (Once: everything is given).</summary>
-            public float Each { get { return Once || Count == 0 ? 1f : 1f - Mathf.Pow(1f - Chance / Count, Draws); } }
+            public float Each
+            {
+                get
+                {
+                    if (Once || Count == 0) return 1f;
+                    // Without repeats: Draws different cards of Count. With repeats (Progression.OpenPack draws each
+                    // slot on its own, so a pack can hold the same card twice): at least once in Draws tries.
+                    return Distinct ? Mathf.Min(1f, Draws * Chance / Count) : 1f - Mathf.Pow(1f - Chance / Count, Draws);
+                }
+            }
+
+            /// <summary>Several independent tries for one card: each try's chance is worth showing.</summary>
+            public bool Repeats { get { return !Once && !Distinct && Draws > 1 && Count > 1; } }
         }
 
         private class Group
@@ -368,7 +382,7 @@ namespace HexRevival
             string head = p.Draws > 1 ? Loc.Get("r_draws", p.Draws) : Rate(p.Chance);
             if (p.Count <= 1) return head;
             // Several draws: each draw's chance, and the chance to get it at least once.
-            return p.Draws > 1 ? Loc.Get("r_each_multi", head, p.Draws, Rate(p.Chance / p.Count), Rate(p.Each)) : Loc.Get("r_each", head, Rate(p.Each));
+            return p.Repeats ? Loc.Get("r_each_multi", head, p.Draws, Rate(p.Chance / p.Count), Rate(p.Each)) : Loc.Get("r_each", head, Rate(p.Each));
         }
 
         private static void CardTile(Rect tile, CardTemplate c, Pool p, float S)
@@ -520,7 +534,7 @@ namespace HexRevival
                 body = ItemText(item) + "\n\n" + Loc.Get("pc_owned", Inventory.Count(item.m_Id));
             }
             if (m_DetailPool != null && !m_DetailPool.Once)
-                body += "\n" + (m_DetailPool.Draws > 1
+                body += "\n" + (m_DetailPool.Repeats
                     ? Loc.Get("d_drop_multi", m_DetailPool.Title, m_DetailPool.Draws, Rate(m_DetailPool.Chance / Math.Max(1, m_DetailPool.Count)), Rate(m_DetailPool.Each))
                     : Loc.Get("d_drop", m_DetailPool.Title, Rate(m_DetailPool.Each)));
             GameSkin.Label(new Rect(text.x, text.y, text.width, 36 * S), title, GameSkin.Style("title", 24, GameSkin.Gold));
@@ -754,7 +768,14 @@ namespace HexRevival
         {
             Contents c = new Contents();
             bool filled = false;
-            try { filled = Fill(item, c); }
+            try
+            {
+                filled = Fill(item, c);
+                // The special packs drawn with SpecialPacks.Draw: no card twice in one pack.
+                string kind = SpecialPacks.KindOf(item);
+                if (kind == "trials" || kind == "common" || kind == "gauntlet" || kind == "dualshard")
+                    foreach (Group g in c.Groups) foreach (Pool p in g.Pools) p.Distinct = true;
+            }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [PackContents] " + item.m_Name + ": " + e); }
             c.Groups.RemoveAll(g => { g.Pools.RemoveAll(p => p.Count == 0); return g.Pools.Count == 0; });
             if (!filled || c.Groups.Count == 0)
