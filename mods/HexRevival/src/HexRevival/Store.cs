@@ -7,6 +7,7 @@ using Game.Client.Network.Escrow;
 using Game.Shared;
 using Game.Shared.Domain;
 using Game.Shared.Network.Escrow;
+using Game.Shared.Resources;
 using Reckoning.Game;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace HexRevival
         /// <summary>Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary>
         public const int BoosterGoldPrice = 2000;
         /// <summary>Chance of a bonus primal pack with a bought pack. Src.Forum2017 ("about a 2% chance").</summary>
-        private const float PrimalChance = 0.02f;
+        internal const float PrimalChance = 0.02f;
 
         private static List<StoreItem> s_Items;
         private static bool s_ItemsInGold;
@@ -63,6 +64,14 @@ namespace HexRevival
 
         /// <summary>PLACEHOLDER gold prices of products without a known price.</summary>
         private const int CollectorDeckGold = 25000, OtherDeckGold = 10000, PrimalPackGold = 30000, BattleboardGold = 10000;
+        /// <summary>
+        /// Gold prices of stardust (Common, Uncommon, Rare, Legendary, Promo; PLACEHOLDER: a player's memory of the original store (Criesener), which
+        /// sold it for gold only; the game data has none, its base price is 1): sold only in the extended art panel's stardust store (UIExtendedArtViewModel.ShowStardustStore,
+        /// which takes the stardust products of the catalog), hidden in the store (StoreItem.HideInStore).
+        /// </summary>
+        private static readonly int[] StardustGold = { 1000, 2000, 5000, 7000, 10000 };
+        private static readonly ResourceId[] StardustKinds = { BuiltInResources.CommonStardust, BuiltInResources.UncommonStardust, BuiltInResources.RareStardust, BuiltInResources.LegendaryStardust, BuiltInResources.PromoStardust };
+
         /// <summary>PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary>
         private const int KismetPackGold = 20000;
 
@@ -85,7 +94,8 @@ namespace HexRevival
                 Product p = Price(item, tm);
                 if (p == null) continue;
                 // Accounts without "platinum prices in gold": the platinum price (every gold price here is one).
-                if (!goldPrices && p.Currency == "Gold") { p.Currency = "Platinum"; p.Price = Math.Max(1, p.Price / GoldPerPlatinum); }
+                // Stardust always sold for gold (Criesener, 2026-10-31).
+                if (!goldPrices && p.Currency == "Gold" && !(item is InventoryStardust)) { p.Currency = "Platinum"; p.Price = Math.Max(1, p.Price / GoldPerPlatinum); }
                 StoreItem s = new StoreItem();
                 s.id = (ulong)(s_Items.Count + 1);
                 s.TemplateId = item.m_Id;
@@ -100,10 +110,15 @@ namespace HexRevival
                 s.SoftPurchaseLimit = -1;
                 s.LocationIndex = -1;
                 s.StoreTab = p.Tab;
+                s.HideInStore = item is InventoryStardust;
                 s.data = new Dictionary<string, object> { { "Price", s.Price }, { "ItemType", s.ItemType }, { "CurrencyType", s.CurrencyType }, { "ItemTemplateId", s.TemplateId.ToString() } };
                 s_Items.Add(s);
                 s_Products[s.id] = p;
             }
+            // The stardust store lists them in catalog order: by rarity.
+            List<StoreItem> dust = s_Items.Where(i => Array.IndexOf(StardustKinds, i.TemplateId) >= 0).OrderBy(i => Array.IndexOf(StardustKinds, i.TemplateId)).ToList();
+            s_Items.RemoveAll(i => dust.Contains(i));
+            s_Items.AddRange(dust);
             Debug.Log("[HexRevival] [Store] " + s_Items.Count + " products for sale");
             return s_Items;
         }
@@ -123,6 +138,12 @@ namespace HexRevival
                 int gold = item.m_BasePrice > 1 ? item.m_BasePrice * GoldPerPlatinum
                     : item.m_Name.StartsWith("Collector's Deck") ? CollectorDeckGold : OtherDeckGold;
                 return new Product { Item = item, Price = gold, Tab = "collectordeck" };
+            }
+            InventoryStardust dust = item as InventoryStardust;
+            if (dust != null)
+            {
+                int k = Array.IndexOf(StardustKinds, item.m_Id);
+                return k < 0 ? null : new Product { Item = item, Price = StardustGold[k], Tab = "stardust" };
             }
             string special = SpecialPacks.KindOf(item);
             if (special != null) return new Product { Item = item, Price = SpecialPacks.GoldPrice(special), Tab = special == "common" || special == "fullset" ? "cardpack" : "special" };
@@ -225,6 +246,23 @@ namespace HexRevival
             return true;
         }
 
+        /// <summary>
+        /// A store deck's sleeves (given if not owned yet): the deck's own (Src.Game) and a collector deck's "Obtained in
+        /// the [deck] Collector Deck" (Src.HexCodex).
+        /// </summary>
+        internal static List<ResourceId> DeckSleeves(InventoryItemData item, DeckTemplate t)
+        {
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            List<ResourceId> sleeves = new List<ResourceId>();
+            if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve && Sleeves.HasPicture(tm.GetInventoryItem(t.m_DeckSleeve))) sleeves.Add(t.m_DeckSleeve);
+            foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
+            {
+                string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
+                if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
+            }
+            return sleeves;
+        }
+
         /// <summary>One bought product, into the response (opened packs as granted cards: the loot window).</summary>
         private static void Deliver(InventoryItemData item, PurchaseItemResponse r)
         {
@@ -236,16 +274,7 @@ namespace HexRevival
                 DeckTemplate t = tm.GetDeckTemplate(deckPack.m_DeckTemplateId);
                 foreach (TemplateCardStack st in t.m_DeckResources) r.PurchasedCards.AddRange(Collection.GrantSilently(st.m_idTemplate, st.m_Count));
                 r.PurchasedDeckBits.Add(Decks.CreateFromTemplate(item.m_Name, t));
-                // Its sleeve (the deck's own, Src.Game; a collector deck's "Obtained in the [deck] Collector Deck",
-                // Src.HexCodex), if not owned yet.
-                List<ResourceId> sleeves = new List<ResourceId>();
-                if (t.m_DeckSleeve.IsValid && tm.GetInventoryItem(t.m_DeckSleeve) is InventoryDeckSleeve && Sleeves.HasPicture(tm.GetInventoryItem(t.m_DeckSleeve))) sleeves.Add(t.m_DeckSleeve);
-                foreach (InventoryDeckSleeve sl in Sleeves.Matching("^Obtained in the .+ Collector Deck"))
-                {
-                    string deckName = System.Text.RegularExpressions.Regex.Replace(sl.m_Name.Trim(), " Sleeve$", "");
-                    if (item.m_Name.IndexOf(deckName, StringComparison.OrdinalIgnoreCase) >= 0 && !sleeves.Contains(sl.m_Id)) sleeves.Add(sl.m_Id);
-                }
-                foreach (ResourceId id in sleeves)
+                foreach (ResourceId id in DeckSleeves(item, t))
                     if (!Sleeves.Owned(id)) { inventory_bits sb = Inventory.GrantSilently(id); if (sb != null) r.GrantedInventory.Add(sb); }
                 return;
             }
@@ -331,7 +360,7 @@ namespace HexRevival
         }
 
         /// <summary>The set's primal pack item (invalid if it has none).</summary>
-        private static ResourceId PrimalOf(ResourceId set)
+        internal static ResourceId PrimalOf(ResourceId set)
         {
             foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
             {

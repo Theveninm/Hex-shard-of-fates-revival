@@ -79,8 +79,12 @@ namespace HexRevival
             public ulong PlayerId;
             public int Wins, Losses;                 // matches
             public int GameWins, GameLosses;         // games of the match in progress
+            /// <summary>Each match played, in order: 1 won, 2 lost (the values of the deck builder's RECORD boxes).</summary>
+            public List<int> Results = new List<int>();
             public deck_bits Deck;                   // the tournament deck: the pool in its reserves for a limited run
+#pragma warning disable 0649   // read back from older saves (JSON); no longer set
             public bool DeckBuilt;                   // the pool was handed to the deck builder
+#pragma warning restore 0649
             // Draft: the packs at the table (seat 0 is the player), round 0..2, pick 0..16.
             public List<List<ResourceId>> Packs;
             public List<List<ResourceId>> BotPicks;
@@ -134,6 +138,30 @@ namespace HexRevival
                 File.WriteAllBytes(StorePath, b);
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Battlegrounds] save: " + e); }
+        }
+
+        /// <summary>
+        /// Whether a deck is a sealed or draft run's (by its id, or the deck builder of such a run): its cards are the
+        /// tournament's pool and its basic shards the mod's (AddBasicShards), not the collection's, so the ownership check
+        /// (Decks.NotOwned) does not apply. Until 1.2.12 it refused them ("You don't own everything in this deck: 20x Blood
+        /// Shard...") and the draft could not be played.
+        /// </summary>
+        public static bool IsLimitedPool(deck_bits b)
+        {
+            if (b == null) return false;
+            Run r = Data.Runs.Find(x => x.Deck != null && b.Id != 0 && x.Deck.Id == b.Id);
+            if (r == null)
+            {
+                try
+                {
+                    TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+                    EGameState state = GameClient.Instance.StateManager.CurrentGameState;
+                    if (cur != null && (state == EGameState.TournamentSideboarding || state == EGameState.TournamentLobby)) r = RunOf(cur.TournamentID);
+                }
+                catch { }
+            }
+            Gauntlet g = r != null ? Find(r.TournamentId) : null;
+            return g != null && (g.Kind == Kind.Draft || g.Kind == Kind.Sealed);
         }
 
         private static Run RunOf(ulong tournamentId) { return Data.Runs.Find(r => r.TournamentId == tournamentId); }
@@ -207,7 +235,7 @@ namespace HexRevival
             return d;
         }
 
-        /// <summary>PLACEHOLDER prize: one booster per match won.</summary>
+        /// <summary>PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary>
         private static int PrizeBoosters(int wins) { return wins; }
 
         private static InventoryItemData Booster()
@@ -827,6 +855,8 @@ namespace HexRevival
             {
                 bool matchWon = r.GameWins >= needed;
                 if (matchWon) r.Wins++; else r.Losses++;
+                if (r.Results == null) r.Results = new List<int>();
+                r.Results.Add(matchWon ? 1 : 2);
                 text = Loc.Get(matchWon ? "bg_match_won" : "bg_match_lost", r.Wins, r.Losses);
                 r.GameWins = r.GameLosses = 0;
             }
@@ -836,14 +866,105 @@ namespace HexRevival
             Manager.CurrentlyInMatch = r.GameWins + r.GameLosses > 0;
             Debug.Log("[HexRevival] [Battlegrounds] " + g.Name + ": " + text);
             Notices.Show(text);
+            s_RefreshRecord = true;
             if (r.Wins >= g.MaxWins || r.Losses >= g.MaxLosses || r.Wins + r.Losses >= g.MaxMatches) s_Finished = r;
             Save();
             return true;
         }
 
+        /// <summary>
+        /// The draft's RECORD boxes: the client fills them with every win first, then the losses, so a loss then a win
+        /// showed as won, lost. Here they follow the order of the matches (Run.Results). Runs saved before 1.2.13 have no
+        /// order: left to the client. Returns the three boxes (1 won, 2 lost, 0 empty), or null.
+        /// </summary>
+        private static int[] RecordBoxes()
+        {
+            Run r = CurrentRun();
+            if (r == null || r.Results == null || r.Results.Count != r.Wins + r.Losses) return null;
+            int[] box = new int[3];
+            for (int i = 0; i < box.Length && i < r.Results.Count; i++) box[i] = r.Results[i];
+            return box;
+        }
+
+        private static Run CurrentRun()
+        {
+            TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+            return cur != null ? RunOf(cur.TournamentID) : null;
+        }
+
+        /// <summary>Postfix of UIDeckBuilderVM.SetupTournamentUI and OnAsynchPlayerUpdated.</summary>
+        public static void ShowRecord(DeckBuilder.UITournamentContext t)
+        {
+            int[] box = RecordBoxes();
+            if (t == null || box == null) return;
+            t.ResultOne = box[0]; t.ResultTwo = box[1]; t.ResultThree = box[2];
+        }
+
+        /// <summary>
+        /// Postfix of UITournamentDeckEditorViewModel.Initialize and OnAsynchPlayerUpdated: the deck screen of the
+        /// asynchronous gauntlets (draft, sealed, constructed).
+        /// </summary>
+        public static void ShowRecord(UITournamentDeckEditorContext t)
+        {
+            int[] box = RecordBoxes();
+            if (t == null || box == null) return;
+            t.ResultOne = box[0]; t.ResultTwo = box[1]; t.ResultThree = box[2];
+        }
+
+        /// <summary>
+        /// Back from a game, the gauntlet's deck screen is the one left for the battle: it read the record when it opened
+        /// and the server's update (OnAsynchPlayerUpdated) never came, so RECORD / WINS / LOSSES stayed as they were until
+        /// the screen was opened again (2026-10-31). The update is given to it here.
+        /// </summary>
+        private static void RefreshDeckScreen()
+        {
+            Run r = CurrentRun();
+            TournamentPlayerInfo me;
+            if (r == null || !Manager.AsynchPlayerOverrides.TryGetValue(r.TournamentId, out me)) return;
+            me.Wins = r.Wins;
+            me.Losses = r.Losses;
+            UITournamentDeckEditorViewModel vm = UnityEngine.Object.FindObjectOfType<UITournamentDeckEditorViewModel>();
+            if (vm == null) return;
+            System.Reflection.MethodInfo m = typeof(UITournamentDeckEditorViewModel).GetMethod("OnAsynchPlayerUpdated", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (m != null) m.Invoke(vm, new object[] { r.TournamentId, me });   // the postfix puts the boxes in order
+        }
+
+        private static bool s_RefreshRecord;
+
+        /// <summary>
+        /// The score of the match in progress of a best-of-3 gauntlet ("Match 2 - games 1-0"), shown next to RECORD: the
+        /// boxes only count whole matches, and the game score was only a notice after each game (2026-10-31). Null when
+        /// there is nothing to show.
+        /// </summary>
+        public static string MatchScore()
+        {
+            try
+            {
+                if (GameClient.Instance.StateManager.CurrentGameState != EGameState.TournamentSideboarding) return null;
+                Run r = CurrentRun();
+                Gauntlet g = r != null ? Find(r.TournamentId) : null;
+                if (g == null || g.GamesPerMatch < 2 || (g.Kind == Kind.Draft && r.Round < g.Boosters)) return null;
+                return Loc.Get("bg_score", r.Wins + r.Losses + 1, r.GameWins, r.GameLosses);
+            }
+            catch { return null; }
+        }
+
         /// <summary>Called every frame: the prizes of a finished run, once back from the battle.</summary>
         public static void Tick()
         {
+            if (s_RefreshRecord && s_Battle == null)
+            {
+                try
+                {
+                    if (GameClient.Instance.StateManager.CurrentGameState == EGameState.TournamentSideboarding
+                        && UnityEngine.Object.FindObjectOfType<UITournamentDeckEditorViewModel>() != null)
+                    {
+                        s_RefreshRecord = false;
+                        RefreshDeckScreen();
+                    }
+                }
+                catch (Exception e) { s_RefreshRecord = false; Debug.LogError("[HexRevival] [Battlegrounds] record: " + e); }
+            }
             if (s_Finished == null || s_Battle != null) return;
             EGameState state = GameClient.Instance.StateManager.CurrentGameState;
             if (state != EGameState.TournamentSideboarding && state != EGameState.TournamentLobby && state != EGameState.Tournament) return;
@@ -858,14 +979,22 @@ namespace HexRevival
             Gauntlet g = Find(r.TournamentId);
             Data.Runs.Remove(r);
             Save();
+            // The prize boosters unopened, in the inventory (Open Pack in the store); until 1.2.12 they were opened at
+            // once and the prize window listed their cards, read as the drafted cards (2026-10-31). The drafted and
+            // sealed cards are the player's since the draft / the entry (Keep), not shown as a prize.
             List<ResourceId> cards = new List<ResourceId>();
-            CardSetTemplate set = BoosterSet();
-            for (int i = 0; i < PrizeBoosters(r.Wins); i++)
-                foreach (CardTemplate t in Progression.OpenPack(set)) { cards.Add(t.m_Id); Collection.Grant(t.m_Id, 1); }
-            Debug.Log("[HexRevival] [Battlegrounds] " + (g != null ? g.Name : "?") + " over: " + r.Wins + "-" + r.Losses + ", " + cards.Count + " cards");
+            List<ResourceId> items = new List<ResourceId>();
+            InventoryItemData booster = Booster();
+            for (int i = 0; booster != null && i < PrizeBoosters(r.Wins); i++)
+            {
+                inventory_bits b = Inventory.GrantSilently(booster.m_Id);
+                if (b == null) continue;
+                try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Battlegrounds] prize: " + e.Message); }
+                items.Add(booster.m_Id);
+            }
+            Debug.Log("[HexRevival] [Battlegrounds] " + (g != null ? g.Name : "?") + " over: " + r.Wins + "-" + r.Losses + ", " + items.Count + " booster(s)");
             // Sleeves (Src.HexCodex): "Awarded for getting 3 wins in Kismet's Draft events"; "Obtained through Gauntlet
             // Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet.
-            List<ResourceId> items = new List<ResourceId>();
             if (g != null && r.Wins >= 3 && (g.Kind == Kind.Draft || g.Kind == Kind.Constructed))
             {
                 InventoryDeckSleeve sl = Sleeves.Unowned(Sleeves.Matching(g.Kind == Kind.Draft ? "^Awarded for getting 3 wins in Kismet's Draft" : "^Obtained through Gauntlet Tournaments"));
@@ -890,7 +1019,20 @@ namespace HexRevival
             res.success = true;
             res.ErrorMessage = "";
             LocalServer.Answer(typeof(TournamentsService.LeaveTournament), res, handler);
-            if (r != null) LocalServer.Later(() => Finish(r));
+            LocalServer.Later(() =>
+            {
+                if (r != null) Finish(r);
+                // A forfeit from the deck builder of an asynchronous gauntlet (UIDeckBuilderVM.LeaveTournamentViaForfeit)
+                // shows a waiting spinner until the server sends the player back to the tournament list: without this,
+                // the screen stayed dark forever (2026-10-31, leaving a draft). The prize window follows to the list.
+                try
+                {
+                    EGameState state = GameClient.Instance.StateManager.CurrentGameState;
+                    if (state == EGameState.TournamentSideboarding || state == EGameState.TournamentLobby || state == EGameState.Tournament)
+                        Manager.TransitionToTournamentList();
+                }
+                catch (Exception e) { Debug.LogError("[HexRevival] [Battlegrounds] leave: " + e); }
+            });
         }
 
         /// <summary>Dev: "bg [state] | bg autodeck &lt;id&gt; (a 40-card deck from the pool) | bg play &lt;id&gt; (Find Match)".</summary>
@@ -935,12 +1077,19 @@ namespace HexRevival
                     if (r == null || r.PackShown == null) return "no pack shown";
                     SelectDraftCard(id, r.PackId, r.PackShown[0].Id);
                     return "picked " + r.PackShown[0].TemplateID + " (round " + r.Round + " pick " + r.Pick + ")";
+                case "prize":   // dev: "bg prize <wins>" = the prize of a draft run with that record (nothing else changes)
+                    Finish(new Run { TournamentId = 90000003, Wins = parts.Length > 2 ? int.Parse(parts[2]) : 2 });
+                    return "prize given";
+                case "resume":
+                    if (r == null) return "no run " + id;
+                    Resume(id);
+                    return "resumed " + id;
                 case "play":
                     if (r == null) return "no run " + id;
                     GameEntrance(id, null, true, null);
                     return "match started";
             }
-            return "usage: bg [state] | autodeck <id> | pick <id> | play <id>";
+            return "usage: bg [state] | autodeck <id> | pick <id> | resume <id> | play <id>";
         }
 
         // ------------------------------------------------------------------
@@ -950,7 +1099,9 @@ namespace HexRevival
         private class LadderRecord
         {
             public int ConstructedStars, ConstructedMax, ConstructedStreak;
+#pragma warning disable 0649   // no limited ladder offline: 0, kept in the save (JSON)
             public int LimitedStars, LimitedMax, LimitedStreak;
+#pragma warning restore 0649
             /// <summary>When the account played its first ranked game (DateTime ticks): the seasons count from it.</summary>
             public long SeasonsFrom;
         }
@@ -1055,6 +1206,40 @@ namespace HexRevival
             Notices.Show(Loc.Get("ladder_stars", l.ConstructedStars));
             LadderSleeves();
             return true;
+        }
+    }
+
+    /// <summary>Draws Battlegrounds.MatchScore left of the gauntlet deck screen's RECORD / WINS-LOSSES frame.</summary>
+    public class BattlegroundsScore : MonoBehaviour
+    {
+        private float m_Next;
+        private Transform m_Frame;
+        private string m_Text;
+
+        private void Update()
+        {
+            if (Time.realtimeSinceStartup < m_Next) return;
+            m_Next = Time.realtimeSinceStartup + 0.5f;
+            m_Text = Battlegrounds.MatchScore();
+            if (m_Text == null) { m_Frame = null; return; }
+            if (m_Frame == null)
+            {
+                UITournamentDeckEditorViewModel vm = FindObjectOfType<UITournamentDeckEditorViewModel>();
+                m_Frame = vm != null ? vm.transform.Find("Asynchronous_Elements/Frame_Progress_Win_Loss") : null;
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (m_Text == null || m_Frame == null || !m_Frame.gameObject.activeInHierarchy) return;
+            Bounds b = NGUIMath.CalculateAbsoluteWidgetBounds(m_Frame);
+            Camera cam = NGUITools.FindCameraForLayer(m_Frame.gameObject.layer);
+            if (cam == null) return;
+            Vector3 lo = cam.WorldToScreenPoint(b.min), hi = cam.WorldToScreenPoint(b.max);
+            float S = GameSkin.Scale;
+            float left = Mathf.Min(lo.x, hi.x), top = Screen.height - Mathf.Max(lo.y, hi.y), h = Mathf.Abs(hi.y - lo.y);
+            Rect r = new Rect(left - 330 * S, top, 316 * S, h);
+            GameSkin.Label(r, m_Text, GameSkin.Style("title", 17, GameSkin.Gold, TextAnchor.MiddleRight));
         }
     }
 }

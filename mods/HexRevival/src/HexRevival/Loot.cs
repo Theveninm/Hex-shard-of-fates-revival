@@ -124,6 +124,15 @@ namespace HexRevival
         private const string AlachianSeaPack = "Alachian Sea Pack";
         private const float PackMercenaryChance = 0.01f;
 
+        /// <summary>The game's item of a pack table (Src.Game: InventoryTreasureChest "Howling Plains Pack", "Tranquil Dream Pack"...).</summary>
+        public static string PackItemName(string pack)
+        {
+            string az2;
+            if (pack == null || pack == AZ1Pack) return "Howling Plains Pack";
+            if (AZ2Packs.TryGetValue(pack, out az2)) return az2;
+            return pack + " Pack";
+        }
+
         /// <summary>Opens a pack of the table (e.g. AZ1Pack) or an AZ2 pack; unknown names are skipped (see the "loot check" command).</summary>
         public static List<Drop> Open(string pack)
         {

@@ -63,6 +63,38 @@ namespace HexRevival
                     Server.MarkDirty();
                     return "gave " + t.m_Name + " to " + p.m_PlayerId;
                 }
+                case "damage":
+                {
+                    // dev: "cheat damage j <n> <card>" = that much damage marked on the player's troops of that name
+                    int dmg;
+                    if (parts.Length < 5 || !int.TryParse(parts[3], out dmg)) return "usage: cheat damage <j|ai> <n> <card>";
+                    string name = string.Join(" ", parts, 4, parts.Length - 4);
+                    FieldInfo f = typeof(Card).GetField("m_CurrentDamageValue", BindingFlags.Instance | BindingFlags.NonPublic);
+                    int n = 0;
+                    foreach (Card c in p.GetAllCards())
+                        if (c.m_CardTemplate != null && string.Equals(c.m_CardTemplate.m_Name, name, StringComparison.OrdinalIgnoreCase)) { f.SetValue(c, dmg); n++; }
+                    Server.MarkDirty();
+                    return "damage " + dmg + " on " + n + " card(s)";
+                }
+                case "useup":
+                {
+                    // dev: "cheat useup j <card>" = its limited-use abilities (ONE-SHOT...) count as used up
+                    string name = string.Join(" ", parts, 3, parts.Length - 3);
+                    int n = 0;
+                    foreach (Card c in p.GetAllCards())
+                    {
+                        if (c.m_CardTemplate == null || !string.Equals(c.m_CardTemplate.m_Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                        foreach (ResourceId id in c.CurrentAbilities.ToList())
+                        {
+                            AbilityTemplate a = Singleton<TemplateManager>.Instance.GetAbilityTemplate(id);
+                            if (a == null || a.UsesPerGame <= 0) continue;
+                            c.m_PerGameUses[id] = a.UsesPerGame;
+                            n++;
+                        }
+                    }
+                    Server.MarkDirty();
+                    return n + " ability(ies) used up";
+                }
                 case "health":
                 {
                     // dev: "cheat health j 17" = sets the champion's health
@@ -491,7 +523,6 @@ namespace HexRevival
         /// <summary>Diagnostics: every second where a holder has priority (main phase,
         /// empty chain), records whether the engine considers its card playable.</summary>
         private static LocalPlayer s_ClientPlayer;
-        private static bool s_ForcedThisTick;
         private static bool ForceMode() { return File.Exists(Path.Combine(Root, "HexRevival.gauntlet.force")); }
 
         /// <summary>
@@ -605,7 +636,6 @@ namespace HexRevival
         {
             try
             {
-                s_ForcedThisTick = false;
                 Player prio = ss.GetPriorityPlayer();
                 if (prio == null || !ss.CurrentTurnPhase.IsMainPhasePriorityWindow() || !ss.Chain.IsEmpty)
                     return;

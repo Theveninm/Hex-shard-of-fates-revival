@@ -142,7 +142,6 @@ namespace HexRevival
         private float m_LastLoginAttempt;
         private float m_LastActionTime;
         private float m_LastStateLog;
-        private int m_LastPhase = -1;
         private string m_StatePath;
         private string m_CmdPath;
         private string m_RespPath;
@@ -165,6 +164,8 @@ namespace HexRevival
                 go.AddComponent<AiButton>();
                 go.AddComponent<OnlineLobby>();
                 go.AddComponent<Community>();
+                go.AddComponent<PackContents>();
+                go.AddComponent<BattlegroundsScore>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -918,6 +919,7 @@ namespace HexRevival
                 case "profile": return AccountMenu.Command(parts);
                 case "net": return NetCodec.Stats();
                 case "aidecks": return AiDecksWindow.Command(parts);
+                case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
                 case "sleeves": return Sleeves.Command(parts);
                 case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
@@ -1024,6 +1026,7 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }   // dev: "tdecks [check]" = the bundled tournament decks
+                case "redeem": return Redeem.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
                     if (parts.Length > 1 && parts[1] == "products") return Store.Products(parts.Length > 2 ? string.Join(" ", parts, 2, parts.Length - 2) : "");
@@ -1583,6 +1586,14 @@ namespace HexRevival
                     Progression.AddAccountXp(parts.Length > 1 ? int.Parse(parts[1]) : 50); return "account level " + Saves.Current.AccountLevel + ", xp " + Saves.Current.AccountXp + ", gold " + Saves.Current.Gold;
                 case "cheatmenu": Settings.ShowCheats = parts.Length < 2 || parts[1] != "off"; return "show cheats = " + Settings.ShowCheats;
                 case "uidump": return UiDump(parts.Length > 1 ? parts[1] : "");
+                case "panonpcs":   // dev: the characters of the panorama shown (object, identifier, active, location given by the mod)
+                    {
+                        List<string> l = new List<string>();
+                        foreach (GoPanoramaInteractable go in Resources.FindObjectsOfTypeAll<GoPanoramaInteractable>())
+                            l.Add(go.name + " id=" + go.m_Identifier + " active=" + go.gameObject.activeInHierarchy
+                                + " loc=" + (go.Context != null && go.Context.Location != null ? go.Context.Location.Node : "-"));
+                        return string.Join("\n", l.ToArray());
+                    }
                 case "hover":   // dev: "hover <GameObject path>" = NGUI's OnHover(true) on it, as the mouse entering it would
                     {
                         GameObject go = parts.Length > 1 ? GameObject.Find(string.Join(" ", parts, 1, parts.Length - 1)) : null;
@@ -1666,7 +1677,42 @@ namespace HexRevival
                             + " active=" + player.IsActivePlayer() + " prio=" + player.IsPriorityPlayer();
                     }
                     catch (Exception e) { return "AIUpdate exception: " + e; }
+                case "packlist": return PackContents.DevOpen(parts.Length > 1 ? (parts[1] == "close" ? -1f : float.Parse(parts[1])) : 0f);
+                case "artcheck":
+                    if (parts.Length > 1)
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+                            if (t != null && t.m_Name == q) return t.m_Id + " text: " + t.m_GameText + "\nlayout: " + t.m_CardLayoutId;
+                        return "not found";
+                    }
+                    return ChoiceArt.Check();
+                case "showcard":   // dev: "showcard <name>" = the card viewer a card link opens (UISystem.DisplayLinkedCard)
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+                            if (t != null && t.m_Name == q) { UISystem.DisplayLinkedCard(t, true, false, false); return "shown " + t.m_Name + " image='" + t.m_CardImagePath + "' parent=" + (ChoiceArt.Parent(t.m_Id) != null ? ChoiceArt.Parent(t.m_Id).m_Name : "-"); }
+                        return "not found";
+                    }
+                case "packcheck": return PackContents.DevCheck();
+                case "packsnap": return PackContents.DevSnaps();
+                case "packdetail": return PackContents.DevDetail(string.Join(" ", parts, 1, parts.Length - 1));
+                case "iconcheck": return PackContents.IconCheck(parts.Length > 1 && parts[1] == "all");
                 case "cards": return CardsDump(gc, session, parts.Length > 1 && parts[1] == "all");
+                case "clitext":   // dev: "clitext <n>" = the text the client writes on card SessionCardId(Card.n), from its ability list
+                    {
+                        if (session == null || parts.Length < 2) return "usage: clitext <n>";
+                        foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in session.Cache.Cards)
+                        {
+                            if (kv.Key.ToString() != "SessionCardId(Card." + parts[1] + ")") continue;
+                            CardRepresentation rep = kv.Value;
+                            CardTemplate ct = Singleton<TemplateManager>.Instance.GetCardTemplate(rep.TemplateId);
+                            List<AbilityTemplate> act = new List<AbilityTemplate>();
+                            foreach (ResourceId id in rep.Abilities) { AbilityTemplate a = Singleton<TemplateManager>.Instance.GetAbilityTemplate(id); if (a != null) act.Add(a); }
+                            return rep.Abilities.Count + " abilities: " + (ct != null ? ct.BuildGameText(rep, act, XLIFFLocalization.instance) : "?");
+                        }
+                        return "not found";
+                    }
                 default: return Repl.Execute(gc, parts, Repl.BuildRefs(gc));
             }
         }

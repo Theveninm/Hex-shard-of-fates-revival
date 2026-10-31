@@ -581,7 +581,29 @@ namespace HexRevival
                 string choice = Quests.Flag(champ, "choice:" + n.Key);
                 return choice != "choice_sneak" && choice != "choice_Bribe";
             }
+            // The drawbridges (Zila: Winston, Zodiac: Wallace) stay up until the keeper's quest battle is won: "the bridge
+            // stays up" (Step 1), "player has not beaten ..." (Step 2); Step 3 lowers it (Src.Game dialogues; Zymmer
+            // 2026-10-31: the drawbridges opened at once).
+            if (u.Contains("WINSTON - STEP 1") || u.Contains("WALLACE - STEP 1") || u.Contains("WINSTON - STEP 2") || u.Contains("WALLACE - STEP 2")) return true;
             return (u.Contains("STEP 1B") && u.Contains("NOT BEATEN")) || u.Contains("STEP 1 - LOCKED") || u.Contains("MASKED ARMY - STEP 1");
+        }
+
+        /// <summary>
+        /// A closed drawbridge still shows the rest of the bank: only the bridge's other end stays hidden (Zila: the Savage
+        /// Lord's Razortooth Forest and the river are reached through Fork001 next to the bridge; Zodiac: the river).
+        /// </summary>
+        private static readonly Dictionary<string, string> BridgeFarEnd = new Dictionary<string, string> { { "Node012", "Node015" }, { "Node030", "Node038" } };
+
+        private static void RevealGate(CampState st, MapNode n)
+        {
+            string far;
+            if (st.Z != AZ1 || !BridgeFarEnd.TryGetValue(n.Id, out far)) return;
+            st.Visible.Add(n.Id);
+            foreach (string m in Neighbours(st.Z, n.Id))
+            {
+                if (m == far || st.Visible.Contains(m)) continue;
+                if (IsFork(st.Z, m)) Reveal(st, m); else st.Visible.Add(m);
+            }
         }
 
         /// <summary>Conversation shown before a node's battle (null if none).</summary>
@@ -1318,6 +1340,45 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>
+        /// The characters of each hub's panorama scene (Src.Game: the GoPanoramaInteractable objects of its asset bundle).
+        /// The client shows an NPC only on the object of that name.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> HubObjects = new Dictionary<string, string[]>
+        {
+            { "Node017", new[] { "Ennis", "Fahrny", "Myaa", "Rizzix", "Takumi", "VB25351", "Vincent", "Wyatt" } },
+            { "Node034", new[] { "Belarius", "Caribard", "FeatherDrifting", "Gnathan", "GrinningFox", "Gurtok", "Myaa", "Sagebrush" } },
+            { "Node049", new[] { "Alawa", "DuskDaughter", "ShortBuffalo", "WhisperingBreeze" } },
+            { "AZ2/Node007", new[] { "Belarius", "Blue Sparrow", "Cressida", "Daughter of Stars", "Marshal Josephina", "Myaa", "Tezozo", "Totem", "Two Tomahawks" } },
+            { "AZ2/Node027", new[] { "Ada the Apparitionist", "Bonewalker", "Kentigern Slate", "Malzok", "Myaa", "Reese", "Renner", "Sharpshooter Sahas", "Takumi" } },
+        };
+
+        /// <summary>
+        /// Ambling Mesa's NPCs without an object of their name. Src.Video (MHS Ardent 2017-01-15 [D1m-I19keFw] 2:30): Kian is a
+        /// caribaur ("I'm a caribaur"), on the Caribard; Vincent, the gnome cartographer, on Gnathan.
+        /// </summary>
+        private static readonly Dictionary<string, string> HubAliases = new Dictionary<string, string>
+        {
+            { "Node034/Kian", "Caribard" }, { "Node034/Vincent", "Gnathan" },
+        };
+
+        /// <summary>
+        /// The panorama object an NPC stands on: its name, else its name without spaces ("Feather Drifting" = FeatherDrifting,
+        /// Thunderfield's three), else the object ending with it ("Sahas" = Sharpshooter Sahas), else the aliases above.
+        /// </summary>
+        internal static string HubSlot(Zone z, string node, string npc)
+        {
+            string key = z == AZ1 ? node : z.Key + "/" + node;
+            string alias;
+            if (HubAliases.TryGetValue(key + "/" + npc, out alias)) return alias;
+            string[] objs;
+            if (!HubObjects.TryGetValue(key, out objs)) return npc;
+            if (Array.IndexOf(objs, npc) >= 0) return npc;
+            string compact = npc.Replace(" ", "").Replace("'", "");
+            string found = Array.Find(objs, o => o == compact) ?? Array.Find(objs, o => o.EndsWith(" " + npc));
+            return found ?? npc;
+        }
+
         private static GameplayState BuildPanoState(ulong champ)
         {
             PanoState ps;
@@ -1340,13 +1401,14 @@ namespace HexRevival
                 foreach (Npc n in HubNpcs(champ, ps.Z, ps.Node))
                 {
                     Dictionary<string, object> d = new Dictionary<string, object>();
-                    d["name"] = n.Name; d["node"] = n.Name; d["type"] = "Convo"; d["conversationId"] = n.ConvId;
+                    string slot = HubSlot(ps.Z, ps.Node, n.Name);
+                    d["name"] = slot; d["node"] = slot; d["type"] = "Convo"; d["conversationId"] = n.ConvId;
                     d["visible"] = true; d["enabled"] = true; d["completed"] = false; d["repeatable"] = n.Repeat;
                     d["givequest"] = n.Give; d["turninquest"] = n.TurnIn; d["autostart"] = false; d["autopan"] = false;
                     gs.VisLocs.Add(new Location(d));
-                    Dictionary<string, object> nd = new Dictionary<string, object> { { "id", n.Name }, { "type", "DEFAULT" } };
+                    Dictionary<string, object> nd = new Dictionary<string, object> { { "id", slot }, { "type", "DEFAULT" } };
                     if (n.Champion != null) nd["championId"] = n.Champion;
-                    gs.LocNodes.Add(new Node(n.Name, nd));
+                    gs.LocNodes.Add(new Node(slot, nd));
                 }
             gs.PublicState = new QueryState(new Dictionary<string, object> { { "CampaignGroup", ps != null ? ps.Z.Key : AZ1.Key }, { "HideQuickNavigation", false } });
             return gs;
@@ -1465,7 +1527,7 @@ namespace HexRevival
             if (evt == "return_parent") { LeavePanorama(champ); return; }
             if (ps != null && (evt == "conv_done" || evt == "accept") && ps.ALoc != null)
             {
-                Npc n = HubNpcs(champ, ps.Z, ps.Node).Find(x => x.Name == ps.ALoc);
+                Npc n = HubNpcs(champ, ps.Z, ps.Node).Find(x => HubSlot(ps.Z, ps.Node, x.Name) == ps.ALoc || x.Name == ps.ALoc);
                 ps.ALoc = null;
                 if (n != null && evt == "conv_done")
                 {
@@ -1702,8 +1764,13 @@ namespace HexRevival
                     }
                     if (active != null && evt == "conv_done" && IsGate(st.ChampId, active, convId))
                     {
-                        // The way stays closed: the node is not completed, so what lies beyond is not revealed.
+                        // The way stays closed: the node is not completed, so what lies beyond is not revealed (a
+                        // drawbridge's keeper still gives his quest, and the bank around stays reachable).
+                        RevealGate(st, active);
+                        ConversationTemplate gc = convId != null ? Singleton<TemplateManager>.Instance.GetConversationTemplate(new ResourceId(convId)) : null;
+                        if (gc != null && BridgeFarEnd.ContainsKey(active.Id)) Quests.OnAreaConversationDone(st.ChampId, active.Key, gc.m_Name);
                         st.ALoc = null;
+                        Save();
                         break;
                     }
                     if (active != null) Complete(st, active);
@@ -2029,7 +2096,7 @@ namespace HexRevival
             if (!s_Pano.TryGetValue(champ, out ps)) return "not in a hub";
             Npc n = HubNpcs(champ, ps.Z, ps.Node).Find(x => string.Equals(x.Name, npc, StringComparison.OrdinalIgnoreCase));
             if (n == null) return "no NPC " + npc;
-            ps.ALoc = n.Name;
+            ps.ALoc = HubSlot(ps.Z, ps.Node, n.Name);
             PanoEvent(champ, "conv_done", null);
             return n.Name + ": \"" + n.ConvName + "\"";
         }

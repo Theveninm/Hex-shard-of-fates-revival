@@ -453,6 +453,14 @@ namespace HexRevival
 
         private void OnGUI()
         {
+            // The mod's version, bottom right of the main menu above the bar (Zymmer 2026-10-31: "version number
+            // displayed somewhere in game").
+            if (!m_Open && Event.current.type == EventType.Repaint && OnLandingPage())
+            {
+                float s = GameSkin.Scale;
+                GameSkin.Label(new Rect(Screen.width - 330 * s, Screen.height - 64 * s, 316 * s, 22 * s), "HEX Revival " + Community.Version,
+                    GameSkin.Style("body", 15, new Color(0.85f, 0.85f, 0.8f, 0.85f), TextAnchor.MiddleRight));
+            }
             if (!m_Open) return;
             bool modal = m_ConfirmDelete != null;
             if (modal) GUI.enabled = false;

@@ -58,13 +58,10 @@ namespace HexRevival
             if (x < 0.05 && Sleeve(CosmicSleeves, rng, r)) return;
             if (x < 0.35)
             {
+                // The booster itself, unopened (until 1.2.12 its cards; 2026-10-31: rewards as unopened packs).
                 InventoryCardPack pack = Find(LatestBooster) as InventoryCardPack;
-                CardSetTemplate set;
-                if (pack != null && Singleton<TemplateManager>.Instance.CardSets.TryGetValue(pack.m_SetId, out set))
-                {
-                    foreach (CardTemplate t in Progression.OpenPack(set)) r.GrantedCards.AddRange(Collection.GrantSilently(t.m_Id, 1));
-                    return;
-                }
+                inventory_bits b = pack != null ? Inventory.GrantSilently(pack.m_Id) : null;
+                if (b != null) { r.GrantedInventory.Add(b); return; }
             }
             Card(AltCards(false), rng, 4, r);
         }
@@ -140,6 +137,24 @@ namespace HexRevival
             foreach (CardSetTemplate s in Singleton<TemplateManager>.Instance.CardSets.Values)
                 if (s != null && s.m_Name == name) return s.m_Id;
             return ResourceId.Invalid;
+        }
+
+        // ---- What each pack can give (the store's drop list, PackContents) ----
+
+        public static List<CardTemplate> PveCards() { return SetCards(PvESet); }
+        public static List<CardTemplate> AltArtCards() { return AltCards(false); }
+        public static List<CardTemplate> AltArtShards() { return AltCards(true); }
+        public static List<InventoryItemData> SiegeEquipmentPool() { return Zymmer.Equipment("Siege Pack"); }
+        public static List<InventoryItemData> SiegeSleeveItems() { return Items(SiegeSleeves); }
+        public static List<InventoryItemData> CosmicSleeveItems() { return Items(CosmicSleeves); }
+        public static List<InventoryItemData> SiegeMercenaryItems() { return Items(SiegeMercenaries); }
+        public static InventoryItemData LatestBoosterItem() { return Find(LatestBooster); }
+
+        private static List<InventoryItemData> Items(string[] names)
+        {
+            List<InventoryItemData> res = new List<InventoryItemData>();
+            foreach (string n in names) { InventoryItemData i = Find(n); if (i != null) res.Add(i); }
+            return res;
         }
 
         /// <summary>Dev: "store pools" = the size of each pool.</summary>
