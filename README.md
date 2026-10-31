@@ -33,7 +33,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   Until other players' defenses can be shared, the defenses to attack are configured, and the attacks on yours
   are AI-against-AI games you launch and watch (see [docs/PROGRESSION.md](docs/PROGRESSION.md#siege)).
 - **Battlegrounds**: the Constructed, Sealed and Draft gauntlets (a table of 8 drafters) and the ladder,
-  against AI opponents (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
+  against AI opponents; prizes come as unopened boosters (see [docs/PROGRESSION.md](docs/PROGRESSION.md#battlegrounds)).
 - **Frost Ring Arena**: the PvE boss rush (20 fights in 4 tiers) on the game's own arena screens.
 - **AI opponents**: "Configure the AIs" (bottom right of the Battlegrounds, Arena and Siege screens) sets, per
   tier, which decks the AI plays (your decks, decks made for the AI, the game's AI decks or its encounters), how
@@ -49,7 +49,14 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   the game and find opponents.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold. Boosters are opened on the game's Pack Opening screen, each with a
-  treasure chest you can spin on the Wheel of Fate.
+  treasure chest you can spin on the Wheel of Fate. Every product has a **Details** window: everything it can give,
+  grouped by slot with its drop rates (the mod's own odds), the cards drawn whole and how many you own; a right
+  click shows a card's text, an equipment's effect or a mercenary's party bonus and deck rules. The store's
+  **Redeem code** gives the Kickstarter reward tiers and the convention and event items, once per account.
+- **Crafting** (an account option, off by default): copies of a card beyond 4 and of an equipment beyond 1 break
+  down into gems and parts, and missing ones are crafted from them and stardust. Stardust also unlocks a card's
+  extended art.
+- **Account levels**: their rewards are claimed on the game's account panel (click the XP bar), packs as packs.
 - **Full collection**: every card (4 copies, unlimited basic shards) and every equipment, or a
   progression account that earns its cards by playing.
 - **Deck editor** (the game's Collection screen): create, edit, delete decks; they are saved on your computer.
@@ -68,7 +75,7 @@ Come and talk about the game, report bugs and find opponents on the **[Discord s
    removed from Steam at the end of 2020: Steam only installs it (app 410380) on accounts that already
    have it in their library; other accounts get "No license". If you have the game files from another
    source, the launcher lets you pick the game folder.
-2. Download `HexRevival-1.1.0.zip` from the [Releases](../../releases) page and extract it anywhere.
+2. Download `HexRevival-<version>.zip` from the [Releases](../../releases) page and extract it anywhere.
 3. Double-click `HexRevival.exe`. It:
    - finds the game (Steam libraries, Windows registry, or the folder you chose last time),
    - otherwise offers to install it through Steam (if it is in your library) or to pick the game folder,
@@ -198,9 +205,11 @@ source (a video, a screenshot, a guide of the time) are welcome: please open an 
 To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
 blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
 taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns), **KrystoferRobin** (the mercenary slots of the battle
-panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards) and **InfinityAbyss** (the
+panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards, the choice cards without art) and **InfinityAbyss** (the
 champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
-from, and for the tutorial's last battle that froze. To **Criesener** for the macOS version. To **RomoSJR** for
+from, for the tutorial's last battle that froze, and for the report behind 1.2.13 (the AI attacking into blockers,
+damage display, one-shot texts, campaign packs, the store's drop lists). To **Criesener** for the macOS version,
+crafting and the redeem codes. To **RomoSJR** for
 Hex Codex, the source of the AI's tournament decks, the sleeves and much of the equipment.
 
 ## Building from source
