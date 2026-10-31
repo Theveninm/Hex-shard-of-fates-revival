@@ -9,31 +9,44 @@ namespace HexRevival
 {
     /// <summary>
     /// "Possible drops" of a store product (Zymmer 2026-10-31: "a list of all stuff that could drop when buying a pack
-    /// from the store"): a button next to the store's card count opens a window with what the selected pack can give,
-    /// as the mod opens it (Progression.OpenPack, Packs, SpecialPacks, Zymmer): how many cards of each rarity, then every
-    /// card and item of each pool with the copies owned. The odds shown are the mod's own (PLACEHOLDER where they are).
+    /// from the store"), as the mod opens it (Progression.OpenPack, Packs, SpecialPacks, Zymmer). Not in the original game.
+    /// - A bar on the item panel, for every product the window can describe (the game's card count only exists for the
+    ///   booster packs): the cards owned of the product's pools and every item owned (cards, equipment, mercenaries),
+    ///   with a "Possible drops" button. Under the game's card count when it has one, in its place otherwise.
+    /// - The window: how many cards of each rarity, then every card of each pool with the copies owned, then the other
+    ///   items (equipment, mercenaries) with their pictures. The odds shown are the mod's own (PLACEHOLDER where they are).
     /// </summary>
     public class PackContents : MonoBehaviour
     {
+        /// <summary>What a product can give: cards by section, then other items by section.</summary>
+        private class Contents
+        {
+            public string Summary;
+            public readonly List<KeyValuePair<string, List<CardTemplate>>> Cards = new List<KeyValuePair<string, List<CardTemplate>>>();
+            public readonly List<KeyValuePair<string, List<InventoryItemData>>> Items = new List<KeyValuePair<string, List<InventoryItemData>>>();
+            public int CardsOwned, CardsTotal, ItemsOwned, ItemsTotal;
+        }
+
         private class Row
         {
-            public string Text;
-            public string Detail;
+            public string Text, Detail;
             public bool Header;
+            public List<InventoryItemData> Tiles;
+            public float Height, Y;
         }
 
         private InventoryItemData m_Item;
-        private string m_Summary;
+        private Contents m_Contents;
         private List<Row> m_Rows;
+        private float m_RowsWidth, m_RowsHeight;
         private Vector2 m_Scroll;
-        private Rect m_ButtonRect;
+        private Rect m_BarRect, m_LastFrame;
         private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
         private UIPremiumStoreViewModel m_Store;
         private float m_NextFind;
         private InventoryItemData m_Checked;
-        private bool m_CheckedHas;
-
-        private bool Open { get { return m_Rows != null; } }
+        private Contents m_CheckedContents;
+        private bool m_Open;
 
         private static PackContents s_Instance;
         private void Awake() { s_Instance = this; }
@@ -42,9 +55,10 @@ namespace HexRevival
         public static string DevOpen()
         {
             InventoryItemData item = s_Instance != null && s_Instance.m_Store != null ? s_Instance.Selected() : null;
-            if (item == null || !Has(item)) return "no described item selected";
-            s_Instance.Show(item);
-            return item.m_Name + ": " + s_Instance.m_Rows.Count + " rows";
+            Contents c = item != null ? Describe(item) : null;
+            if (c == null) return "no described item selected";
+            s_Instance.Show(item, c);
+            return item.m_Name + ": cards " + c.CardsOwned + "/" + c.CardsTotal + ", all " + (c.CardsOwned + c.ItemsOwned) + "/" + (c.CardsTotal + c.ItemsTotal);
         }
 
         private void Update()
@@ -54,8 +68,8 @@ namespace HexRevival
                 m_NextFind = Time.realtimeSinceStartup + 1f;
                 m_Store = FindObjectOfType<UIPremiumStoreViewModel>();
             }
-            if (m_Store == null || !m_Store.isActiveAndEnabled) { m_Rows = null; m_ButtonRect = new Rect(); m_Block.Release(); return; }
-            m_Block.Update(Open, m_ButtonRect);
+            if (m_Store == null || !m_Store.isActiveAndEnabled) { m_Open = false; m_BarRect = new Rect(); m_Checked = null; m_Block.Release(); return; }
+            m_Block.Update(m_Open, m_BarRect);
         }
 
         private InventoryItemData Selected()
@@ -73,56 +87,168 @@ namespace HexRevival
             if (m_Store == null || !m_Store.isActiveAndEnabled) return;
             float S = GameSkin.Scale;
             GUI.depth = -850;
-            if (Open) { DrawWindow(S); return; }
+            if (m_Open) { DrawWindow(S); return; }
             InventoryItemData item = Selected();
-            if (item != m_Checked) { m_Checked = item; m_CheckedHas = item != null && Has(item); }
-            if (!m_CheckedHas) { m_ButtonRect = new Rect(); return; }
-            Transform frame = m_Store.transform.Find("Panel_R/Panel_Overlay/Frame_Details");
-            Rect f = frame != null && frame.gameObject.activeInHierarchy ? ScreenRect(frame) : new Rect();
-            Transform panel = m_Store.transform.Find("Panel_R");
-            Rect p = panel != null ? ScreenRect(panel) : new Rect();
-            // Left of the card count when there is one, else the top left corner of the item's panel.
-            m_ButtonRect = f.width > 0 ? new Rect(f.x - 196 * S, f.y, 186 * S, f.height)
-                : new Rect(p.x + 14 * S, p.y + 30 * S, 186 * S, 34 * S);
-            if (GameSkin.GoldButton(m_ButtonRect, Loc.Get("pc_button"), true, 15)) Show(item);
+            if (item != m_Checked) { m_Checked = item; m_CheckedContents = item != null ? Describe(item) : null; }
+            if (m_CheckedContents == null) { m_BarRect = new Rect(); return; }
+            DrawBar(S, item, m_CheckedContents);
         }
 
-        private void Show(InventoryItemData item)
+        // ------------------------------------------------------------------
+        // The bar on the item panel
+        // ------------------------------------------------------------------
+
+        private void DrawBar(float S, InventoryItemData item, Contents c)
+        {
+            Transform frame = m_Store.transform.Find("Panel_R/Panel_Overlay/Frame_Details");
+            bool gameBar = frame != null && frame.gameObject.activeInHierarchy;
+            if (gameBar) m_LastFrame = ScreenRect(frame);
+            Rect f = m_LastFrame;
+            if (f.width <= 0)
+            {
+                // Never seen yet: where the game puts it (the top middle of the item panel).
+                Transform panel = m_Store.transform.Find("Panel_R");
+                Rect p = panel != null ? ScreenRect(panel) : new Rect(Screen.width * 0.5f, Screen.height * 0.12f, Screen.width * 0.48f, Screen.height * 0.7f);
+                f = new Rect(p.center.x - 196 * S, p.y + 30 * S, 392 * S, 38 * S);
+            }
+            float h = 34 * S, w = 660 * S;
+            // Under the game's card count when it shows one, in its place otherwise.
+            Rect bar = new Rect(f.center.x - w / 2f, gameBar ? f.yMax + 6 * S : f.y, w, h);
+            m_BarRect = bar;
+            if (!GameSkin.Sprite(bar, "A_Shared_Atlas", "Dropdown_Panel")) GUI.DrawTexture(bar, GameSkin.Solid(new Color(0.05f, 0.06f, 0.09f, 0.9f)));
+            string text = Loc.Get("pc_bar", Pct(c.CardsOwned, c.CardsTotal), Pct(c.CardsOwned + c.ItemsOwned, c.CardsTotal + c.ItemsTotal));
+            Rect button = new Rect(bar.xMax - 170 * S, bar.y + 2 * S, 166 * S, h - 4 * S);
+            GameSkin.Label(new Rect(bar.x + 12 * S, bar.y, button.x - bar.x - 16 * S, h), text, GameSkin.Style("bold", 15, GameSkin.Gold, TextAnchor.MiddleCenter));
+            if (GameSkin.GoldButton(button, Loc.Get("pc_button"), true, 14)) Show(item, c);
+        }
+
+        private static string Pct(int owned, int total)
+        {
+            return total <= 0 ? "0/0" : owned + "/" + total + " (" + Mathf.RoundToInt(100f * owned / total) + "%)";
+        }
+
+        // ------------------------------------------------------------------
+        // The window
+        // ------------------------------------------------------------------
+
+        private void Show(InventoryItemData item, Contents c)
         {
             m_Item = item;
-            m_Rows = new List<Row>();
-            m_Summary = Describe(item, m_Rows);
+            m_Contents = c;
+            m_Rows = null;
             m_Scroll = Vector2.zero;
+            m_Open = true;
         }
 
         private void DrawWindow(float S)
         {
-            Rect win = Controls.Window(980, 820, Loc.Get("pc_title", m_Item.m_Name));
+            Rect win = Controls.Window(1000, 840, Loc.Get("pc_title", m_Item.m_Name));
             float pad = 34 * S;
+            string summary = m_Contents.Summary + "\n" + Loc.Get("pc_bar", Pct(m_Contents.CardsOwned, m_Contents.CardsTotal),
+                Pct(m_Contents.CardsOwned + m_Contents.ItemsOwned, m_Contents.CardsTotal + m_Contents.ItemsTotal));
             GUIStyle sum = GameSkin.Style("body", 16, GameSkin.Text, TextAnchor.UpperLeft, true);
-            float sh = sum.CalcHeight(new GUIContent(m_Summary), win.width - 2 * pad);
-            GUI.Label(new Rect(win.x + pad, win.y + 54 * S, win.width - 2 * pad, sh), m_Summary, sum);
+            float sh = sum.CalcHeight(new GUIContent(summary), win.width - 2 * pad);
+            GUI.Label(new Rect(win.x + pad, win.y + 54 * S, win.width - 2 * pad, sh), summary, sum);
             float top = win.y + 64 * S + sh;
             Rect area = new Rect(win.x + pad, top, win.width - 2 * pad, win.yMax - 84 * S - top);
             Controls.Frame(area, null);
             Rect inner = new Rect(area.x + 8 * S, area.y + 8 * S, area.width - 16 * S, area.height - 16 * S);
-            float rowH = 30 * S;
+            float width = inner.width - 24 * S;
+            if (m_Rows == null || Mathf.Abs(m_RowsWidth - width) > 1f) BuildRows(width, S);
+
+            Rect view = new Rect(0, 0, inner.width - 20 * S, m_RowsHeight);
+            m_Scroll = GUI.BeginScrollView(inner, m_Scroll, view, false, false, GUIStyle.none, view.height > inner.height ? GameSkin.ScrollBar : GUIStyle.none);
             GUIStyle head = GameSkin.Style("title", 18, GameSkin.Gold);
             GUIStyle name = GameSkin.Style("body", 16, GameSkin.Text);
             GUIStyle det = GameSkin.Style("body", 15, GameSkin.Muted, TextAnchor.MiddleRight);
-            m_Scroll = Controls.List(inner, m_Scroll, m_Rows.Count, rowH, i =>
+            GUIStyle tileName = GameSkin.Style("body", 13, GameSkin.Text, TextAnchor.UpperCenter, true);
+            GUIStyle tileOwned = GameSkin.Style("body", 12, GameSkin.Muted, TextAnchor.UpperCenter);
+            foreach (Row r in m_Rows)
             {
-                Row r = m_Rows[i];
-                Rect rr = new Rect(0, i * (rowH + 4 * S), inner.width - 24 * S, rowH);
+                // Only the rows in sight are drawn (lists of hundreds of cards).
+                if (r.Y + r.Height < m_Scroll.y || r.Y > m_Scroll.y + inner.height) continue;
+                Rect rr = new Rect(0, r.Y, width, r.Height);
                 if (r.Header) GameSkin.Label(rr, r.Text, head);
+                else if (r.Tiles != null) DrawTiles(rr, r.Tiles, S, tileName, tileOwned);
                 else
                 {
                     GUI.Label(new Rect(rr.x + 16 * S, rr.y, rr.width - 200 * S, rr.height), r.Text, name);
                     GUI.Label(new Rect(rr.xMax - 190 * S, rr.y, 190 * S, rr.height), r.Detail, det);
                 }
-                return false;
-            }, i => { });
-            if (GameSkin.RedButton(new Rect(win.center.x - 90 * S, win.yMax - 70 * S, 180 * S, 52 * S), Loc.Get("close"))) m_Rows = null;
+            }
+            GUI.EndScrollView();
+            if (GameSkin.RedButton(new Rect(win.center.x - 90 * S, win.yMax - 70 * S, 180 * S, 52 * S), Loc.Get("close"))) { m_Open = false; m_Rows = null; }
+        }
+
+        private const float TileW = 150f, TileH = 196f;
+
+        private void BuildRows(float width, float S)
+        {
+            m_RowsWidth = width;
+            m_Rows = new List<Row>();
+            float headH = 34 * S, rowH = 30 * S, gap = 4 * S;
+            foreach (KeyValuePair<string, List<CardTemplate>> sec in m_Contents.Cards)
+            {
+                m_Rows.Add(new Row { Header = true, Text = sec.Key + "  (" + sec.Value.Count + ")", Height = headH });
+                foreach (CardTemplate c in sec.Value)
+                    m_Rows.Add(new Row { Text = c.m_Name, Detail = Loc.Get("pc_owned", Collection.Count(c.m_Id)), Height = rowH });
+            }
+            int perRow = Mathf.Max(1, (int)(width / ((TileW + 10) * S)));
+            foreach (KeyValuePair<string, List<InventoryItemData>> sec in m_Contents.Items)
+            {
+                m_Rows.Add(new Row { Header = true, Text = sec.Key + "  (" + sec.Value.Count + ")", Height = headH });
+                for (int i = 0; i < sec.Value.Count; i += perRow)
+                    m_Rows.Add(new Row { Tiles = sec.Value.GetRange(i, Math.Min(perRow, sec.Value.Count - i)), Height = TileH * S });
+            }
+            float y = 0;
+            foreach (Row r in m_Rows) { r.Y = y; y += r.Height + gap; }
+            m_RowsHeight = y;
+        }
+
+        private static void DrawTiles(Rect row, List<InventoryItemData> items, float S, GUIStyle nameStyle, GUIStyle ownedStyle)
+        {
+            float w = TileW * S, step = (TileW + 10) * S, pic = 110 * S;
+            for (int i = 0; i < items.Count; i++)
+            {
+                InventoryItemData it = items[i];
+                Rect tile = new Rect(row.x + i * step, row.y, w, row.height);
+                GameSkin.Sprite(tile, "A_Frames", "Frame_Inner");
+                Rect pr = new Rect(tile.center.x - pic / 2f, tile.y + 8 * S, pic, pic);
+                Texture2D t = Icon(it);
+                bool owned = Inventory.Count(it.m_Id) > 0;
+                if (t != null)
+                {
+                    Color old = GUI.color;
+                    if (!owned) GUI.color = new Color(1f, 1f, 1f, 0.45f);   // greyed out as the collection shows what is missing
+                    GUI.DrawTexture(pr, t, ScaleMode.ScaleToFit);
+                    GUI.color = old;
+                }
+                else GUI.DrawTexture(pr, GameSkin.Solid(new Color(0.1f, 0.1f, 0.13f, 1f)));
+                string kind = it is InventoryMercenaryData ? Loc.Get("pc_mercenary") : it is InventoryEquipmentData ? RarityName(((InventoryEquipmentData)it).m_Rarity) : "";
+                GUI.Label(new Rect(tile.x + 4 * S, pr.yMax + 4 * S, w - 8 * S, 40 * S), it.m_Name.Trim(), nameStyle);
+                GUI.Label(new Rect(tile.x + 4 * S, tile.yMax - 22 * S, w - 8 * S, 20 * S),
+                    (kind.Length > 0 ? kind + " · " : "") + Loc.Get("pc_owned", Inventory.Count(it.m_Id)), ownedStyle);
+            }
+        }
+
+        private static readonly Dictionary<ResourceId, Texture2D> s_Icons = new Dictionary<ResourceId, Texture2D>();
+
+        /// <summary>An item's picture from the game's icon bundle (icons.ab: the item's texture, or its "_Thumb"); null if none.</summary>
+        private static Texture2D Icon(InventoryItemData item)
+        {
+            Texture2D t;
+            if (s_Icons.TryGetValue(item.m_Id, out t)) return t;
+            t = null;
+            try
+            {
+                string tex = string.IsNullOrEmpty(item.m_TexturePath) ? null : FolderUtils.GetFileNameWithoutPathOrExtension(item.m_TexturePath);
+                if (tex != null && AssetBundleManager.Instance != null)
+                    t = (AssetBundleManager.Instance.GetAsset(AssetBundleFile.Icons, tex, AssetType.Texture2D) as Texture2D)
+                        ?? (AssetBundleManager.Instance.GetAsset(AssetBundleFile.Icons, tex + "_Thumb", AssetType.Texture2D) as Texture2D);
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [PackContents] icon " + item.m_Name + ": " + e.Message); }
+            s_Icons[item.m_Id] = t;
+            return t;
         }
 
         // ------------------------------------------------------------------
@@ -131,30 +257,38 @@ namespace HexRevival
 
         private static readonly ERarity[] Rarities = { ERarity.Legendary, ERarity.Epic, ERarity.Rare, ERarity.Uncommon, ERarity.Common };
 
-        /// <summary>Whether the window has something to show for this item.</summary>
-        public static bool Has(InventoryItemData item)
+        /// <summary>What the product can give; null if the window does not describe it.</summary>
+        private static Contents Describe(InventoryItemData item)
         {
-            return Describe(item, null) != null;
+            Contents c = new Contents();
+            c.Summary = Fill(item, c);
+            if (c.Summary == null) return null;
+            HashSet<ResourceId> cards = new HashSet<ResourceId>(), items = new HashSet<ResourceId>();
+            foreach (KeyValuePair<string, List<CardTemplate>> s in c.Cards) foreach (CardTemplate t in s.Value) cards.Add(t.m_Id);
+            foreach (KeyValuePair<string, List<InventoryItemData>> s in c.Items) foreach (InventoryItemData i in s.Value) items.Add(i.m_Id);
+            c.CardsTotal = cards.Count;
+            foreach (ResourceId id in cards) if (Collection.Count(id) > 0) c.CardsOwned++;
+            c.ItemsTotal = items.Count;
+            foreach (ResourceId id in items) if (Inventory.Count(id) > 0) c.ItemsOwned++;
+            return c;
         }
 
-        /// <summary>The product's summary, its pools added to rows (rows null: only checks); null if not described.</summary>
-        private static string Describe(InventoryItemData item, List<Row> rows)
+        /// <summary>The product's pools added to c; returns its summary, null if not described.</summary>
+        private static string Fill(InventoryItemData item, Contents c)
         {
-            if (item == null) return null;
             if (Zymmer.IsKismetPack(item))
             {
                 List<Loot.Drop> bundle = Zymmer.KismetBundle(item.m_Name);
                 if (bundle.Count == 0) return null;
-                if (rows != null) AddDrops(rows, Loc.Get("pc_items"), bundle);
+                AddDrops(c, Loc.Get("pc_items"), bundle);
                 return Loc.Get("pc_kismet");
             }
             string kind = SpecialPacks.KindOf(item);
             if (kind == "randomkismet")
             {
-                if (rows != null)
-                    foreach (InventoryItemData k in Singleton<TemplateManager>.Instance.InventoryItems.Values)
-                        if (Zymmer.IsKismetPack(k) && Zymmer.KismetBundle(k.m_Name).Count > 0) AddDrops(rows, k.m_Name, Zymmer.KismetBundle(k.m_Name));
-                return Loc.Get("pc_randomkismet");
+                foreach (InventoryItemData k in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                    if (Zymmer.IsKismetPack(k) && Zymmer.KismetBundle(k.m_Name).Count > 0) AddDrops(c, k.m_Name.Trim(), Zymmer.KismetBundle(k.m_Name));
+                return c.Cards.Count + c.Items.Count > 0 ? Loc.Get("pc_randomkismet") : null;
             }
             InventoryCardPack pack = item as InventoryCardPack;
             if (pack == null) return null;
@@ -164,57 +298,55 @@ namespace HexRevival
             {
                 case "fullset":
                     if (set == null) return null;
-                    if (rows != null) foreach (ERarity r in Rarities) AddCards(rows, r, Progression.Pool(set, r));
+                    foreach (ERarity r in Rarities) AddCards(c, r, Progression.Pool(set, r));
                     return Loc.Get("pc_fullset");
                 case "trials":
                 {
                     if (set == null) return null;
                     string race = Array.Find(SpecialPacks.Races, x => item.m_Name.StartsWith(x));
-                    if (rows != null)
-                        foreach (ERarity r in new[] { ERarity.Rare, ERarity.Uncommon, ERarity.Common })
-                        {
-                            List<CardTemplate> pool = Progression.Pool(set, r);
-                            List<CardTemplate> of = race == null ? pool : pool.FindAll(c => c.HasSubtype(race == "Shin'hare" ? "Shin" : race));
-                            AddCards(rows, r, of.Count > 0 ? of : pool);
-                        }
+                    foreach (ERarity r in new[] { ERarity.Rare, ERarity.Uncommon, ERarity.Common })
+                    {
+                        List<CardTemplate> pool = Progression.Pool(set, r);
+                        List<CardTemplate> of = race == null ? pool : pool.FindAll(t => t.HasSubtype(race == "Shin'hare" ? "Shin" : race));
+                        AddCards(c, r, of.Count > 0 ? of : pool);
+                    }
                     return Loc.Get("pc_trials");
                 }
                 case "common":
-                    if (rows != null) AddCards(rows, ERarity.Common, SpecialPacks.StandardPool(ERarity.Common));
+                    AddCards(c, ERarity.Common, SpecialPacks.StandardPool(ERarity.Common));
                     return Loc.Get("pc_common");
                 case "gauntlet":
-                    if (rows != null) { AddCards(rows, ERarity.Uncommon, SpecialPacks.StandardPool(ERarity.Uncommon)); AddCards(rows, ERarity.Common, SpecialPacks.StandardPool(ERarity.Common)); }
+                    AddCards(c, ERarity.Uncommon, SpecialPacks.StandardPool(ERarity.Uncommon));
+                    AddCards(c, ERarity.Common, SpecialPacks.StandardPool(ERarity.Common));
                     return Loc.Get("pc_gauntlet");
                 case "dualshard":
                     if (set == null) return null;
-                    if (rows != null) foreach (ERarity r in new[] { ERarity.Legendary, ERarity.Rare, ERarity.Uncommon, ERarity.Common }) AddCards(rows, r, Progression.Pool(set, r));
+                    foreach (ERarity r in new[] { ERarity.Legendary, ERarity.Rare, ERarity.Uncommon, ERarity.Common }) AddCards(c, r, Progression.Pool(set, r));
                     return Loc.Get("pc_dualshard");
                 case "kismetdraft":
-                    if (rows != null)
-                        foreach (ERarity r in new[] { ERarity.Legendary, ERarity.Rare, ERarity.Uncommon, ERarity.Common })
-                        {
-                            List<CardTemplate> all = new List<CardTemplate>();
-                            foreach (CardSetTemplate s in SpecialPacks.BoosterSets()) all.AddRange(Progression.Pool(s, r));
-                            AddCards(rows, r, all);
-                        }
+                    foreach (ERarity r in new[] { ERarity.Legendary, ERarity.Rare, ERarity.Uncommon, ERarity.Common })
+                    {
+                        List<CardTemplate> all = new List<CardTemplate>();
+                        foreach (CardSetTemplate s in SpecialPacks.BoosterSets()) all.AddRange(Progression.Pool(s, r));
+                        AddCards(c, r, all);
+                    }
                     return Loc.Get("pc_kismetdraft");
                 case "gencon":
                     if (set == null) return null;
-                    if (rows != null) foreach (ERarity r in Rarities) AddCards(rows, r, Progression.Pool(set, r));
+                    foreach (ERarity r in Rarities) AddCards(c, r, Progression.Pool(set, r));
                     return Loc.Get("pc_gencon");
             }
             if (set == null) return null;
             if (pack.m_CardPackType == ECardPackType.PrimalPack)
             {
-                if (rows != null) { AddCards(rows, ERarity.Legendary, Progression.Pool(set, ERarity.Legendary)); AddCards(rows, ERarity.Rare, Progression.Pool(set, ERarity.Rare)); AddChest(rows, set); }
+                AddCards(c, ERarity.Legendary, Progression.Pool(set, ERarity.Legendary));
+                AddCards(c, ERarity.Rare, Progression.Pool(set, ERarity.Rare));
+                AddChest(c, set);
                 return Loc.Get("pc_primal");
             }
             if (pack.m_CardPackType != ECardPackType.BoosterPack) return null;
-            if (rows != null)
-            {
-                foreach (ERarity r in Rarities) AddCards(rows, r, Progression.Pool(set, r));
-                AddChest(rows, set);
-            }
+            foreach (ERarity r in Rarities) AddCards(c, r, Progression.Pool(set, r));
+            AddChest(c, set);
             return Loc.Get(Store.PrimalOf(set.m_Id).IsValid ? "pc_booster_primal" : "pc_booster");
         }
 
@@ -230,36 +362,54 @@ namespace HexRevival
             }
         }
 
-        private static void AddCards(List<Row> rows, ERarity rarity, List<CardTemplate> pool)
+        private static List<CardTemplate> Sorted(List<CardTemplate> pool)
         {
-            if (pool.Count == 0) return;
             List<CardTemplate> sorted = new List<CardTemplate>(pool);
             sorted.Sort((a, b) => string.Compare(a.m_Name, b.m_Name, StringComparison.OrdinalIgnoreCase));
-            rows.Add(new Row { Header = true, Text = RarityName(rarity) + "  (" + sorted.Count + ")" });
-            foreach (CardTemplate c in sorted) rows.Add(new Row { Text = c.m_Name, Detail = Loc.Get("pc_owned", Collection.Count(c.m_Id)) });
+            return sorted;
+        }
+
+        private static void AddCards(Contents c, ERarity rarity, List<CardTemplate> pool)
+        {
+            if (pool.Count > 0) c.Cards.Add(new KeyValuePair<string, List<CardTemplate>>(RarityName(rarity), Sorted(pool)));
         }
 
         /// <summary>The set's chest (Packs: one per booster, legendary for a primal pack), from Zymmer's "Set N Chest Loot".</summary>
-        private static void AddChest(List<Row> rows, CardSetTemplate set)
+        private static void AddChest(Contents c, CardSetTemplate set)
         {
             string source = "Set " + Zymmer.SetNumber(set) + " Chest Loot";
             List<Loot.Drop> drops = new List<Loot.Drop>();
+            foreach (CardTemplate t in Zymmer.Cards(source)) drops.Add(new Loot.Drop { Card = t });
             foreach (InventoryItemData i in Zymmer.Equipment(source)) drops.Add(new Loot.Drop { Item = i.m_Id });
-            foreach (CardTemplate c in Zymmer.Cards(source)) drops.Add(new Loot.Drop { Card = c });
             foreach (InventoryMercenaryData m in Zymmer.MercenariesOf(source)) drops.Add(new Loot.Drop { Item = m.m_Id });
-            if (drops.Count > 0) AddDrops(rows, Loc.Get("pc_chest"), drops);
+            if (drops.Count > 0) AddDrops(c, Loc.Get("pc_chest"), drops);
         }
 
-        private static void AddDrops(List<Row> rows, string title, List<Loot.Drop> drops)
+        /// <summary>Drops of one source: its cards with the cards, its other items after every card section.</summary>
+        private static void AddDrops(Contents c, string title, List<Loot.Drop> drops)
         {
-            rows.Add(new Row { Header = true, Text = title + "  (" + drops.Count + ")" });
+            List<CardTemplate> cards = new List<CardTemplate>();
+            List<InventoryItemData> items = new List<InventoryItemData>();
             foreach (Loot.Drop d in drops)
             {
-                if (d.Card != null) { rows.Add(new Row { Text = d.Card.m_Name, Detail = Loc.Get("pc_owned", Collection.Count(d.Card.m_Id)) }); continue; }
+                if (d.Card != null) { cards.Add(d.Card); continue; }
                 InventoryItemData i = Singleton<TemplateManager>.Instance.GetInventoryItem(d.Item);
-                if (i == null) continue;
-                string what = i is InventoryMercenaryData ? Loc.Get("pc_mercenary") : i is InventoryEquipmentData ? RarityName(((InventoryEquipmentData)i).m_Rarity) : "";
-                rows.Add(new Row { Text = i.m_Name + (what.Length > 0 ? "  · " + what : ""), Detail = Loc.Get("pc_owned", Inventory.Count(i.m_Id)) });
+                if (i != null) items.Add(i);
+            }
+            if (cards.Count > 0) c.Cards.Add(new KeyValuePair<string, List<CardTemplate>>(title + " · " + Loc.Get("pc_cards"), Sorted(cards)));
+            if (items.Count > 0)
+            {
+                // Mercenaries first, then equipment by rarity (the rarest first), then by name.
+                items.Sort((a, b) =>
+                {
+                    int ka = a is InventoryMercenaryData ? 0 : 1, kb = b is InventoryMercenaryData ? 0 : 1;
+                    if (ka != kb) return ka.CompareTo(kb);
+                    InventoryEquipmentData ea = a as InventoryEquipmentData, eb = b as InventoryEquipmentData;
+                    int ra = ea != null ? (int)ea.m_Rarity : 0, rb = eb != null ? (int)eb.m_Rarity : 0;
+                    if (ra != rb) return rb.CompareTo(ra);
+                    return string.Compare(a.m_Name, b.m_Name, StringComparison.OrdinalIgnoreCase);
+                });
+                c.Items.Add(new KeyValuePair<string, List<InventoryItemData>>(title + " · " + Loc.Get("pc_other_items"), items));
             }
         }
 
