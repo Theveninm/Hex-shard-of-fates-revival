@@ -52,8 +52,9 @@ namespace HexRevival
                 }
             }
 
-            /// <summary>Several independent tries for one card: each try's chance is worth showing.</summary>
-            public bool Repeats { get { return !Once && !Distinct && Draws > 1 && Count > 1; } }
+            /// <summary>Several cards from this pool per pack: each one's chance is shown with the number of tries (the user,
+            /// 2026-10-31: "12 times 0.73% (8.42% chances to get at least one)"); implicit for one.</summary>
+            public bool Repeats { get { return !Once && Draws > 1 && Count > 1; } }
         }
 
         private class Group
