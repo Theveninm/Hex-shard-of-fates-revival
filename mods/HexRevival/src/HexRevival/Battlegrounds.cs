@@ -911,7 +911,20 @@ namespace HexRevival
             res.success = true;
             res.ErrorMessage = "";
             LocalServer.Answer(typeof(TournamentsService.LeaveTournament), res, handler);
-            if (r != null) LocalServer.Later(() => Finish(r));
+            LocalServer.Later(() =>
+            {
+                if (r != null) Finish(r);
+                // A forfeit from the deck builder of an asynchronous gauntlet (UIDeckBuilderVM.LeaveTournamentViaForfeit)
+                // shows a waiting spinner until the server sends the player back to the tournament list: without this,
+                // the screen stayed dark forever (2026-10-31, leaving a draft). The prize window follows to the list.
+                try
+                {
+                    EGameState state = GameClient.Instance.StateManager.CurrentGameState;
+                    if (state == EGameState.TournamentSideboarding || state == EGameState.TournamentLobby || state == EGameState.Tournament)
+                        Manager.TransitionToTournamentList();
+                }
+                catch (Exception e) { Debug.LogError("[HexRevival] [Battlegrounds] leave: " + e); }
+            });
         }
 
         /// <summary>Dev: "bg [state] | bg autodeck &lt;id&gt; (a 40-card deck from the pool) | bg play &lt;id&gt; (Find Match)".</summary>

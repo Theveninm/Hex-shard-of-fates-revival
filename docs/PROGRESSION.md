@@ -503,6 +503,7 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Sealed Gauntlet | 6 boosters opened (kept), a 40-card deck; single-game matches; until 5 wins or 3 losses | Game ("gauntlet-sealed-description") |
 | Draft Gauntlet | 3 boosters drafted at a table of 8 (cards kept); matches best of 3; 3 matches | Game ("gauntlet-draft-description") |
 | Draft RECORD boxes (deck builder) | one box per match, won or lost, in the order played (the client put every win first, then the losses; runs started before 1.2.13 keep that order) | Zymmer 2026-10-31 |
+| Forfeit (deck builder) | the run ends, the prize of the matches won is given, and the game goes back to the tournament list with its results window (until 1.2.12 the screen stayed dark behind a loading circle: the client waits for the server to send it back) | Game (UIDeckBuilderVM.LeaveTournamentViaForfeit) |
 | Entry fees | constructed 2,000 gold, sealed 12,000 (6 boosters), draft 6,000 (3 boosters) | PLACEHOLDER |
 | Prizes | one booster (opened) per match won | PLACEHOLDER |
 | Boosters of sealed and draft | Doombringer (the last set) | PLACEHOLDER: the server chose the product |
