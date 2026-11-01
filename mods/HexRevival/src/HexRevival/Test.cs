@@ -1026,6 +1026,16 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }   // dev: "tdecks [check]" = the bundled tournament decks
+                case "party":   // dev: "party [champion id]" = the party the client holds for that champion (current one by default) and its unlocked slots
+                    {
+                        PlayerProfile pp = GameClient.Instance.PlayerProfile;
+                        ulong champ;
+                        if (parts.Length < 2 || !ulong.TryParse(parts[1], out champ)) champ = pp.GetCurrentChampion() != null ? pp.GetCurrentChampion().Id : 0;
+                        List<string> o = new List<string>();
+                        foreach (PlayerProfile.PartyMember m in pp.GetPartyForChampion(champ))
+                            o.Add((m.MercTemplate != null ? m.MercTemplate.m_Name : "?") + " deck " + m.DeckTemplateId);
+                        return "champion " + champ + ": " + o.Count + " member(s), " + pp.GetUnlockedPartySlots() + " slot(s)" + (o.Count > 0 ? ": " + string.Join(", ", o.ToArray()) : "");
+                    }
                 case "redeem": return Redeem.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();

@@ -167,7 +167,11 @@ namespace HexRevival
             catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] starter decks: " + e); }
             foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
             {
-                try { profile.SavedChampionParty(kv.Key, kv.Value); }
+                try
+                {
+                    profile.SavedChampionParty(kv.Key, kv.Value);
+                    Debug.Log("[HexRevival] [Mercenaries] party of " + kv.Key + " given: " + kv.Value.Members.Count + " saved, " + profile.GetPartyForChampion(kv.Key).Count + " held by the client");
+                }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Mercenaries] party " + kv.Key + ": " + e.Message); }
             }
         }
