@@ -222,7 +222,7 @@ namespace HexRevival
             d.MaxPlayers = 0;
             d.MaxRounds = g.MaxMatches;
             d.Players = new string[0];
-            d.tournamentFees = new Dictionary<int, TournamentEntryInfo> { { 0, FeeInPlatinum ? new TournamentEntryInfo { platCost = g.GoldFee / HexRevival.Store.GoldPerPlatinum } : new TournamentEntryInfo { goldCost = HexRevival.Store.Gold(g.GoldFee) } } };
+            d.tournamentFees = new Dictionary<int, TournamentEntryInfo> { { 0, FeeInPlatinum ? new TournamentEntryInfo { platCost = HexRevival.Store.PlatinumOf(g.GoldFee) } : new TournamentEntryInfo { goldCost = HexRevival.Store.GoldOfPlatinum(HexRevival.Store.PlatinumOf(g.GoldFee)) } } };
             d.tournamentRewards = new TournamentRewardCollection();
             InventoryItemData booster = Booster();
             if (booster != null)
@@ -308,7 +308,7 @@ namespace HexRevival
             else if (r == null)
             {
                 bool plat = FeeInPlatinum;
-                long fee = plat ? g.GoldFee / HexRevival.Store.GoldPerPlatinum : HexRevival.Store.Gold(g.GoldFee);
+                long fee = plat ? HexRevival.Store.PlatinumOf(g.GoldFee) : HexRevival.Store.GoldOfPlatinum(HexRevival.Store.PlatinumOf(g.GoldFee));
                 if ((plat ? Saves.Current.Platinum : Saves.Current.Gold) < fee) res.Error = EEnterTournamentError.DoesNotMeetPrereqsError;
                 else
                 {
@@ -327,7 +327,7 @@ namespace HexRevival
             LocalServer.Answer(typeof(TournamentsService.EnterTournament), res, handler);
         }
 
-        /// <summary>Accounts without "platinum prices in gold" pay the entries in platinum (the gold fees divided by the account's gold per platinum); the others the gold fee after the account's divisor.</summary>
+        /// <summary>Accounts without "platinum prices in gold" pay the entries in platinum (the gold fees are platinum x 10); the others that platinum at the account's gold per platinum.</summary>
         private static bool FeeInPlatinum { get { return Saves.Current != null && !Saves.Current.GoldPrices; } }
 
         private static void ShowBalance()

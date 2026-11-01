@@ -47,8 +47,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Starter collection | the game's two "new player" starter decks + 200 of each basic shard | Game (decks), SteamGuide2016 (shards) |
 | Starting gold and platinum | chosen when the account is created (0 by default; "unlock everything" accounts: 100,000 gold) | mod choice |
 | Platinum prices in gold | chosen when the account is created (on by default, always on with "unlock everything"), changed later in the game's Settings, Account tab: off, the store and the gauntlet entries cost platinum | mod choice |
-| Gold per platinum | chosen when the account is created (10 by default), changed later in the Settings, Account tab: platinum prices in gold multiply by it, with platinum prices the fees set in gold (Battlegrounds) divide by it | mod choice (Criesener, 2026-11-01) |
-| Gold prices divided by | chosen when the account is created (1 by default), changed later in the Settings, Account tab: every gold price (store, stardust, Wheel of Fate spins, Battlegrounds entries, gift box refund) is divided by it | mod choice (Criesener, 2026-11-01) |
+| Gold per platinum | chosen when the account is created (10 by default), changed later in the Settings, Account tab: what sold for platinum (boosters, decks, special packs, Battlegrounds entries) costs that many gold per platinum; with platinum prices it costs the platinum | mod choice (Criesener, 2026-11-01) |
+| Gold prices divided by | chosen when the account is created (1 by default), changed later in the Settings, Account tab: every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it | mod choice (Criesener, 2026-11-01) |
 | Every gem in the campaign | chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
 | New champion | its race's starter deck (added to the collection and used as the champion's deck) | Game |
 

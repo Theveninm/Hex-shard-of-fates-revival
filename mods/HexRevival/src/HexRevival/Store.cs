@@ -50,10 +50,20 @@ namespace HexRevival
         /// <summary>Gold per platinum of the current account (Saves.Info.GoldPerPlatinum; the default without one).</summary>
         public static int GoldPerPlatinum { get { return Saves.Current != null && Saves.Current.GoldPerPlatinum > 0 ? Saves.Current.GoldPerPlatinum : DefaultGoldPerPlatinum; } }
 
+        /// <summary>
+        /// The platinum behind a price written in gold at the default ratio (the mod's gold prices of what sold for
+        /// platinum: boosters 2000, decks base price x 10, the Battlegrounds fees, special packs).
+        /// </summary>
+        public static int PlatinumOf(int goldAtDefault) { return Math.Max(1, goldAtDefault / DefaultGoldPerPlatinum); }
+
+        /// <summary>What sold for platinum, in gold: the platinum price times the account's gold per platinum.</summary>
+        public static int GoldOfPlatinum(int platinum) { return GoldOfPlatinum(platinum, GoldPerPlatinum); }
+        public static int GoldOfPlatinum(int platinum, int goldPerPlatinum) { return Math.Max(1, platinum) * (goldPerPlatinum > 0 ? goldPerPlatinum : DefaultGoldPerPlatinum); }
+
         /// <summary>The current account's divisor of every gold price (Saves.Info.GoldDivisor; 1 without one).</summary>
         public static int GoldDivisor { get { return Saves.Current != null && Saves.Current.GoldDivisor > 1 ? Saves.Current.GoldDivisor : 1; } }
 
-        /// <summary>A gold price after the account's divisor (at least 1 gold when the price was not free).</summary>
+        /// <summary>A price that was gold in the original (stardust, Wheel of Fate spins), after the account's divisor (at least 1 gold when the price was not free).</summary>
         public static int Gold(int price) { return Gold(price, GoldDivisor); }
 
         /// <summary>A gold price after a divisor (at least 1 gold when the price was not free).</summary>
@@ -67,8 +77,9 @@ namespace HexRevival
         {
             if (goldPerPlatinum < 1) goldPerPlatinum = DefaultGoldPerPlatinum;
             if (divisor < 1) divisor = 1;
-            string booster = goldPrices ? Loc.Get("reward_gold", Gold(BoosterGoldPrice, divisor).ToString("N0"))
-                : Loc.Get("reward_platinum", Math.Max(1, BoosterGoldPrice / goldPerPlatinum).ToString("N0"));
+            // A booster was a platinum price: gold per platinum decides it; the spin a gold price: the divisor does.
+            string booster = goldPrices ? Loc.Get("reward_gold", GoldOfPlatinum(PlatinumOf(BoosterGoldPrice), goldPerPlatinum).ToString("N0"))
+                : Loc.Get("reward_platinum", PlatinumOf(BoosterGoldPrice).ToString("N0"));
             string spin = Loc.Get("reward_gold", Gold(Packs.CommonSpinCost, divisor).ToString("N0"));
             return Loc.Get("price_example", booster, spin);
         }
@@ -120,10 +131,12 @@ namespace HexRevival
             {
                 Product p = Price(item, tm);
                 if (p == null) continue;
-                // Accounts without "platinum prices in gold": the platinum price (every gold price here is one).
-                // Stardust always sold for gold (Criesener, 2026-10-31). The gold prices left: the account's divisor.
-                if (!goldPrices && p.Currency == "Gold" && !(item is InventoryStardust)) { p.Currency = "Platinum"; p.Price = Math.Max(1, p.Price / GoldPerPlatinum); }
-                else if (p.Currency == "Gold") p.Price = Gold(p.Price);
+                // Every gold price here but stardust's was a platinum price (written at the default ratio): accounts
+                // without "platinum prices in gold" pay that platinum, the others its gold at the account's gold per
+                // platinum. Stardust always sold for gold (Criesener, 2026-10-31): the account's divisor.
+                if (p.Currency == "Gold" && item is InventoryStardust) p.Price = Gold(p.Price);
+                else if (p.Currency == "Gold" && !goldPrices) { p.Currency = "Platinum"; p.Price = PlatinumOf(p.Price); }
+                else if (p.Currency == "Gold") p.Price = GoldOfPlatinum(PlatinumOf(p.Price));
                 StoreItem s = new StoreItem();
                 s.id = (ulong)(s_Items.Count + 1);
                 s.TemplateId = item.m_Id;
@@ -163,7 +176,7 @@ namespace HexRevival
             {
                 if (!item.m_AvailableForPurchase || tm.GetDeckTemplate(deck.m_DeckTemplateId) == null) return null;
                 // The game data's base price is the platinum price (the boosters' 200 matches Src.Forum2017).
-                int gold = item.m_BasePrice > 1 ? item.m_BasePrice * GoldPerPlatinum
+                int gold = item.m_BasePrice > 1 ? item.m_BasePrice * DefaultGoldPerPlatinum
                     : item.m_Name.StartsWith("Collector's Deck") ? CollectorDeckGold : OtherDeckGold;
                 return new Product { Item = item, Price = gold, Tab = "collectordeck" };
             }

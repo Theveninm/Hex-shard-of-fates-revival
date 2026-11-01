@@ -136,7 +136,7 @@ namespace HexRevival
                     InventoryItemData eq = Sleeves.HolidayEquipment(holiday);
                     inventory_bits eb = eq != null ? Inventory.GrantSilently(eq.m_Id) : null;
                     if (eb != null) r.GrantedInventory.Add(eb);
-                    if (sb == null && eb == null) { Saves.Current.Gold += Store.Gold(GoldPrice(kind)); Saves.SaveCurrent(); Notices.Show(Loc.Get("giftbox_empty")); }
+                    if (sb == null && eb == null) { Saves.Current.Gold += Store.GoldOfPlatinum(Store.PlatinumOf(GoldPrice(kind))); Saves.SaveCurrent(); Notices.Show(Loc.Get("giftbox_empty")); }
                     return true;
                 }
             }

@@ -39,11 +39,11 @@ namespace HexRevival
             public bool GoldPrices = true;
             /// <summary>
             /// What a platinum is worth in gold (Criesener, 2026-11-01: chosen per account, Store.DefaultGoldPerPlatinum by
-            /// default): platinum prices in gold multiply by it; with platinum prices, the fees set in gold divide by it.
+            /// default): what sold for platinum (boosters, decks, entries) costs that many gold per platinum.
             /// </summary>
             public int GoldPerPlatinum = Store.DefaultGoldPerPlatinum;
             /// <summary>
-            /// Every gold price (store, stardust, Wheel of Fate spins, Battlegrounds entries) is divided by it
+            /// Every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it
             /// (Criesener, 2026-11-01: chosen per account; 1 = the original prices).
             /// </summary>
             public int GoldDivisor = 1;
