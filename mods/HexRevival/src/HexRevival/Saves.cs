@@ -38,6 +38,16 @@ namespace HexRevival
             /// </summary>
             public bool GoldPrices = true;
             /// <summary>
+            /// What a platinum is worth in gold (Criesener, 2026-11-01: chosen per account, Store.DefaultGoldPerPlatinum by
+            /// default): what sold for platinum (boosters, decks, entries) costs that many gold per platinum.
+            /// </summary>
+            public int GoldPerPlatinum = Store.DefaultGoldPerPlatinum;
+            /// <summary>
+            /// Every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it
+            /// (Criesener, 2026-11-01: chosen per account; 1 = the original prices).
+            /// </summary>
+            public int GoldDivisor = 1;
+            /// <summary>
             /// Every gem in PvE decks (campaign, dungeons), not only the Standard and class gems the PvE format allows
             /// (Src.Game: GemHelper.IsGemLegalInFormat); the arena already allows every gem (mornox, 2026-10-30). Off by
             /// default, as in the original game.
@@ -104,15 +114,19 @@ namespace HexRevival
 
         /// <summary>
         /// A new account. On progression accounts, the player chooses the gold and platinum to start with (0 by
-        /// default) and whether platinum prices are converted to gold.
+        /// default), whether platinum prices are converted to gold, the gold a platinum is worth and the divisor of
+        /// the gold prices (0: the defaults).
         /// </summary>
-        public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false, bool crafting = false)
+        public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false, bool crafting = false,
+            int goldPerPlatinum = 0, int goldDivisor = 0)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
             Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
             i.Gold = unlockAll ? UnlockedGold : Math.Max(0, gold);
             i.Platinum = unlockAll ? 0 : Math.Max(0, platinum);
             i.GoldPrices = unlockAll || goldPrices;
+            if (!unlockAll && goldPerPlatinum > 0) i.GoldPerPlatinum = goldPerPlatinum;
+            if (!unlockAll && goldDivisor > 0) i.GoldDivisor = goldDivisor;
             i.AllGems = allGems;
             i.Crafting = !unlockAll && crafting;
             Write(i);
@@ -161,6 +175,8 @@ namespace HexRevival
                 i.Name = string.IsNullOrEmpty(OnlineProfile.Current.Name) ? "Online" : OnlineProfile.Current.Name;
                 i.UnlockAll = true;
                 i.GoldPrices = true;
+                i.GoldPerPlatinum = Store.DefaultGoldPerPlatinum;
+                i.GoldDivisor = 1;
                 return i;
             }
         }
@@ -199,6 +215,8 @@ namespace HexRevival
                     else if (k == "tutorial") i.TutorialPending = v == "1";
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "goldprices") i.GoldPrices = v != "0";
+                    else if (k == "goldperplat") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerPlatinum = n; }
+                    else if (k == "golddivisor") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldDivisor = n; }
                     else if (k == "allgems") i.AllGems = v == "1";
                     else if (k == "crafting") i.Crafting = v == "1";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
@@ -226,6 +244,8 @@ namespace HexRevival
                     "tutorial=" + (i.TutorialPending ? "1" : "0"),
                     "cosmic=" + i.CosmicCoins,
                     "goldprices=" + (i.GoldPrices ? "1" : "0"),
+                    "goldperplat=" + i.GoldPerPlatinum,
+                    "golddivisor=" + i.GoldDivisor,
                     "allgems=" + (i.AllGems ? "1" : "0"),
                     "crafting=" + (i.Crafting ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });

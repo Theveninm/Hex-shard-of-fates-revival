@@ -47,6 +47,13 @@ namespace HexRevival
             }
             EnsureRow(row, grid, "HexRevival_GoldPrices", "opt_goldprices", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.GoldPrices, v => { if (Saves.Current != null) { Saves.Current.GoldPrices = v; Saves.SaveCurrent(); } });
+            // The prices (Criesener, 2026-11-01): copies of the Language row with their own list of values.
+            EnsureChoiceRow(grid, "HexRevival_GoldPerPlatinum", "opt_goldperplat", offline && !Saves.Current.UnlockAll, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerPlatinum : Store.DefaultGoldPerPlatinum, v => { if (Saves.Current != null) { Saves.Current.GoldPerPlatinum = v; Saves.SaveCurrent(); } });
+            EnsureChoiceRow(grid, "HexRevival_GoldDivisor", "opt_golddivisor", offline && !Saves.Current.UnlockAll, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldDivisor : 1, v => { if (Saves.Current != null) { Saves.Current.GoldDivisor = v; Saves.SaveCurrent(); } });
+            EnsureTextRow(grid, "HexRevival_PriceExample", offline && !Saves.Current.UnlockAll,
+                Store.PriceExample(Saves.Current.GoldPrices, Saves.Current.GoldPerPlatinum, Saves.Current.GoldDivisor));
             EnsureRow(row, grid, "HexRevival_Crafting", "opt_crafting", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.Crafting, v => { if (Saves.Current != null) { Saves.Current.Crafting = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
@@ -94,6 +101,128 @@ namespace HexRevival
                 UiClone.Reposition(parent);
             }
             catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] option row " + name + ": " + e); }
+        }
+
+        /// <summary>The values offered for the gold per platinum and the gold price divisor (a typed value joins them).</summary>
+        private static readonly int[] Factors = { 1, 2, 3, 4, 5, 10, 20, 25, 50, 100 };
+
+        /// <summary>
+        /// A copy of the Account tab's "Language" row (a title and a drop-down list) under parent, with its own title and
+        /// values (made once, shown when show is true, its list kept on the setting's value: the account may have changed since).
+        /// </summary>
+        private static void EnsureChoiceRow(Transform parent, string name, string labelKey, bool show, int[] choices, System.Func<int> get, System.Action<int> set)
+        {
+            Transform existing = parent.Find(name);
+            if (existing != null)
+            {
+                if (existing.gameObject.activeSelf != show) { existing.gameObject.SetActive(show); UiClone.Reposition(parent); }
+                if (show)
+                {
+                    // The list keeps no selection (UIPopupList.Set clears it after its callbacks): the label is the memory.
+                    UIPopupList list = existing.GetComponentInChildren<UIPopupList>(true);
+                    UILabel shown = list != null ? ChoiceLabel(list) : null;
+                    if (shown != null && shown.text != get().ToString()) { FillChoices(list, choices, get()); shown.text = get().ToString(); }
+                }
+                return;
+            }
+            if (!show) return;
+            Transform language = parent.Find("Language");
+            if (language == null) return;
+            try
+            {
+                GameObject copy = UiClone.Copy(language.gameObject, name);
+                copy.SetActive(true);
+                copy.transform.SetAsLastSibling();
+                UiClone.Strip(copy, "UIPopupList");   // the list stays; its binding to the game's languages goes
+                Transform title = copy.transform.Find("LanguageLabel");
+                UILabel titleLabel = title != null ? title.GetComponent<UILabel>() : null;
+                if (titleLabel != null)
+                {
+                    // Longer than "Language": a wider label, right-aligned at the same edge, instead of shrunk text
+                    // (the row's anchors would keep the width, so they go).
+                    titleLabel.SetAnchor((GameObject)null);
+                    titleLabel.pivot = UIWidget.Pivot.Right;
+                    titleLabel.alignment = NGUIText.Alignment.Right;
+                    titleLabel.overflowMethod = UILabel.Overflow.ClampContent;
+                    titleLabel.width = 400;
+                    titleLabel.text = Loc.Get(labelKey);
+                }
+                UIPopupList list = copy.GetComponentInChildren<UIPopupList>(true);
+                UILabel shown = list != null ? ChoiceLabel(list) : null;
+                if (list == null || shown == null) { Object.Destroy(copy); return; }
+                list.name = name + "_List";
+                list.isLocalized = false;
+                list.onChange.Clear();
+                FillChoices(list, choices, get());
+                shown.text = get().ToString();
+                UIPopupList chosen = list;
+                // The chosen value is only readable during the callback (UIPopupList.current.value).
+                list.onChange.Add(new EventDelegate(() =>
+                {
+                    int v;
+                    if (int.TryParse(chosen.value, out v) && v > 0) { set(v); shown.text = v.ToString(); }
+                }));
+                UiClone.Reposition(parent);
+            }
+            catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] choice row " + name + ": " + e); }
+        }
+
+        /// <summary>
+        /// A line of text under parent (a copy of the Account tab's "User Name" label), kept on the given text:
+        /// the example prices follow the lists above as they change.
+        /// </summary>
+        private static void EnsureTextRow(Transform parent, string name, bool show, string text)
+        {
+            Transform existing = parent.Find(name);
+            if (existing != null)
+            {
+                if (existing.gameObject.activeSelf != show) { existing.gameObject.SetActive(show); UiClone.Reposition(parent); }
+                UILabel l = show ? existing.GetComponent<UILabel>() : null;
+                if (l != null && l.text != text) l.text = text;
+                return;
+            }
+            if (!show) return;
+            Transform src = parent.Find("AccountName");
+            if (src == null || src.GetComponent<UILabel>() == null) return;
+            try
+            {
+                GameObject copy = UiClone.Copy(src.gameObject, name);
+                copy.SetActive(true);
+                copy.transform.SetAsLastSibling();
+                UiClone.Strip(copy);
+                UILabel l = copy.GetComponent<UILabel>();
+                // One line across the row (the "User Name" label is narrower and anchored).
+                l.SetAnchor((GameObject)null);
+                l.overflowMethod = UILabel.Overflow.ClampContent;
+                l.width = 780;
+                l.alignment = NGUIText.Alignment.Center;
+                l.fontSize = 18;
+                l.text = text;
+                UiClone.Reposition(parent);
+            }
+            catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] text row " + name + ": " + e); }
+        }
+
+        /// <summary>The list's items: the choices, and the current value if it is not one of them (typed when the account was made).</summary>
+        private static void FillChoices(UIPopupList list, int[] choices, int current)
+        {
+            list.items.Clear();
+            list.itemData.Clear();
+            bool seen = false;
+            foreach (int c in choices)
+            {
+                if (!seen && current < c) { list.items.Add(current.ToString()); seen = true; }
+                if (c == current) seen = true;
+                list.items.Add(c.ToString());
+            }
+            if (!seen) list.items.Add(current.ToString());
+        }
+
+        /// <summary>The list's label, which shows the value (the game's binding did that for the Language row).</summary>
+        private static UILabel ChoiceLabel(UIPopupList list)
+        {
+            Transform label = list.transform.Find("Label");
+            return label != null ? label.GetComponent<UILabel>() : null;
         }
 
         /// <summary>Test command "toggles": check boxes on screen, with their path and nearby labels.</summary>

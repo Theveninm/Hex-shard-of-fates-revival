@@ -210,7 +210,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | SpecialPacks.cs:55 | PLACEHOLDER gold prices.</summary> |
 | Store.cs:23 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
 | Store.cs:28 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
-| Store.cs:47 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
+| Store.cs:47 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio (the default; each account may choose its own, Criesener 2026-11-01). |
 | Store.cs:65 | PLACEHOLDER gold prices of products without a known price.</summary> |
 | Store.cs:68 | Gold prices of stardust (Common, Uncommon, Rare, Legendary, Promo; PLACEHOLDER: a player's memory of the original store (Criesener), which |
 | Store.cs:75 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
