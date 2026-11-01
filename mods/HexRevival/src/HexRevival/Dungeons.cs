@@ -87,6 +87,7 @@ namespace HexRevival
             public bool Starter;                        // Castle Crayburn: lost battles are fought again
             public Dictionary<string, Room> Rooms = new Dictionary<string, Room>();
             public Dictionary<string, HashSet<string>> Edges;
+            public HashSet<string> Forks = new HashSet<string>();   // prefab nodes flagged as path forks (UIDungeonMapNodeData.IsPathFork)
             public string NodesPrefab { get { return FolderPath + "/prefabs/nodes"; } }
             public string BackgroundPrefab { get { return FolderPath + "/prefabs/background"; } }
             // Public campaign vars the conversations test (Src.Game TestCampaignState): var -> room whose clearing sets it to 1.
@@ -409,7 +410,9 @@ namespace HexRevival
                 if (prefab != null)
                     foreach (Transform t in prefab.GetComponentsInChildren<Transform>(true))
                     {
-                        if (t.GetComponent<UIDungeonMapNodeData>() != null && !d.Edges.ContainsKey(t.name)) d.Edges[t.name] = new HashSet<string>();
+                        UIDungeonMapNodeData nd = t.GetComponent<UIDungeonMapNodeData>();
+                        if (nd != null && !d.Edges.ContainsKey(t.name)) d.Edges[t.name] = new HashSet<string>();
+                        if (nd != null && nd.IsPathFork) d.Forks.Add(t.name);
                         string[] p = t.name.Split('_');
                         if (p.Length != 3 || p[0] != "Path") continue;
                         Link(d.Edges, p[1], p[2]);
@@ -828,7 +831,11 @@ namespace HexRevival
                     }
                 }
                 gs.VisLocs.Add(new Location(l));
-                gs.LocNodes.Add(new Node(n, new Dictionary<string, object> { { "id", n }, { "type", "DEFAULT" } }));
+                // A path fork without a room (Fort Romor's Node6-8, the Usurper's Fork1-2) is a FORK node: the client
+                // draws no location marker and nothing can be clicked (as DEFAULT it was a green "NODE7" with an
+                // empty window). The Smoldering Dead's NodeB is flagged a fork but is a room: it stays a location.
+                string type = d.Forks.Contains(n) && !d.Rooms.ContainsKey(n) ? "FORK" : "DEFAULT";
+                gs.LocNodes.Add(new Node(n, new Dictionary<string, object> { { "id", n }, { "type", type } }));
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
             pub["CampaignGroup"] = d.Zone;

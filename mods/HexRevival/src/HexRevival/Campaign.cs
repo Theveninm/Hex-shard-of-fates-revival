@@ -49,6 +49,7 @@ namespace HexRevival
             public Dictionary<string, string[]> Panoramas;             // hub node -> asset bundle, level
             public List<MapNode> Nodes;
             public Dictionary<string, HashSet<string>> Edges;
+            public HashSet<string> Forks = new HashSet<string>();      // map prefab nodes flagged as path forks (UIDungeonMapNodeData.IsPathFork)
             public HashSet<string> NodeNumbers;                        // numbers of the template's nodes ("19", "19B")
             public Dictionary<string, string> NumberAlias;             // node -> number in its names
             public Dictionary<string, EFactions> HubFaction;           // hubs whose quest givers serve one faction
@@ -221,6 +222,8 @@ namespace HexRevival
                 if (prefab != null)
                     foreach (Transform t in prefab.GetComponentsInChildren<Transform>(true))
                     {
+                        UIDungeonMapNodeData nd = t.GetComponent<UIDungeonMapNodeData>();
+                        if (nd != null && nd.IsPathFork) z.Forks.Add(t.name);
                         string[] p = t.name.Split('_');
                         if (p.Length != 3 || p[0] != "Path") continue;
                         AddEdge(z, p[1], p[2]);
@@ -1171,7 +1174,9 @@ namespace HexRevival
                 gs.VisLocs.Add(new Location(fd));
                 Dictionary<string, object> fn = new Dictionary<string, object>();
                 fn["id"] = id;
-                fn["type"] = "DEFAULT";
+                // A fork flagged in the prefab is a FORK node: no location marker, nothing to click (Src.Game
+                // UIDungeonMapNode.SetNodeType; as DEFAULT it was a green location with an empty window).
+                fn["type"] = st.Z.Forks.Contains(id) ? "FORK" : "DEFAULT";
                 gs.LocNodes.Add(new Node(id, fn));
             }
             Dictionary<string, object> pub = new Dictionary<string, object>();
