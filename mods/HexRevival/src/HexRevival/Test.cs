@@ -644,6 +644,19 @@ namespace HexRevival
         /// dev: "click &lt;text&gt;" = clicks the first visible button whose path or label contains the text
         /// (NGUI OnClick, as a mouse click would); "click" alone lists the clickable buttons.
         /// </summary>
+        /// <summary>dev "cardvers *": the versions of a name as "set/alt/owned:picture".</summary>
+        private static string Describe(TemplateManager tm, List<CardTemplate> versions, HashSet<ResourceId> ownedIds)
+        {
+            List<string> v = new List<string>();
+            foreach (CardTemplate c in versions)
+            {
+                CardSetTemplate set; tm.CardSets.TryGetValue(c.m_SetId, out set);
+                string pic = c.m_CardImagePath ?? ""; int cut = pic.LastIndexOf('/'); if (cut >= 0) pic = pic.Substring(cut + 1);
+                v.Add((set != null ? set.m_Name : "?") + (c.m_HasAlternateArt ? "/alt" : "") + (ownedIds.Contains(c.m_Id) ? "/owned" : "") + ":" + pic);
+            }
+            return string.Join(", ", v.ToArray());
+        }
+
         private static string UiClick(string text)
         {
             List<string> found = new List<string>();
@@ -1046,8 +1059,16 @@ namespace HexRevival
                                 if (!d.TryGetValue(c.m_Name, out l)) d[c.m_Name] = l = new List<CardTemplate>();
                                 l.Add(c);
                             }
-                            int mainMulti = 0, otherOnly = 0, otherMulti = 0, otherMultiSets = 0, shown = 0;
-                            foreach (KeyValuePair<string, List<CardTemplate>> kv in main) if (kv.Value.Count > 1) mainMulti++;
+                            // Per name: how many versions, how many distinct pictures (m_CardImagePath), how many sets; same picture twice = a plain reprint.
+                            int mainMulti = 0, mainSameArt = 0, otherOnly = 0, otherMulti = 0, otherMultiSets = 0, otherSameArt = 0, shown = 0;
+                            foreach (KeyValuePair<string, List<CardTemplate>> kv in main)
+                            {
+                                if (kv.Value.Count < 2) continue;
+                                mainMulti++;
+                                HashSet<string> art = new HashSet<string>();
+                                foreach (CardTemplate c in kv.Value) art.Add(c.m_CardImagePath ?? "");
+                                if (art.Count < kv.Value.Count) { mainSameArt++; if (shown++ < 10) o.Add("[Immortal, same picture] " + kv.Key + ": " + Describe(tm, kv.Value, ownedIds)); }
+                            }
                             foreach (KeyValuePair<string, List<CardTemplate>> kv in other)
                             {
                                 if (main.ContainsKey(kv.Key)) continue;
@@ -1055,16 +1076,13 @@ namespace HexRevival
                                 if (kv.Value.Count < 2) continue;
                                 otherMulti++;
                                 HashSet<ResourceId> s = new HashSet<ResourceId>();
-                                foreach (CardTemplate c in kv.Value) s.Add(c.m_SetId);
+                                HashSet<string> art = new HashSet<string>();
+                                foreach (CardTemplate c in kv.Value) { s.Add(c.m_SetId); art.Add(c.m_CardImagePath ?? ""); }
                                 if (s.Count > 1) otherMultiSets++;
-                                if (shown++ < 15)
-                                {
-                                    List<string> v = new List<string>();
-                                    foreach (CardTemplate c in kv.Value) { CardSetTemplate set; tm.CardSets.TryGetValue(c.m_SetId, out set); v.Add((set != null ? set.m_Name : "?") + (c.m_HasAlternateArt ? "/alt" : "") + (ownedIds.Contains(c.m_Id) ? "/owned" : "")); }
-                                    o.Add(kv.Key + ": " + string.Join(", ", v.ToArray()));
-                                }
+                                if (art.Count < kv.Value.Count) otherSameArt++;
+                                o.Add("[other, " + art.Count + " pictures] " + kv.Key + ": " + Describe(tm, kv.Value, ownedIds));
                             }
-                            return main.Count + " names in Immortal sets, " + mainMulti + " with several versions; " + otherOnly + " names only elsewhere, " + otherMulti + " with several versions (" + otherMultiSets + " across sets)\n" + string.Join("\n", o.ToArray());
+                            return main.Count + " names in Immortal sets, " + mainMulti + " with several versions, " + mainSameArt + " of them with the same picture twice; " + otherOnly + " names only elsewhere, " + otherMulti + " with several versions (" + otherMultiSets + " across sets, " + otherSameArt + " with the same picture twice)\n" + string.Join("\n", o.ToArray());
                         }
                         foreach (CardTemplate c in tm.Cards.Values)
                         {
@@ -1074,7 +1092,7 @@ namespace HexRevival
                             bool own; try { own = c.IsOwnable(); } catch { own = false; }
                             o.Add(c.m_Id + " | " + (set != null ? set.m_Name : "?") + (immortal.Contains(c.m_SetId) ? " [Immortal]" : "") + " | ownable=" + own
                                 + " stage=" + c.m_ImplStage + " rarity=" + c.CardRarity + " altArt=" + c.m_HasAlternateArt + " eqMod=" + c.m_EquipmentModifiedCard
-                                + " | owned=" + ownedIds.Contains(c.m_Id));
+                                + " | owned=" + ownedIds.Contains(c.m_Id) + " | " + c.m_CardImagePath);
                         }
                         return o.Count + " templates\n" + string.Join("\n", o.ToArray());
                     }
