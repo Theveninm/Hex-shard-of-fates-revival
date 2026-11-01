@@ -191,6 +191,12 @@ namespace HexRevival
                 return true;
             }
             if (NetCodec.Loopback && !IsAIId(transaction.m_PlayerId)) transaction = NetCodec.LoopTransaction(transaction);
+            // The AI's blocks, made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks).
+            if (transaction is CommitTroopsToDefenseTransaction && IsAIId(transaction.m_PlayerId))
+            {
+                try { AiBlocks.Repair(self, (CommitTroopsToDefenseTransaction)transaction); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] AI blocks: " + e); }
+            }
             s_Pending.Enqueue(new PendingTransaction { Tx = transaction, Time = UnityEngine.Time.realtimeSinceStartup });
             // No MarkDirty here: sending GreenLight before the transaction is processed
             // makes the AI submit it twice (loop). See Pump.

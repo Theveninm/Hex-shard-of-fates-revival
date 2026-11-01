@@ -63,6 +63,16 @@ namespace HexRevival
                     Server.MarkDirty();
                     return "gave " + t.m_Name + " to " + p.m_PlayerId;
                 }
+                case "put":
+                {
+                    // dev: "cheat put <j|ai> <card>" = a new copy of that card in the player's warzone (troops in play at once)
+                    CardTemplate t = FindCard(string.Join(" ", parts, 3, parts.Length - 3));
+                    if (t == null)
+                        return "card not found";
+                    ss.CreateEncounterCardsInZone(p, t.m_Id, 1, ECardCollections.Warzone, ECardLocations.Unknown);
+                    Server.MarkDirty();
+                    return "put " + t.m_Name + " in play for " + p.m_PlayerId;
+                }
                 case "damage":
                 {
                     // dev: "cheat damage j <n> <card>" = that much damage marked on the player's troops of that name
@@ -189,18 +199,27 @@ namespace HexRevival
             return null;
         }
 
+        /// <summary>"name :: words": among the templates of that name, the one whose text holds the words (several versions share a name).</summary>
         private static CardTemplate FindCard(string name)
         {
+            string words = null;
+            int sep = name.IndexOf("::", StringComparison.Ordinal);
+            if (sep >= 0) { words = name.Substring(sep + 2).Trim().ToLower(); name = name.Substring(0, sep); }
             name = name.Trim().ToLower();
-            CardTemplate partial = null;
+            CardTemplate partial = null, exact = null;
             foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
             {
                 if (t == null || t.m_Name == null) continue;
                 string n = t.m_Name.ToLower();
-                if (n == name) return t;
+                if (n == name)
+                {
+                    if (words == null) return t;
+                    if (CardText(t).ToLower().Contains(words)) return t;
+                    if (exact == null) exact = t;
+                }
                 if (partial == null && n.Contains(name)) partial = t;
             }
-            return partial;
+            return exact ?? partial;
         }
 
         /// <summary>Full text of a card (card text + texts of its abilities).</summary>

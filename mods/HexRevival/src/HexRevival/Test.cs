@@ -880,7 +880,19 @@ namespace HexRevival
                     if (player == null) return "noplayer";
                     if (parts.Length > 1 && parts[1].StartsWith("d")) player.ChooseDrawFirst(); else player.ChoosePlayFirst();
                     return "choose sent";
-                case "attack": if (player != null) player.DeclareAttack(new List<CommitTroopsToAttackTransaction.AttackDeclaration>()); return "attack none";
+                case "attack":   // dev: "attack" = no attackers; "attack all" = every troop the options allow, at the opponent's champion
+                {
+                    if (player == null) return "noplayer";
+                    List<CommitTroopsToAttackTransaction.AttackDeclaration> decl = new List<CommitTroopsToAttackTransaction.AttackDeclaration>();
+                    if (parts.Length > 1 && parts[1] == "all" && session != null)
+                    {
+                        List<SessionCardId> troops = session.Cache.GetCardsWithUsage(ECardUsage.Attack);
+                        foreach (KeyValuePair<UID, PlayerRepresentation> kv in session.Cache.Players)
+                            if (kv.Key != player.m_PlayerId && troops.Count > 0) { decl.Add(new CommitTroopsToAttackTransaction.AttackDeclaration(kv.Value.ChampionSessionCardId, troops)); break; }
+                    }
+                    player.DeclareAttack(decl);
+                    return "attack " + (decl.Count > 0 ? decl[0].AttackingCardIds.Count + " troop(s)" : "none");
+                }
                 case "discard":   // dev: discards the first card of the hand (discard phase)
                     if (player == null || session == null) return "noplayer";
                     foreach (SessionCardId id in session.Cache.GetCardsInCollection(ECardCollections.Hand, player.m_PlayerId)) { player.Discard(id); return "discard " + id; }
@@ -899,6 +911,29 @@ namespace HexRevival
                     if (ReferenceEquals(UIBattle.Instance, null)) return "noUIBattle";
                     UIBattle.Instance.PlayCard(playable[idx]);
                     return "play " + playable[idx];
+                case "tclick":   // dev: "tclick <card name>" = clicks that card on the battlefield in the battle UI's current state (e.g. as a target)
+                {
+                    if (session == null || ReferenceEquals(UIBattle.Instance, null)) return "no battle";
+                    string q = string.Join(" ", parts, 1, parts.Length - 1);
+                    TemplateManager tm = Singleton<TemplateManager>.Instance;
+                    foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in session.Cache.Cards)
+                    {
+                        CardTemplate t = tm.GetCardTemplate(kv.Value.TemplateId);
+                        if (t == null || !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase)) continue;
+                        GoCardView view = UIBattle.Instance.GetCardView(kv.Key);
+                        if (view == null) continue;
+                        object stack = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UIBattle.Instance);
+                        BattleStateBase state = stack.GetType().GetMethod("Peek").Invoke(stack, null) as BattleStateBase;
+                        if (state == null) return "no UI state";
+                        state.OnClick(view);
+                        return "clicked " + t.m_Name + " (" + kv.Key + ") in " + state.GetType().Name;
+                    }
+                    return "no card view named '" + q + "'";
+                }
+                case "ubtn":   // dev: "ubtn Accept|Pass|Skip" = a battle UI button, as UIBattle.OnButton
+                    if (ReferenceEquals(UIBattle.Instance, null)) return "no battle";
+                    UIBattle.Instance.OnButton(parts.Length > 1 ? parts[1] : "Pass", 0, "");
+                    return "button " + (parts.Length > 1 ? parts[1] : "Pass");
                 case "server": return ServerDump(gc);
                 case "anims": return AnimsDump();
                 case "cheat": return Cheats.Execute(gc, parts);
@@ -1742,7 +1777,7 @@ namespace HexRevival
                 foreach (Card c in p.GetCardCollection(ECardCollections.Hand))
                     sb.Add("  hand " + c.m_CardTemplate.m_Name + " cost=" + c.CastingCost + " canPlay=" + ss.CanPlayCard(c, p) + " inPlayable=" + ss.IsInPlayableLocation(c, p));
                 foreach (Card c in p.GetCardCollection(ECardCollections.Warzone))
-                    sb.Add("  war  " + c.m_CardTemplate.m_Name + " canAtk=" + c.CanAttack() + " canBlk=" + c.CanBlock());
+                    sb.Add("  war  " + c.m_CardTemplate.m_Name + " canAtk=" + c.CanAttack() + " canBlk=" + c.CanBlock() + (c.MustBeBlocked() ? " mustBeBlocked" : "") + (c.IsBlocking() ? " blocking" : ""));
             }
             foreach (Combat cb in ss.CombatManager.Combats)
                 sb.Add("combat atk=" + (cb.Attacker != null ? cb.Attacker.m_CardTemplate.m_Name : "?") + " blockers=" + cb.Blockers.Count);
