@@ -399,6 +399,11 @@ namespace HexRevival
             apply("UINewsEventsViewModel.Start", () =>
                 harmony.Patch(AccessTools.Method(typeof(UINewsEventsViewModel), "Start"), prefix: new HarmonyMethod(typeof(Hooks), "News_Start")));
             apply("UINewsEventsViewModel.GetNewsAndEvents", () => Prefix(harmony, typeof(UINewsEventsViewModel), "GetNewsAndEvents", Type.EmptyTypes, "News_Get"));
+            // The loot window's close callbacks fire once, for the window they were added for (LootWindow): the stuck
+            // packs screen after a chest open and a spin.
+            apply("UIGenericLootWindow.OnCloseWindow", () =>
+                harmony.Patch(AccessTools.Method(typeof(UIGenericLootWindow), "OnCloseWindow"),
+                    prefix: new HarmonyMethod(typeof(Hooks), "LootWindow_Closing"), postfix: new HarmonyMethod(typeof(Hooks), "LootWindow_Closed")));
 
             Log.LogInfo("HexRevival loaded: " + ok + " patches OK, " + failed + " failed.");
         }
@@ -778,6 +783,8 @@ namespace HexRevival
         public static void CardStack_Shown(UICardStackPagingViewModel __instance) { CraftUi.OnCardShown(__instance); }
         public static void Equipment_RightClick(object __0) { CraftUi.OnEquipmentRightClick(__0); }
         public static void InventoryIcon_Set(GoInventoryIcon __instance, Reckoning.Game.InventoryItemData __0) { Crafting.OnIcon(__instance, __0); }
+        public static void LootWindow_Closing(UIGenericLootWindow __instance, ref UIGenericLootWindow._OnLootWindowClosed __state) { LootWindow.Closing(__instance, ref __state); }
+        public static void LootWindow_Closed(UIGenericLootWindow __instance, UIGenericLootWindow._OnLootWindowClosed __state) { LootWindow.Closed(__instance, __state); }
 
         /// <summary>BepInEx config [UI] HideAuctionHouse.</summary>
         public static bool HideAuctionHouse = true;
