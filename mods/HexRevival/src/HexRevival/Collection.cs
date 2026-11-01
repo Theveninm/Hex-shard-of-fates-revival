@@ -49,6 +49,7 @@ namespace HexRevival
             if (Saves.Current.UnlockAll) AddEverything();
             else if (!LoadFile()) { AddStarter(); SaveFile(); }
             ReadCounts(ExtendedPath, s_Extended);
+            if (!Saves.Current.UnlockAll) GrantDailyLogin();
             List<card_instance_bits> res = new List<card_instance_bits>();
             foreach (KeyValuePair<ResourceId, int> kv in s_Counts)
             {
@@ -62,6 +63,30 @@ namespace HexRevival
             }
             Debug.Log("[HexRevival] [Collection] " + s_Counts.Count + " cards, " + res.Count + " copies" + (Saves.Current.UnlockAll ? " (unlock all)" : ""));
             return res;
+        }
+
+        private const string SpectralOak = "79ba006b-5fae-44f2-b5f5-024c5d73a3b0", SpectralAcorn = "0cfb7ee4-bb48-4606-bd27-fa6e13ad21c4";
+
+        /// <summary>
+        /// Spectral Oak: "The first time that you login each day, this creates a Spectral Acorn and adds it to your
+        /// collection." (Src.Game: the card's text.) One Acorn per Oak owned, once per UTC day, at the first login of the day
+        /// (the claim "daily:<oak>:<date>" in the account; offline there was no other way to get Acorns, Criesener, 2026-10-31).
+        /// </summary>
+        private static void GrantDailyLogin()
+        {
+            int oaks;
+            if (!s_Counts.TryGetValue(new ResourceId(SpectralOak), out oaks) || oaks <= 0) return;
+            string prefix = "daily:" + SpectralOak + ":", key = prefix + DateTime.UtcNow.ToString("yyyy-MM-dd");
+            if (Saves.Current.Claims.Contains(key)) return;
+            Saves.Current.Claims.RemoveWhere(k => k.StartsWith(prefix));
+            Saves.Current.Claims.Add(key);
+            Saves.SaveCurrent();
+            ResourceId acorn = new ResourceId(SpectralAcorn);
+            int n;
+            s_Counts.TryGetValue(acorn, out n);
+            s_Counts[acorn] = n + oaks;
+            SaveFile();
+            Notices.Show(Loc.Get("daily_acorn", oaks));
         }
 
         /// <summary>
