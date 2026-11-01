@@ -1026,6 +1026,58 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }   // dev: "tdecks [check]" = the bundled tournament decks
+                case "cardvers":   // dev: "cardvers <card name>" = every card template of that name: set, format, ownable, state, copies owned
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        HashSet<ResourceId> immortal = new HashSet<ResourceId>(Game.Shared.Resources.BuiltInResources.Format_Immortal);
+                        List<string> o = new List<string>();
+                        HashSet<ResourceId> ownedIds = new HashSet<ResourceId>(Collection.Owned());   // Collection.Count says 4 for every id on unlock-all saves
+                        if (q == "*")
+                        {
+                            // Names with several ownable versions: inside the Immortal sets, and (names absent there) elsewhere, with their sets.
+                            Dictionary<string, List<CardTemplate>> main = new Dictionary<string, List<CardTemplate>>(), other = new Dictionary<string, List<CardTemplate>>();
+                            foreach (CardTemplate c in tm.Cards.Values)
+                            {
+                                bool own; try { own = c != null && c.m_Name != null && c.IsOwnable(); } catch { own = false; }
+                                if (!own) continue;
+                                Dictionary<string, List<CardTemplate>> d = immortal.Contains(c.m_SetId) ? main : other;
+                                List<CardTemplate> l;
+                                if (!d.TryGetValue(c.m_Name, out l)) d[c.m_Name] = l = new List<CardTemplate>();
+                                l.Add(c);
+                            }
+                            int mainMulti = 0, otherOnly = 0, otherMulti = 0, otherMultiSets = 0, shown = 0;
+                            foreach (KeyValuePair<string, List<CardTemplate>> kv in main) if (kv.Value.Count > 1) mainMulti++;
+                            foreach (KeyValuePair<string, List<CardTemplate>> kv in other)
+                            {
+                                if (main.ContainsKey(kv.Key)) continue;
+                                otherOnly++;
+                                if (kv.Value.Count < 2) continue;
+                                otherMulti++;
+                                HashSet<ResourceId> s = new HashSet<ResourceId>();
+                                foreach (CardTemplate c in kv.Value) s.Add(c.m_SetId);
+                                if (s.Count > 1) otherMultiSets++;
+                                if (shown++ < 15)
+                                {
+                                    List<string> v = new List<string>();
+                                    foreach (CardTemplate c in kv.Value) { CardSetTemplate set; tm.CardSets.TryGetValue(c.m_SetId, out set); v.Add((set != null ? set.m_Name : "?") + (c.m_HasAlternateArt ? "/alt" : "") + (ownedIds.Contains(c.m_Id) ? "/owned" : "")); }
+                                    o.Add(kv.Key + ": " + string.Join(", ", v.ToArray()));
+                                }
+                            }
+                            return main.Count + " names in Immortal sets, " + mainMulti + " with several versions; " + otherOnly + " names only elsewhere, " + otherMulti + " with several versions (" + otherMultiSets + " across sets)\n" + string.Join("\n", o.ToArray());
+                        }
+                        foreach (CardTemplate c in tm.Cards.Values)
+                        {
+                            if (c == null || c.m_Name == null || !string.Equals(c.m_Name, q, StringComparison.OrdinalIgnoreCase)) continue;
+                            CardSetTemplate set;
+                            tm.CardSets.TryGetValue(c.m_SetId, out set);
+                            bool own; try { own = c.IsOwnable(); } catch { own = false; }
+                            o.Add(c.m_Id + " | " + (set != null ? set.m_Name : "?") + (immortal.Contains(c.m_SetId) ? " [Immortal]" : "") + " | ownable=" + own
+                                + " stage=" + c.m_ImplStage + " rarity=" + c.CardRarity + " altArt=" + c.m_HasAlternateArt + " eqMod=" + c.m_EquipmentModifiedCard
+                                + " | owned=" + ownedIds.Contains(c.m_Id));
+                        }
+                        return o.Count + " templates\n" + string.Join("\n", o.ToArray());
+                    }
                 case "redeem": return Redeem.Command(parts);
                 case "store":
                     if (parts.Length > 1 && parts[1] == "pools") return PrizePacks.Describe();
