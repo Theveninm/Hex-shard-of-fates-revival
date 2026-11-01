@@ -252,27 +252,38 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Every collectible card, one version per name: preferably the one from a "normal" set
-        /// (sets 1 to 9, Immortal format), since the deck editor filters by format and would ignore a
-        /// PvE or promo version.
+        /// Every collectible card: all versions from the "normal" sets (sets 1 to 9, Immortal format),
+        /// since the deck editor filters by format and would ignore a PvE or promo version. A card
+        /// with another art is its own template in the same set (e.g. Vampire Prince, Herofall), so
+        /// every version of a name is taken, not one per name (mornox, 2026-11-01: fully unlocked
+        /// accounts got only one of the two arts, the one with the lower id). A name absent from
+        /// those sets (core commons, PvE cards) comes from one set only, with all its versions there:
+        /// the core commons are reprinted in two sets.
         /// </summary>
         private static void AddEverything()
         {
             HashSet<ResourceId> mainSets = new HashSet<ResourceId>(BuiltInResources.Format_Immortal);
+            HashSet<string> inMain = new HashSet<string>();
             Dictionary<string, CardTemplate> byName = new Dictionary<string, CardTemplate>();
+            List<CardTemplate> others = new List<CardTemplate>();
+            int main = 0, extra = 0;
             foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
             {
                 if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
                 bool ownable;
                 try { ownable = t.IsOwnable(); } catch { ownable = false; }
                 if (!ownable) continue;
+                if (mainSets.Contains(t.m_SetId)) { s_Counts[t.m_Id] = CopiesPerCard; inMain.Add(t.m_Name); main++; continue; }
+                others.Add(t);
                 CardTemplate cur;
-                if (!byName.TryGetValue(t.m_Name, out cur)
-                    || (!mainSets.Contains(cur.m_SetId) && mainSets.Contains(t.m_SetId))
-                    || (mainSets.Contains(cur.m_SetId) == mainSets.Contains(t.m_SetId) && string.CompareOrdinal(t.m_Id.ToString(), cur.m_Id.ToString()) < 0))
-                    byName[t.m_Name] = t;
+                if (!byName.TryGetValue(t.m_Name, out cur) || string.CompareOrdinal(t.m_Id.ToString(), cur.m_Id.ToString()) < 0) byName[t.m_Name] = t;
             }
-            foreach (CardTemplate t in byName.Values) s_Counts[t.m_Id] = CopiesPerCard;
+            foreach (CardTemplate t in others)
+            {
+                if (inMain.Contains(t.m_Name) || byName[t.m_Name].m_SetId != t.m_SetId) continue;
+                s_Counts[t.m_Id] = CopiesPerCard;
+                extra++;
+            }
             // The alternate arts too (sets "Set09_PvP_alternates"..., Src.Game): the same cards with another picture, which
             // the Siege Pack, the Cosmic Coin Pack and account levels give (mornox, 2026-10-30). The game lists their sets as
             // not ownable (BuiltInResources.NotOwnable_Sets) and flags every alternate as a modified card
@@ -292,7 +303,7 @@ namespace HexRevival
                 s_Counts[t.m_Id] = CopiesPerCard;
                 alternates++;
             }
-            Debug.Log("[HexRevival] [Collection] unlock all: " + byName.Count + " cards, " + alternates + " alternate arts");
+            Debug.Log("[HexRevival] [Collection] unlock all: " + main + " cards of the Immortal sets, " + extra + " from other sets, " + alternates + " alternate arts");
             AddBasicShards();
         }
 
