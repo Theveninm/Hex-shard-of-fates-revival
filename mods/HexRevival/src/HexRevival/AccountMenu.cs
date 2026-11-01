@@ -25,6 +25,9 @@ namespace HexRevival
         private bool m_AllGems;
         private bool m_Crafting;
         private string m_StartGold = "0", m_StartPlatinum = "0";
+        private string m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(), m_GoldDivisor = "1";
+        private Vector2 m_CreateScroll;
+        private float m_CreateHeight = 1000;
         private string m_Error;
         private readonly ProfileForm m_Profile = new ProfileForm();
         private static AccountMenu s_Instance;
@@ -182,6 +185,7 @@ namespace HexRevival
                 m_Screen = Screen.Create;
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
                 m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false;
+                m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
             }
             y += newH + gap;
 
@@ -221,48 +225,68 @@ namespace HexRevival
         private void DrawCreate(Rect area)
         {
             float S = GameSkin.Scale;
-            float y = area.y + 10 * S;
-            GameSkin.Label(new Rect(area.x, y, area.width, 30 * S), Loc.Get("account_name"), GameSkin.Style("title", 19, GameSkin.Gold));
+            // The form scrolls (mouse wheel, a bar when needed): with the price fields it no longer fits every window (Criesener, 2026-11-01).
+            float by = area.yMax - 56 * S;
+            Rect body = new Rect(area.x, area.y, area.width, by - 12 * S - area.y);
+            bool needBar = m_CreateHeight > body.height;
+            Rect view = new Rect(0, 0, body.width - (needBar ? 20 * S : 0), Mathf.Max(m_CreateHeight, body.height));
+            m_CreateScroll = GUI.BeginScrollView(body, m_CreateScroll, view, false, false, GUIStyle.none, needBar ? GameSkin.ScrollBar : GUIStyle.none);
+            float w = view.width, y = 6 * S;
+            GameSkin.Label(new Rect(0, y, w, 30 * S), Loc.Get("account_name"), GameSkin.Style("title", 19, GameSkin.Gold));
+            if (!string.IsNullOrEmpty(m_Error))
+                GUI.Label(new Rect(0, y, w, 30 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f), TextAnchor.MiddleRight));
             y += 36 * S;
-            Rect field = new Rect(area.x, y, area.width, 40 * S);
+            Rect field = new Rect(0, y, w, 40 * S);
             GameSkin.Sprite(field, "A_Frames", "Frame_Inner");
             GUI.DrawTexture(new Rect(field.x + 2, field.y + 2, field.width - 4, field.height - 4), GameSkin.Solid(new Color(0, 0, 0, 0.45f)));
             GUI.SetNextControlName("hexrevival_account_name");
             m_Name = GUI.TextField(field, m_Name ?? "", 32, GameSkin.Field);
             if (GUI.GetNameOfFocusedControl() == "") GUI.FocusControl("hexrevival_account_name");
-            y += 64 * S;
+            y += 60 * S;
 
-            m_Unlock = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
-            y += 84 * S;
-            m_Tutorial = Checkbox(new Rect(area.x, y, area.width, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
-            y += 96 * S;
-            m_AllGems = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
+            m_Unlock = Checkbox(new Rect(0, y, w, 66 * S), m_Unlock, Loc.Get("opt_unlock"), Loc.Get("opt_unlock_desc"));
             y += 80 * S;
+            m_Tutorial = Checkbox(new Rect(0, y, w, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
+            y += 94 * S;
+            m_AllGems = Checkbox(new Rect(0, y, w, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
+            y += 78 * S;
             // Progression accounts only (an "unlock everything" account has its gold and gold prices, and no crafting).
             if (!m_Unlock)
             {
-                m_GoldPrices = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc"));
-                y += 80 * S;
-                m_Crafting = Checkbox(new Rect(area.x, y, area.width, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));
-                y += 80 * S;
-                float half = (area.width - 20 * S) / 2f;
-                m_StartGold = NumberField(new Rect(area.x, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
-                m_StartPlatinum = NumberField(new Rect(area.x + half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
+                m_GoldPrices = Checkbox(new Rect(0, y, w, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
                 y += 78 * S;
+                m_Crafting = Checkbox(new Rect(0, y, w, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));
+                y += 78 * S;
+                float half = (w - 20 * S) / 2f;
+                m_StartGold = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
+                m_StartPlatinum = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
+                y += 76 * S;
+                // The prices (Criesener, 2026-11-01): what a platinum is worth in gold, and the divisor of every gold price.
+                m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
+                m_GoldDivisor = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
+                y += 72 * S;
+                GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperplat_desc") + " " + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                y += 52 * S;
             }
+            m_CreateHeight = y;
+            GUI.EndScrollView();
 
-            if (!string.IsNullOrEmpty(m_Error))
-                GUI.Label(new Rect(area.x, y, area.width, 26 * S), Loc.Get(m_Error), GameSkin.Style("body", 15, new Color(1f, 0.55f, 0.45f)));
-
-            float by = area.yMax - 56 * S;
             if (GameSkin.RedButton(new Rect(area.x, by, 180 * S, 52 * S), Loc.Get("cancel"))) m_Screen = Screen.List;
             bool submit = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
             if (GameSkin.GreenButton(new Rect(area.xMax - 220 * S, by, 220 * S, 52 * S), Loc.Get("create")) || submit)
             {
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
-                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems, m_Crafting));
+                if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems, m_Crafting,
+                    Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor)));
             }
+        }
+
+        /// <summary>A typed factor: at least 1 (an empty or zero field: 0, the default).</summary>
+        private static int Factor(string text)
+        {
+            long v = Amount(text);
+            return v <= 0 ? 0 : v > 1000000 ? 1000000 : (int)v;
         }
 
         /// <summary>A labeled field that only takes digits; returns the new text.</summary>

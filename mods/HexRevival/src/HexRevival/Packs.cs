@@ -292,12 +292,12 @@ namespace HexRevival
         private static int SpinCost(Chest c)
         {
             if (c.Rarity == ETreasureChestType.Primal || c.Spin == EChestSpinStatus.FreeSpin) return 0;
-            switch (c.Rarity)
+            switch (c.Rarity)   // after the account's gold divisor (Store.Gold)
             {
-                case ETreasureChestType.Common: return 1200;
-                case ETreasureChestType.Uncommon: return 3100;
-                case ETreasureChestType.Rare: return 8500;
-                default: return 30000;
+                case ETreasureChestType.Common: return Store.Gold(1200);
+                case ETreasureChestType.Uncommon: return Store.Gold(3100);
+                case ETreasureChestType.Rare: return Store.Gold(8500);
+                default: return Store.Gold(30000);
             }
         }
 

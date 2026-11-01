@@ -672,6 +672,9 @@ namespace HexRevival
                         UIEventTrigger et = m as UIEventTrigger;
                         if (b != null) { UIButton prev = UIButton.current; UIButton.current = b; EventDelegate.Execute(b.onClick); UIButton.current = prev; continue; }
                         if (et != null) { EventDelegate.Execute(et.onClick); continue; }
+                        // Drop-down list items (UIPopupList) react to a press and its release, not to a click.
+                        UIEventListener el = m as UIEventListener;
+                        if (el != null) { if (el.onPress != null) { el.onPress(c.gameObject, true); el.onPress(c.gameObject, false); } if (el.onClick != null) el.onClick(c.gameObject); continue; }
                         MethodInfo onClick = m.GetType().GetMethod("OnClick", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
                         if (onClick != null) onClick.Invoke(m, null);
                     }

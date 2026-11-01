@@ -376,6 +376,9 @@ namespace HexRevival
                 harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "Initialize"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
             apply("UITournamentDeckEditorViewModel.OnAsynchPlayerUpdated", () =>
                 harmony.Patch(AccessTools.Method(typeof(UITournamentDeckEditorViewModel), "OnAsynchPlayerUpdated"), postfix: new HarmonyMethod(typeof(Hooks), "DeckEditor_Record")));
+            // The Wheel of Fate's spin cost shown by the client: after the account's gold price divisor (Store.Gold).
+            apply("ChestUtils.GetChestSpinCost", () =>
+                harmony.Patch(AccessTools.Method(typeof(Game.Shared.Chests.ChestUtils), "GetChestSpinCost"), postfix: new HarmonyMethod(typeof(Hooks), "Chests_SpinCost")));
             // Breaking down and crafting on the zoomed card, next to "Unlock extended art" (see CraftUi).
             apply("UIExtendedArtViewModel.ShowExtendedArtUI", () =>
                 harmony.Patch(AccessTools.Method(typeof(UIExtendedArtViewModel), "ShowExtendedArtUI"), postfix: new HarmonyMethod(typeof(Hooks), "ExtendedArt_Show")));
@@ -428,6 +431,8 @@ namespace HexRevival
     internal static class Hooks
     {
         private static bool s_Initialized;
+
+        public static void Chests_SpinCost(ref int __result) { if (__result > 0) __result = HexRevival.Store.Gold(__result); }
 
         public static void Main_FinializeInit()
         {

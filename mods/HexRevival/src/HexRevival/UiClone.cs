@@ -14,10 +14,10 @@ namespace HexRevival
         /// Removes everything but the look from a copy: the game's bindings, localized texts and
         /// the original widget's actions (including its right-click ones).
         /// </summary>
-        public static void Strip(GameObject go)
+        public static void Strip(GameObject go, params string[] alsoKept)
         {
             foreach (MonoBehaviour mb in go.GetComponentsInChildren<MonoBehaviour>(true))
-                if (mb != null && System.Array.IndexOf(Kept, mb.GetType().Name) < 0)
+                if (mb != null && System.Array.IndexOf(Kept, mb.GetType().Name) < 0 && System.Array.IndexOf(alsoKept, mb.GetType().Name) < 0)
                     Object.DestroyImmediate(mb);
         }
 

@@ -31,7 +31,7 @@ namespace HexRevival
         internal const float PrimalChance = 0.02f;
 
         private static List<StoreItem> s_Items;
-        private static bool s_ItemsInGold;
+        private static string s_ItemsKey;   // the account settings the catalog was priced with
 
         /// <summary>A product of the store: what it is, its price, its currency, its tab.</summary>
         private class Product
@@ -45,7 +45,20 @@ namespace HexRevival
         private static readonly Dictionary<ulong, Product> s_Products = new Dictionary<ulong, Product>();
 
         /// <summary>Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary>
-        public const int GoldPerPlatinum = 10;
+        public const int DefaultGoldPerPlatinum = 10;
+
+        /// <summary>Gold per platinum of the current account (Saves.Info.GoldPerPlatinum; the default without one).</summary>
+        public static int GoldPerPlatinum { get { return Saves.Current != null && Saves.Current.GoldPerPlatinum > 0 ? Saves.Current.GoldPerPlatinum : DefaultGoldPerPlatinum; } }
+
+        /// <summary>The current account's divisor of every gold price (Saves.Info.GoldDivisor; 1 without one).</summary>
+        public static int GoldDivisor { get { return Saves.Current != null && Saves.Current.GoldDivisor > 1 ? Saves.Current.GoldDivisor : 1; } }
+
+        /// <summary>A gold price after the account's divisor (at least 1 gold when the price was not free).</summary>
+        public static int Gold(int price)
+        {
+            int d = GoldDivisor;
+            return d > 1 && price > 0 ? Math.Max(1, price / d) : price;
+        }
 
         // Prize Exchange (Src.HexTCG2018: "Introducing Cosmic Coins and Siege Sacks", May 2018).
         private static readonly Dictionary<string, KeyValuePair<string, int>> Exchange = new Dictionary<string, KeyValuePair<string, int>>
@@ -84,8 +97,9 @@ namespace HexRevival
         private static List<StoreItem> Items()
         {
             bool goldPrices = Saves.Current == null || Saves.Current.GoldPrices;
-            if (s_Items != null && s_ItemsInGold == goldPrices) return s_Items;
-            s_ItemsInGold = goldPrices;
+            string key = goldPrices + "/" + GoldPerPlatinum + "/" + GoldDivisor;
+            if (s_Items != null && s_ItemsKey == key) return s_Items;
+            s_ItemsKey = key;
             s_Items = new List<StoreItem>();
             s_Products.Clear();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
@@ -94,8 +108,9 @@ namespace HexRevival
                 Product p = Price(item, tm);
                 if (p == null) continue;
                 // Accounts without "platinum prices in gold": the platinum price (every gold price here is one).
-                // Stardust always sold for gold (Criesener, 2026-10-31).
+                // Stardust always sold for gold (Criesener, 2026-10-31). The gold prices left: the account's divisor.
                 if (!goldPrices && p.Currency == "Gold" && !(item is InventoryStardust)) { p.Currency = "Platinum"; p.Price = Math.Max(1, p.Price / GoldPerPlatinum); }
+                else if (p.Currency == "Gold") p.Price = Gold(p.Price);
                 StoreItem s = new StoreItem();
                 s.id = (ulong)(s_Items.Count + 1);
                 s.TemplateId = item.m_Id;
