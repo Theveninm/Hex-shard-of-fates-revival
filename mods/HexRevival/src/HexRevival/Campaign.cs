@@ -1546,6 +1546,10 @@ namespace HexRevival
         public static void QueryCurrentCampaign(ulong champId, ClientCampaignManager.StateCallback callback)
         {
             // Inside a dungeon, in the hometown (a new champion, see Hometown), else the zone's map.
+            // The saved parties first, whichever state follows: only the zone map's BuildState handed them to the
+            // client, so a champion who logged in inside a dungeon showed no party until he left it (Criesener,
+            // 2026-11-01).
+            Mercenaries.ApplyPending();
             bool newChampion = !HasProgress(champId);
             Hometown.MaybeStart(champId, newChampion);
             GameplayState dg = Dungeons.Current(champId, newChampion && !Hometown.Begun(champId));
