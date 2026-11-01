@@ -54,10 +54,23 @@ namespace HexRevival
         public static int GoldDivisor { get { return Saves.Current != null && Saves.Current.GoldDivisor > 1 ? Saves.Current.GoldDivisor : 1; } }
 
         /// <summary>A gold price after the account's divisor (at least 1 gold when the price was not free).</summary>
-        public static int Gold(int price)
+        public static int Gold(int price) { return Gold(price, GoldDivisor); }
+
+        /// <summary>A gold price after a divisor (at least 1 gold when the price was not free).</summary>
+        public static int Gold(int price, int divisor) { return divisor > 1 && price > 0 ? Math.Max(1, price / divisor) : price; }
+
+        /// <summary>
+        /// Example prices for the account settings (Criesener, 2026-11-01): what a booster and a Common chest spin cost
+        /// with these settings, as a sentence ("For example: a booster 200 gold, a Common chest spin 120 gold.").
+        /// </summary>
+        public static string PriceExample(bool goldPrices, int goldPerPlatinum, int divisor)
         {
-            int d = GoldDivisor;
-            return d > 1 && price > 0 ? Math.Max(1, price / d) : price;
+            if (goldPerPlatinum < 1) goldPerPlatinum = DefaultGoldPerPlatinum;
+            if (divisor < 1) divisor = 1;
+            string booster = goldPrices ? Loc.Get("reward_gold", Gold(BoosterGoldPrice, divisor).ToString("N0"))
+                : Loc.Get("reward_platinum", Math.Max(1, BoosterGoldPrice / goldPerPlatinum).ToString("N0"));
+            string spin = Loc.Get("reward_gold", Gold(Packs.CommonSpinCost, divisor).ToString("N0"));
+            return Loc.Get("price_example", booster, spin);
         }
 
         // Prize Exchange (Src.HexTCG2018: "Introducing Cosmic Coins and Siege Sacks", May 2018).

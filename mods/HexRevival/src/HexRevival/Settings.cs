@@ -52,6 +52,8 @@ namespace HexRevival
                 () => Saves.Current != null ? Saves.Current.GoldPerPlatinum : Store.DefaultGoldPerPlatinum, v => { if (Saves.Current != null) { Saves.Current.GoldPerPlatinum = v; Saves.SaveCurrent(); } });
             EnsureChoiceRow(grid, "HexRevival_GoldDivisor", "opt_golddivisor", offline && !Saves.Current.UnlockAll, Factors,
                 () => Saves.Current != null ? Saves.Current.GoldDivisor : 1, v => { if (Saves.Current != null) { Saves.Current.GoldDivisor = v; Saves.SaveCurrent(); } });
+            EnsureTextRow(grid, "HexRevival_PriceExample", offline && !Saves.Current.UnlockAll,
+                Store.PriceExample(Saves.Current.GoldPrices, Saves.Current.GoldPerPlatinum, Saves.Current.GoldDivisor));
             EnsureRow(row, grid, "HexRevival_Crafting", "opt_crafting", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.Crafting, v => { if (Saves.Current != null) { Saves.Current.Crafting = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
@@ -163,6 +165,42 @@ namespace HexRevival
                 UiClone.Reposition(parent);
             }
             catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] choice row " + name + ": " + e); }
+        }
+
+        /// <summary>
+        /// A line of text under parent (a copy of the Account tab's "User Name" label), kept on the given text:
+        /// the example prices follow the lists above as they change.
+        /// </summary>
+        private static void EnsureTextRow(Transform parent, string name, bool show, string text)
+        {
+            Transform existing = parent.Find(name);
+            if (existing != null)
+            {
+                if (existing.gameObject.activeSelf != show) { existing.gameObject.SetActive(show); UiClone.Reposition(parent); }
+                UILabel l = show ? existing.GetComponent<UILabel>() : null;
+                if (l != null && l.text != text) l.text = text;
+                return;
+            }
+            if (!show) return;
+            Transform src = parent.Find("AccountName");
+            if (src == null || src.GetComponent<UILabel>() == null) return;
+            try
+            {
+                GameObject copy = UiClone.Copy(src.gameObject, name);
+                copy.SetActive(true);
+                copy.transform.SetAsLastSibling();
+                UiClone.Strip(copy);
+                UILabel l = copy.GetComponent<UILabel>();
+                // One line across the row (the "User Name" label is narrower and anchored).
+                l.SetAnchor((GameObject)null);
+                l.overflowMethod = UILabel.Overflow.ClampContent;
+                l.width = 780;
+                l.alignment = NGUIText.Alignment.Center;
+                l.fontSize = 18;
+                l.text = text;
+                UiClone.Reposition(parent);
+            }
+            catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] text row " + name + ": " + e); }
         }
 
         /// <summary>The list's items: the choices, and the current value if it is not one of them (typed when the account was made).</summary>

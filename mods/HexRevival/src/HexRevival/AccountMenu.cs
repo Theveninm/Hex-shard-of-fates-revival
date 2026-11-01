@@ -265,6 +265,9 @@ namespace HexRevival
                 m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
                 m_GoldDivisor = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
                 y += 72 * S;
+                // What these settings mean, live: a booster and a Common chest spin.
+                GUI.Label(new Rect(0, y, w, 24 * S), Store.PriceExample(m_GoldPrices, Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor)), GameSkin.Style("body", 14, GameSkin.Gold));
+                y += 26 * S;
                 GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperplat_desc") + " " + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
                 y += 52 * S;
             }

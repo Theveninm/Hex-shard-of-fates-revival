@@ -423,6 +423,8 @@ namespace HexRevival
             { "opt_goldperplat_desc", new[] { "What a platinum is worth in gold: platinum prices in gold multiply by it, with platinum prices the fees set in gold divide by it (10 in the original store).", "", "Was ein Platin in Gold wert ist: Platinpreise in Gold werden damit multipliziert, bei Platinpreisen werden die in Gold festgelegten Gebühren dadurch geteilt (im Original 10)." } },
             { "opt_golddivisor", new[] { "Gold prices divided by", "", "Goldpreise geteilt durch" } },
             { "opt_golddivisor_desc", new[] { "Every gold price (store, stardust, Wheel of Fate spins, Battlegrounds entries) is divided by it; 1 keeps the original prices.", "", "Jeder Goldpreis (Laden, Staub, Glücksrad, Battlegrounds-Anmeldung) wird dadurch geteilt; 1 lässt die Originalpreise." } },
+            { "price_example", new[] { "For example: a booster {0}, a Common chest spin {1}.", "", "Zum Beispiel: ein Booster {0}, ein Spin einer Common-Truhe {1}." } },
+            { "reward_platinum", new[] { "{0} platinum", "{0} platine", "{0} Platin", "{0} de platino", "{0} platino", "{0} de platina", "{0} platyny", "{0} платины", "{0} platin", "{0}プラチナ", "{0} 白金" } },
         };
 
         /// <summary>Two-letter game language code ("en" by default).</summary>

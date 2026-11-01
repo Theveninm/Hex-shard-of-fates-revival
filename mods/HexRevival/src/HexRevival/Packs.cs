@@ -289,12 +289,15 @@ namespace HexRevival
             return r;
         }
 
+        /// <summary>Gold per spin of a Common chest (ChestUtils.GetChestSpinCost), before the account's divisor.</summary>
+        internal const int CommonSpinCost = 1200;
+
         private static int SpinCost(Chest c)
         {
             if (c.Rarity == ETreasureChestType.Primal || c.Spin == EChestSpinStatus.FreeSpin) return 0;
             switch (c.Rarity)   // after the account's gold divisor (Store.Gold)
             {
-                case ETreasureChestType.Common: return Store.Gold(1200);
+                case ETreasureChestType.Common: return Store.Gold(CommonSpinCost);
                 case ETreasureChestType.Uncommon: return Store.Gold(3100);
                 case ETreasureChestType.Rare: return Store.Gold(8500);
                 default: return Store.Gold(30000);
