@@ -34,10 +34,12 @@ namespace HexRevival
                 s_Card = card;
                 s_Equip = null;
                 RestoreDepths();
+                RestorePanel();
                 GameObject unlock = Unlock(vm);
                 if (unlock != null) unlock.SetActive(true);
                 if (!Crafting.Active || card == null || card.Template == null || !Crafting.IsCraftable(card.Template)) { SetVisible(false); return; }
                 if (!Ensure(vm)) return;
+                ForcePanel(vm);
                 // The button panel shows with "Unlock extended art" (Context.UnlockExtendedArtVisible): kept for our buttons,
                 // only "Unlock" hidden where there is nothing to unlock (a card already extended, a shard).
                 if (card.IsExtended || card.Template.m_CardType.HasAnyFlags(ECardTypes.Resource))
@@ -73,6 +75,41 @@ namespace HexRevival
             s_Card = null;
             s_Equip = null;
             SetVisible(false);
+            RestorePanel();
+        }
+
+        /// <summary>
+        /// The game's button panel (Unlock, the stardust picture) our buttons sit in. The campaign deck editor's prefab has
+        /// it off (no extended art there, the game's choice; nothing in its code touches it): switched on there for the
+        /// crafting buttons, without Unlock, and off again when the card goes (user 2026-10-31: crafting right where the
+        /// campaign deck is built).
+        /// </summary>
+        private static GameObject s_ForcedPanel;
+
+        private static void ForcePanel(UIExtendedArtViewModel vm)
+        {
+            Transform p = vm.transform.Find("VisibilityBinding/Anchor/ExtendedArtButtonPanel");
+            if (p == null || p.gameObject.activeSelf) return;
+            GameObject panel = p.gameObject;
+            panel.SetActive(true);
+            s_ForcedPanel = panel;
+            GameObject unlock = Unlock(vm);
+            if (unlock == null) return;
+            unlock.SetActive(false);
+            // The panel's own binding starts with it (next frame) and shows its children, Unlock among them: off again then.
+            vm.gameObject.AddComponent<NextFrame>().Do = () => { if (s_ForcedPanel == panel) unlock.SetActive(false); };
+        }
+
+        private static void RestorePanel()
+        {
+            if (s_ForcedPanel != null) s_ForcedPanel.SetActive(false);
+            s_ForcedPanel = null;
+        }
+
+        private class NextFrame : MonoBehaviour
+        {
+            public Action Do;
+            private void Update() { Action a = Do; Destroy(this); if (a != null) a(); }
         }
 
         private static void SetVisible(bool v)
@@ -264,6 +301,7 @@ namespace HexRevival
             c.ExtendedArtVisible = true;
             c.StardustStoreVisible = false;
             if (!Ensure(vm)) return;
+            ForcePanel(vm);
             GameObject unlock = Unlock(vm);
             if (unlock != null) unlock.SetActive(false);
             if (vm.GetComponent<EquipmentWatch>() == null) vm.gameObject.AddComponent<EquipmentWatch>();
