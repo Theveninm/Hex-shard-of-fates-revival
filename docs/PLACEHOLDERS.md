@@ -54,6 +54,21 @@ Vandersveldt part N + time. Dialogue lines come from the dialogue pass (`_tools/
 Inferred from the game data only (no video shows them; check if a source turns up): White Hawk Step 2 after the
 Killipede, AZ2 Milosh repeat dialogues, AZ2 map quest givers (Brutecrown Delta turn-in).
 
+## Settled from the players' surveys (2026-11-02, Src.Survey2015 / Src.Survey2014, as tabulated by Src.HexServer)
+The hex-server project (MTGQuarters/hex-server, branch pve-equipment-and-mercenaries, 2026-10-01) put the two
+players' surveys the mod already cites into tables; their totals match the survey counts the mod uses for the Wheel's
+outcomes. Numbers only, no code (AGPL).
+
+| What | Was | Now |
+|---|---|---|
+| What a chest holds | 1 item; a mercenary 5% (rare or better chests), a PvE card 15%, otherwise equipment 70/30 of the chest's rarity | per chest rarity, per mille: equipment by rarity, stardust, alternate art, PvE card, mercenary, sleeve, booster (Survey2015; Zymmer.ChestTable, see PROGRESSION.md) |
+| Chest sleeves | 5% of any chest | only primal chests, 102 per mille of their items (Survey2015) |
+| Chest alternate arts | none | an alternate art (epic) card: the survey's lists for Sets 1-2, any of the set for the others (PLACEHOLDER) |
+| Which Wheel of Fate mercenary / equipment / PvE card | any, evenly | common / uncommon / rare version: 59/5/2, 10/8/60, 64/9/5 (Survey2014) |
+| Wheel's alternate art outcome | a rare of the set | an alternate art of the set (Game: the payout table; which one PLACEHOLDER) |
+
+Still PLACEHOLDER there: how many items a legendary (2) and a primal (3) chest hold; the survey covers Sets 1-3 only.
+
 ## Settled in 1.2.10 (2026-10-30)
 | What | Was | Now | Source |
 |---|---|---|---|
@@ -162,42 +177,42 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
-| Packs.cs:30 | for 1 / 2 gold reels. Src.HexCodex: each set's Wheel of Fate and chest sleeves (see Sleeves). PLACEHOLDER: the |
-| Packs.cs:117 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:166 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:182 | base price 1, the holiday sleeves "Awarded during the [year] [holiday] Holiday"). PLACEHOLDER: one gift box with |
-| Packs.cs:183 | every booster opened during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and outside the holidays one |
-| Packs.cs:205 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
-| Packs.cs:278 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:312 | alternate arts: PLACEHOLDER, see the class |
-| Packs.cs:318 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:382 | PLACEHOLDER: how often a chest also holds one of its set's sleeves, and a booster one of its own.</summary> |
-| Packs.cs:434 | The set's chest loot (Src.Zymmer pools, Zymmer.OpenChest); a primal chest: one item more (PLACEHOLDER). |
-| Packs.cs:441 | chests (PLACEHOLDER chance). |
-| Packs.cs:449 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
+| Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
+| Packs.cs:167 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:183 | base price 1, the holiday sleeves "Awarded during the [year] [holiday] Holiday"). PLACEHOLDER: one gift box with |
+| Packs.cs:184 | every booster opened during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and outside the holidays one |
+| Packs.cs:206 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
+| Packs.cs:279 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:313 | an alternate art of the set (which one: PLACEHOLDER) |
+| Packs.cs:320 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:384 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:457 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
 | Progression.cs:150 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
+| Progression.cs:179 | Finanif: not read |
 | Progression.cs:203 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:281 | { "kukatan/NodeQ", new Reward { Gold = 600, Xp = 525, Source = Src.Placeholder, Note = "Tomb of Omens never fought on video" } }, |
 | Progression.cs:550 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:764 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:800 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:803 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:919 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:1001 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:1004 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:1007 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1022 | level: PLACEHOLDER). |
-| Progression.cs:1035 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1125 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1126 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:565 | if (!QuestRewards.TryGetValue(script, out r)) r = new Reward { Gold = QuestGold, Source = Src.Placeholder }; |
+| Progression.cs:763 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:799 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:802 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:918 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:1000 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:1003 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:1006 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1021 | level: PLACEHOLDER). |
+| Progression.cs:1034 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1124 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1125 | same for the Battlegrounds: PLACEHOLDER |
 | PveFullSets.cs:24 | the TemplateManager when the store is built. Price PLACEHOLDER (see GoldPrice). |
 | PveFullSets.cs:28 | PLACEHOLDER gold price (written as the other platinum-era products: converted by the account's price settings).</summary> |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
-| Sleeves.cs:19 | - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:22 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
 | Sleeves.cs:25 | - "Obtained through Gauntlet Tournaments or Steam": a constructed gauntlet run with 3 wins (PLACEHOLDER: the |
@@ -226,6 +241,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | StoreIcons.cs:219 | The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original |
 | Zymmer.cs:15 | PLACEHOLDER unless noted. |
 | Zymmer.cs:137 | pack (Src.LootTables2016, 1,162 packs). Used for packs the loot tables do not cover (AZ2): PLACEHOLDER by analogy. |
-| Zymmer.cs:206 | An equipment of a set's Wheel of Fate (Src.Zymmer list; which one: PLACEHOLDER, any, evenly).</summary> |
-| Zymmer.cs:220 | equipment, its PvE promo cards and its three chest mercenaries). How many items and which kind are PLACEHOLDER: |
-| Zymmer.cs:272 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |
+| Zymmer.cs:288 | card of the set. Which one: PLACEHOLDER, any, evenly (only Set 1's three are reported, and second hand). |
+| Zymmer.cs:348 | alternate art of the set (PLACEHOLDER). |
+| Zymmer.cs:356 | Items per chest: 1, 2 for a legendary chest, 3 for a primal one (the client: "Legendary and Primal chests will have additional items"; how many: PLACEHOLDER).</summary> |
+| Zymmer.cs:493 | What one pack gave (here: the whole theme, once) is PLACEHOLDER. |

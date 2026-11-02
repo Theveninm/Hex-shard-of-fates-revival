@@ -759,8 +759,7 @@ namespace HexRevival
         /// <summary>A chest of the current set opened (Src.Zymmer pools, Zymmer.OpenChest); returns its description.</summary>
         private static string GiveChest(ERarity rarity)
         {
-            int set = Zymmer.SetNumber(CurrentSet());
-            List<Loot.Drop> drops = Zymmer.OpenChest(set, rarity);
+            List<Loot.Drop> drops = Zymmer.OpenChest(CurrentSet(), Zymmer.ChestTier(rarity));
             if (drops.Count == 0) return GiveGold(rarity >= ERarity.Rare ? 1000 : 500);   // no list for that set: the old PLACEHOLDER gold
             List<string> names = new List<string>();
             foreach (Loot.Drop d in drops)
