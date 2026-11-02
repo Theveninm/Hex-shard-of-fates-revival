@@ -38,7 +38,8 @@ namespace HexRevival
 
             Transform vis = row;
             while (vis != null && vis.name != "VisibilityBinding") vis = vis.parent;
-            Transform grid = vis != null ? vis.Find("Option_Profile_Panel/LayoutGrid") : null;
+            // The grid sits in the mod's scroll view once it is made (AccountScroll).
+            Transform grid = vis != null ? (vis.Find("Option_Profile_Panel/" + ScrollName + "/LayoutGrid") ?? vis.Find("Option_Profile_Panel/LayoutGrid")) : null;
             if (grid == null) return;
             foreach (string n in new[] { "ChangePassword", "Authenticator" })
             {
@@ -60,6 +61,162 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.ExtraStore, v => { if (Saves.Current != null) { Saves.Current.ExtraStore = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
                 () => Saves.Current != null && Saves.Current.AllGems, v => { if (Saves.Current != null) { Saves.Current.AllGems = v; Saves.SaveCurrent(); } });
+            AccountScroll(grid);
+        }
+
+        // ------------------------------------------------------------------
+        // The Account tab's scroll view
+        // ------------------------------------------------------------------
+
+        private const string ScrollName = "HexRevival_AccountScroll";
+
+        /// <summary>
+        /// The Account tab scrolls (user 2026-11-02: with the mod's rows its list ran under the window's buttons). Its row
+        /// grid goes into a clipped panel with a scroll view (mouse wheel, drag) between the grid's top and the window's
+        /// button bar, with a scroll bar copied from one of the game's own when the rows do not fit. Made once; the clip
+        /// follows the window and the bar shows only when needed.
+        /// </summary>
+        private static void AccountScroll(Transform grid)
+        {
+            try
+            {
+                if (!grid.gameObject.activeInHierarchy) return;
+                Transform holder = grid.parent;
+                UIScrollView sv;
+                UIPanel panel;
+                if (holder != null && holder.name == ScrollName)
+                {
+                    sv = holder.GetComponent<UIScrollView>();
+                    panel = holder.GetComponent<UIPanel>();
+                    if (sv == null || panel == null) return;
+                }
+                else
+                {
+                    if (holder == null) return;
+                    float bottom;
+                    if (!ButtonBarTop(grid, out bottom)) return;
+                    GameObject go = new GameObject(ScrollName);
+                    go.layer = grid.gameObject.layer;
+                    go.transform.parent = holder;
+                    go.transform.localPosition = Vector3.zero;
+                    go.transform.localRotation = Quaternion.identity;
+                    go.transform.localScale = Vector3.one;
+                    UIPanel parentPanel = NGUITools.FindInParents<UIPanel>(holder.gameObject);
+                    panel = go.AddComponent<UIPanel>();
+                    panel.depth = parentPanel != null ? parentPanel.depth + 1 : 10;
+                    panel.clipping = UIDrawCall.Clipping.SoftClip;
+                    panel.clipSoftness = new Vector2(0f, 6f);
+                    sv = go.AddComponent<UIScrollView>();
+                    sv.movement = UIScrollView.Movement.Vertical;
+                    sv.dragEffect = UIScrollView.DragEffect.MomentumAndSpring;
+                    sv.restrictWithinPanel = true;
+                    sv.disableDragIfFits = true;
+                    sv.showScrollBars = UIScrollView.ShowCondition.OnlyIfNeeded;
+                    sv.contentPivot = UIWidget.Pivot.Top;
+                    grid.parent = go.transform;   // the same place on screen: the new parent sits where the old one is
+                    NGUITools.MarkParentAsChanged(grid.gameObject);
+                    s_ClipFor = null;
+                }
+                // The clip: from the grid's top (where the tab's list starts) down to the button bar, as wide as the rows.
+                Vector3 key = holder.position;
+                if (s_ClipFor == null || s_ClipFor.Value != key || s_ClipRows != grid.childCount)
+                {
+                    float bottom;
+                    if (!ButtonBarTop(grid, out bottom)) return;
+                    Transform pt = panel.transform;
+                    sv.ResetPosition();
+                    Bounds content = NGUIMath.CalculateRelativeWidgetBounds(pt, grid, false);
+                    float bottomLocal = pt.InverseTransformPoint(new Vector3(0f, bottom, 0f)).y + 6f;
+                    float top = content.max.y + 2f;
+                    if (top - bottomLocal < 60f) return;   // not laid out yet
+                    float width = content.size.x + 24f;
+                    panel.baseClipRegion = new Vector4(content.center.x, (top + bottomLocal) / 2f, width, top - bottomLocal);
+                    panel.clipOffset = Vector2.zero;
+                    pt.localPosition = Vector3.zero;
+                    sv.ResetPosition();
+                    sv.UpdateScrollbars(true);
+                    EnsureDrag(grid, sv);
+                    EnsureBar(sv, pt, content.max.x + 14f, top, bottomLocal);
+                    s_ClipFor = key;
+                    s_ClipRows = grid.childCount;
+                }
+            }
+            catch (System.Exception e) { Debug.LogWarning("[HexRevival] [Settings] account scroll: " + e.Message); }
+        }
+
+        private static Vector3? s_ClipFor;
+        private static int s_ClipRows;
+
+        /// <summary>
+        /// The top of the window's button bar (Restore Defaults, Apply Changes, Cancel, Accept) in world space: the highest
+        /// top of the visible buttons below the grid, outside it, looked for from the tab's panel up to the window.
+        /// </summary>
+        private static bool ButtonBarTop(Transform grid, out float top)
+        {
+            top = float.MinValue;
+            float gridTop = NGUIMath.CalculateAbsoluteWidgetBounds(grid).max.y;
+            Transform w = grid;
+            for (int up = 0; up < 8 && w.parent != null; up++)
+            {
+                w = w.parent;
+                foreach (UIButton b in w.GetComponentsInChildren<UIButton>(false))
+                {
+                    if (b.transform.IsChildOf(grid)) continue;
+                    Bounds bb = NGUIMath.CalculateAbsoluteWidgetBounds(b.transform);
+                    if (bb.size.y <= 0f || bb.max.y >= gridTop) continue;
+                    if (bb.max.y > top) top = bb.max.y;
+                }
+                if (top > float.MinValue) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Every row with a collider drags and wheel-scrolls the view (NGUI: UIDragScrollView on what the mouse is over).</summary>
+        private static void EnsureDrag(Transform grid, UIScrollView sv)
+        {
+            foreach (Collider c in grid.GetComponentsInChildren<Collider>(true))
+            {
+                UIDragScrollView d = c.GetComponent<UIDragScrollView>();
+                if (d == null) d = c.gameObject.AddComponent<UIDragScrollView>();
+                d.scrollView = sv;
+            }
+        }
+
+        /// <summary>
+        /// A vertical scroll bar at the clip's right edge: a copy of one of the game's own (its sprites), made once and
+        /// resized to the clip; none when the game has none loaded (the wheel and dragging still scroll).
+        /// </summary>
+        private static void EnsureBar(UIScrollView sv, Transform pt, float x, float top, float bottom)
+        {
+            UIScrollBar bar = sv.verticalScrollBar as UIScrollBar;
+            if (bar == null)
+            {
+                UIScrollBar src = null;
+                foreach (UIScrollBar b in Resources.FindObjectsOfTypeAll<UIScrollBar>())
+                    if (b != null && b.gameObject.scene.IsValid() && b.fillDirection == UIProgressBar.FillDirection.TopToBottom
+                        && b.backgroundWidget != null && b.foregroundWidget != null) { src = b; break; }
+                if (src == null) return;
+                GameObject copy = (GameObject)Object.Instantiate(src.gameObject);
+                copy.name = ScrollName + "_Bar";
+                copy.layer = pt.gameObject.layer;
+                copy.transform.parent = pt.parent;   // outside the clip
+                copy.transform.localRotation = Quaternion.identity;
+                copy.transform.localScale = Vector3.one;
+                bar = copy.GetComponent<UIScrollBar>();
+                foreach (UIWidget wd in copy.GetComponentsInChildren<UIWidget>(true)) { wd.SetAnchor((GameObject)null); wd.ParentHasChanged(); }
+                bar.onChange.Clear();
+                sv.verticalScrollBar = bar;
+                copy.SetActive(true);
+            }
+            UIWidget bg = bar.backgroundWidget;
+            if (bg != null)
+            {
+                bg.pivot = UIWidget.Pivot.Top;
+                bg.height = Mathf.Max(20, Mathf.RoundToInt(top - bottom));
+                bg.transform.localPosition = Vector3.zero;
+            }
+            bar.transform.position = pt.TransformPoint(new Vector3(x, top, 0f));
+            sv.UpdateScrollbars(true);
         }
 
         /// <summary>
