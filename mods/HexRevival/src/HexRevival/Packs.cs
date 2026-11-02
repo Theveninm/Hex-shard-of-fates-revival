@@ -113,7 +113,7 @@ namespace HexRevival
                 r.NewChestInstances.Add(Bits(c));
                 // A holiday's gift box with the booster (see GiftBoxFor), a second chest in the answer.
                 InventoryItemData box = primal ? null : GiftBoxFor(DateTime.Now);
-                if (box != null) { r.NewChestInstances.Add(Bits(NewGiftBox(box))); gifts++; }
+                if (box != null) { Chest g = NewGiftBox(box); r.NewChestInstances.Add(Bits(g)); s_NewGiftBoxes.Add(g); gifts++; }
                 // "Obtained by opening [set] Booster Packs" (Src.HexCodex: Doombringer's): sometimes one of them
                 // (PLACEHOLDER chance), given when the opening is over.
                 if (!primal && UnityEngine.Random.value < BoosterSleeveChance)
@@ -134,6 +134,9 @@ namespace HexRevival
 
         private static readonly List<KeyValuePair<ResourceId, int>> s_ToRemove = new List<KeyValuePair<ResourceId, int>>();
 
+        /// <summary>Gift boxes of the packs being opened, made promotional chests on the client once the answer was delivered.</summary>
+        private static readonly List<Chest> s_NewGiftBoxes = new List<Chest>();
+
         /// <summary>Sleeves found in the packs being opened, given once the opening's answer was delivered.</summary>
         private static readonly List<InventoryDeckSleeve> s_AfterOpening = new List<InventoryDeckSleeve>();
 
@@ -149,6 +152,25 @@ namespace HexRevival
                     try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(kv.Key, 1); }
                     catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] " + e.Message); }
             s_ToRemove.Clear();
+            foreach (Chest g in s_NewGiftBoxes) AsPromoChest(GameClient.Instance.PlayerProfile, g);
+            s_NewGiftBoxes.Clear();
+        }
+
+        /// <summary>
+        /// A gift box on the client: the promotional chest the game makes of a gift box item (PlayerProfile.
+        /// ProcessNonStandardChests: ChestUtils.CreateChest from the item, with its promotional id). The one made from our
+        /// chest_bits has none, so the Pack Opening screen's Open Multiple found no box like the one chosen and opened
+        /// nothing (UIPackListViewModel.OnOpenMultiplePromoChests, InventoryTreasureChest.IsSameTemplate; Zymmer 2026-11-02).
+        /// </summary>
+        private static void AsPromoChest(PlayerProfile profile, Chest c)
+        {
+            try
+            {
+                InventoryTreasureChest box = Singleton<TemplateManager>.Instance.GetInventoryItem(c.Template) as InventoryTreasureChest;
+                if (box == null || profile == null) return;
+                profile.InventoryChests[c.Id] = Game.Shared.Chests.ChestUtils.CreateChest(box, new inventory_bits { Id = c.Id, TemplateID = c.Template });
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] gift box " + c.Id + ": " + e.Message); }
         }
 
         /// <summary>A primal pack: 2 legendaries and 13 rares of the set (Src.Forum2017).</summary>
@@ -192,13 +214,30 @@ namespace HexRevival
             List<InventoryItemData> boxes = SpecialPacks.GiftBoxes();
             if (boxes.Count == 0) return null;
             List<string> holidays = Sleeves.HolidaysNow(now);
-            foreach (InventoryItemData b in boxes) if (holidays.Contains(SpecialPacks.GiftBoxHoliday(b))) return b;
-            return UnityEngine.Random.value < OffSeasonGiftBoxChance ? boxes[s_Rng.Next(boxes.Count)] : null;
+            InventoryItemData box = null;
+            foreach (InventoryItemData b in boxes) if (holidays.Contains(SpecialPacks.GiftBoxHoliday(b))) { box = b; break; }
+            if (box == null && UnityEngine.Random.value < OffSeasonGiftBoxChance) box = boxes[s_Rng.Next(boxes.Count)];
+            return box != null && GiftBoxesWanted(box) ? box : null;
+        }
+
+        /// <summary>
+        /// Whether one more gift box of that holiday holds something (Zymmer 2026-11-02: hundreds of boxes, from every
+        /// booster of the holiday, gave only gold): fewer boxes waiting than the pieces still to give, each box giving one
+        /// sleeve and one equipment piece (SpecialPacks.OpenGiftBox).
+        /// </summary>
+        private static bool GiftBoxesWanted(InventoryItemData box)
+        {
+            string holiday = SpecialPacks.GiftBoxHoliday(box);
+            int sleeves = SpecialPacks.HolidaySleeves(holiday).FindAll(x => !Sleeves.Owned(x.m_Id)).Count;
+            int equipment = Sleeves.HolidayEquipmentPool(holiday).FindAll(x => Inventory.Count(x.m_Id) == 0).Count;
+            int waiting = 0;
+            foreach (Chest c in s_Chests.Values) if (c.LootPack == GiftBoxLoot && c.Template == box.m_Id) waiting++;
+            return waiting < Math.Max(sleeves, equipment);
         }
 
         private static Chest NewGiftBox(InventoryItemData box)
         {
-            Chest c = new Chest { Id = s_NextChest++, Rarity = ETreasureChestType.Common, Spin = EChestSpinStatus.NoSpin, Set = ResourceId.Invalid, Template = box.m_Id, LootPack = GiftBoxLoot };
+            Chest c = new Chest { Id = s_NextChest++, Rarity = ETreasureChestType.Promo, Spin = EChestSpinStatus.NoSpin, Set = ResourceId.Invalid, Template = box.m_Id, LootPack = GiftBoxLoot };
             s_Chests[c.Id] = c;
             return c;
         }
@@ -401,10 +440,11 @@ namespace HexRevival
         {
             OpenChestResponse r = Empty<OpenChestResponse>();
             Load();
+            int emptyBoxes = 0;
             foreach (ulong id in ids ?? new List<ulong>())
             {
                 Chest c;
-                if (!s_Chests.TryGetValue(id, out c)) { r.Error = EOpenChestError.InvalidChestID; continue; }
+                if (!s_Chests.TryGetValue(id, out c)) { Debug.Log("[HexRevival] [Packs] open: no chest " + id); r.Error = EOpenChestError.InvalidChestID; continue; }
                 if (c.LootPack == GiftBoxLoot)
                 {
                     // A holiday gift box: one of its sleeves and equipment pieces not owned yet, else gold.
@@ -419,7 +459,7 @@ namespace HexRevival
                     {
                         r.goldAcquired += EmptyGiftBoxGold;
                         Saves.Current.Gold += EmptyGiftBoxGold;
-                        Notices.Show(Loc.Get("giftbox_empty", EmptyGiftBoxGold.ToString("N0")));
+                        emptyBoxes++;
                     }
                     s_Chests.Remove(id);
                     r.validChestIds.Add(id);
@@ -469,6 +509,9 @@ namespace HexRevival
                 LocalServer.Later(() => { try { GameClient.Instance.PlayerProfile.RemoveInventoryItem(new UID(UID.Type.InventoryItem, gone)); } catch { } });
                 Debug.Log("[HexRevival] [Packs] chest " + c.Rarity + " (set " + setNumber + ") opened: " + drops.Count + " item(s)");
             }
+            // One notice for the empty gift boxes of the request (Open Multiple opens up to 10).
+            if (emptyBoxes == 1) Notices.Show(Loc.Get("giftbox_empty", EmptyGiftBoxGold.ToString("N0")));
+            else if (emptyBoxes > 1) Notices.Show(Loc.Get("giftbox_empty_n", emptyBoxes, (emptyBoxes * EmptyGiftBoxGold).ToString("N0")));
             Saves.SaveCurrent();
             Save();
             LocalServer.Later(() => { try { GameClient.Instance.PlayerProfile.UpdateBalance((int)Saves.Current.Gold, (int)Saves.Current.Platinum); } catch { } });
@@ -558,6 +601,9 @@ namespace HexRevival
                     Chest c = new Chest { Id = ulong.Parse(p[0]), Rarity = (ETreasureChestType)int.Parse(p[1]), Spin = (EChestSpinStatus)int.Parse(p[2]), Set = new ResourceId(p[3]) };
                     // A campaign pack: its item, then its loot table (the rest of the line, it may hold spaces).
                     if (p.Length >= 6) { c.Template = new ResourceId(p[4]); c.LootPack = string.Join(" ", p, 5, p.Length - 5); }
+                    // A gift box: a promotional chest, as the game's own (1.2.14 and 1.2.15 made them common chests,
+                    // listed as "Common Chest" and not opened by Open Multiple: Zymmer 2026-11-02).
+                    if (c.LootPack == GiftBoxLoot) c.Rarity = ETreasureChestType.Promo;
                     s_Chests[c.Id] = c;
                     if (c.Id >= s_NextChest) s_NextChest = c.Id + 1;
                 }
@@ -586,6 +632,7 @@ namespace HexRevival
             {
                 profile.AddChestItem(c.Id, Bits(c));
                 profile.AddInventoryItem(new UID(UID.Type.InventoryItem, c.Id), c.Template.IsValid ? c.Template : BuiltInResources.CommonTreasureChest, 1);
+                if (c.LootPack == GiftBoxLoot) AsPromoChest(profile, c);
             }
             if (s_Chests.Count > 0) Debug.Log("[HexRevival] [Packs] " + s_Chests.Count + " chest(s) waiting");
         }
@@ -616,6 +663,26 @@ namespace HexRevival
                 foreach (UIPackContentViewModel vm in UnityEngine.Object.FindObjectsOfType<UIPackContentViewModel>())
                     if (vm.IsVisible()) { if (sub == "flip") vm.FlipRare(); else vm.OnClose(); k++; }
                 return sub + " on " + k + " view(s)";
+            }
+            if (sub == "sim" && parts.Length > 2)
+            {
+                // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare
+                CardSetTemplate set = Progression.FindSet(parts[2].Replace('_', ' '));
+                if (set == null) return "no set " + parts[2];
+                int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0;
+                Dictionary<ERarity, int> count = new Dictionary<ERarity, int>();
+                for (int k = 0; k < n; k++)
+                {
+                    List<CardTemplate> cards = Progression.OpenPack(set);
+                    total += cards.Count;
+                    if (!cards.Exists(t => t.m_CardRarity >= ERarity.Rare)) noRare++;
+                    foreach (CardTemplate t in cards) { int v; count.TryGetValue(t.m_CardRarity, out v); count[t.m_CardRarity] = v + 1; }
+                }
+                List<string> outl = new List<string>();
+                foreach (KeyValuePair<ERarity, int> kv in count) outl.Add(kv.Key + "=" + kv.Value);
+                foreach (ERarity r in new[] { ERarity.Common, ERarity.Uncommon, ERarity.Rare, ERarity.Epic, ERarity.Legendary })
+                    outl.Add("pool " + r + "=" + Progression.Pool(set, r).Count);
+                return set.m_Name + ": " + n + " packs, " + total + " cards, " + noRare + " without a rare; " + string.Join(", ", outl.ToArray());
             }
             if (sub == "give" && parts.Length > 2)
             {
