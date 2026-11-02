@@ -1176,6 +1176,7 @@ namespace HexRevival
                     }
                     return "usage: store pools | store products [text] | store cosmic <n> | store open <product id> | store select <text>";
                 case "toggles": return Settings.DumpToggles();
+                case "acctscroll": return Settings.DevScroll(parts.Length > 1 ? parts[1] : "");   // dev: the Account tab's scroll view state, "up"/"down" scrolls
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
                     {
