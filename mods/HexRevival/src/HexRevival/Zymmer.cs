@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Shared;
 using Game.Shared.Mechanics;
+using Game.Shared.Resources;
 using Reckoning.Game;
 using UnityEngine;
 
