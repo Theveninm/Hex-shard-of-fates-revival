@@ -1006,30 +1006,56 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// The set's chest (Packs: common with a booster, legendary with a primal pack), from Zymmer.OpenChest and the
-        /// "Set N Chest Loot" list: per item, a mercenary not owned yet 5% (rare or better chests), a PvE card up to 20%,
-        /// otherwise an equipment piece (common chest: common 70% / uncommon 30%; legendary: legendary). Its cards are not in
-        /// the game's card count. The chest sleeves: 5% of the chests.
+        /// The set's chest (Packs: common with a booster, legendary with a primal pack), from Zymmer.OpenChest: per item,
+        /// a kind of prize with the players' 2015 survey's frequencies for that chest rarity (Zymmer.ChestTable; the kinds
+        /// the set has nothing of are left out and the others share their part), then one item of it. Its cards are not
+        /// in the game's card count.
         /// </summary>
         private static void Chest(Contents c, CardSetTemplate set, bool legendary)
         {
             string source = "Set " + Zymmer.SetNumber(set) + " Chest Loot";
+            int tier = legendary ? 3 : 0, draws = Zymmer.ChestItems(tier);
             List<InventoryItemData> equipment = Zymmer.Equipment(source);
             Group g = G(c, Loc.Get(legendary ? "g_chest_legendary" : "g_chest_common"), Loc.Get("n_wheel"));
-            if (legendary)
+            List<Zymmer.ChestOdds> lines = new List<Zymmer.ChestOdds>();
+            List<object> pools = new List<object>();
+            float total = 0;
+            foreach (Zymmer.ChestOdds o in Zymmer.ChestTable[tier])
             {
-                Items(g, Loc.Get("pc_mercenaries"), Zymmer.MercenariesOf(source).ConvertAll(m => (InventoryItemData)m), 0.05f, 2);
-                Cards(g, Loc.Get("pc_pve_cards"), Zymmer.Cards(source), 0.15f, 2, false);
-                Items(g, RarityName(ERarity.Legendary) + " · " + Loc.Get("pc_equipment"), equipment.FindAll(i => Zymmer.RarityOf(i) == ERarity.Legendary), 0.80f, 2);
+                object pool = null;
+                switch (o.Kind)
+                {
+                    case Zymmer.ChestPrize.Equipment: { List<InventoryItemData> l = equipment.FindAll(i => Zymmer.RarityOf(i) == o.Rarity); if (l.Count > 0) pool = l; break; }
+                    case Zymmer.ChestPrize.Mercenary: { List<InventoryItemData> l = Zymmer.MercenariesOf(source).ConvertAll(m => (InventoryItemData)m); if (l.Count > 0) pool = l; break; }
+                    case Zymmer.ChestPrize.Sleeve: { List<InventoryItemData> l = Sleeves.Matching("^Found in Chests for " + Regex.Escape(set.m_Name.Trim()) + @"\.$").ConvertAll(s => (InventoryItemData)s); if (l.Count > 0) pool = l; break; }
+                    case Zymmer.ChestPrize.Booster: { InventoryItemData b = Singleton<TemplateManager>.Instance.GetInventoryItem(Zymmer.BoosterOf(set)); if (b != null) pool = new List<InventoryItemData> { b }; break; }
+                    case Zymmer.ChestPrize.Stardust: { InventoryItemData sd = Singleton<TemplateManager>.Instance.GetInventoryItem(Zymmer.StardustItem(o.Rarity)); if (sd != null) pool = new List<InventoryItemData> { sd }; break; }
+                    case Zymmer.ChestPrize.AltArt: { List<CardTemplate> l = Zymmer.ChestAltArtPool(set, o.Tier); if (l.Count > 0) pool = l; break; }
+                    case Zymmer.ChestPrize.PveCard: { List<CardTemplate> l = Zymmer.ChestPveCards(source, o.Tier); if (l.Count > 0) pool = l; break; }
+                }
+                if (pool == null) continue;
+                total += o.Weight;
+                lines.Add(o);
+                pools.Add(pool);
             }
-            else
+            if (total <= 0) return;
+            for (int i = 0; i < lines.Count; i++)
             {
-                Cards(g, Loc.Get("pc_pve_cards"), Zymmer.Cards(source), 0.20f, 1, false);
-                Items(g, RarityName(ERarity.Common) + " · " + Loc.Get("pc_equipment"), equipment.FindAll(i => Zymmer.RarityOf(i) == ERarity.Common), 0.80f * 0.7f);
-                Items(g, RarityName(ERarity.Uncommon) + " · " + Loc.Get("pc_equipment"), equipment.FindAll(i => Zymmer.RarityOf(i) == ERarity.Uncommon), 0.80f * 0.3f);
+                Zymmer.ChestOdds o = lines[i];
+                float chance = o.Weight / total;
+                List<CardTemplate> cards = pools[i] as List<CardTemplate>;
+                List<InventoryItemData> items = pools[i] as List<InventoryItemData>;
+                switch (o.Kind)
+                {
+                    case Zymmer.ChestPrize.Equipment: Items(g, RarityName(o.Rarity) + " · " + Loc.Get("pc_equipment"), items, chance, draws); break;
+                    case Zymmer.ChestPrize.Mercenary: Items(g, Loc.Get("pc_mercenaries"), items, chance, draws); break;
+                    case Zymmer.ChestPrize.Sleeve: Items(g, Loc.Get("pc_sleeves"), items, chance, draws); break;
+                    case Zymmer.ChestPrize.Booster:
+                    case Zymmer.ChestPrize.Stardust: Items(g, Loc.Get("pc_items_title"), items, chance, draws); break;
+                    case Zymmer.ChestPrize.AltArt: Cards(g, RarityName(ERarity.Epic), cards, chance, draws, false); break;
+                    case Zymmer.ChestPrize.PveCard: Cards(g, Loc.Get("pc_pve_cards"), cards, chance, draws, false); break;
+                }
             }
-            List<InventoryItemData> sleeves = Sleeves.Matching("^Found in Chests for " + Regex.Escape(set.m_Name.Trim()) + @"\.$").ConvertAll(s => (InventoryItemData)s);
-            if (sleeves.Count > 0) Items(g, Loc.Get("pc_sleeves") + " · " + Loc.Get("n_extra"), sleeves, Packs.ChestSleeveChance);
         }
 
         /// <summary>A Kismet's Reserve pack's theme: everything, once.</summary>

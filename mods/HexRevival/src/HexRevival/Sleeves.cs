@@ -16,7 +16,7 @@ namespace HexRevival
     /// assets/sleeve_sources.txt by tools/gen_sleeves.py; the game's own sleeve items carry only their names). The mod
     /// gives them where the original did and the mod has the same thing:
     /// - "Found in the Wheels of Fate for [set]": the Wheel of Fate's sleeves outcome (Packs);
-    /// - "Found in Chests for [set]": sometimes in an opened chest of that set (PLACEHOLDER chance, Packs);
+    /// - "Found in Chests for [set]": in an opened primal chest of that set, 10% of its items (Src.Survey2015, Zymmer.ChestTable);
     /// - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs);
     /// - "Obtained in the [deck] Collector Deck": with that deck bought in the store (Store);
     /// - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER);

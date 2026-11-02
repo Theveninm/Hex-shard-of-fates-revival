@@ -23,7 +23,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 |---|---|
 | Game | the game's own data files |
 | Guide2016 | moderator guide on the Steam forum, April 2016 ("New Player Pitstop - Free Cards") |
-| HexServer | values the hex-server project read on 2017-2018 gameplay videos |
+| HexServer | the hex-server project (MTGQuarters/hex-server, AGPL; github.com/MTGQuarters/hex-server): values it read on 2017-2018 gameplay videos, and its tables of the two players' surveys below (branch pve-equipment-and-mercenaries, services/chest_loot.py and services/wheel_of_fate.py, 2026-10-01). Only numbers are taken, no code |
 | Wiki2019 | Hex Compendium "Account Leveling", April 2019 snapshot (Wayback Machine) |
 | Forum2017 | official forum guide "Spending $$$ for HEX - Strategy", February 2017 |
 | Wiki2018 | Hex Compendium main page, May 2018 snapshot |
@@ -35,8 +35,8 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | HexTCG2018 | official article "Introducing Cosmic Coins and Siege Sacks", hextcg.com, May 10 2018 (archived copy) |
 | Zymmer | "Zymmer's notes": a player's hand-made catalogue of HEX (cards, equipment, mercenaries, champions), each entry with where it was obtained (a pack, a set's chest or Wheel of Fate, the Frost Ring Arena, a quest, an event...). Only those "where obtained" lines are used, matched to the game's ids by `tools/gen_zymmer.py` into `data/zymmer_sources.tsv`. They say which items a source held, never how often |
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
-| Survey2014 | players' Wheels of Fate survey, 2014: 2,167 spins by chest rarity and outcome (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw) |
-| Survey2015 | players' treasure chest survey, 2015: chests from boosters and what they held (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs) |
+| Survey2014 | players' Wheels of Fate survey, April-May 2014: 2,167 spins by chest rarity and outcome, and which version (common / uncommon / rare) of each prize came (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw; the prize versions as tabulated by HexServer) |
+| Survey2015 | players' treasure chest survey, July 2015: chests from boosters and what they held, about 1,700 drops of Set 1-3 chests by chest rarity and kind of prize (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs; the per-rarity frequencies and the alternate art lists as tabulated by HexServer) |
 | HexCodex | Hex Codex by RomoSJR, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its equipment list (where each piece was obtained: 138 pieces Zymmer's notes miss are added to the same pools, `assets/codex_equipment.txt` by `tools/gen_codex_equipment.py`; its mercenary list agrees with the notes), its tournament database (46,674 decks from 1,550 constructed events, 2016-2020), its sleeve list (how each of the 425 sleeves was obtained, `assets/sleeve_sources.txt` by `tools/gen_sleeves.py`), and its Frost Ring Arena, Siege and Dueling Pit pages, which quote the game's own texts |
 | Wiki | HEX fandom wiki (hextcg.fandom.com), mostly 2014-2015 pages: "Treasure Chest", "Wheels of Fate" |
 
@@ -645,9 +645,7 @@ What each reward becomes in the mod:
 | Common and uncommon free spin chests | a common chest of the current set, opened at once | contents Zymmer ("Set 9 Chest Loot": the set's chest equipment, PvE cards and 3 mercenaries); what one chest holds PLACEHOLDER (see below) |
 | Rare paid spin chest | a rare chest of the current set, opened at once | same |
 
-A chest (Zymmer pools, PLACEHOLDER rules): 1 item (2 for a legendary chest); a mercenary not owned yet 5% of the
-time from a rare or better chest, a PvE card 15%, otherwise an equipment of the chest's rarity (common chest:
-common 70% / uncommon 30%; rare chest: rare 75% / legendary 25%), never twice the same piece in one chest. The
+A chest: what each chest rarity holds comes from the players' 2015 survey (see Treasure chests, Packs). The
 account level chests are opened at once; booster chests go through the Wheel of Fate (see Packs).
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
 | Exclusive deck sleeve | one of the 24 "Awarded through Account Leveling" sleeves not owned yet | HexCodex; which one PLACEHOLDER |
@@ -669,7 +667,7 @@ The game has 425 sleeves; how each was obtained comes from HexCodex. The mod giv
 | Sleeves | How | Source |
 |---|---|---|
 | "Found in the Wheels of Fate for [set]" (27) | the Wheel of Fate's sleeves outcome (mushrooms): one of the set's not owned yet (a rare when none is left) | HexCodex |
-| "Found in Chests for [set]" (27) | in an opened chest of the set: 5% | HexCodex; chance PLACEHOLDER |
+| "Found in Chests for [set]" (27) | in an opened primal chest of the set: 102 per mille of its items (only primal chests gave sleeves) | HexCodex; Survey2015 |
 | "Obtained by opening Doombringer Booster Packs" (10) | in an opened booster of the set: 2% | HexCodex; chance PLACEHOLDER |
 | Collector decks (9) | with the deck bought in the store, and every bought deck's own sleeve | HexCodex, Game |
 | Kismet's Reserve packs | in 1 pack in 5 of that name | HexCodex; chance PLACEHOLDER |
@@ -744,9 +742,31 @@ an alternate art card, hearts two upgrades, spiders a PvP rare, each with a paid
 500 / 2,500 gold (HexServer), 3 gold or 3 red reels an exclusive reward. How often (Survey2014, common chests, 1,807
 spins): nothing 44%, paid re-spin 13%, upgrade 12%, free re-spin 6%, double upgrade 4%, PvP rare 4%, equipment 4%,
 alternate art 4%, PvE card 3%, mercenary 3%, sleeves 3% (uncommon and rare chests: their own counts). Prizes: the
-set's Wheel of Fate cards, equipment and mercenaries (Zymmer). PLACEHOLDER: the reel colors (red 20%, gold 5%);
-sleeves and alternate arts (not in the mod) give a rare of the set; an exclusive reward is one of the wheel's items.
-Opened, a chest gives the set's chest loot (see Account level: 1 item, 2 for a legendary chest, 3 for a primal one).
+set's Wheel of Fate cards, equipment and mercenaries (Zymmer); which version (Survey2014, by the items' rarity):
+mercenary 59 / 5 / 2 (common / uncommon / rare), equipment 10 / 8 / 60, PvE card 64 / 9 / 5 (the Set 1 wheel's
+Lightning, Water and Air Elementals); sleeves: one of the set's wheel sleeves (HexCodex); alternate art: an
+alternate art (epic) card of the set. PLACEHOLDER: the reel colors (red 20%, gold 5%); which alternate art; an
+exclusive reward is one of the wheel's items.
+
+**What a chest holds** (Survey2015, Set 1-3 chests; used for every set). 1 item, 2 for a legendary chest, 3 for a
+primal one (Game: "Legendary and Primal chests will have additional items"; how many PLACEHOLDER). Each item is
+first a kind of prize, per mille:
+
+| Chest | Equipment C / U / R / L | Stardust | Alternate art | PvE card | Mercenary | Chest sleeve | Booster |
+|---|---|---|---|---|---|---|---|
+| Common | 674 / 136 / 48 / - | common 45, uncommon 25 | 67 | - | - | - | - |
+| Uncommon | 214 / 580 / 76 / - | uncommon 22, rare 14 | 69 | 25 (uncommon or rare) | - | - | - |
+| Rare | 103 / 194 / 455 / - | rare 20, legendary 12 | 59 | 55 (uncommon or rare) | 59 | - | - |
+| Legendary | - / 172 / 178 / 249 | promo 18 | 65 | 154 (any) | 136 | - | 12 |
+| Primal | - / - / 85 / 237 | promo 34 | 212 | 204 (any) | 110 | 102 | 8 |
+
+then one item of that kind, evenly: the set's chest equipment, PvE cards and mercenaries (Zymmer: "Set N Chest
+Loot"; a mercenary not owned yet), its chest sleeves (HexCodex: "Found in Chests for [set]"), its booster, its
+alternate arts: the ones the survey saw for Shards of Fate (Savage Raider, Hex Engine, Wall of Corpses, Rot Caster;
+from legendary and primal chests Mastery of Time, Crash of Beasts) and Shattered Destiny (Constantina, Royal Valkyr,
+Paladin of the Necropolis, Psychotic Anarchist; Darkspire Tyrant, Arborean Rootfather), any of the set's for the
+others (PLACEHOLDER). A kind the set has nothing left of is left out and the others share its part. The same chests
+are the account level rewards' "chests" (common) and "rarechest" (rare).
 
 **Alachian Sea packs** (AZ2 campaign and dungeon packs): no drop table found. The campaign pack layout
 above; which card and equipment: Zymmer. The Alachian Sea Pack: one of its 37 cards and 156 equipment pieces;
