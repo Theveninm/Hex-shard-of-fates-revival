@@ -346,6 +346,9 @@ namespace HexRevival
             // Cards without art (choices such as "Pain" and "Suffering") drawn with the art of the card linking to them.
             apply("GoCardBuilder.UpdateArtOverride", () =>
                 harmony.Patch(AccessTools.Method(typeof(GoCardBuilder), "UpdateArtOverride"), postfix: new HarmonyMethod(typeof(Hooks), "GoCardBuilder_UpdateArtOverride")));
+            // Cards whose picture the client cannot load (the epic Cerulean Mirror Knight) drawn with another version's.
+            apply("GoCardBuilder.SetPortraitToError", () => Prefix(harmony, typeof(GoCardBuilder), "SetPortraitToError",
+                new[] { typeof(string) }, "GoCardBuilder_SetPortraitToError"));
             apply("LogBase.Debug/Error (dead server noise)", () =>
             {
                 harmony.Patch(AccessTools.Method(typeof(LogBase), "Debug", new[] { typeof(string), typeof(string), typeof(object[]) }),
@@ -525,7 +528,8 @@ namespace HexRevival
             if (!__result && __instance.m_PlayerId.GetUIDType() == UID.Type.AIPlayer) __result = true;
         }
 
-        public static void GoCardBuilder_UpdateArtOverride(GoCardBuilder __instance) { ChoiceArt.AfterUpdate(__instance); }
+        public static void GoCardBuilder_UpdateArtOverride(GoCardBuilder __instance) { ChoiceArt.AfterUpdate(__instance); MissingArt.AfterUpdate(__instance); }
+        public static bool GoCardBuilder_SetPortraitToError(GoCardBuilder __instance) { return MissingArt.BeforeError(__instance); }
         public static bool Connector_TryConnect() { return false; }
         public static bool LogBase_Debug(string __0, string __1, object[] __2) { return !LogFilter.DropDebug(__1, __2); }
         public static bool LogBase_Error(string __0, string __1) { return !LogFilter.DropError(__0, __1); }

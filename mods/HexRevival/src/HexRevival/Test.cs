@@ -1806,12 +1806,29 @@ namespace HexRevival
                         return "not found";
                     }
                     return ChoiceArt.Check();
-                case "showcard":   // dev: "showcard <name>" = the card viewer a card link opens (UISystem.DisplayLinkedCard)
+                case "missingart": return MissingArt.Check();   // dev: the cards whose picture failed to load this session, and what they are drawn with
+                case "showcard":   // dev: "showcard <name>" = the card viewer a card link opens (UISystem.DisplayLinkedCard); "showcard <name> #<n>" = its n-th version (by rarity, then id)
                     {
                         string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        int nth = 1;
+                        int hash = q.LastIndexOf(" #", StringComparison.Ordinal);
+                        if (hash > 0 && int.TryParse(q.Substring(hash + 2), out nth)) q = q.Substring(0, hash); else nth = 1;
+                        List<CardTemplate> found = new List<CardTemplate>();
                         foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
-                            if (t != null && t.m_Name == q) { UISystem.DisplayLinkedCard(t, true, false, false); return "shown " + t.m_Name + " image='" + t.m_CardImagePath + "' parent=" + (ChoiceArt.Parent(t.m_Id) != null ? ChoiceArt.Parent(t.m_Id).m_Name : "-"); }
-                        return "not found";
+                            if (t != null && t.m_Name == q) found.Add(t);
+                        found.Sort((a, c) => a.m_CardRarity != c.m_CardRarity ? a.m_CardRarity.CompareTo(c.m_CardRarity) : string.CompareOrdinal(a.m_Id.ToString(), c.m_Id.ToString()));
+                        if (found.Count == 0) return "not found";
+                        if (nth < 1 || nth > found.Count)
+                            return found.Count + " version(s):\n" + string.Join("\n", found.ConvertAll(t =>
+                            {
+                                CardSetTemplate s;
+                                return t.m_CardRarity + " [" + (Singleton<TemplateManager>.Instance.CardSets.TryGetValue(t.m_SetId, out s) && s != null ? s.m_Name : "?") + "] " + t.m_CardImagePath;
+                            }).ToArray());
+                        {
+                            CardTemplate t = found[nth - 1];
+                            UISystem.DisplayLinkedCard(t, true, false, false);
+                            return "shown " + t.m_Name + " [" + t.m_CardRarity + "] " + nth + "/" + found.Count + " image='" + t.m_CardImagePath + "' parent=" + (ChoiceArt.Parent(t.m_Id) != null ? ChoiceArt.Parent(t.m_Id).m_Name : "-");
+                        }
                     }
                 case "packcheck": return PackContents.DevCheck();
                 case "packsnap": return PackContents.DevSnaps();

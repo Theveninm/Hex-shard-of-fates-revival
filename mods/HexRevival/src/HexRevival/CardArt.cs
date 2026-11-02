@@ -38,6 +38,12 @@ namespace HexRevival
             // Failed (asked while the game was still loading its bundles, at login): asked again 5 s later.
             if (it.Failed && Time.realtimeSinceStartup - it.FailedAt > 5f) { it.Failed = false; it.Requested = false; }
             if (!it.Requested) Request(c, it);
+            if (it.Texture == null && it.Failed)
+            {
+                // The picture the client cannot load either (MissingArt): another version's picture.
+                CardTemplate alt = MissingArt.Replacement(c);
+                if (alt != null && !string.Equals(alt.m_CardImagePath, c.m_CardImagePath, StringComparison.OrdinalIgnoreCase)) return Get(alt, out uv);
+            }
             return it.Texture;
         }
 

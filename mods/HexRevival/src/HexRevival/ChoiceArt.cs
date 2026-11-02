@@ -18,7 +18,7 @@ namespace HexRevival
     public static class ChoiceArt
     {
         private static readonly FieldInfo s_Override = typeof(GoCardBuilder).GetField("m_ArtOverrideTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
-        private static readonly FieldInfo s_Set = typeof(GoCardBuilder).GetField("m_CardSetTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo s_Set = typeof(GoCardBuilder).GetField("m_CardSetTemplate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);   // a public field
         private static readonly Regex s_Bold = new Regex("<b>(.*?)</b>");
         private static Dictionary<ResourceId, CardTemplate> s_Parents;
 
