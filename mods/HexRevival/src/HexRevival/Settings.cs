@@ -139,12 +139,17 @@ namespace HexRevival
         {
             public Transform Grid;
             public UIPanel Panel;
-            private UIScrollBar m_Bar;
-            private float m_Y, m_Overflow, m_ClipTop, m_ClipBottom, m_ClipLeft, m_ClipRight;
+            private float m_Y, m_Overflow, m_Top, m_Bottom, m_Left, m_Right;   // the tab's area (tab buttons to button bar), panel-parent units
             private Vector3 m_LaidFor;
             private int m_LaidRows = -1;
-            private bool m_Setting, m_Warned;
-            private const float Step = 60f;   // panel units per wheel notch (a row is about 50)
+            private bool m_Warned;
+            private const float Step = 60f;      // per wheel notch (a row is about 50)
+            private const float BarWidth = 18f;  // the scroll bar, at the area's right edge
+            private const float Gap = 6f;        // between the content and the bar, and around the bar
+
+            // The scroll bar: a track and a thumb (the game's own scroll bar sprites), in a panel above the rows.
+            private GameObject m_BarRoot;
+            private UISprite m_Track, m_Thumb;
 
             public float Overflow { get { return m_Overflow; } }
             public float Position { get { return m_Y; } }
@@ -168,13 +173,17 @@ namespace HexRevival
                 catch (System.Exception e) { if (!m_Warned) Debug.LogWarning("[HexRevival] [Settings] account scroll: " + e); m_Warned = true; }
             }
 
+            /// <summary>
+            /// The tab's area: from the tab buttons' bottom edge to the top of the button bar's frame, as wide as the rows.
+            /// The bar takes its right edge; the content is clipped to the rest.
+            /// </summary>
             private void Layout(int rows)
             {
                 float bottom;
                 if (!ButtonBarTop(Grid, out bottom)) return;
                 Transform pt = transform;
                 float keep = m_Y;
-                // A panel inside the rows (their header) clips with this one only if it clips too (NGUI: cumulative clipping).
+                // A panel inside the rows clips with this one only if it clips too (NGUI: cumulative clipping).
                 foreach (UIPanel inner in Grid.GetComponentsInChildren<UIPanel>(true))
                     if (inner != Panel && inner.clipping == UIDrawCall.Clipping.None)
                     {
@@ -185,7 +194,6 @@ namespace HexRevival
                 Bounds content = NGUIMath.CalculateRelativeWidgetBounds(pt, Grid, false);
                 float bottomLocal = pt.InverseTransformPoint(new Vector3(0f, bottom, 0f)).y + 18f;   // above the buttons' frame
                 float top = content.max.y + 2f;
-                // Not above the tab buttons' bottom edge (Frame_Tabs/Tab_0x: their own sprite, not their glow children).
                 Transform tabs = null;
                 for (Transform w = pt.parent; w != null && tabs == null; w = w.parent) tabs = w.Find("Frame_Tabs");
                 if (tabs != null)
@@ -197,12 +205,14 @@ namespace HexRevival
                         if (tabBottom - 1f < top && tabBottom > bottomLocal + 60f) top = tabBottom - 1f;
                     }
                 if (top - bottomLocal < 60f) return;   // not laid out yet
-                m_ClipTop = top; m_ClipBottom = bottomLocal;
+                m_Top = top; m_Bottom = bottomLocal;
+                m_Left = content.min.x; m_Right = content.max.x;
                 ContentMin = content.min.y;
-                m_ClipLeft = content.min.x - 4f; m_ClipRight = content.max.x + 4f;
-                Panel.baseClipRegion = new Vector4((m_ClipLeft + m_ClipRight) / 2f, (top + bottomLocal) / 2f, m_ClipRight - m_ClipLeft, top - bottomLocal);
                 m_Overflow = Mathf.Max(0f, bottomLocal - content.min.y + 10f);   // the last row whole, with a little space
                 if (m_Overflow <= 12f) m_Overflow = 0f;
+                // The content's clip: the area, less the bar's strip on the right when there is something to scroll.
+                float right = m_Overflow > 0f ? m_Right - BarWidth - 2f * Gap : m_Right;
+                Panel.baseClipRegion = new Vector4((m_Left + right) / 2f, (top + bottomLocal) / 2f, right - m_Left, top - bottomLocal);
                 m_LaidRows = rows;
                 m_LaidFor = pt.parent.position;
                 EnsureBar();
@@ -211,34 +221,16 @@ namespace HexRevival
 
             /// <summary>
             /// The rows are anchored to the window and would stay put when the panel moves: while scrolled, their anchors
-            /// are frozen where they are (OnStart), and given back their own setting at the top (the window may move or
-            /// resize then).
+            /// are frozen where they are (OnStart), and given back their own setting at the top.
             /// </summary>
             private readonly System.Collections.Generic.Dictionary<UIRect, UIRect.AnchorUpdate> m_Anchors = new System.Collections.Generic.Dictionary<UIRect, UIRect.AnchorUpdate>();
-
-            /// <summary>Widgets outside the rows (in the tab, not under the grid) anchored to something in the rows.</summary>
-            private System.Collections.Generic.List<UIWidget> Headings()
-            {
-                System.Collections.Generic.List<UIWidget> res = new System.Collections.Generic.List<UIWidget>();
-                Transform tab = transform.parent;
-                if (tab == null) return res;
-                foreach (UIWidget w in tab.GetComponentsInChildren<UIWidget>(false))
-                {
-                    if (w.transform.IsChildOf(transform) || !w.isAnchored) continue;
-                    foreach (UIRect.AnchorPoint a in new[] { w.leftAnchor, w.rightAnchor, w.topAnchor, w.bottomAnchor })
-                        if (a != null && a.target != null && a.target.IsChildOf(Grid)) { res.Add(w); break; }
-                }
-                return res;
-            }
 
             private void Freeze(bool frozen)
             {
                 if (frozen == (m_Anchors.Count > 0)) return;
                 if (frozen)
                 {
-                    System.Collections.Generic.List<UIRect> rects = new System.Collections.Generic.List<UIRect>(Grid.GetComponentsInChildren<UIRect>(true));
-                    foreach (UIWidget h in Headings()) rects.Add(h);
-                    foreach (UIRect r in rects)
+                    foreach (UIRect r in Grid.GetComponentsInChildren<UIRect>(true))
                         if (r.isAnchored && r.updateAnchors != UIRect.AnchorUpdate.OnStart) { m_Anchors[r] = r.updateAnchors; r.updateAnchors = UIRect.AnchorUpdate.OnStart; }
                     if (m_Anchors.Count == 0) m_Anchors[Panel] = Panel.updateAnchors;   // nothing anchored: remembered as frozen all the same
                 }
@@ -261,105 +253,151 @@ namespace HexRevival
             public void MoveTo(float y)
             {
                 Place(Mathf.Clamp(y, 0f, m_Overflow));
-                if (m_Bar != null)
-                {
-                    bool show = m_Overflow > 0f;
-                    if (m_Bar.gameObject.activeSelf != show) m_Bar.gameObject.SetActive(show);
-                    if (show)
-                    {
-                        m_Setting = true;
-                        float h = m_ClipTop - m_ClipBottom;
-                        // The thumb as the visible share of the rows, but never more than 60% of the track, so
-                        // it can always be dragged.
-                        m_Bar.barSize = Mathf.Clamp(h / (h + m_Overflow), 0.15f, 0.6f);
-                        m_Bar.value = m_Overflow > 0f ? m_Y / m_Overflow : 0f;
-                        m_Setting = false;
-                    }
-                }
+                UpdateBar();
             }
 
             public void Step1(int dir) { MoveTo(m_Y + dir * Step); }
 
-            /// <summary>The mouse over the clip (screen space, through the UI camera).</summary>
+            // ---- The scroll bar ----
+
+            private float TrackTop { get { return m_Top - Gap; } }
+            private float TrackBottom { get { return m_Bottom + Gap; } }
+            private float TrackHeight { get { return TrackTop - TrackBottom; } }
+            // The visible share of the rows, between 30 units and 70% of the track (always room to drag it).
+            private float ThumbHeight { get { float h = m_Top - m_Bottom; return Mathf.Clamp(TrackHeight * h / (h + m_Overflow), 30f, TrackHeight * 0.7f); } }
+
+            /// <summary>The track and thumb: the game's scroll bar sprites (from a loaded UIScrollBar), made once.</summary>
+            private void EnsureBar()
+            {
+                if (m_BarRoot == null)
+                {
+                    UISprite fg = null, bg = null;
+                    foreach (UIScrollBar b in Resources.FindObjectsOfTypeAll<UIScrollBar>())
+                    {
+                        if (b == null || !b.gameObject.scene.IsValid() || b.fillDirection != UIProgressBar.FillDirection.TopToBottom) continue;
+                        UISprite f = b.foregroundWidget as UISprite;
+                        if (f == null || f.atlas == null || string.IsNullOrEmpty(f.spriteName)) continue;
+                        fg = f;
+                        UISprite k = b.backgroundWidget as UISprite;
+                        if (k != null && k.atlas != null && !string.IsNullOrEmpty(k.spriteName) && k.color.a > 0.1f) bg = k;
+                        break;
+                    }
+                    if (fg == null) return;
+                    m_BarRoot = new GameObject(ScrollName + "_Bar");
+                    m_BarRoot.layer = gameObject.layer;
+                    m_BarRoot.transform.parent = transform.parent;   // not in the clipped panel: it does not scroll
+                    m_BarRoot.transform.localPosition = Vector3.zero;
+                    m_BarRoot.transform.localRotation = Quaternion.identity;
+                    m_BarRoot.transform.localScale = Vector3.one;
+                    UIPanel bp = m_BarRoot.AddComponent<UIPanel>();
+                    bp.depth = Panel.depth + 1;   // above the rows
+                    m_Track = Sprite("Track", bg ?? fg, 0);
+                    if (bg == null) { Color c = fg.color; c.a = 0.3f; m_Track.color = c; }   // the thumb's sprite, dimmed
+                    m_Thumb = Sprite("Thumb", fg, 1);
+                    // Dragging the thumb, clicking the track (a page towards the click).
+                    NGUITools.AddWidgetCollider(m_Track.gameObject);
+                    NGUITools.AddWidgetCollider(m_Thumb.gameObject);
+                    UIEventListener.Get(m_Thumb.gameObject).onDrag = (go, delta) => DragThumb(delta);
+                    UIEventListener.Get(m_Track.gameObject).onClick = go => ClickTrack();
+                }
+                Transform t = m_Track.transform;
+                t.localPosition = new Vector3(m_Right - Gap - BarWidth / 2f, TrackTop, 0f);
+                m_Track.width = Mathf.RoundToInt(BarWidth);
+                m_Track.height = Mathf.Max(20, Mathf.RoundToInt(TrackHeight));
+                NGUITools.UpdateWidgetCollider(m_Track.gameObject);
+                m_Thumb.width = Mathf.RoundToInt(BarWidth);
+                m_Thumb.height = Mathf.RoundToInt(ThumbHeight);
+                NGUITools.UpdateWidgetCollider(m_Thumb.gameObject);
+            }
+
+            private UISprite Sprite(string name, UISprite src, int depth)
+            {
+                GameObject g = new GameObject(name);
+                g.layer = gameObject.layer;
+                g.transform.parent = m_BarRoot.transform;
+                g.transform.localRotation = Quaternion.identity;
+                g.transform.localScale = Vector3.one;
+                UISprite s = g.AddComponent<UISprite>();
+                s.atlas = src.atlas;
+                s.spriteName = src.spriteName;
+                s.type = src.type == UIBasicSprite.Type.Simple ? UIBasicSprite.Type.Sliced : src.type;
+                s.color = src.color;
+                s.pivot = UIWidget.Pivot.Top;
+                s.depth = depth;
+                return s;
+            }
+
+            /// <summary>The thumb's place: the share of the scroll done, along the track; hidden when nothing scrolls.</summary>
+            private void UpdateBar()
+            {
+                if (m_BarRoot == null) return;
+                bool show = m_Overflow > 0f;
+                if (m_BarRoot.activeSelf != show) m_BarRoot.SetActive(show);
+                if (!show) return;
+                float travel = TrackHeight - ThumbHeight;
+                float y = TrackTop - (m_Overflow > 0f ? travel * m_Y / m_Overflow : 0f);
+                m_Thumb.transform.localPosition = new Vector3(m_Right - Gap - BarWidth / 2f, y, 0f);
+            }
+
+            /// <summary>Panel-parent units per screen pixel (vertically).</summary>
+            private float UnitsPerPixel()
+            {
+                Camera cam = NGUITools.FindCameraForLayer(gameObject.layer);
+                if (cam == null) return 1f;
+                Transform pp = transform.parent;
+                float a = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(0f, m_Top, 0f))).y;
+                float b = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(0f, m_Bottom, 0f))).y;
+                return Mathf.Abs(a - b) > 1f ? (m_Top - m_Bottom) / Mathf.Abs(a - b) : 1f;
+            }
+
+            private void DragThumb(Vector2 delta)
+            {
+                float travel = TrackHeight - ThumbHeight;
+                if (travel <= 0f) return;
+                MoveTo(m_Y - delta.y * UnitsPerPixel() * m_Overflow / travel);
+            }
+
+            private void ClickTrack()
+            {
+                Camera cam = NGUITools.FindCameraForLayer(gameObject.layer);
+                if (cam == null) return;
+                Vector3 local = transform.parent.InverseTransformPoint(cam.ScreenToWorldPoint(UICamera.lastEventPosition));
+                float thumbTop = m_Thumb.transform.localPosition.y;
+                float page = m_Top - m_Bottom - 20f;
+                if (local.y > thumbTop) MoveTo(m_Y - page);
+                else if (local.y < thumbTop - ThumbHeight) MoveTo(m_Y + page);
+            }
+
+            /// <summary>The mouse over the tab's area (screen space, through the UI camera).</summary>
             private bool Hovered()
             {
                 Camera cam = NGUITools.FindCameraForLayer(gameObject.layer);
                 if (cam == null) return false;
                 Transform pp = transform.parent;
-                Vector3 a = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(m_ClipLeft, m_ClipBottom, 0f)));
-                Vector3 b = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(m_ClipRight + 30f, m_ClipTop, 0f)));
+                Vector3 a = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(m_Left, m_Bottom, 0f)));
+                Vector3 b = cam.WorldToScreenPoint(pp.TransformPoint(new Vector3(m_Right, m_Top, 0f)));
                 Vector3 m = Input.mousePosition;
                 return m.x >= Mathf.Min(a.x, b.x) && m.x <= Mathf.Max(a.x, b.x) && m.y >= Mathf.Min(a.y, b.y) && m.y <= Mathf.Max(a.y, b.y);
             }
 
-            /// <summary>
-            /// A vertical scroll bar inside the clip's right edge: a copy of one of the game's own (its sprites), sized to the
-            /// clip; none when no game bar is loaded (the wheel still scrolls).
-            /// </summary>
-            private void EnsureBar()
+            public string Describe()
             {
-                Transform pp = transform.parent;
-                if (m_Bar == null)
-                {
-                    UIScrollBar src = null;
-                    foreach (UIScrollBar b in Resources.FindObjectsOfTypeAll<UIScrollBar>())
-                        if (b != null && b.gameObject.scene.IsValid() && b.fillDirection == UIProgressBar.FillDirection.TopToBottom
-                            && b.backgroundWidget != null && b.foregroundWidget != null && !b.name.StartsWith(ScrollName)) { src = b; break; }
-                    if (src == null) return;
-                    GameObject copy = (GameObject)Instantiate(src.gameObject);
-                    copy.name = ScrollName + "_Bar";
-                    copy.layer = gameObject.layer;
-                    copy.transform.parent = pp;   // outside the clip
-                    copy.transform.localRotation = Quaternion.identity;
-                    copy.transform.localScale = Vector3.one;
-                    m_Bar = copy.GetComponent<UIScrollBar>();
-                    foreach (UIWidget wd in copy.GetComponentsInChildren<UIWidget>(true)) wd.SetAnchor((GameObject)null);
-                    // Drawn above the rows (their panel is one over the tab's): a panel of its own, higher still.
-                    UIPanel barPanel = copy.GetComponent<UIPanel>() ?? copy.AddComponent<UIPanel>();
-                    barPanel.depth = Panel.depth + 1;
-                    // A visible track: the game's bar draws only its thumb here; the track takes the thumb's sprite, dimmed.
-                    UISprite fgs = m_Bar.foregroundWidget as UISprite, bgs = m_Bar.backgroundWidget as UISprite;
-                    if (fgs != null && bgs != null)
-                    {
-                        bgs.atlas = fgs.atlas;
-                        bgs.spriteName = fgs.spriteName;
-                        bgs.type = fgs.type;
-                        Color c = fgs.color; c.a *= 0.3f; bgs.color = c;
-                        bgs.alpha = 1f;
-                    }
-                    m_Bar.onChange.Clear();
-                    m_Bar.onChange.Add(new EventDelegate(() => { if (!m_Setting) Place(Mathf.Clamp01(m_Bar.value) * m_Overflow); }));
-                    copy.SetActive(true);
-                }
-                UIWidget bg = m_Bar.backgroundWidget;
-                if (bg == null) return;
-                // Height: the clip's, in the bar's own units; then moved so its top right sits at the clip's top right.
-                Bounds now = NGUIMath.CalculateAbsoluteWidgetBounds(bg.transform);
-                Vector3 topRight = pp.TransformPoint(new Vector3(m_ClipRight - 2f, m_ClipTop - 2f, 0f));
-                Vector3 bottomRight = pp.TransformPoint(new Vector3(m_ClipRight - 2f, m_ClipBottom + 2f, 0f));
-                float worldH = Mathf.Abs(topRight.y - bottomRight.y);
-                if (now.size.y > 0f && bg.height > 0) bg.height = Mathf.Max(20, Mathf.RoundToInt(bg.height * worldH / now.size.y));
-                m_Bar.ForceUpdate();
-                now = NGUIMath.CalculateAbsoluteWidgetBounds(bg.transform);
-                m_Bar.transform.position += new Vector3(topRight.x - now.max.x, topRight.y - now.max.y, 0f);
+                return "area y " + m_Bottom + ".." + m_Top + " x " + m_Left + ".." + m_Right + " clip=" + Panel.baseClipRegion + " overflow=" + m_Overflow + " y=" + m_Y
+                    + (m_BarRoot != null ? " bar: track " + m_Track.height + " thumb " + m_Thumb.height + " at " + m_Thumb.transform.localPosition.y + " active=" + m_BarRoot.activeSelf : " no bar");
             }
         }
 
-        /// <summary>Dev "acctscroll [up|down]": the Account tab's scroll (clip, overflow, position, the bar), or a scroll step.</summary>
+        /// <summary>Dev "acctscroll [up|down]": the Account tab's scroll (area, clip, overflow, position, the bar), or a scroll step.</summary>
         public static string DevScroll(string arg)
         {
             AccountScroller sc = null;
             foreach (AccountScroller v in Resources.FindObjectsOfTypeAll<AccountScroller>()) if (v != null && v.gameObject.activeInHierarchy) { sc = v; break; }
             if (sc == null) return "no account scroll (open Settings, Account tab)";
             if (arg == "down" || arg == "up") sc.Step1(arg == "down" ? 1 : -1);
-            UIScrollBar bar = null;
-            foreach (UIScrollBar b in Resources.FindObjectsOfTypeAll<UIScrollBar>()) if (b != null && b.name == ScrollName + "_Bar") bar = b;
-            System.Collections.Generic.List<string> other = new System.Collections.Generic.List<string>();
-            foreach (UIWidget w in sc.Grid.GetComponentsInChildren<UIWidget>(true))
-                if (w.panel != sc.Panel) other.Add(w.name + "@" + (w.panel != null ? w.panel.name + "/" + w.panel.clipping : "null") + (w.isVisible ? "" : "(hidden)"));
-            return "outside panel: " + string.Join(", ", other.ToArray()) + "\ncontentMin=" + sc.ContentMin + " clip=" + sc.Panel.baseClipRegion + " offset=" + sc.Panel.clipOffset + " overflow=" + sc.Overflow + " y=" + sc.Position
-                + " bar=" + (bar != null ? "active=" + bar.gameObject.activeInHierarchy + " value=" + bar.value + " size=" + bar.barSize : "none");
+            if (arg == "bottom") sc.MoveTo(1e6f);
+            return sc.Describe();
         }
+
 
         /// <summary>
         /// A copy of the "Enable hints" row under parent, with its own label and value (made once, shown when show is true,
