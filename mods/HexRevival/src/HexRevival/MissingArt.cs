@@ -9,16 +9,19 @@ using UnityEngine;
 namespace HexRevival
 {
     /// <summary>
-    /// Cards whose picture the client cannot load, drawn with the picture of another version of the same card (same
-    /// name and type; its own set and its printed version first) instead of the client's "Error" picture.
+    /// Cards whose picture the client cannot load, drawn with the mod's own picture of the card (assets/art) or,
+    /// without one, with the picture of another version of the same card (same name and type; its own set and its
+    /// printed version first) instead of the client's "Error" picture.
     /// Report: a player's screenshot of the epic Cerulean Mirror Knight (Discord, 2026-11-02). Its bundle in the
     /// client's archive (cardsets/set001/a0001896.ab) holds only the card's sound, no texture; the rare version's
-    /// bundle (a0000076.ab) has both. The 31 alternates of the Doombringer core commons ("Set09_PvP_Core_Commons_alternates")
-    /// name an archive the client does not have (set09_pvp_core_commons.harc); their pictures exist under their
-    /// regular versions (archive breachcorecommonss). Every other card bundle of the client holds its texture (every
-    /// archive read, 2026-11-02). The mod does not read the archives for this: it reacts to the client's failure
-    /// (GoCardBuilder.SetPortraitToError, reached after the atlas, the full texture and the file on disk all failed),
-    /// remembers the card and swaps the picture again whenever the client resets it (GoCardBuilder.UpdateArtOverride).
+    /// bundle (a0000076.ab) has both. The mod carries that alternate art (assets/art/a0001896.png, from the card's
+    /// official image on the HEX Codex, see assets/README.md). The 31 alternates of the Doombringer core commons
+    /// ("Set09_PvP_Core_Commons_alternates") name an archive the client does not have (set09_pvp_core_commons.harc);
+    /// their pictures exist under their regular versions (archive breachcorecommonss). Every other card bundle of the
+    /// client holds its texture (every archive read, 2026-11-02). The mod does not read the archives for this: it
+    /// reacts to the client's failure (GoCardBuilder.SetPortraitToError, reached after the atlas, the full texture and
+    /// the file on disk all failed), remembers the card and swaps the picture again whenever the client resets it
+    /// (GoCardBuilder.UpdateArtOverride).
     /// </summary>
     public static class MissingArt
     {
@@ -26,14 +29,18 @@ namespace HexRevival
         private static readonly FieldInfo s_Override = typeof(GoCardBuilder).GetField("m_ArtOverrideTemplate", Any);
         private static readonly FieldInfo s_Set = typeof(GoCardBuilder).GetField("m_CardSetTemplate", Any);
         private static readonly MethodInfo s_UpdateTexture = typeof(GoCardBuilder).GetMethod("UpdateTexture", Any);
+        private static readonly MethodInfo s_SetCrop = typeof(GoCardBuilder).GetMethod("SetCrop", Any, null, new[] { typeof(Texture2D) }, null);
 
         /// <summary>The cards whose picture failed, with the version tried next (null: no other version is left).</summary>
         private static readonly Dictionary<ResourceId, CardTemplate> s_Missing = new Dictionary<ResourceId, CardTemplate>();
         private static Dictionary<string, List<CardTemplate>> s_ByName;
+        /// <summary>The mod's own pictures by image name (assets/art), loaded once; null when there is none.</summary>
+        private static readonly Dictionary<string, Texture2D> s_Pictures = new Dictionary<string, Texture2D>();
 
         /// <summary>
-        /// GoCardBuilder.SetPortraitToError (prefix): the card's picture failed to load; another version's is tried.
-        /// False when one is tried: the client's "Error" picture is not shown.
+        /// GoCardBuilder.SetPortraitToError (prefix): the card's picture failed to load; the mod's own picture of it
+        /// (assets/art) is shown, else another version's is tried. False when one is shown or tried: the client's
+        /// "Error" picture is not shown.
         /// </summary>
         public static bool BeforeError(GoCardBuilder b)
         {
@@ -42,6 +49,17 @@ namespace HexRevival
                 if (b == null || s_Override == null || s_Set == null || s_UpdateTexture == null) return true;
                 CardTemplate o = s_Override.GetValue(b) as CardTemplate;
                 if (o == null || string.IsNullOrEmpty(o.m_CardImagePath)) return true;
+                Texture2D pic = Picture(o);
+                if (pic != null && s_SetCrop != null)
+                {
+                    if (!s_Missing.ContainsKey(o.m_Id))
+                    {
+                        s_Missing[o.m_Id] = o;   // drawn as is, with the mod's picture
+                        Debug.Log("[HexRevival] [MissingArt] " + o.m_Name + " [" + o.m_CardRarity + ", " + SetName(o) + "]: picture " + o.m_CardImagePath + " not loaded; drawn with the mod's own");
+                    }
+                    s_SetCrop.Invoke(b, new object[] { pic });
+                    return false;
+                }
                 CardTemplate next;
                 if (!s_Missing.TryGetValue(o.m_Id, out next))
                 {
@@ -95,10 +113,42 @@ namespace HexRevival
             for (int i = 0; i < 16 && cur != null; i++)
             {
                 CardTemplate next;
-                if (!s_Missing.TryGetValue(cur.m_Id, out next)) return cur;
+                if (!s_Missing.TryGetValue(cur.m_Id, out next) || next == cur) return cur;   // not failed, or the mod's own picture
                 cur = next;
             }
             return null;
+        }
+
+        /// <summary>
+        /// The mod's own picture of a card (assets/art/&lt;image name&gt;.png, a 512x512 texture laid out like the
+        /// game's, the art in the template's portrait rectangle), loaded once; null when the mod has none.
+        /// </summary>
+        public static Texture2D Picture(CardTemplate t)
+        {
+            if (t == null || string.IsNullOrEmpty(t.m_CardImagePath)) return null;
+            string name = FolderUtils.GetFileNameWithoutPathOrExtension(t.m_CardImagePath).ToLowerInvariant();
+            Texture2D tex;
+            if (s_Pictures.TryGetValue(name, out tex)) return tex;
+            tex = null;
+            try
+            {
+                using (System.IO.Stream st = typeof(MissingArt).Assembly.GetManifestResourceStream("HexRevival.art." + name + ".png"))
+                {
+                    if (st != null)
+                    {
+                        byte[] bytes = new byte[st.Length];
+                        int read = 0;
+                        while (read < bytes.Length) { int n = st.Read(bytes, read, bytes.Length - read); if (n <= 0) break; read += n; }
+                        // As the game loads a picture from disk (ResourceManager.GetTextureAsync).
+                        tex = new Texture2D(0, 0, TextureFormat.RGB24, true) { mipMapBias = -0.5f, filterMode = FilterMode.Bilinear };
+                        if (tex.LoadImage(bytes)) { tex.wrapMode = TextureWrapMode.Clamp; tex.Compress(true); tex.name = name; }
+                        else { UnityEngine.Object.Destroy(tex); tex = null; }
+                    }
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [MissingArt] picture " + name + ": " + e.Message); tex = null; }
+            s_Pictures[name] = tex;
+            return tex;
         }
 
         /// <summary>
@@ -167,7 +217,7 @@ namespace HexRevival
                 if (!Singleton<TemplateManager>.Instance.Cards.TryGetValue(kv.Key, out t) || t == null) continue;
                 CardTemplate r = Resolve(t);
                 o.Add(t.m_Name + " [" + t.m_CardRarity + ", " + SetName(t) + "] " + t.m_CardImagePath + " -> "
-                    + (r != null ? r.m_CardImagePath + " [" + r.m_CardRarity + ", " + SetName(r) + "]" : "none (Error)"));
+                    + (r == t ? "the mod's own picture" : r != null ? r.m_CardImagePath + " [" + r.m_CardRarity + ", " + SetName(r) + "]" : "none (Error)"));
             }
             return s_Missing.Count + " card(s) whose picture failed:\n" + string.Join("\n", o.ToArray());
         }

@@ -20,6 +20,7 @@
   <ItemGroup>
     <Compile Include="..\HexRevival\src\HexRevival\*.cs" />
     <EmbeddedResource Include="..\HexRevival\assets\discord_badge.png" LogicalName="HexRevival.discord_badge.png" />
+    <EmbeddedResource Include="..\HexRevival\assets\art\a0001896.png" LogicalName="HexRevival.art.a0001896.png" />
   </ItemGroup>
 
   <ItemGroup>

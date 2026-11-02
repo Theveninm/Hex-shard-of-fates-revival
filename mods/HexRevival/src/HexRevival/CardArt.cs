@@ -40,7 +40,9 @@ namespace HexRevival
             if (!it.Requested) Request(c, it);
             if (it.Texture == null && it.Failed)
             {
-                // The picture the client cannot load either (MissingArt): another version's picture.
+                // The picture the client cannot load either (MissingArt): the mod's own, else another version's picture.
+                Texture2D pic = MissingArt.Picture(c);
+                if (pic != null) return pic;
                 CardTemplate alt = MissingArt.Replacement(c);
                 if (alt != null && !string.Equals(alt.m_CardImagePath, c.m_CardImagePath, StringComparison.OrdinalIgnoreCase)) return Get(alt, out uv);
             }
