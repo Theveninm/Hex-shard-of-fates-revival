@@ -63,9 +63,10 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
             // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do
             // nothing there and are not shown; its profile information says so, under the user name (user 2026-11-03:
-            // the tab looked incomplete). "Every gem in the campaign" is not shown either (user 2026-11-03: of no use there).
+            // the tab looked incomplete). "Every gem in the campaign" stays: it is about which gems the campaign's deck
+            // editor lists (Gems), not which ones are owned (mornox 2026-11-03: wanted there too, every gem selectable like cards).
             EnsureTextRow(grid, "HexRevival_UnlockAllNote", offline && Saves.Current.UnlockAll, Loc.Get("opt_unlockall_note"), grid.Find("AccountName"));
-            EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline && !Saves.Current.UnlockAll,
+            EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
                 () => Saves.Current != null && Saves.Current.AllGems, v => { if (Saves.Current != null) { Saves.Current.AllGems = v; Saves.SaveCurrent(); } });
             AccountScroll(grid);
         }

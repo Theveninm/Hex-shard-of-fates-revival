@@ -50,7 +50,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Additional items in the store | chosen when the account is created (off by default), changed later in the Settings, Account tab (progression accounts only): the store also sells products the original did not: each Full Set as PvP, PvE or both, the campaign packs and the holiday gift boxes (see the store below); later, items only Kickstarter tiers or events gave | mod choice (user 2026-11-02; PvE full sets: Criesener's idea; campaign packs: Zymmer's proposal) |
 | Gold per platinum | chosen when the account is created (10 by default), changed later in the Settings, Account tab: what sold for platinum (boosters, decks, special packs, Battlegrounds entries) costs that many gold per platinum; with platinum prices it costs the platinum | mod choice (Criesener, 2026-11-01) |
 | Gold prices divided by | chosen when the account is created (1 by default), changed later in the Settings, Account tab: every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it | mod choice (Criesener, 2026-11-01) |
-| Every gem in the campaign | progression accounts only (user 2026-11-03), chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
+| Every gem in the campaign | every account, "unlock everything" ones too (mornox 2026-11-03: every socketable gem selectable, like cards), chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
 | New champion | its race's starter deck (added to the collection and used as the champion's deck) | Game |
 
 Wiki2018 says new accounts got about 250 common and uncommon cards forming a deck per major race:
@@ -305,6 +305,13 @@ meeting, then the repeat dialogue with or without a fortune (Game names, not fil
 first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run). "The New Land" is offered
 once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
 
+Closed ways (the client's map paths are all open; mornox 2026-11-03). Out of the landing shore, Moondust Canyon (to
+Wakuna) and Alachian Flats (to Naagaan) wait for Brutecrown Bluff (Game: Belarius / Takumi at McGinty Coast, "If we
+stand any chance of reaching Wakuna / Naagaan, we have to make sure [the gnolls] aren't going to be a problem"; Video:
+both MyHotStream runs fought nothing else between Chumspike and the end of the dungeon). The Mouth of the Zodiac River,
+the way into the eastern half, opens from Zodiac Coast only once the ship has landed there from the Zodiac Docks (Video:
+both runs fought next to Zodiac Coast months before, and beyond the river only after "Disembark to 33").
+
 Whisper Delta (node 3), Chumspike's first attack: surviving until the "Row Faster" terrain effect lets the champion row
 away ends with "Player successfully escaped" (Video: every run, e.g. KVC part 1 20:34); killing Chumspike (30 health)
 ends with the game's "Player wins battle" conversation instead (Game; never seen on video).
@@ -332,12 +339,15 @@ Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
   voyage (Game: Basic Hull "The Hull of your ship persists across encounters", the Ship Port "When
   running low on hull, you can return here for repairs"; the client reports the battle's end health, +5
   with Repair Crew, and reads a starting health back; Video: KVC Jan 2017). Full again at each new voyage
-  and at Water Town ("The shipwrights of the town offer to repair the damage to your hull.", Game).
+  and at Water Town ("The shipwrights of the town offer to repair the damage to your hull.", Game). The game shows
+  the hull only as the ship's health in battle: the mod also says on screen the hull left after each sea battle won
+  and the Water Town repair (user 2026-11-03).
   MyHotStream (late 2017) shows full hull at every battle, which no talent or ability explains: not
   followed. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
   harbor (Video, same text).
 - Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
-  increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game). The
+  increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game), said
+  on screen when given (the conversation has one answer and no card to choose, Game). The
   Lighthouse gives the card Sea Spirit (Video).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") are given by the harbor master at
