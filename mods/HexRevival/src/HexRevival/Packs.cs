@@ -108,12 +108,12 @@ namespace HexRevival
             {
                 List<CardTemplate> cards = primal ? Primal(set) : Progression.OpenPack(set);
                 foreach (CardTemplate t in cards) r.NewCardInstances.AddRange(Collection.GrantSilently(t.m_Id, 1));
-                // The chest of the pack (a primal pack's is legendary, Src.HexServer).
-                Chest c = NewChest(primal ? ETreasureChestType.Legendary : RollRarity(), set.m_Id);
-                r.NewChestInstances.Add(Bits(c));
-                // A holiday's gift box with the booster (see GiftBoxFor), a second chest in the answer.
+                // The pack's one chest ("Each Booster Pack contains: 12 Commons, 4 Uncommons, 1 Rare or Legendary,
+                // 1 Treasure Chest", Src.Game: BoosterPack_Content_Combined; a primal pack's is legendary, Src.HexServer).
+                // Sometimes a holiday's gift box in its place (see GiftBoxFor), never both (user 2026-11-03).
                 InventoryItemData box = primal ? null : GiftBoxFor(DateTime.Now);
                 if (box != null) { Chest g = NewGiftBox(box); r.NewChestInstances.Add(Bits(g)); s_NewGiftBoxes.Add(g); gifts++; }
+                else r.NewChestInstances.Add(Bits(NewChest(primal ? ETreasureChestType.Legendary : RollRarity(), set.m_Id)));
                 // "Obtained by opening [set] Booster Packs" (Src.HexCodex: Doombringer's): sometimes one of them
                 // (PLACEHOLDER chance), given when the opening is over.
                 if (!primal && UnityEngine.Random.value < BoosterSleeveChance)
@@ -202,10 +202,12 @@ namespace HexRevival
         /// <summary>
         /// The holiday gift boxes (Harvest of Souls, Night of Bells, Feast of Abundance) came with the booster packs opened
         /// during their holiday, not from the store (user 2026-11-02; Src.Game: promo treasure chests without a spin,
-        /// base price 1, the holiday sleeves "Awarded during the [year] [holiday] Holiday"). PLACEHOLDER: one gift box with
-        /// every booster opened during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and outside the holidays one
-        /// booster in 50 brings a random one, so they can be had all year offline.
+        /// base price 1, the holiday sleeves "Awarded during the [year] [holiday] Holiday"). A booster holds one treasure
+        /// chest (Src.Game), so a gift box takes its place (user 2026-11-03: chest kinds were mutually exclusive). How often:
+        /// no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and
+        /// outside the holidays 1 in 50 brings a random one, so they can be had all year offline.
         /// </summary>
+        internal const float HolidayGiftBoxChance = 0.1f;
         internal const float OffSeasonGiftBoxChance = 0.02f;
 
         /// <summary>The gift box a booster opened now comes with (null: none).</summary>
@@ -216,6 +218,7 @@ namespace HexRevival
             List<string> holidays = Sleeves.HolidaysNow(now);
             InventoryItemData box = null;
             foreach (InventoryItemData b in boxes) if (holidays.Contains(SpecialPacks.GiftBoxHoliday(b))) { box = b; break; }
+            if (box != null && UnityEngine.Random.value >= HolidayGiftBoxChance) return null;
             if (box == null && UnityEngine.Random.value < OffSeasonGiftBoxChance) box = boxes[s_Rng.Next(boxes.Count)];
             return box != null && GiftBoxesWanted(box) ? box : null;
         }
