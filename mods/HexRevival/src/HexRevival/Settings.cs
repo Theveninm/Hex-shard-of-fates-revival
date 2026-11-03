@@ -62,8 +62,10 @@ namespace HexRevival
             EnsureRow(row, grid, "HexRevival_PrimalBonus", "opt_primalbonus", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
             // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do
-            // nothing there and are not shown; one line says why (user 2026-11-03: the tab looked incomplete).
-            EnsureTextRow(grid, "HexRevival_UnlockAllNote", offline && Saves.Current.UnlockAll, Loc.Get("opt_unlockall_note"));
+            // nothing there and are not shown; its profile information says so, under the user name (user 2026-11-03:
+            // the tab looked incomplete). "Every gem in the campaign" stays: it is about which gems the campaign's deck
+            // editor lists (Gems), not which ones are owned.
+            EnsureTextRow(grid, "HexRevival_UnlockAllNote", offline && Saves.Current.UnlockAll, Loc.Get("opt_unlockall_note"), grid.Find("AccountName"));
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
                 () => Saves.Current != null && Saves.Current.AllGems, v => { if (Saves.Current != null) { Saves.Current.AllGems = v; Saves.SaveCurrent(); } });
             AccountScroll(grid);
@@ -515,7 +517,7 @@ namespace HexRevival
         /// A line of text under parent (a copy of the Account tab's "User Name" label), kept on the given text:
         /// the example prices follow the lists above as they change.
         /// </summary>
-        private static void EnsureTextRow(Transform parent, string name, bool show, string text)
+        private static void EnsureTextRow(Transform parent, string name, bool show, string text, Transform after = null)
         {
             Transform existing = parent.Find(name);
             if (existing != null)
@@ -532,7 +534,8 @@ namespace HexRevival
             {
                 GameObject copy = UiClone.Copy(src.gameObject, name);
                 copy.SetActive(true);
-                copy.transform.SetAsLastSibling();
+                if (after != null) copy.transform.SetSiblingIndex(after.GetSiblingIndex() + 1);
+                else copy.transform.SetAsLastSibling();
                 UiClone.Strip(copy);
                 UILabel l = copy.GetComponent<UILabel>();
                 // One line across the row (the "User Name" label is narrower and anchored).
