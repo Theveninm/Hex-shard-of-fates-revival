@@ -50,7 +50,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Additional items in the store | chosen when the account is created (off by default), changed later in the Settings, Account tab (progression accounts only): the store also sells products the original did not: each Full Set as PvP, PvE or both, the campaign packs and the holiday gift boxes (see the store below); later, items only Kickstarter tiers or events gave | mod choice (user 2026-11-02; PvE full sets: Criesener's idea; campaign packs: Zymmer's proposal) |
 | Gold per platinum | chosen when the account is created (10 by default), changed later in the Settings, Account tab: what sold for platinum (boosters, decks, special packs, Battlegrounds entries) costs that many gold per platinum; with platinum prices it costs the platinum | mod choice (Criesener, 2026-11-01) |
 | Gold prices divided by | chosen when the account is created (1 by default), changed later in the Settings, Account tab: every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it | mod choice (Criesener, 2026-11-01) |
-| Every gem in the campaign | chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
+| Every gem in the campaign | progression accounts only (user 2026-11-03), chosen when the account is created (off by default), changed later in the game's Settings, Account tab: the campaign deck editor's socket window lists every gem, as the arena does, not only the Standard ones | Game (the window lists Standard gems unless told otherwise; the PvE deck check already allows every gem); mornox |
 | New champion | its race's starter deck (added to the collection and used as the champion's deck) | Game |
 
 Wiki2018 says new accounts got about 250 common and uncommon cards forming a deck per major race:
@@ -762,7 +762,10 @@ set's Wheel of Fate cards, equipment and mercenaries (Zymmer); which version (Su
 mercenary 59 / 5 / 2 (common / uncommon / rare), equipment 10 / 8 / 60, PvE card 64 / 9 / 5 (the Set 1 wheel's
 Lightning, Water and Air Elementals); sleeves: one of the set's wheel sleeves (HexCodex); alternate art: an
 alternate art (epic) card of the set. PLACEHOLDER: the reel colors (red 20%, gold 5%); which alternate art; an
-exclusive reward is one of the wheel's items.
+exclusive reward is one of the wheel's items. A primal chest cannot go higher: with the account option "Primal chest upgrades give cards"
+(on by default, Settings, Account tab; Zymmer's proposal, user 2026-11-03), each upgrade beyond primal gives a random
+PvP card of the chest's set (any rarity, PLACEHOLDER) and a PvE card of its wheel (as the PvE card prize); the chest
+itself is unchanged.
 
 **What a chest holds** (Survey2015, Set 1-3 chests; used for every set). 1 item, 2 for a legendary chest, 3 for a
 primal one (Game: "Legendary and Primal chests will have additional items"; how many PLACEHOLDER). Each item is

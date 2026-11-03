@@ -249,11 +249,12 @@ namespace HexRevival
             y += 80 * S;
             m_Tutorial = Checkbox(new Rect(0, y, w, 86 * S), m_Tutorial, Loc.Get("opt_tutorial"), Loc.Get("opt_tutorial_desc"));
             y += 94 * S;
-            m_AllGems = Checkbox(new Rect(0, y, w, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
-            y += 78 * S;
-            // Progression accounts only (an "unlock everything" account has its gold and gold prices, and no crafting).
+            // Progression accounts only (an "unlock everything" account has its gold and gold prices, no crafting, and
+            // no use for the campaign's extra gems, user 2026-11-03).
             if (!m_Unlock)
             {
+                m_AllGems = Checkbox(new Rect(0, y, w, 66 * S), m_AllGems, Loc.Get("opt_allgems"), Loc.Get("opt_allgems_desc"));
+                y += 78 * S;
                 m_GoldPrices = Checkbox(new Rect(0, y, w, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
                 y += 78 * S;
                 m_Crafting = Checkbox(new Rect(0, y, w, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));

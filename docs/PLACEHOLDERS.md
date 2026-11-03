@@ -187,8 +187,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Packs.cs:321 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
 | Packs.cs:355 | an alternate art of the set (which one: PLACEHOLDER) |
 | Packs.cs:362 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:426 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
-| Packs.cs:500 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:404 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
+| Packs.cs:450 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:524 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |

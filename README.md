@@ -57,6 +57,8 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 - **Crafting** (an account option, off by default): copies of a card beyond 4 and of an equipment beyond 1 break
   down into gems and parts, and missing ones are crafted from them and stardust. Stardust also unlocks a card's
   extended art.
+- **Primal chest upgrades give cards** (an account option, on by default): a Wheel of Fate upgrade on a primal chest,
+  which cannot go higher, gives a random PvP card and a random PvE card of its set (two of each for a double upgrade).
 - **Additional items in the store** (an account option, off by default): the store also sells what the original one
   did not. For now: each Full Set as PvP, PvE (its PvE cards, its chest and Wheel of Fate equipment, its six
   mercenaries and its six sleeves, for players who would rather not open and spin chests) or both, once or x4, the
