@@ -59,6 +59,11 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.Crafting, v => { if (Saves.Current != null) { Saves.Current.Crafting = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_ExtraStore", "opt_extrastore", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.ExtraStore, v => { if (Saves.Current != null) { Saves.Current.ExtraStore = v; Saves.SaveCurrent(); } });
+            EnsureRow(row, grid, "HexRevival_PrimalBonus", "opt_primalbonus", offline && !Saves.Current.UnlockAll,
+                () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
+            // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do
+            // nothing there and are not shown; one line says why (user 2026-11-03: the tab looked incomplete).
+            EnsureTextRow(grid, "HexRevival_UnlockAllNote", offline && Saves.Current.UnlockAll, Loc.Get("opt_unlockall_note"));
             EnsureRow(row, grid, "HexRevival_AllGems", "opt_allgems", offline,
                 () => Saves.Current != null && Saves.Current.AllGems, v => { if (Saves.Current != null) { Saves.Current.AllGems = v; Saves.SaveCurrent(); } });
             AccountScroll(grid);

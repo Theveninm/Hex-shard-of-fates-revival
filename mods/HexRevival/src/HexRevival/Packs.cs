@@ -297,8 +297,8 @@ namespace HexRevival
             {
                 case Outcome.PaidSpin: won.Add("paid re-spin"); break;
                 case Outcome.FreeSpin: won.Add("free re-spin"); break;
-                case Outcome.Upgrade: Upgrade(c, 1); won.Add("upgrade"); if (sym[0] == Eye) c.Spin = EChestSpinStatus.NoSpin; break;   // 3 eyes: the upgrade only
-                case Outcome.DoubleUpgrade: Upgrade(c, 2); won.Add("double upgrade"); break;
+                case Outcome.Upgrade: PrimalBonus(Upgrade(c, 1), set, wheel, r, won); won.Add("upgrade"); if (sym[0] == Eye) c.Spin = EChestSpinStatus.NoSpin; break;   // 3 eyes: the upgrade only
+                case Outcome.DoubleUpgrade: PrimalBonus(Upgrade(c, 2), set, wheel, r, won); won.Add("double upgrade"); break;
                 // Which version of a prize (common, uncommon, rare): Src.Survey2014's counts (Zymmer.Wheel*).
                 case Outcome.Mercenary: Prize(Zymmer.WheelMercenary(wheel) ?? Zymmer.WheelEquipment(wheel), r, won); break;
                 case Outcome.Equipment: Prize(Zymmer.WheelEquipment(wheel), r, won); break;
@@ -350,10 +350,34 @@ namespace HexRevival
         /// A chest's rarity goes up; an upgraded legendary chest "becomes a primal chest", the only way to get one
         /// (Src.Wiki: hextcg.fandom.com "Treasure Chest"; the client knows primal chests and opens them).
         /// </summary>
-        private static void Upgrade(Chest c, int steps)
+        private static int Upgrade(Chest c, int steps)
         {
-            int v = Math.Min((int)ETreasureChestType.Primal, (int)c.Rarity + steps);
+            int target = (int)c.Rarity + steps, v = Math.Min((int)ETreasureChestType.Primal, target);
             if (c.Rarity < ETreasureChestType.Primal) c.Rarity = (ETreasureChestType)v;
+            return Math.Max(0, target - (int)ETreasureChestType.Primal);   // the steps beyond primal
+        }
+
+        /// <summary>
+        /// Upgrades beyond primal (Zymmer's proposal, user 2026-11-03; the account's "primal chest upgrades" option): each
+        /// gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of
+        /// its Wheel of Fate (as the wheel's PvE card prize). The chest's own contents do not change.
+        /// </summary>
+        private static void PrimalBonus(int steps, CardSetTemplate set, string wheel, SpinWheelOfFateResponse r, List<string> won)
+        {
+            if (steps <= 0 || Saves.Current == null || !Saves.Current.PrimalBonus) return;
+            for (int k = 0; k < steps; k++)
+            {
+                Prize(AnyCardOf(set) ?? RareOf(set), r, won);
+                Prize(Zymmer.WheelPveCard(wheel), r, won);
+            }
+        }
+
+        /// <summary>A random ownable card of a set, any rarity (null: none).</summary>
+        private static Loot.Drop AnyCardOf(CardSetTemplate set)
+        {
+            List<CardTemplate> pool = new List<CardTemplate>();
+            foreach (ERarity rarity in new[] { ERarity.Common, ERarity.Uncommon, ERarity.Rare, ERarity.Legendary }) pool.AddRange(Progression.Pool(set, rarity));
+            return pool.Count > 0 ? new Loot.Drop { Card = pool[s_Rng.Next(pool.Count)] } : null;
         }
 
         /// <summary>A prize of the wheel: silently granted, the answer gives it to the client (PlayerProfile.HandleChestUpdate).</summary>
@@ -616,6 +640,22 @@ namespace HexRevival
                 foreach (UIPackContentViewModel vm in UnityEngine.Object.FindObjectsOfType<UIPackContentViewModel>())
                     if (vm.IsVisible()) { if (sub == "flip") vm.FlipRare(); else vm.OnClose(); k++; }
                 return sub + " on " + k + " view(s)";
+            }
+            if (sub == "spin" && parts.Length > 2)
+            {
+                // dev: "packs spin <chest id> [n]" = up to n wheel spins of that chest (server side only, as the well's spin; a failed spin does not stop it), until an upgrade
+                ulong id = ulong.Parse(parts[2]);
+                int n = parts.Length > 3 ? int.Parse(parts[3]) : 1;
+                List<string> outl = new List<string>();
+                for (int k = 0; k < n; k++)
+                {
+                    Chest dc;
+                    if (s_Chests.TryGetValue(id, out dc) && dc.Spin == EChestSpinStatus.NoSpin) dc.Spin = EChestSpinStatus.PaidSpin;   // dev: spun again after a failed spin
+                    SpinWheelOfFateResponse sr = Spin(id);
+                    outl.Add(sr.Error + " " + string.Join("", sr.SpinEntrySymbols.ConvertAll(x => x.ToString()).ToArray()) + " cards " + sr.RewardCards.Count + " items " + sr.RewardedItems.Count);
+                    if (sr.Error != ESpinWheelOfFateError.Ok || sr.SpinEntrySymbols.FindAll(x => x == 7).Count == 3 || sr.SpinEntrySymbols.FindAll(x => x == 4).Count == 3 || sr.SpinEntrySymbols.FindAll(x => x == 2).Count == 3) break;
+                }
+                return string.Join("\n", outl.ToArray());
             }
             if (sub == "give" && parts.Length > 2)
             {

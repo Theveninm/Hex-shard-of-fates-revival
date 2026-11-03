@@ -762,7 +762,10 @@ set's Wheel of Fate cards, equipment and mercenaries (Zymmer); which version (Su
 mercenary 59 / 5 / 2 (common / uncommon / rare), equipment 10 / 8 / 60, PvE card 64 / 9 / 5 (the Set 1 wheel's
 Lightning, Water and Air Elementals); sleeves: one of the set's wheel sleeves (HexCodex); alternate art: an
 alternate art (epic) card of the set. PLACEHOLDER: the reel colors (red 20%, gold 5%); which alternate art; an
-exclusive reward is one of the wheel's items.
+exclusive reward is one of the wheel's items. A primal chest cannot go higher: with the account option "Primal chest upgrades give cards"
+(on by default, Settings, Account tab; Zymmer's proposal, user 2026-11-03), each upgrade beyond primal gives a random
+PvP card of the chest's set (any rarity, PLACEHOLDER) and a PvE card of its wheel (as the PvE card prize); the chest
+itself is unchanged.
 
 **What a chest holds** (Survey2015, Set 1-3 chests; used for every set). 1 item, 2 for a legendary chest, 3 for a
 primal one (Game: "Legendary and Primal chests will have additional items"; how many PLACEHOLDER). Each item is
