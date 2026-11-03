@@ -140,7 +140,7 @@ namespace HexRevival
             i.GoldPrices = unlockAll || goldPrices;
             if (!unlockAll && goldPerPlatinum > 0) i.GoldPerPlatinum = goldPerPlatinum;
             if (!unlockAll && goldDivisor > 0) i.GoldDivisor = goldDivisor;
-            i.AllGems = allGems;
+            i.AllGems = !unlockAll && allGems;
             i.Crafting = !unlockAll && crafting;
             i.ExtraStore = !unlockAll && extraStore;
             Write(i);
