@@ -804,12 +804,31 @@ namespace HexRevival
             // "Your opponent played Mastery of Time." / "Your opponent played a Headless Executioner.": the card is played for
             // the opponent without cost (EncounterModAddCard, collection CastSpells).
             { "masteryoftime", new Challenge { Key = "masteryoftime", Conversation = "Challenge07 - Mastery of Time", Setup = (ss, ai, me) => AddCards(ss, ai, "Mastery of Time", 1, ECardCollections.CastSpells) } },
-            // "You and your opponent each start the game with an Incantation in play": the game's AI-only card "Arena Incantation", played for each.
-            { "incantation", new Challenge { Key = "incantation", Conversation = "Challenge08 - Incantation", Setup = (ss, ai, me) => { AddCards(ss, ai, "Arena Incantation", 1, ECardCollections.CastSpells); AddCards(ss, me, "Arena Incantation", 1, ECardCollections.CastSpells); } } },
+            // "You and your opponent each start the game with an Incantation in play". The game's AI-only card "Arena
+            // Incantation" ("At the start of the game, each champion summons a random card with Incantation in its name")
+            // did nothing: played once the game has started, its start-of-game trigger is past (Zymmer 2026-11-03). Its
+            // effect instead: a random Incantation played for each champion (RandomIncantation).
+            { "incantation", new Challenge { Key = "incantation", Conversation = "Challenge08 - Incantation", Setup = (ss, ai, me) => { AddCards(ss, ai, RandomIncantation(), 1, ECardCollections.CastSpells); AddCards(ss, me, RandomIncantation(), 1, ECardCollections.CastSpells); } } },
             { "prosperity", new Challenge { Key = "prosperity", Conversation = "Challenge09 - Shrine of Prosperity",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Shrine of Prosperity" } } } },
             { "headless", new Challenge { Key = "headless", Conversation = "Challenge10 - Headless Executioner", Setup = (ss, ai, me) => AddCards(ss, ai, "Headless Executioner", 1, ECardCollections.CastSpells) } },
         };
+
+        /// <summary>A random playable card with "Incantation" in its name (Incantation of Fury...), the Arena's own excepted.</summary>
+        private static string RandomIncantation()
+        {
+            List<string> names = new List<string>();
+            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+            {
+                if (t == null || string.IsNullOrEmpty(t.m_Name)) continue;
+                string n = t.m_Name.Trim();
+                if (n.IndexOf("Incantation", StringComparison.OrdinalIgnoreCase) < 0 || n.StartsWith("Arena", StringComparison.OrdinalIgnoreCase) || names.Contains(n)) continue;
+                bool ownable;
+                try { ownable = t.IsOwnable(); } catch { ownable = false; }
+                if (ownable) names.Add(n);
+            }
+            return names.Count > 0 ? names[UnityEngine.Random.Range(0, names.Count)] : "Arena Incantation";
+        }
 
         /// <summary>The game's EncounterModAddCard for a player: cards into a zone (a deck is shuffled after), or played for free (CastSpells).</summary>
         private static void AddCards(StandaloneSession ss, Player p, string name, int amount, ECardCollections zone)

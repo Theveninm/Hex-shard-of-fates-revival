@@ -181,16 +181,15 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
 | Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:167 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:183 | base price 1, the holiday sleeves "Awarded during the [year] [holiday] Holiday"). PLACEHOLDER: one gift box with |
-| Packs.cs:184 | every booster opened during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and outside the holidays one |
-| Packs.cs:206 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
-| Packs.cs:279 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:313 | an alternate art of the set (which one: PLACEHOLDER) |
-| Packs.cs:320 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:362 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
-| Packs.cs:408 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
-| Packs.cs:481 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:189 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:207 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
+| Packs.cs:248 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
+| Packs.cs:321 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:355 | an alternate art of the set (which one: PLACEHOLDER) |
+| Packs.cs:362 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:404 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
+| Packs.cs:450 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:524 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |

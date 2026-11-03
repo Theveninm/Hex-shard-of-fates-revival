@@ -562,9 +562,14 @@ namespace HexRevival
                     ECardUsage usage = ECardUsage.None;
                     List<SessionEventArgs> instances = new List<SessionEventArgs>();
 
-                    if (self.CanPlayCard(card, player))
+                    // "You can play this for free" (Twilight Archon with a Daybreak and a Nightfall, Zymmer 2026-11-03):
+                    // offered with PlayForFree, which the client's play sends as a free play (BattleStatePlayCard.Commit:
+                    // CastTroop/CastSpell... forFree); the engine checks it with CanPlayCard(card, player, true).
+                    bool free = CanPlayForFree(card, player) && self.CanPlayCard(card, player, true);
+                    if (free || self.CanPlayCard(card, player))
                     {
                         usage |= ECardUsage.Play;
+                        if (free) usage |= ECardUsage.PlayForFree;
                         // The client (BattleStatePlayCard / AI) reads:
                         //  - the generic "Play Card" ability: the card's additional costs
                         //    (X, sacrifice, discard... see GetPotentialCostsForAbility);
@@ -770,6 +775,20 @@ namespace HexRevival
                 sb.Append(';');
             }
             return sb.ToString();
+        }
+
+        /// <summary>Whether a card may be played for free now: its own "You can play this for free", or its champion's.</summary>
+        private static bool CanPlayForFree(Card card, Player player)
+        {
+            try
+            {
+                CardContext c = card.GetCardContext();
+                if (c != null && c.GetBool(IntAttrs.OwnerCanPlayForFree)) return true;
+                Card champ = player != null ? player.m_ChampionCard : null;
+                CardContext cc = champ != null ? champ.GetCardContext() : null;
+                return cc != null && cc.GetBool(IntAttrs.CanPlayCardsForFree);
+            }
+            catch { return false; }
         }
 
         /// <summary>Cards for which a "play" option was sent (test bench diagnostics).</summary>
