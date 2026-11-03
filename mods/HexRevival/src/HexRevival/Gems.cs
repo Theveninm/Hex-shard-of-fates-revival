@@ -19,7 +19,7 @@ namespace HexRevival
         {
             if (vm == null || ShowImmortal == null || Saves.Current == null || Saves.IsOnline) return;
             if (Object.FindObjectOfType<UICampaignDeckEditor>() == null) return;
-            ShowImmortal.SetValue(vm, Saves.Current.AllGems && !Saves.Current.UnlockAll);   // progression accounts only (user 2026-11-03)
+            ShowImmortal.SetValue(vm, Saves.Current.AllGems);
         }
     }
 }
