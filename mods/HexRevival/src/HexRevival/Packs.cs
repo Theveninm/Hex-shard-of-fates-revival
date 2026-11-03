@@ -157,10 +157,11 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// A gift box on the client: the promotional chest the game makes of a gift box item (PlayerProfile.
-        /// ProcessNonStandardChests: ChestUtils.CreateChest from the item, with its promotional id). The one made from our
-        /// chest_bits has none, so the Pack Opening screen's Open Multiple found no box like the one chosen and opened
-        /// nothing (UIPackListViewModel.OnOpenMultiplePromoChests, InventoryTreasureChest.IsSameTemplate; Zymmer 2026-11-02).
+        /// A gift box or a campaign pack on the client: the chest the game makes of such an item (PlayerProfile.
+        /// ProcessNonStandardChests, CacheRewards: ChestUtils.CreateChest from the item, with its promotional id and set).
+        /// The one made from our chest_bits has neither, so the Pack Opening screen's Open Multiple found no chest like the
+        /// one chosen and opened nothing (UIPackListViewModel.OnOpenMultiplePromoChests, InventoryTreasureChest.
+        /// IsSameTemplate; Zymmer 2026-11-02 for the gift boxes, user 2026-11-03 for the Howling Plains packs).
         /// </summary>
         private static void AsPromoChest(PlayerProfile profile, Chest c)
         {
@@ -605,6 +606,7 @@ namespace HexRevival
                     PlayerProfile profile = GameClient.Instance.PlayerProfile;
                     profile.AddChestItem(c.Id, Bits(c));
                     profile.AddInventoryItem(new UID(UID.Type.InventoryItem, c.Id), c.Template, 1);
+                    AsPromoChest(profile, c);
                 }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] chest " + id + " to the client: " + e.Message); }
             });
@@ -659,7 +661,7 @@ namespace HexRevival
             {
                 profile.AddChestItem(c.Id, Bits(c));
                 profile.AddInventoryItem(new UID(UID.Type.InventoryItem, c.Id), c.Template.IsValid ? c.Template : BuiltInResources.CommonTreasureChest, 1);
-                if (c.LootPack == GiftBoxLoot) AsPromoChest(profile, c);
+                if (c.LootPack != null) AsPromoChest(profile, c);   // gift boxes and campaign packs: chests of their item
             }
             if (s_Chests.Count > 0) Debug.Log("[HexRevival] [Packs] " + s_Chests.Count + " chest(s) waiting");
         }
