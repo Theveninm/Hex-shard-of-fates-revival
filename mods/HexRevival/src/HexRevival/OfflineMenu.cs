@@ -149,6 +149,7 @@ namespace HexRevival
             if (m_Open && !OnLandingPage()) SetOpen(false);
             if (OnLandingPage()) { EnsureLogoutButton(); Tutorial.OnLandingPage(); }
             else m_LogoutButton = null;
+            StoreIcon();
         }
 
         private void SetOpen(bool open)
@@ -354,18 +355,39 @@ namespace HexRevival
         {
             UILandingPageViewModel vm = UnityEngine.Object.FindObjectOfType<UILandingPageViewModel>();
             // The column has no room for one more button: the Collection button goes (the collection is reachable
-            // from the icon of the top bar).
-            if (vm != null && vm.MenuUI.Collection != null && vm.MenuUI.Collection.gameObject.activeSelf)
-            {
-                vm.MenuUI.Collection.gameObject.SetActive(false);
-                UIGrid g = vm.MenuUI.Collection.transform.parent != null ? vm.MenuUI.Collection.transform.parent.GetComponent<UIGrid>() : null;
-                if (g != null) g.Reposition();
-            }
+            // from the icon of the top bar). An "unlock everything" account has nothing to buy: the Store button goes
+            // instead (user 2026-11-03), and with it the store icon of the top bar (StoreIcon). Its packs (Battlegrounds
+            // prizes) still open from the Stash, which leads to the Pack Opening screen (UIPlayerInventoryViewModel).
+            bool noStore = Saves.Current != null && Saves.Current.UnlockAll && !Saves.IsOnline;
+            if (vm != null) { ShowMenuButton(vm.MenuUI.Collection, noStore); ShowMenuButton(vm.MenuUI.Store, !noStore); }
             if (vm == null || vm.MenuUI.Campaign == null) return;
             DuelingPit.OpenIfAsked(vm);
             // Red, as a cancel button.
             m_LogoutButton = LandingButton(vm, m_LogoutButton, "HexRevival_ChangeAccount", "switch_account", "switch_account_tip",
                 new Color(1f, 0.55f, 0.5f), new Color(1f, 0.72f, 0.68f), new Color(0.8f, 0.42f, 0.38f), ChangeAccount);
+        }
+
+        private static void ShowMenuButton(UIButton b, bool show)
+        {
+            if (b == null || b.gameObject.activeSelf == show) return;
+            b.gameObject.SetActive(show);
+            UIGrid g = b.transform.parent != null ? b.transform.parent.GetComponent<UIGrid>() : null;
+            if (g != null) g.Reposition();
+        }
+
+        private GameObject m_StoreIcon;
+        private float m_NextStoreIcon;
+
+        /// <summary>The store icon of the top bar (Anchor_L/Icon_Store): hidden on an "unlock everything" account, see EnsureLogoutButton.</summary>
+        private void StoreIcon()
+        {
+            if (Time.realtimeSinceStartup < m_NextStoreIcon) return;
+            m_NextStoreIcon = Time.realtimeSinceStartup + 0.5f;
+            bool show = Saves.Current == null || !Saves.Current.UnlockAll || Saves.IsOnline;
+            // GameObject.Find sees only active objects: the hidden one stays known for when it must come back.
+            GameObject found = GameObject.Find("Anchor_L/Icon_Store");
+            if (found != null) m_StoreIcon = found;
+            if (m_StoreIcon != null && m_StoreIcon.activeSelf != show) m_StoreIcon.SetActive(show);
         }
 
         /// <summary>A copy of the Campaign button, colored, added at the end of the main menu's column (once).</summary>

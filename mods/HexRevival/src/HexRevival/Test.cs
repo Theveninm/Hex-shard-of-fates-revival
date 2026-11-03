@@ -167,6 +167,7 @@ namespace HexRevival
                 go.AddComponent<PackContents>();
                 go.AddComponent<StoreVariants>();
                 go.AddComponent<BattlegroundsScore>();
+                go.AddComponent<BattlegroundsSets>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)

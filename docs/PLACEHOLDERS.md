@@ -156,14 +156,14 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Arena.cs:796 | soon as its tunneling count is reached (0 for a card without Tunneling). Which card: PLACEHOLDER (a random troop |
 | Battlegrounds.cs:28 | draft timer are PLACEHOLDER (not known). The client's own screens are driven through its TournamentManager: |
 | Battlegrounds.cs:48 | PLACEHOLDER |
-| Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary> |
+| Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters until the player chooses others (BoosterChoice; the server chose the product).</summary> |
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:238 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
-| Battlegrounds.cs:997 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:1109 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:1147 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1193 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:243 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
+| Battlegrounds.cs:1084 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:1219 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:1257 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1303 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
@@ -181,15 +181,15 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
 | Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:189 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:207 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
-| Packs.cs:248 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
-| Packs.cs:321 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:355 | an alternate art of the set (which one: PLACEHOLDER) |
-| Packs.cs:362 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:404 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
-| Packs.cs:450 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
-| Packs.cs:524 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:190 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
+| Packs.cs:208 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
+| Packs.cs:249 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
+| Packs.cs:322 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:356 | an alternate art of the set (which one: PLACEHOLDER) |
+| Packs.cs:363 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:405 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
+| Packs.cs:451 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:525 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
