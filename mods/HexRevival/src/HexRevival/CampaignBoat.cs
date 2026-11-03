@@ -191,7 +191,13 @@ namespace HexRevival
             if (evt == "boat_fail_shown") { Quests.SetFlag(champ, "boat:failed", null); return true; }
             if (active == null) return false;
             // Water Town: "The shipwrights of the town offer to repair the damage to your hull." (Src.Game)
-            if (evt == "conv_done" && active.Id == WaterTown) { Quests.SetFlag(champ, HullFlag, null); Debug.Log("[HexRevival] [Campaign] Water Town repairs the hull"); }
+            if (evt == "conv_done" && active.Id == WaterTown)
+            {
+                // The game says it only in the conversation and shows the hull only in battle: said on screen (user 2026-11-03).
+                if (Quests.Flag(champ, HullFlag) != null) Notices.Show(Loc.Get("ship_hull_repaired", MaxHull(champ)));
+                Quests.SetFlag(champ, HullFlag, null);
+                Debug.Log("[HexRevival] [Campaign] Water Town repairs the hull");
+            }
             if (evt == "conv_done" && active.Id == Harbor && Quests.Flag(champ, "boat:name") != null && !st.Completed.Contains(Harbor))
             {
                 // Naming conversation done: the talent window opens next (the location stays active).
@@ -336,6 +342,8 @@ namespace HexRevival
             if (!won) { Quests.SetFlag(champ, "boat:sunk", "1"); Quests.SetFlag(champ, HullFlag, null); return; }
             if (s_EndHealth > 0) Quests.SetFlag(champ, HullFlag, Math.Min(s_EndHealth, MaxHull(champ)).ToString());
             Debug.Log("[HexRevival] [Campaign] sea battle won, end health " + s_EndHealth + ", hull kept " + (Quests.Flag(champ, HullFlag) ?? "none"));
+            // The hull kept for the next sea battle (Repair Crew's 5 included), which the game shows only once that battle starts.
+            Notices.Show(Loc.Get("ship_hull_left", Hull(champ), MaxHull(champ)));
         }
 
         private static void ResetShipBattle() { s_HullApplied = false; s_EndHealth = -1; }

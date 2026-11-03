@@ -339,7 +339,9 @@ Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
   voyage (Game: Basic Hull "The Hull of your ship persists across encounters", the Ship Port "When
   running low on hull, you can return here for repairs"; the client reports the battle's end health, +5
   with Repair Crew, and reads a starting health back; Video: KVC Jan 2017). Full again at each new voyage
-  and at Water Town ("The shipwrights of the town offer to repair the damage to your hull.", Game).
+  and at Water Town ("The shipwrights of the town offer to repair the damage to your hull.", Game). The game shows
+  the hull only as the ship's health in battle: the mod also says on screen the hull left after each sea battle won
+  and the Water Town repair (user 2026-11-03).
   MyHotStream (late 2017) shows full hull at every battle, which no talent or ability explains: not
   followed. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
   harbor (Video, same text).
