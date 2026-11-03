@@ -529,8 +529,8 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Forfeit (deck builder) | the run ends, the prize of the matches won is given, and the game goes back to the tournament list with its results window (until 1.2.12 the screen stayed dark behind a loading circle: the client waits for the server to send it back) | Game (UIDeckBuilderVM.LeaveTournamentViaForfeit) |
 | Ownership check | sealed and draft decks are the tournament's pool and the mod's basic shards: not checked against the collection (until 1.2.12 they were refused: "You don't own everything in this deck: 20x Blood Shard..."); the constructed gauntlet's deck is checked as any deck | - |
 | Entry fees | constructed 2,000 gold, sealed 12,000 (6 boosters), draft 6,000 (3 boosters) | PLACEHOLDER |
-| Prizes | one booster per match won, unopened in the inventory (until 1.2.12 opened at once, their cards listed in the results window, which read as the drafted cards); the drafted or sealed cards are the player's from the end of the draft / the entry and are not shown as a prize | PLACEHOLDER |
-| Boosters of sealed and draft | Doombringer (the last set) | PLACEHOLDER: the server chose the product |
+| Prizes | one booster per match won, unopened in the inventory (until 1.2.12 opened at once, their cards listed in the results window, which read as the drafted cards), of the run's sets in turn (Doombringer for the constructed gauntlet); the drafted or sealed cards are the player's from the end of the draft / the entry and are not shown as a prize | PLACEHOLDER |
+| Boosters of sealed and draft | chosen on the Battlegrounds screen before joining, any of the 9 booster sets: one per round for the draft, one for the 6 sealed boosters; Doombringer (the last set) until chosen; kept for the next runs, fixed for a run once joined | mod choice (Stuie 2026-11-03); the default is a PLACEHOLDER: the server chose the product |
 | Basic shards in a limited pool | 20 of each | PLACEHOLDER |
 | Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (see AI opponents) | PLACEHOLDER (timer); the passing order is the usual one |
 | Opponents | constructed: the opponent pack (see AI opponents); draft: another drafter's picks; sealed: a pool of 6 boosters | PLACEHOLDER |
@@ -710,6 +710,9 @@ Onslaught, The Transcended and Vennen deck sleeves, Prodigen, Sir Pies, Animated
 (mornox), so they are never given.
 
 ## Store
+
+An "unlock everything" account has nothing to buy: its main menu shows Collection instead of Store, and the top bar
+has no store icon (user 2026-11-03). Packs it receives (Battlegrounds prizes) open from the Stash.
 
 The client sorts the products into its four tabs. Platinum cannot be earned offline, so what sold for
 platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).

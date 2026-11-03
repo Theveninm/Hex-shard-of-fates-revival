@@ -59,7 +59,7 @@ namespace HexRevival
                            GamesPerMatch = 3, MaxWins = 3, MaxLosses = 3, MaxMatches = 3, GoldFee = 6000, Boosters = 3 },
         };
 
-        /// <summary>PLACEHOLDER: the limited gauntlets use the last set's boosters (the server chose the product).</summary>
+        /// <summary>PLACEHOLDER: the limited gauntlets use the last set's boosters until the player chooses others (BoosterChoice; the server chose the product).</summary>
         private const string BoosterName = "Doombringer Booster Pack";
         /// <summary>PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary>
         private const int BasicShardsPerKind = 20;
@@ -96,6 +96,8 @@ namespace HexRevival
             public List<card_instance_bits> PackShown;
             public ulong PackId;
             public int Round, Pick;
+            /// <summary>The set of each booster (draft: per round; sealed: the 6 opened), chosen at the entry. Null before 1.2.17: the default booster.</summary>
+            public List<string> Sets;
         }
 
         private class SealedOpponent
@@ -109,6 +111,9 @@ namespace HexRevival
             public ulong NextInstance = 7000000000000UL;
             public List<Run> Runs = new List<Run>();
             public LadderRecord Ladder = new LadderRecord();
+            /// <summary>The player's choice of boosters (set ids): the draft's, one per round, and the sealed pool's (see BoosterChoice).</summary>
+            public List<string> DraftSets = new List<string>();
+            public string SealedSet;
         }
 
         private static Store s_Store;
@@ -224,7 +229,7 @@ namespace HexRevival
             d.Players = new string[0];
             d.tournamentFees = new Dictionary<int, TournamentEntryInfo> { { 0, FeeInPlatinum ? new TournamentEntryInfo { platCost = HexRevival.Store.PlatinumOf(g.GoldFee) } : new TournamentEntryInfo { goldCost = HexRevival.Store.GoldOfPlatinum(HexRevival.Store.PlatinumOf(g.GoldFee)) } } };
             d.tournamentRewards = new TournamentRewardCollection();
-            InventoryItemData booster = Booster();
+            InventoryItemData booster = (g.Kind != Kind.Constructed ? BoosterOf(SetById(ChosenSets(g)[0])) : null) ?? Booster();
             if (booster != null)
                 for (int w = 1; w <= g.MaxWins; w++)
                 {
@@ -250,6 +255,86 @@ namespace HexRevival
             InventoryCardPack p = Booster() as InventoryCardPack;
             CardSetTemplate set;
             return p != null && Singleton<TemplateManager>.Instance.CardSets.TryGetValue(p.m_SetId, out set) ? set : null;
+        }
+
+        // ------------------------------------------------------------------
+        // The boosters' sets (Stuie 2026-11-03: "a drop-down ... that allows picking the set(s) for a draft")
+        // ------------------------------------------------------------------
+
+        /// <summary>The sets a limited gauntlet can use: the 9 booster sets, in order (Shards of Fate ... Doombringer).</summary>
+        internal static List<CardSetTemplate> SetChoices()
+        {
+            List<CardSetTemplate> res = SpecialPacks.BoosterSets();
+            res.Sort((a, b) => Zymmer.SetNumber(a).CompareTo(Zymmer.SetNumber(b)));
+            return res;
+        }
+
+        private static CardSetTemplate SetById(string id)
+        {
+            CardSetTemplate set;
+            return !string.IsNullOrEmpty(id) && Singleton<TemplateManager>.Instance.CardSets.TryGetValue(new ResourceId(id), out set) ? set : null;
+        }
+
+        /// <summary>The set of a run's booster i (the default booster's for a run started before the choice existed).</summary>
+        private static CardSetTemplate SetOf(Run r, int i)
+        {
+            CardSetTemplate set = r.Sets != null && i >= 0 && i < r.Sets.Count ? SetById(r.Sets[i]) : null;
+            return set ?? BoosterSet();
+        }
+
+        /// <summary>The booster pack of a set (its "... Booster Pack"), null if none.</summary>
+        private static InventoryItemData BoosterOf(CardSetTemplate set)
+        {
+            if (set == null) return null;
+            foreach (InventoryItemData i in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+            {
+                InventoryCardPack p = i as InventoryCardPack;
+                if (p != null && p.m_SetId == set.m_Id && p.m_Name != null && p.m_Name.EndsWith(" Booster Pack")) return p;
+            }
+            return null;
+        }
+
+        /// <summary>The sets the next run of a gauntlet opens, one per booster: the player's choice, else the default booster's.</summary>
+        private static List<string> ChosenSets(Gauntlet g)
+        {
+            List<string> res = new List<string>();
+            CardSetTemplate def = BoosterSet();
+            if (Data.DraftSets == null) Data.DraftSets = new List<string>();   // a save from before 1.2.17
+            for (int i = 0; i < g.Boosters; i++)
+            {
+                string id = g.Kind == Kind.Draft ? (i < Data.DraftSets.Count ? Data.DraftSets[i] : null) : Data.SealedSet;
+                CardSetTemplate set = SetById(id) ?? def;
+                res.Add(set != null ? set.m_Id.ToString() : null);
+            }
+            return res;
+        }
+
+        /// <summary>
+        /// The booster choices shown for a gauntlet (the set of each slot: draft one per round, sealed one for the 6),
+        /// null for a constructed gauntlet or while a run is in progress (its boosters are already chosen).
+        /// </summary>
+        internal static List<CardSetTemplate> BoosterChoice(ulong tournamentId)
+        {
+            Gauntlet g = Find(tournamentId);
+            if (g == null || g.Kind == Kind.Constructed || RunOf(tournamentId) != null) return null;
+            List<string> ids = ChosenSets(g);
+            List<CardSetTemplate> res = new List<CardSetTemplate>();
+            for (int i = 0; i < (g.Kind == Kind.Draft ? ids.Count : 1); i++) res.Add(SetById(ids[i]));
+            return res;
+        }
+
+        internal static void ChooseBooster(ulong tournamentId, int slot, CardSetTemplate set)
+        {
+            Gauntlet g = Find(tournamentId);
+            if (g == null || set == null) return;
+            if (g.Kind == Kind.Sealed) Data.SealedSet = set.m_Id.ToString();
+            else
+            {
+                while (Data.DraftSets.Count < g.Boosters) Data.DraftSets.Add(null);
+                Data.DraftSets[slot] = set.m_Id.ToString();
+            }
+            Save();
+            Debug.Log("[HexRevival] [Battlegrounds] " + g.Name + " booster " + (slot + 1) + ": " + set.m_Name);
         }
 
         /// <summary>The run as the client's tournament: info, and the player's record (IsRegisteredInTournament).</summary>
@@ -338,6 +423,7 @@ namespace HexRevival
         private static Run Start(Gauntlet g, UID deckId)
         {
             Run r = new Run { TournamentId = g.Id, PlayerId = NewInstanceId() };
+            if (g.Kind != Kind.Constructed) r.Sets = ChosenSets(g);
             r.Deck = new deck_bits();
             r.Deck.Id = NewInstanceId();
             r.Deck.DeckName = Localization.Get(g.Name);
@@ -355,9 +441,8 @@ namespace HexRevival
                     break;
                 case Kind.Sealed:
                     // "Entering this tournament will open 6 booster packs [...] You will get to keep all the cards you opened."
-                    CardSetTemplate set = BoosterSet();
                     for (int i = 0; i < g.Boosters; i++)
-                        foreach (CardTemplate t in Progression.OpenPack(set)) r.Deck.CardsInSideboard.Add(Instance(t.m_Id));
+                        foreach (CardTemplate t in Progression.OpenPack(SetOf(r, i))) r.Deck.CardsInSideboard.Add(Instance(t.m_Id));
                     Keep(r.Deck.CardsInSideboard);
                     AddBasicShards(r.Deck);
                     break;
@@ -490,7 +575,7 @@ namespace HexRevival
 
         private static void OpenDraftRound(Run r)
         {
-            CardSetTemplate set = BoosterSet();
+            CardSetTemplate set = SetOf(r, r.Round);
             r.Packs.Clear();
             for (int s = 0; s < DraftSeats; s++)
             {
@@ -663,7 +748,7 @@ namespace HexRevival
                 {
                     AiConfig.AiPlayer p = PickPlayer();
                     SealedOpponent so = new SealedOpponent { Player = p != null ? p.Name : "AI" };
-                    for (int i = 0; i < 6; i++) foreach (CardTemplate t in Progression.OpenPack(BoosterSet())) so.Pool.Add(t.m_Id);
+                    for (int i = 0; i < 6; i++) foreach (CardTemplate t in Progression.OpenPack(SetOf(r, i))) so.Pool.Add(t.m_Id);
                     r.SealedOpponents.Add(so);
                     Save();
                 }
@@ -984,9 +1069,11 @@ namespace HexRevival
             // sealed cards are the player's since the draft / the entry (Keep), not shown as a prize.
             List<ResourceId> cards = new List<ResourceId>();
             List<ResourceId> items = new List<ResourceId>();
-            InventoryItemData booster = Booster();
-            for (int i = 0; booster != null && i < PrizeBoosters(r.Wins); i++)
+            for (int i = 0; i < PrizeBoosters(r.Wins); i++)
             {
+                // The prizes follow the run's boosters in turn (a constructed run: the default booster).
+                InventoryItemData booster = BoosterOf(r.Sets != null && r.Sets.Count > 0 ? SetOf(r, i % r.Sets.Count) : null) ?? Booster();
+                if (booster == null) break;
                 inventory_bits b = Inventory.GrantSilently(booster.m_Id);
                 if (b == null) continue;
                 try { GameClient.Instance.PlayerProfile.AddInventoryItem(b); } catch (Exception e) { Debug.LogWarning("[HexRevival] [Battlegrounds] prize: " + e.Message); }
@@ -1035,7 +1122,7 @@ namespace HexRevival
             });
         }
 
-        /// <summary>Dev: "bg [state] | bg autodeck &lt;id&gt; (a 40-card deck from the pool) | bg play &lt;id&gt; (Find Match)".</summary>
+        /// <summary>Dev: "bg [state] | bg sets &lt;id&gt; [slot set] | bg autodeck &lt;id&gt; (a 40-card deck from the pool) | bg play &lt;id&gt; (Find Match)".</summary>
         public static string Command(string[] parts)
         {
             string sub = parts.Length > 1 ? parts[1] : "state";
@@ -1047,8 +1134,31 @@ namespace HexRevival
                     string res = "ladder " + Data.Ladder.ConstructedStars + " stars";
                     foreach (Run x in Data.Runs)
                         res += "\n" + x.TournamentId + ": " + x.Wins + "-" + x.Losses + " (games " + x.GameWins + "-" + x.GameLosses + "), deck " + x.Deck.CardsInDeck.Count + " + " + x.Deck.CardsInSideboard.Count
-                            + (x.Packs != null ? ", draft round " + x.Round + " pick " + x.Pick : "");
+                            + (x.Packs != null ? ", draft round " + x.Round + " pick " + x.Pick : "")
+                            + (x.Sets != null ? ", sets " + string.Join(" / ", x.Sets.ConvertAll(sid => { CardSetTemplate cs = SetById(sid); return cs != null ? cs.m_Name : "?"; }).ToArray()) : "");
                     return res;
+                case "start":
+                    // dev: "bg start <id>" = a limited run started without the fee (its packs' and pool's sets listed)
+                    Gauntlet sg = Find(id);
+                    if (sg == null || sg.Kind == Kind.Constructed) return "not a limited gauntlet";
+                    Run sr = Start(sg, new UID());
+                    Dictionary<string, int> bySet = new Dictionary<string, int>();
+                    List<ResourceId> cards = sr.Packs != null ? sr.Packs[0] : new List<card_instance_bits>(sr.Deck.CardsInSideboard).ConvertAll(c => c.TemplateID);
+                    foreach (ResourceId c in cards)
+                    {
+                        CardTemplate ct = Singleton<TemplateManager>.Instance.GetCardTemplate(c);
+                        CardSetTemplate cs = ct != null ? SetById(ct.m_SetId.ToString()) : null;
+                        string k = cs != null ? cs.m_Name : "?";
+                        bySet[k] = (bySet.ContainsKey(k) ? bySet[k] : 0) + 1;
+                    }
+                    List<string> o = new List<string>();
+                    foreach (KeyValuePair<string, int> kv in bySet) o.Add(kv.Key + " x" + kv.Value);
+                    return "started, " + (sr.Packs != null ? "first pack: " : "pool: ") + string.Join(", ", o.ToArray());
+                case "sets":
+                    // dev: "bg sets <id> <slot 1-3> <set number 1-9>" = the booster chooser's choice; "bg sets <id>" lists them
+                    if (parts.Length > 4) ChooseBooster(id, int.Parse(parts[3]) - 1, Zymmer.SetOfNumber(int.Parse(parts[4])));
+                    List<CardSetTemplate> ch = BoosterChoice(id);
+                    return ch == null ? "no choice for " + id : string.Join(" / ", ch.ConvertAll(cs => cs != null ? cs.m_Name : "?").ToArray());
                 case "autodeck":
                     if (r == null) return "no run " + id;
                     List<card_instance_bits> all = new List<card_instance_bits>(r.Deck.CardsInDeck);
@@ -1210,6 +1320,87 @@ namespace HexRevival
     }
 
     /// <summary>Draws Battlegrounds.MatchScore left of the gauntlet deck screen's RECORD / WINS-LOSSES frame.</summary>
+    /// <summary>
+    /// The Draft and Sealed gauntlets' booster sets, chosen on the Battlegrounds screen before joining (Stuie 2026-11-03):
+    /// one button per draft round (one for the sealed pool's 6 boosters) above "Configure the AIs"; a click lists the sets.
+    /// </summary>
+    public class BattlegroundsSets : MonoBehaviour
+    {
+        private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
+        private ulong m_Id;
+        private List<CardSetTemplate> m_Slots;
+        private int m_Open = -1;
+        private Rect m_Panel, m_List;
+        private float m_Next;
+
+        private void Update()
+        {
+            if (Time.realtimeSinceStartup >= m_Next)
+            {
+                m_Next = Time.realtimeSinceStartup + 0.25f;
+                m_Slots = null;
+                try
+                {
+                    if (!AiDecksWindow.IsOpen && !OfflineMenu.IsOpen && Saves.Current != null && !Saves.IsOnline
+                        && GameClient.Instance.StateManager.CurrentGameState == EGameState.Tournament)
+                    {
+                        UITournamentPendingViewModel vm = FindObjectOfType<UITournamentPendingViewModel>();
+                        UITournamentDescContext sel = vm != null && vm.m_Context != null ? vm.m_Context.SelectedTournament : null;
+                        if (sel != null && sel.m_TournamentDesc != null)
+                        {
+                            if (m_Id != sel.m_TournamentDesc.TournamentID) m_Open = -1;
+                            m_Id = sel.m_TournamentDesc.TournamentID;
+                            m_Slots = Battlegrounds.BoosterChoice(m_Id);
+                        }
+                    }
+                }
+                catch { m_Slots = null; }
+            }
+            if (m_Slots == null) { m_Open = -1; m_Block.Release(); m_Panel = m_List = new Rect(); return; }
+            m_Block.Update(false, m_Panel, m_List);
+        }
+
+        private void OnGUI()
+        {
+            if (m_Slots == null) return;
+            float S = GameSkin.Scale;
+            GUI.depth = -900;
+            float w = 290 * S, rowH = 40 * S, gap = 6 * S, head = 30 * S;
+            float h = head + m_Slots.Count * (rowH + gap) + 8 * S;
+            // above the "Configure the AIs" button (AiButton: bottom right, 112 px from the bottom)
+            m_Panel = new Rect(Screen.width - 14 * S - w, Screen.height - 120 * S - h, w, h);
+            GUI.DrawTexture(m_Panel, GameSkin.Solid(new Color(0, 0, 0, 0.75f)));
+            GameSkin.Sprite(m_Panel, "A_Frames", "Frame_Inner");
+            GameSkin.Label(new Rect(m_Panel.x + 10 * S, m_Panel.y + 4 * S, w - 20 * S, head - 4 * S),
+                Loc.Get(m_Slots.Count > 1 ? "bg_draft_sets" : "bg_sealed_set"), GameSkin.Style("title", 16, GameSkin.Gold, TextAnchor.MiddleCenter));
+            for (int i = 0; i < m_Slots.Count; i++)
+            {
+                Rect b = new Rect(m_Panel.x + 8 * S, m_Panel.y + head + i * (rowH + gap), w - 16 * S, rowH);
+                string name = m_Slots[i] != null ? m_Slots[i].m_Name : "?";
+                string text = m_Slots.Count > 1 ? Loc.Get("bg_pack_n", i + 1, name) : name;
+                if (GameSkin.GoldButton(b, text + " \u25BE", true, 13)) m_Open = m_Open == i ? -1 : i;
+            }
+            m_List = new Rect();
+            if (m_Open < 0 || m_Open >= m_Slots.Count) return;
+            List<CardSetTemplate> sets = Battlegrounds.SetChoices();
+            float lw = 260 * S, lh = sets.Count * (34 * S + 2 * S) + 10 * S;
+            m_List = new Rect(m_Panel.x - lw - 6 * S, Mathf.Max(60 * S, m_Panel.yMax - lh), lw, lh);
+            GUI.DrawTexture(m_List, GameSkin.Solid(new Color(0, 0, 0, 0.85f)));
+            GameSkin.Sprite(m_List, "A_Frames", "Frame_Inner");
+            for (int k = 0; k < sets.Count; k++)
+            {
+                Rect r = new Rect(m_List.x + 5 * S, m_List.y + 5 * S + k * 36 * S, lw - 10 * S, 34 * S);
+                bool cur = m_Slots[m_Open] != null && m_Slots[m_Open].m_Id == sets[k].m_Id;
+                if (GameSkin.Tab(r, sets[k].m_Name, cur, 15))
+                {
+                    Battlegrounds.ChooseBooster(m_Id, m_Open, sets[k]);
+                    m_Open = -1;
+                    m_Next = 0;
+                }
+            }
+        }
+    }
+
     public class BattlegroundsScore : MonoBehaviour
     {
         private float m_Next;
