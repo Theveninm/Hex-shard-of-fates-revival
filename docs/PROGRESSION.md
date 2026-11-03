@@ -305,6 +305,13 @@ meeting, then the repeat dialogue with or without a fortune (Game names, not fil
 first text (Video: still shown after the Kraken; its "post-Kraken" text appears in no run). "The New Land" is offered
 once the Kraken quest is done (Game: its start dialogue thanks the champion for the Kraken; mornox).
 
+Closed ways (the client's map paths are all open; mornox 2026-11-03). Out of the landing shore, Moondust Canyon (to
+Wakuna) and Alachian Flats (to Naagaan) wait for Brutecrown Bluff (Game: Belarius / Takumi at McGinty Coast, "If we
+stand any chance of reaching Wakuna / Naagaan, we have to make sure [the gnolls] aren't going to be a problem"; Video:
+both MyHotStream runs fought nothing else between Chumspike and the end of the dungeon). The Mouth of the Zodiac River,
+the way into the eastern half, opens from Zodiac Coast only once the ship has landed there from the Zodiac Docks (Video:
+both runs fought next to Zodiac Coast months before, and beyond the river only after "Disembark to 33").
+
 Whisper Delta (node 3), Chumspike's first attack: surviving until the "Row Faster" terrain effect lets the champion row
 away ends with "Player successfully escaped" (Video: every run, e.g. KVC part 1 20:34); killing Chumspike (30 health)
 ends with the game's "Player wins battle" conversation instead (Game; never seen on video).
@@ -337,7 +344,8 @@ Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
   followed. A sea battle lost sinks the ship: the game's "Your boat has sunk!" message, back to the
   harbor (Video, same text).
 - Coralcove Rock (once per champion, Video): the Mermaid's Blessing, "Your starting hand size is
-  increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game). The
+  increased by 1" for the next battle: the game's "Mermaid's Blessing" effect card (8 cards, checked in game), said
+  on screen when given (the conversation has one answer and no card to choose, Game). The
   Lighthouse gives the card Sea Spirit (Video).
 - Sea battles are fought again on each voyage. The three sea quests ("Pirates of the Alachian",
   "Stormwatch", "Lobster Tale": "Must defeat all 3 in one voyage") are given by the harbor master at

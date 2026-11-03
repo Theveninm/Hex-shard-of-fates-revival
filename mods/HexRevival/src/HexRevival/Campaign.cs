@@ -609,6 +609,49 @@ namespace HexRevival
             }
         }
 
+        /// <summary>
+        /// AZ2's closed ways (no conversation closes them; the map's paths are open in the client's data):
+        /// - Out of the landing shore (River of Whispers, Whisper Delta, McGinty Coast): Moondust Canyon (Node005, to Wakuna)
+        ///   and Alachian Flats (Node032, to Naagaan) wait for Brutecrown Bluff. Src.Game: Belarius / Takumi at McGinty Coast,
+        ///   "If we stand any chance of reaching Wakuna / Naagaan, we have to make sure [the gnolls] aren't going to be a
+        ///   problem". Src.Video: both MyHotStream runs fought the crocodile and Chumspike, then the whole dungeon, before any
+        ///   other battle (Underworld 2017-03-02 to 03-17, then Alachian Flats 03-23; Ardent 2017-06-19 to 07-06, then Wakuna
+        ///   Ridge 07-10). mornox 2026-11-03: "maybe the Gnoll dungeon".
+        /// - The Mouth of the Zodiac River (Node033, the eastern half) from Zodiac Coast (Node031): only once the ship has
+        ///   landed there from the Zodiac Docks ("The New Land"). Src.Video: both runs fought at Zodiac Coast's neighbours
+        ///   months before, but beyond the river only after the landing (Underworld: Portabella South 2017-03-31, "Disembark
+        ///   to 33" then Starfire Tributary 2017-08-31; Ardent: Portabella South 2017-08-29, Starfire Tributary 2017-12-12).
+        ///   mornox 2026-11-03: "the bridge you need to open with your boat ... is already opened from the start".
+        /// A location already done, the champion's own, or reached from its far side stays shown (saves made before).
+        /// </summary>
+        private static bool ClosedWay(CampState st, MapNode n)
+        {
+            string near;
+            if (n.Z != AZ2 || !ClosedWayNear.TryGetValue(n.Id, out near) || st.Completed.Contains(n.Id) || st.LastNode == n.Id) return false;
+            foreach (string m in Neighbours(st.Z, n.Id)) if (m != near && st.Completed.Contains(m)) return false;
+            return n.Id == "Node033" ? !Landed(st.ChampId) : !GnollsDealtWith(st.ChampId);
+        }
+
+        /// <summary>The closed ways: the location behind, and the side it is closed from.</summary>
+        private static readonly Dictionary<string, string> ClosedWayNear = new Dictionary<string, string> { { "Node005", "Node001" }, { "Node032", "Node057" }, { "Node033", "Node031" } };
+
+        private static bool GnollsDealtWith(ulong champ)
+        {
+            return Quests.Flag(champ, "dungeon:b730906f-a446-4fe0-869a-147857e4396e") != null || Quests.DoneLoc(champ, "q_brutecrown_bluff", "Step1");
+        }
+
+        /// <summary>The ship landed at the Mouth of the Zodiac River (the Zodiac Docks' "Disembark", see ShipEvent).</summary>
+        private static bool Landed(ulong champ)
+        {
+            return Quests.Flag(champ, "boat:landed") != null || Quests.DoneLoc(champ, "q_the_new_land", "Step2");
+        }
+
+        /// <summary>A location the map shows this champion.</summary>
+        private static bool Shown(CampState st, MapNode n)
+        {
+            return st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n) && !(n.Z == AZ1 && Gnomes.Hidden(st.ChampId, n.Id)) && !ClosedWay(st, n);
+        }
+
         /// <summary>Conversation shown before a node's battle (null if none).</summary>
         private static string Prelude(ulong champ, MapNode n)
         {
@@ -1057,7 +1100,7 @@ namespace HexRevival
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
             foreach (MapNode n in st.Z.Nodes)
             {
-                bool visible = st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n) && !(n.Z == AZ1 && Gnomes.Hidden(st.ChampId, n.Id));
+                bool visible = Shown(st, n);
                 Dictionary<string, object> d = new Dictionary<string, object>();
                 d["name"] = n.Name;
                 d["node"] = n.Id;
@@ -1668,7 +1711,7 @@ namespace HexRevival
             CampState st = Get(campId, false);
             if (st == null) return;
             MapNode n = FindNode(st.Z, location);
-            if (n != null && st.Visible.Contains(n.Id))
+            if (n != null && Shown(st, n))
             {
                 st.ALoc = n.Name;
                 st.LastNode = n.Id;
@@ -2504,6 +2547,21 @@ namespace HexRevival
                 }
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalQuests.txt"), sb.ToString());
                 return count + " quests written to HexRevivalQuests.txt";
+            }
+            if (sub == "shown" && parts.Length > 2)
+            {
+                // dev: "camp shown <champion or campaign id>" = the locations the champion's map shows, and those hidden by a closed way
+                ulong id = ulong.Parse(parts[2]);
+                CampState st = id >= AZ2.Base ? Get(id, false) : GetChamp(id, false);   // a campaign id (500002) or a champion id
+                if (st == null) return "no campaign";
+                BuildMap(st.Z);
+                List<string> shown = new List<string>(), closed = new List<string>();
+                foreach (MapNode n in st.Z.Nodes)
+                {
+                    if (Shown(st, n)) shown.Add(n.Id);
+                    else if (st.Visible.Contains(n.Id) && ClosedWay(st, n)) closed.Add(n.Id);
+                }
+                return st.Z.Key + " shown: " + string.Join(",", shown.ToArray()) + "\nclosed ways: " + string.Join(",", closed.ToArray());
             }
             if (sub == "transfer")
             {

@@ -191,7 +191,7 @@ namespace HexRevival
             if (evt == "boat_fail_shown") { Quests.SetFlag(champ, "boat:failed", null); return true; }
             if (active == null) return false;
             // Water Town: "The shipwrights of the town offer to repair the damage to your hull." (Src.Game)
-            if (evt == "conv_done" && active.Id == WaterTown) Quests.SetFlag(champ, HullFlag, null);
+            if (evt == "conv_done" && active.Id == WaterTown) { Quests.SetFlag(champ, HullFlag, null); Debug.Log("[HexRevival] [Campaign] Water Town repairs the hull"); }
             if (evt == "conv_done" && active.Id == Harbor && Quests.Flag(champ, "boat:name") != null && !st.Completed.Contains(Harbor))
             {
                 // Naming conversation done: the talent window opens next (the location stays active).
@@ -209,6 +209,7 @@ namespace HexRevival
             {
                 Quests.CompleteLoc(champ, "q_the_new_land", "Step2");
                 Quests.CompleteLoc(champ, "q_the_new_land", "Step3");
+                Quests.SetFlag(champ, "boat:landed", "1");   // the way over the river opens (Campaign.ClosedWay)
                 EndVoyage(st, NewLand);
                 return true;
             }
@@ -225,6 +226,9 @@ namespace HexRevival
                 // The witch's blessing (Src.Video: "Your starting hand size is increased by 1", 8 cards in the next battle; see ShipEffects).
                 Quests.SetFlag(champ, "boat:blessed", "1");
                 Quests.SetFlag(champ, "boat:blessing", "1");
+                // The game's conversation has one answer and no card choice (Src.Game): the boon is the blessing itself,
+                // said here (mornox 2026-11-03 expected a choice, as at the Shroom Hauses).
+                Notices.Show(Loc.Get("mermaid_blessing"));
                 return false;
             }
             if (evt == "conv_done" && IsSea(active) && Quests.Flag(champ, "boat:sunk") != null && Quests.Flag(champ, "outcome:" + active.Key) != null)
@@ -307,8 +311,10 @@ namespace HexRevival
             Player human = Cheats.FindPlayer(ss, "j");
             if (human == null || human.m_ChampionCard == null) return;
             s_HullApplied = true;
-            ss.SetChampionHealth(human.m_ChampionCard, Hull(ship.OwnerChampionId), false);
+            int hull = Hull(ship.OwnerChampionId);
+            ss.SetChampionHealth(human.m_ChampionCard, hull, false);
             Server.MarkDirty();
+            Debug.Log("[HexRevival] [Campaign] ship hull " + hull + "/" + MaxHull(ship.OwnerChampionId) + " (saved: " + (Quests.Flag(ship.OwnerChampionId, HullFlag) ?? "none") + ")");
         }
 
         /// <summary>The witch's blessing for the ship's next battle: the game's "Mermaid's Blessing" effect card (starting hand + 1).</summary>
@@ -329,6 +335,7 @@ namespace HexRevival
             if (!OnVoyage(champ)) return;
             if (!won) { Quests.SetFlag(champ, "boat:sunk", "1"); Quests.SetFlag(champ, HullFlag, null); return; }
             if (s_EndHealth > 0) Quests.SetFlag(champ, HullFlag, Math.Min(s_EndHealth, MaxHull(champ)).ToString());
+            Debug.Log("[HexRevival] [Campaign] sea battle won, end health " + s_EndHealth + ", hull kept " + (Quests.Flag(champ, HullFlag) ?? "none"));
         }
 
         private static void ResetShipBattle() { s_HullApplied = false; s_EndHealth = -1; }
