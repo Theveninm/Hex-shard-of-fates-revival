@@ -73,6 +73,16 @@ namespace HexRevival
                     Server.MarkDirty();
                     return "put " + t.m_Name + " in play for " + p.m_PlayerId;
                 }
+                case "cast":
+                {
+                    // dev: "cheat cast <j|ai> <card>" = that card played for free (EncounterModAddCard, CastSpells), as the Arena challenges do
+                    CardTemplate t = FindCard(string.Join(" ", parts, 3, parts.Length - 3));
+                    if (t == null)
+                        return "card not found";
+                    new EncounterModAddCard { m_CardId = t.m_Id, m_Amount = 1, m_Collection = ECardCollections.CastSpells, m_Location = ECardLocations.Unknown }.Apply(ss, p);
+                    Server.MarkDirty();
+                    return "cast " + t.m_Name + " for " + p.m_PlayerId;
+                }
                 case "damage":
                 {
                     // dev: "cheat damage j <n> <card>" = that much damage marked on the player's troops of that name
