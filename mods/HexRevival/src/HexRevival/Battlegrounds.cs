@@ -1382,7 +1382,7 @@ namespace HexRevival
 
     /// <summary>
     /// The Draft and Sealed gauntlets' booster sets, chosen on the Battlegrounds screen before joining (Stuie 2026-11-03),
-    /// above "Configure the AIs". One drop-down sets every booster; its last entry, "Customize", adds one drop-down per
+    /// above "Configure the AIs". One drop-down (the set's name, or "Customize") sets every booster; its last entry, "Customize", adds one drop-down per
     /// booster (3 for the draft, 6 for sealed) (user 2026-11-04).
     /// </summary>
     public class BattlegroundsSets : MonoBehaviour
@@ -1443,7 +1443,7 @@ namespace HexRevival
             {
                 Rect b = new Rect(m_Panel.x + 8 * S, m_Panel.y + head + (i + 1) * (rowH + gap), w - 16 * S, rowH);
                 string text;
-                if (i < 0) text = Loc.Get("bg_all_boosters", m_View.Custom ? Loc.Get("bg_customized") : (m_View.All != null ? m_View.All.m_Name : "?"));
+                if (i < 0) text = m_View.Custom ? Loc.Get("bg_customize") : (m_View.All != null ? m_View.All.m_Name : "?");   // the set's name alone (user 2026-11-04)
                 else text = Loc.Get("bg_pack_n", i + 1, m_View.Each[i] != null ? m_View.Each[i].m_Name : "?");
                 if (GameSkin.GoldButton(b, text + " \u25BE", true, 13)) m_Open = m_Open == i ? -2 : i;
                 if (m_Open == i) openRow = b;
