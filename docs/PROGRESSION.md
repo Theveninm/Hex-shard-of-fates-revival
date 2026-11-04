@@ -89,7 +89,7 @@ gives **100 gold + 100 champion XP** (HexServer). Battle rewards (Video unless n
 | Node018 Shadowgrove | Corrupt Dryad | 0 | 250 | AZ1 pack, race equipment |
 | Node019 Brink Ridge | Human Blockade | 0 | 200 | — |
 | Node019 Brink Ridge | Barricade Zombie, once, after the Smoldering Dead (Video: MHS Ardent 2017-05-16; scene 19B1, the castle battlefield seen on the video, not 19B's forest) | 250 | 250 | — |
-| Node021 Clark Foothills | Bloated Zombie | 300 | 200 | Conflagration Staff |
+| Node021 Clark Foothills | Bloated Zombie | 300 | 200 | 1 random equipment (Conflagration Staff, Brutal Scimitar, Commander's Brooch seen in three runs) |
 | Node022 Lake Wyalusing | Guru of the Wounded Petal | 400 | 250 | AZ1 pack, deck sleeve Uzume, Grand Concubunny |
 | Node023 Saramago Crater | Zombie Mob (soldiers of the other faction helped or not: 4 scenes 23A/23B, Game) | 250 | 250 | AZ1 pack |
 | Node026 Johannes Bog | Furious Taskmaster (Underworld) / Brood Creeper (Ardent) | 450 | 250 | — |
@@ -214,7 +214,7 @@ The reward window right after the quest giver's last conversation.
 | Tranquil Dream (Fahrny / Feather Drifting) | 0 (500 in early 2016) | 700 | Tranquil Dream Pack |
 | Fort Romor (Wyatt) | 0 (1000 in early 2016) | 900 | Fort Romor Pack |
 | The Usurper (Sagebrush) | 375 | 1000 | The Usurper Pack (MHS Ardent 2017-03-22) |
-| Smoldering Dead (Myaa) | 550 | 1200 | AZ1 pack |
+| Smoldering Dead (Myaa) | 550 (Elf 2017; none for the Necrotic Water Elemental, Dec 2016) | 1200 | Smoldering Dead Pack (Water Elemental part 23) |
 | Devonshire Keep (Myaa) | 600 (Elf; none on the Necrotic run) | 1500 | Devonshire Keep Pack, sleeve Chronicles of Entrath: Chapter 1 |
 | Any other quest | 300 | 0 | PLACEHOLDER (reward unknown) |
 
@@ -724,7 +724,7 @@ platinum sells for gold (10 gold per platinum, PLACEHOLDER ratio).
 | Prize Exchange | Siege Pack 100 sacks, Molten Coin 1,200 sacks, Sisters of Suffering battleboard 5,000 sacks; Cosmic Coin Pack 100 coins, Great Machine Graveyard battleboard 5,000 coins, alternate art shard coins (Blood, Diamond, Ruby, Sapphire, Wild) 1,200 coins each | as listed | HexTCG2018 |
 | Booster Packs (other products) | Common Only Booster Pack; the 9 full sets (by 1, 2 or 4 on the QTY 1, 3 and 10 buttons; StoreVariants.cs, user 2026-11-02) | 500 / 200,000 gold | PLACEHOLDER |
 | Booster Packs, with "Additional items in the store" | each Full Set's buttons choose PvP (the Full Set), PvE or PvP+PvE, and the same x4 on a second row, instead of 1, 3 or 10 copies; the description panel under the buttons is shortened by that row (StoreVariants.cs; user 2026-11-02). PvE is the set's PvE full set (PveFullSets.cs): its PvE cards, 1 copy each (4 for x4, never beyond 4 owned) (its chest and Wheel of Fate cards, about 9), its chest and wheel equipment (about 100), its 6 mercenaries (3 chest, 3 wheel) and its 6 chest and wheel sleeves; what is owned already is not given again. The name, price, BUY total and Details follow the button chosen | PvP 200,000, PvE 100,000, both 300,000 gold; x4: 4 times (800,000, 400,000, 1,200,000) | contents: Zymmer, HexCodex (sleeves); prices PLACEHOLDER; idea: Criesener (user 2026-11-02) |
-| Booster Packs, with "Additional items in the store": campaign packs | the 11 campaign packs, in the order the campaign reaches them: Howling Plains, Tranquil Dream, Fort Romor, The Usurper, Smoldering Dead, Devonshire Keep, Alachian Sea, Brutecrown Bluff, Great Machine Graveyard, Kraken's Cove, Ruins of Kukatan. Unopened, opened on the Pack Opening screen (Other Packs) as the ones the campaign gives (same loot tables, Loot.cs); Details show each card's and item's own chance. Sold once a champion of the account has unlocked its area: the zone for Howling Plains and Alachian Sea, the dungeon's node on the map for the others (shown, or done); before, the bar says it is locked and the purchase is refused (Store.CampaignPackUnlocked; user 2026-11-02). The dungeon packs' banners are made from their wrapper's art (StoreIcons.cs) | 300 (Howling Plains) rising to 700 (Ruins of Kukatan) gold, 500 on average | Zymmer's proposal (2026-11-02): about half a booster's contents, so half its price, earlier packs cheaper; then halved (user 2026-11-02); prices PLACEHOLDER |
+| Booster Packs, with "Additional items in the store": campaign packs | the 11 campaign packs, in the order the campaign reaches them: Howling Plains, Tranquil Dream, Fort Romor, The Usurper, Smoldering Dead, Devonshire Keep, Alachian Sea, Brutecrown Bluff, Great Machine Graveyard, Kraken's Cove, Ruins of Kukatan. Unopened, opened on the Pack Opening screen (Other Packs) as the ones the campaign gives (same loot tables, Loot.cs); Details show each card's and item's own chance. Sold once a champion of the account has unlocked its area: the zone for Howling Plains and Alachian Sea, the dungeon's node on the map for the others (shown, or done); before, the bar says it is locked and the purchase is refused (Store.CampaignPackUnlocked; user 2026-11-02). The dungeon packs' banners are made from their wrapper's art (StoreIcons.cs) | Howling Plains 1,000 gold, also sold without the additional items (the original store's "Adventure Pack 1": Video, Water Elemental part 20, Nov 2016, by 1, 3 or 10, with a "Bonus chance!" badge; the bonus seen was a card, not given by the mod). The others 350 (Tranquil Dream) rising to 700 (Ruins of Kukatan) | Howling Plains: Video. The others: Zymmer's proposal (2026-11-02), about half a booster's contents, so half its price, earlier packs cheaper; then halved (user 2026-11-02); PLACEHOLDER |
 | Special | primal packs (sets with legendaries), battleboards, the four Kismet's Reserve packs, Random Previous Kismet Pack; the 8 Starter Trials packs, Doombringer Sharded Draft Pack, Kismet's Draft Pack, Standard Format Gauntlet Pack, GenCon 2016 Booster Pack | 30,000 / 10,000 / 20,000 / 20,000; 2,000 each (a booster's) | PLACEHOLDER |
 
 | What | Value | Source |
@@ -745,10 +745,12 @@ The set chests, Stardust (no system for it offline), the Convocation boxes and V
 
 ## Packs
 
-**Campaign packs** (Howling Plains = "Adventure Zone 1" pack; dungeon packs alike), Video (25+ packs
-opened on screen): 2 commons of the first PvP sets (Shards of Fate, Shattered Destiny, Armies of Myth),
-1 card of the pack's own list (every pack), 1 equipment, then a 2nd equipment or, about 1 time in 3, a
-stardust (Common, Uncommon, Rare; Legendary seen once; weights PLACEHOLDER). Which card and equipment:
+**Campaign packs** (Howling Plains = "Adventure Zone 1" pack; dungeon packs alike). The store's own text (Video,
+Water Elemental part 20, Nov 2016, "Adventure Pack 1"): "2 Common PvP Cards, 1 Uncommon, Rare, or Legendary PvE Card,
+2 Non-Card Rewards (Equipment, Stardust, etc.)". So: 2 commons of the first PvP sets (Shards of Fate, Shattered Destiny,
+Armies of Myth), 1 card of the pack's own list (every pack), and 2 non-card slots, each an equipment or, 13.5% of the
+time, a stardust (Video: 13 of 96 slots in 48 packs, Vandersveldt and Water Elemental; both slots twice). Stardust
+weights from the 15 seen: Common 5, Uncommon 3, Rare 6, Legendary 1 (small sample). Which card and equipment:
 LootTables2016 (1,162 AZ1 packs), each picked weighted by its %; the unique equipment 1 time in 100.
 A dungeon pack's own 9 equipment pieces (Zymmer) missing from the sheet are added: all 9 for Fort Romor and
 Devonshire Keep (the sheet has none of theirs; Video agrees: Fort Romor packs gave Hellshot Vest and Hasty

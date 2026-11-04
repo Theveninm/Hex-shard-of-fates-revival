@@ -180,7 +180,14 @@ namespace HexRevival
         private static readonly ResourceId[] StardustKinds = { BuiltInResources.CommonStardust, BuiltInResources.UncommonStardust, BuiltInResources.RareStardust, BuiltInResources.LegendaryStardust, BuiltInResources.PromoStardust };
 
         /// <summary>
-        /// PLACEHOLDER gold prices of the campaign packs (written as the other platinum-era prices). Zymmer (2026-11-02):
+        /// The Howling Plains pack in the original store: "Adventure Pack 1", 1,000 gold, by 1, 3 (3,000) or 10 (10,000), with
+        /// a "Bonus chance!" badge (Src.Video: Water Elemental part 20 0:25-0:52, Nov 2016; the bonus seen was a card,
+        /// Uzume's Handmaiden, not given by the mod). Sold without the additional items (see Product).
+        /// </summary>
+        public const int AdventurePackGold = 1000;
+
+        /// <summary>
+        /// PLACEHOLDER gold prices of the other campaign packs (written as the other platinum-era prices). Zymmer (2026-11-02):
         /// a campaign pack holds about half of a booster's "stuff", so half a booster's price to start with, the earlier
         /// packs cheaper and the later ones dearer, in the order the campaign reaches them (Loot.CampaignPacks); then
         /// halved (user 2026-11-02): from 300 (Howling Plains) to 700 (Ruins of Kukatan), 500 on average.
@@ -189,7 +196,7 @@ namespace HexRevival
         {
             switch (pack)
             {
-                case Loot.AZ1Pack: return 300;
+                case Loot.AZ1Pack: return AdventurePackGold;
                 case "Tranquil Dream": return 350;
                 case "Fort Romor": case "The Usurper": return 400;
                 case "Smoldering Dead": return 450;
@@ -330,7 +337,7 @@ namespace HexRevival
                 return new Product { Item = item, Price = SpecialPacks.GoldPrice(special), Tab = "cardpack", Pve = PveFullSets.ForFullSet(item) };
             // The campaign packs (additional items; Zymmer's proposal 2026-11-02): see CampaignPackGold.
             string camp = Loot.PackOf(item);
-            if (camp != null) return ExtraItems ? new Product { Item = item, Price = CampaignPackGold(camp), Tab = "cardpack" } : null;
+            if (camp != null) return ExtraItems || camp == Loot.AZ1Pack ? new Product { Item = item, Price = CampaignPackGold(camp), Tab = "cardpack" } : null;
             // The holiday gift boxes came with opened boosters (Packs); they are products only with the additional items.
             if (special == "giftbox") return ExtraItems ? new Product { Item = item, Price = SpecialPacks.GiftBoxGold, Tab = "special" } : null;
             if (special != null) return new Product { Item = item, Price = SpecialPacks.GoldPrice(special), Tab = special == "common" || special == "fullset" ? "cardpack" : "special" };
