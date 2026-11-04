@@ -197,9 +197,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |
-| Loot.cs:99 | the weights are a PLACEHOLDER. |
-| Loot.cs:112 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
-| Loot.cs:114 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
+| Loot.cs:105 | Legendary 1; Vandersveldt, Water Elemental, MyHotStream). A small sample: PLACEHOLDER precision. |
+| Loot.cs:118 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
+| Loot.cs:120 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
 | NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
@@ -218,20 +218,21 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
-| Progression.cs:150 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
-| Progression.cs:203 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
-| Progression.cs:550 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
-| Progression.cs:763 | no list for that set: the old PLACEHOLDER gold |
-| Progression.cs:799 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
-| Progression.cs:802 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
-| Progression.cs:918 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:1000 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:1003 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:1006 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1021 | level: PLACEHOLDER). |
-| Progression.cs:1034 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1124 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1125 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:152 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
+| Progression.cs:205 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:322 | Seen on video: Necrotic, Elf, Human (KVC); the other five follow the same rule (PLACEHOLDER: inferred). |
+| Progression.cs:560 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:773 | no list for that set: the old PLACEHOLDER gold |
+| Progression.cs:809 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
+| Progression.cs:812 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
+| Progression.cs:928 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
+| Progression.cs:1010 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
+| Progression.cs:1013 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:1016 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1031 | level: PLACEHOLDER). |
+| Progression.cs:1044 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1134 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1135 | same for the Battlegrounds: PLACEHOLDER |
 | PveFullSets.cs:25 | the TemplateManager when the store is built. Price PLACEHOLDER (see GoldPrice). |
 | PveFullSets.cs:29 | PLACEHOLDER gold price (written as the other platinum-era products: converted by the account's price settings).</summary> |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
@@ -256,9 +257,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Store.cs:117 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
 | Store.cs:172 | PLACEHOLDER gold prices of products without a known price.</summary> |
 | Store.cs:175 | Gold prices of stardust (Common, Uncommon, Rare, Legendary, Promo; PLACEHOLDER: a player's memory of the original store (Criesener), which |
-| Store.cs:183 | PLACEHOLDER gold prices of the campaign packs (written as the other platinum-era prices). Zymmer (2026-11-02): |
-| Store.cs:227 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
-| Store.cs:580 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
+| Store.cs:187 | ones' proportions to the Howling Plains pack (PLACEHOLDER). |
+| Store.cs:243 | PLACEHOLDER gold price of a Kismet's Reserve pack (2 PvE cards, 4 equipment and a mercenary, see Zymmer.KismetBundle).</summary> |
+| Store.cs:596 | "Available in the [name] Kismet's Reserve Pack" (Src.HexCodex): its sleeve, once, in 1 pack in 5 (PLACEHOLDER). |
 | StoreIcons.cs:22 | "PLACEHOLDER" picture: a related product's banner (see Related); the Random Previous Kismet Pack's missing model |
 | StoreIcons.cs:34 | Banners the game ships as a "PLACEHOLDER" picture (Src.Game, icons.ab): Dead of Winter Primal Pack's. Replaced |
 | StoreIcons.cs:256 | The product whose banner (and model) a product without one shows (PLACEHOLDER, a mod choice: the original |
