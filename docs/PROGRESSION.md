@@ -441,7 +441,7 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 
 | Battle | Gold | XP | Items |
 |---|---|---|---|
-| Lurking Crocodile (Node001) | 0 | 350 | Phoenix Guard Tactician (KVC) |
+| Lurking Crocodile (Node001) | 0 | 350 | the race's card: Necrotic Voice of Tombs (WE part 25, MHS UW), Elf Festival Barker (MHS Ardent), Human Phoenix Guard Tactician (KVC); other races PLACEHOLDER (their "AZ2 Encounters" rare) |
 | Winter Moon (Node006) | 600 | 425 | AZ2 pack |
 | Flock of Seagulls (Node008) | 0 | 400 | Common Stardust |
 | Katsuhiro (Node009) | 0 | 450 | his mercenary |

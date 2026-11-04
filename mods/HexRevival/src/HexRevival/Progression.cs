@@ -203,9 +203,11 @@ namespace HexRevival
             { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
 
             // ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the
-            // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the Lurking Crocodile's card (not identified)
-            // and the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
-            { "AZ2/Node001", R(0, 350, "Phoenix Guard Tactician") },        // Lurking Crocodile (KVC)
+            // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
+            // Lurking Crocodile: the card of the champion's race (Src.Video: Necrotic Voice of Tombs, Water Elemental part 25
+            // [MLVuON_wMH8] 14:39 and MHS UW 2017-03-02 [fa4fv5aPHeU] 6:40; Elf Festival Barker, MHS Ardent 2017-06-19
+            // [0ZQZBRur6k8] 6:50; Phoenix Guard Tactician, KVC part 1 Sanzang). See RaceRewards "crocodile".
+            { "AZ2/Node001", new Reward { Xp = 350, RaceQuest = "crocodile", Source = Src.Video } },
             { "AZ2/Node038", R(0, 625, "Aryndel Warden", "Sister of the Herd (mercenary)") },   // and her mercenary (KVC)
             { "AZ2/Node043", R(0, 650, "Legendary Stardust") },               // Monk of the Six Strikes (KVC)
             { "AZ2/Node006", new Reward { Gold = 600, Xp = 425, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Winter Moon
@@ -316,6 +318,9 @@ namespace HexRevival
             { "zila",   new[] { "Slippers of Intellect", "Rotwood Sandals", "Nightsky Handlers", "Darkspire Armor", "Rose Circlet", "Reaper's Helm", "Elite Handwraps", "Nursery Handlers" } },
             { "zodiac", new[] { "Orders from High Command", "Master of Masks", "Prophet of the Sun", "Bloodlust", "Junk Repurposer", "Grim Mandate", "Emperor Ito's Will", "Nazhk Lookout" } },
             { "dryad",  new[] { "Holy Beads", "Sylvan Sounder", "Earthcaller's Robes", "Lightning Medallion", "Winged Alloy Helm", "Gem Walkers", "Thug Topper", "Vile Stompers" } },
+            // AZ2 Lurking Crocodile (Node001): the "AZ2 Encounters" rare troop of the race (Src.Zymmer list, card subtypes Src.Game).
+            // Seen on video: Necrotic, Elf, Human (KVC); the other five follow the same rule (PLACEHOLDER: inferred).
+            { "crocodile", new[] { "Phoenix Guard Tactician", "Festival Barker", "Starlight Shaman", "Eye of the Black Crucible", "Subterranean Augmentor", "Voice of Tombs", "Sneakblade of the Milky Eye", "Fanged Fanatic" } },
         };
 
         /// <summary>
