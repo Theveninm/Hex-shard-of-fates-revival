@@ -59,6 +59,8 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.Crafting, v => { if (Saves.Current != null) { Saves.Current.Crafting = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_ExtraStore", "opt_extrastore", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.ExtraStore, v => { if (Saves.Current != null) { Saves.Current.ExtraStore = v; Saves.SaveCurrent(); } });
+            EnsureRow(row, grid, "HexRevival_CheapPacks", "opt_cheappacks", offline && !Saves.Current.UnlockAll,
+                () => Saves.Current != null && Saves.Current.CheapPacks, v => { if (Saves.Current != null) { Saves.Current.CheapPacks = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_PrimalBonus", "opt_primalbonus", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
             // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do

@@ -120,7 +120,9 @@ namespace HexRevival
             { "Node018", new Reward { Xp = 250, Packs = 1, RaceQuest = "dryad", Source = Src.Video } },   // Shadowgrove, Corrupt Dryad
             { "Node019", R(0, 200) },                                         // Brink Ridge, Human Blockade
             { "Node019B", R(250, 250) },                                      // Brink Ridge, Barricade Zombie (after the Smoldering Dead)
-            { "Node021", R(300, 200, "Conflagration Staff") },               // Clark Foothills, Bloated Zombie
+            // Clark Foothills, Bloated Zombie: a random equipment (Src.Video: Conflagration Staff for MHS UW, Brutal Scimitar
+            // for Vandersveldt part 73, Commander's Brooch for Water Elemental part 19 31:26)
+            { "Node021", new Reward { Gold = 300, Xp = 200, RandomEquipment = 1, Source = Src.Video } },
             // Lake Wyalusing, Guru of the Wounded Petal
             { "Node022", new Reward { Gold = 400, Xp = 250, Packs = 1, Cards = new[] { "Uzume, Grand Concubunny Sleeve" }, Source = Src.Video } },
             { "Node023", new Reward { Gold = 250, Xp = 250, Packs = 1, Source = Src.Video } },   // Zombie Mob
@@ -201,9 +203,11 @@ namespace HexRevival
             { "devonshire/NodeL", new Reward { Gold = 750, Xp = 650, Packs = 1, PackName = "Devonshire Keep", Source = Src.Video } },
 
             // ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the
-            // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the Lurking Crocodile's card (not identified)
-            // and the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
-            { "AZ2/Node001", R(0, 350, "Phoenix Guard Tactician") },        // Lurking Crocodile (KVC)
+            // Ardent side of faction nodes). Packs: Loot.AZ2Pack. Not given: the mercenaries of Augustine and Katsuhiro (mercenaries are not implemented).
+            // Lurking Crocodile: the card of the champion's race (Src.Video: Necrotic Voice of Tombs, Water Elemental part 25
+            // [MLVuON_wMH8] 14:39 and MHS UW 2017-03-02 [fa4fv5aPHeU] 6:40; Elf Festival Barker, MHS Ardent 2017-06-19
+            // [0ZQZBRur6k8] 6:50; Phoenix Guard Tactician, KVC part 1 Sanzang). See RaceRewards "crocodile".
+            { "AZ2/Node001", new Reward { Xp = 350, RaceQuest = "crocodile", Source = Src.Video } },
             { "AZ2/Node038", R(0, 625, "Aryndel Warden", "Sister of the Herd (mercenary)") },   // and her mercenary (KVC)
             { "AZ2/Node043", R(0, 650, "Legendary Stardust") },               // Monk of the Six Strikes (KVC)
             { "AZ2/Node006", new Reward { Gold = 600, Xp = 425, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Winter Moon
@@ -314,6 +318,9 @@ namespace HexRevival
             { "zila",   new[] { "Slippers of Intellect", "Rotwood Sandals", "Nightsky Handlers", "Darkspire Armor", "Rose Circlet", "Reaper's Helm", "Elite Handwraps", "Nursery Handlers" } },
             { "zodiac", new[] { "Orders from High Command", "Master of Masks", "Prophet of the Sun", "Bloodlust", "Junk Repurposer", "Grim Mandate", "Emperor Ito's Will", "Nazhk Lookout" } },
             { "dryad",  new[] { "Holy Beads", "Sylvan Sounder", "Earthcaller's Robes", "Lightning Medallion", "Winged Alloy Helm", "Gem Walkers", "Thug Topper", "Vile Stompers" } },
+            // AZ2 Lurking Crocodile (Node001): the "AZ2 Encounters" rare troop of the race (Src.Zymmer list, card subtypes Src.Game).
+            // Seen on video: Necrotic, Elf, Human (KVC); the other five follow the same rule (PLACEHOLDER: inferred).
+            { "crocodile", new[] { "Phoenix Guard Tactician", "Festival Barker", "Starlight Shaman", "Eye of the Black Crucible", "Subterranean Augmentor", "Voice of Tombs", "Sneakblade of the Milky Eye", "Fanged Fanatic" } },
         };
 
         /// <summary>
@@ -529,9 +536,12 @@ namespace HexRevival
             { "q_army_of_myth", new Reward { Gold = 350, Xp = 350, Packs = 1, Source = Src.Video } },
             // Dungeon quests: the dungeon packs are given once the dungeons are implemented (see docs/PROGRESSION.md)
             { "q_tranquil_dream", new Reward { Xp = 700, Packs = 1, PackName = "Tranquil Dream", Source = Src.Video } },
-            { "az01_q_fort_romor", new Reward { Xp = 900, Packs = 1, PackName = "Fort Romor", Source = Src.Video, Note = "early 2016: also 1000 gold" } },
+            { "az01_q_fort_romor", new Reward { Xp = 900, Packs = 1, PackName = "Fort Romor", Source = Src.Video, Note = "1000 gold in 2016 (Vandersveldt part 70, Water Elemental part 17 38:09, Aug 2016); none in Nov 2016 (MHS UW)" } },
             { "az01_q_usurper", new Reward { Gold = 375, Xp = 1000, Packs = 1, PackName = "The Usurper", Source = Src.Video, Note = "MHS Ardent 2017-03-22 [QPx3__eedOE] 13:20, turn-in to Sagebrush" } },
-            { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, Source = Src.Video } },
+            // Smoldering Dead (Myaa): its pack is the dungeon's (Src.Video: "Smoldering Dead Pack", Water Elemental part 23 1:59).
+            // Gold: 550 for MHS Ardent (2017-05-16); none for the Necrotic Water Elemental (Dec 2016), as the other dungeon
+            // quests of the Necrotic runs from Oct 2016 to early Mar 2017 (Tranquil Dream, Fort Romor, Devonshire Keep).
+            { "q_smoldering_dead", new Reward { Gold = 550, Xp = 1200, Packs = 1, PackName = "Smoldering Dead", Source = Src.Video } },
             // AZ2 (Src.Video, Underworld run): the Alachian Sea (Takumi; its card not identified), Petulant Picaroons
             // (Bonewalker), Brutecrown Bluff, the Kraken (Renner)
             { "q_boat_elementals", new Reward { Gold = 500, Xp = 1000, Packs = 1, PackName = Loot.AZ2Pack, Source = Src.Video } },   // Stormwatch (KVC)
@@ -544,7 +554,7 @@ namespace HexRevival
             { "q_petulent_picaroons", new Reward { Gold = 500, Xp = 800, Cards = new[] { "Hired Horn Cutthroat" }, Source = Src.Video } },
             { "q_brutecrown_bluff", new Reward { Gold = 1100, Xp = 1500, Packs = 1, PackName = "Brutecrown Bluff", Source = Src.Video } },
             { "q_kraken", new Reward { Gold = 1300, Xp = 1800, Packs = 1, PackName = "Kraken's Cove", Source = Src.Video } },
-            { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Packs = 1, PackName = "Devonshire Keep", Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "gold seen on the Elf run only" } },
+            { "q_devonshire_keep", new Reward { Gold = 600, Xp = 1500, Packs = 1, PackName = "Devonshire Keep", Cards = new[] { "Chronicles of Entrath: Chapter 1 Sleeve" }, Source = Src.Video, Note = "600 gold on the Elf run (2017-06); none on the two Necrotic runs (MHS UW 2017-02, Water Elemental part 26 1:47, 2017-03)" } },
         };
 
         /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>

@@ -66,6 +66,11 @@ namespace HexRevival
             /// </summary>
             public bool ExtraStore;
             /// <summary>
+            /// "Cheaper campaign packs" (user 2026-11-04): the campaign packs at the mod's reduced prices instead of the
+            /// normal ones (Store.CampaignPackGold). Off by default, also for the accounts made before it existed.
+            /// </summary>
+            public bool CheapPacks;
+            /// <summary>
             /// Wheel of Fate upgrades of a primal chest (Zymmer's proposal, user 2026-11-03): a chest cannot go above primal,
             /// so each upgrade beyond it gives a random PvP card and a random PvE card of the chest's set instead (see
             /// Packs.Spin). On by default, also for the accounts made before it existed; changed in Settings, Account tab.
@@ -131,7 +136,7 @@ namespace HexRevival
         /// the gold prices (0: the defaults).
         /// </summary>
         public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false, bool crafting = false,
-            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false)
+            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false, bool cheapPacks = false)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
             Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
@@ -143,6 +148,7 @@ namespace HexRevival
             i.AllGems = allGems;
             i.Crafting = !unlockAll && crafting;
             i.ExtraStore = !unlockAll && extraStore;
+            i.CheapPacks = !unlockAll && cheapPacks;
             Write(i);
             return i;
         }
@@ -234,6 +240,7 @@ namespace HexRevival
                     else if (k == "allgems") i.AllGems = v == "1";
                     else if (k == "crafting") i.Crafting = v == "1";
                     else if (k == "extrastore") i.ExtraStore = v == "1";
+                    else if (k == "cheappacks") i.CheapPacks = v == "1";
                     else if (k == "primalbonus") i.PrimalBonus = v != "0";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
@@ -265,6 +272,7 @@ namespace HexRevival
                     "allgems=" + (i.AllGems ? "1" : "0"),
                     "crafting=" + (i.Crafting ? "1" : "0"),
                     "extrastore=" + (i.ExtraStore ? "1" : "0"),
+                    "cheappacks=" + (i.CheapPacks ? "1" : "0"),
                     "primalbonus=" + (i.PrimalBonus ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
