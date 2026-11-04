@@ -8,9 +8,9 @@ namespace HexRevival
 {
     /// <summary>
     /// Campaign and dungeon pack contents. What a pack holds comes from the reward windows of gameplay
-    /// videos (Src.Video, 25+ packs opened, 2016-2017): 2 commons of the first PvP sets (Shards of
-    /// Fate, Shattered Destiny, Armies of Myth) + 1 card of the pack's own list + 1 equipment + either
-    /// a 2nd equipment or a stardust (about 1 time in 3). Which card and which equipment: the community
+    /// videos (Src.Video, 48+ packs opened, 2016-2017): 2 commons of the first PvP sets (Shards of
+    /// Fate, Shattered Destiny, Armies of Myth) + 1 card of the pack's own list + 2 non-card rewards, each an
+    /// equipment or, about 1 time in 7, a stardust (see StardustChance). Which card and which equipment: the community
     /// "AZ1 Loot Tables" spreadsheet (2016, Src.LootTables2016; data/az1_pack_loot_tables.csv,
     /// generated into LootData.cs), each pick weighted by its % drop chance; its unique equipment
     /// (1% in total) is kept as a 1-in-100 extra.
@@ -91,17 +91,23 @@ namespace HexRevival
         /// <summary>PvP sets of the 2 commons of a campaign pack (Src.Video).</summary>
         private static readonly string[] CommonSets = { "Shards of Fate", "Shattered Destiny", "Armies of Myth" };
 
-        /// <summary>Chance that the 5th slot is a stardust instead of a 2nd equipment (Src.Video: about 1 time in 3).</summary>
-        private const float StardustChance = 1f / 3f;
+        /// <summary>
+        /// Chance that each of the 2 non-card slots is a stardust instead of an equipment. The store's own text for the
+        /// pack (Src.Video, Water Elemental part 20 0:40, Nov 2016: "This Adventure Pack contains 2 Common PvP Cards,
+        /// 1 Uncommon, Rare, or Legendary PvE Card, 2 Non-Card Rewards (Equipment, Stardust, etc.)") and 48 packs opened
+        /// on video (Vandersveldt 20, Water Elemental 28): 13 of the 96 non-card slots were stardust, twice both slots of
+        /// a pack (Water Elemental parts 7 19:47 and 18 23:16).
+        /// </summary>
+        private const float StardustChance = 0.135f;
 
         /// <summary>
-        /// Stardust of the 5th slot. Seen: Common, Uncommon, Rare, and Legendary once (Src.Video);
-        /// the weights are a PLACEHOLDER.
+        /// Stardust of a non-card slot, weighted by the 15 seen in packs (Src.Video: Common 5, Uncommon 3, Rare 6,
+        /// Legendary 1; Vandersveldt, Water Elemental, MyHotStream). A small sample: PLACEHOLDER precision.
         /// </summary>
         private static readonly KeyValuePair<string, float>[] Stardusts =
         {
-            new KeyValuePair<string, float>("Common Stardust", 35), new KeyValuePair<string, float>("Uncommon Stardust", 35),
-            new KeyValuePair<string, float>("Rare Stardust", 25), new KeyValuePair<string, float>("Legendary Stardust", 5),
+            new KeyValuePair<string, float>("Common Stardust", 5), new KeyValuePair<string, float>("Uncommon Stardust", 3),
+            new KeyValuePair<string, float>("Rare Stardust", 6), new KeyValuePair<string, float>("Legendary Stardust", 1),
         };
 
         /// <summary>
@@ -147,9 +153,11 @@ namespace HexRevival
                 if (c != null) res.Add(new Drop { Card = c });
             }
             AddTo(res, t != null ? Pick(t, 'c', true) : AZ2Card(az2));
-            AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment(az2));
-            if (UnityEngine.Random.value < StardustChance) AddTo(res, Resolve(PickStardust(), false));
-            else AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment(az2));
+            for (int i = 0; i < 2; i++)
+            {
+                if (UnityEngine.Random.value < StardustChance) AddTo(res, Resolve(PickStardust(), false));
+                else AddTo(res, t != null ? Pick(t, 'e', false) : AZ2Equipment(az2));
+            }
             if (t != null && UnityEngine.Random.value < 0.01f) AddTo(res, Pick(t, 'u', false));
             if (az2 != null && UnityEngine.Random.value < PackMercenaryChance) AddTo(res, Zymmer.NewMercenary(az2));
             return res;
@@ -213,8 +221,8 @@ namespace HexRevival
             if (t != null) AddTable(card, t, 'c', true);
             else AddWeighted(card, Zymmer.Cards(az2).ConvertAll(c => new KeyValuePair<Drop, float>(new Drop { Card = c }, Zymmer.CardWeight(c.m_CardRarity))));
             res.Add(card);
-            // One equipment, and a second one unless the 5th slot is a stardust.
-            Slot eq = new Slot { Kind = "equipment", Tries = new[] { 1f, 1f - StardustChance } };
+            // Two non-card slots: each an equipment, or a stardust (StardustChance).
+            Slot eq = new Slot { Kind = "equipment", Tries = new[] { 1f - StardustChance, 1f - StardustChance } };
             if (t != null) AddTable(eq, t, 'e', false);
             else
             {
@@ -238,8 +246,8 @@ namespace HexRevival
                 eq.Items.AddRange(all.Values);
             }
             res.Add(eq);
-            // The 5th slot's stardust.
-            Slot dust = new Slot { Kind = "stardust", Tries = new[] { StardustChance } };
+            // The non-card slots' stardust.
+            Slot dust = new Slot { Kind = "stardust", Tries = new[] { StardustChance, StardustChance } };
             List<KeyValuePair<Drop, float>> dl = new List<KeyValuePair<Drop, float>>();
             foreach (KeyValuePair<string, float> kv in Stardusts) { Drop d = Resolve(kv.Key, false); if (d != null) dl.Add(new KeyValuePair<Drop, float>(d, kv.Value)); }
             AddWeighted(dust, dl);
