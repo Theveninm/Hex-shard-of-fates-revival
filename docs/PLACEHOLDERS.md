@@ -17,7 +17,7 @@ plus Frost Ring Arena runs of 2015. Most rewards agree with the other runs; what
 |---|---|---|---|
 | Campaign pack non-card slots | 1 equipment + (equipment, or stardust 1 time in 3) | 2 slots, each an equipment or a stardust 13.5% of the time | the store's pack text (part 20 0:40) + 48 packs (13 stardust in 96 slots, twice both) |
 | Stardust weights in packs | Common 35, Uncommon 35, Rare 25, Legendary 5 (PLACEHOLDER) | 5 / 3 / 6 / 1, the 15 seen (small sample) | Vandersveldt, Water Elemental, MHS |
-| Howling Plains pack in the store | additional item, 300 gold (PLACEHOLDER) | "Adventure Pack 1", 1,000 gold, in the base store | part 20 0:25-0:52 (Nov 2016) |
+| Howling Plains pack in the store | additional item, 300 gold (PLACEHOLDER) | "Adventure Pack 1", 1,000 gold; every campaign pack now sold on progression accounts, the others at 1,150-2,350 in the same proportions (PLACEHOLDER), or 300-700 with the "Cheaper campaign packs" option (user 2026-11-04) | part 20 0:25-0:52 (Nov 2016) |
 | Bloated Zombie (Node021) | Conflagration Staff | a random equipment | three runs, three pieces (part 19 31:26: Commander's Brooch) |
 | Smoldering Dead quest pack | Howling Plains pack | Smoldering Dead Pack | part 23 1:59 |
 
