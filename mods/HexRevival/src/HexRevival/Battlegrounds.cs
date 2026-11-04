@@ -111,9 +111,19 @@ namespace HexRevival
             public ulong NextInstance = 7000000000000UL;
             public List<Run> Runs = new List<Run>();
             public LadderRecord Ladder = new LadderRecord();
-            /// <summary>The player's choice of boosters (set ids): the draft's, one per round, and the sealed pool's (see BoosterChoice).</summary>
-            public List<string> DraftSets = new List<string>();
+            /// <summary>The player's choice of boosters for the draft and the sealed pool (see BoosterChoice).</summary>
+            public BoosterPick Draft, Sealed;
+            /// <summary>1.2.17's choice (draft: one set per round; sealed: one for all), moved into Draft / Sealed at load.</summary>
+            public List<string> DraftSets;
             public string SealedSet;
+        }
+
+        /// <summary>A limited gauntlet's boosters: one set for all, or (Custom) one set per booster.</summary>
+        public class BoosterPick
+        {
+            public string All;
+            public bool Custom;
+            public List<string> Each = new List<string>();
         }
 
         private static Store s_Store;
@@ -294,45 +304,92 @@ namespace HexRevival
             return null;
         }
 
+        /// <summary>The player's choice for a limited gauntlet's kind (1.2.17's draft list and sealed set moved in).</summary>
+        private static BoosterPick PickOf(Kind kind)
+        {
+            if (Data.Draft == null)
+            {
+                Data.Draft = new BoosterPick();
+                List<string> old = Data.DraftSets ?? new List<string>();
+                bool same = old.TrueForAll(x => x == (old.Count > 0 ? old[0] : null));
+                if (old.Count > 0 && same) Data.Draft.All = old[0];
+                else if (old.Count > 0) { Data.Draft.Custom = true; Data.Draft.Each = new List<string>(old); }
+                Data.DraftSets = null;
+            }
+            if (Data.Sealed == null) { Data.Sealed = new BoosterPick { All = Data.SealedSet }; Data.SealedSet = null; }
+            BoosterPick p = kind == Kind.Draft ? Data.Draft : Data.Sealed;
+            if (p.Each == null) p.Each = new List<string>();
+            return p;
+        }
+
         /// <summary>The sets the next run of a gauntlet opens, one per booster: the player's choice, else the default booster's.</summary>
         private static List<string> ChosenSets(Gauntlet g)
         {
             List<string> res = new List<string>();
+            BoosterPick p = PickOf(g.Kind);
             CardSetTemplate def = BoosterSet();
-            if (Data.DraftSets == null) Data.DraftSets = new List<string>();   // a save from before 1.2.17
             for (int i = 0; i < g.Boosters; i++)
             {
-                string id = g.Kind == Kind.Draft ? (i < Data.DraftSets.Count ? Data.DraftSets[i] : null) : Data.SealedSet;
-                CardSetTemplate set = SetById(id) ?? def;
+                CardSetTemplate set = (p.Custom && i < p.Each.Count ? SetById(p.Each[i]) : null) ?? SetById(p.All) ?? def;
                 res.Add(set != null ? set.m_Id.ToString() : null);
             }
             return res;
         }
 
-        /// <summary>
-        /// The booster choices shown for a gauntlet (the set of each slot: draft one per round, sealed one for the 6),
-        /// null for a constructed gauntlet or while a run is in progress (its boosters are already chosen).
-        /// </summary>
-        internal static List<CardSetTemplate> BoosterChoice(ulong tournamentId)
+        /// <summary>What the booster chooser shows: the set for all (null when customized), and each booster's set.</summary>
+        internal class BoosterView
+        {
+            public CardSetTemplate All;
+            public bool Custom;
+            public List<CardSetTemplate> Each = new List<CardSetTemplate>();
+            public bool Draft;
+        }
+
+        /// <summary>The booster choice of a limited gauntlet, null for a constructed one or while a run is in progress (its boosters are already chosen).</summary>
+        internal static BoosterView BoosterChoice(ulong tournamentId)
         {
             Gauntlet g = Find(tournamentId);
             if (g == null || g.Kind == Kind.Constructed || RunOf(tournamentId) != null) return null;
-            List<string> ids = ChosenSets(g);
-            List<CardSetTemplate> res = new List<CardSetTemplate>();
-            for (int i = 0; i < (g.Kind == Kind.Draft ? ids.Count : 1); i++) res.Add(SetById(ids[i]));
-            return res;
+            BoosterPick p = PickOf(g.Kind);
+            BoosterView v = new BoosterView { Custom = p.Custom, Draft = g.Kind == Kind.Draft };
+            foreach (string id in ChosenSets(g)) v.Each.Add(SetById(id));
+            if (!p.Custom) v.All = v.Each.Count > 0 ? v.Each[0] : null;
+            return v;
+        }
+
+        /// <summary>One set for every booster (and the end of a customized choice).</summary>
+        internal static void ChooseAll(ulong tournamentId, CardSetTemplate set)
+        {
+            Gauntlet g = Find(tournamentId);
+            if (g == null || set == null || g.Kind == Kind.Constructed) return;
+            BoosterPick p = PickOf(g.Kind);
+            p.All = set.m_Id.ToString();
+            p.Custom = false;
+            p.Each.Clear();
+            Save();
+            Debug.Log("[HexRevival] [Battlegrounds] " + g.Name + " boosters: " + set.m_Name);
+        }
+
+        /// <summary>"Customize": each booster chosen on its own, starting from the current sets.</summary>
+        internal static void Customize(ulong tournamentId)
+        {
+            Gauntlet g = Find(tournamentId);
+            if (g == null || g.Kind == Kind.Constructed) return;
+            BoosterPick p = PickOf(g.Kind);
+            if (p.Custom) return;
+            p.Each = ChosenSets(g);
+            p.Custom = true;
+            Save();
         }
 
         internal static void ChooseBooster(ulong tournamentId, int slot, CardSetTemplate set)
         {
             Gauntlet g = Find(tournamentId);
-            if (g == null || set == null) return;
-            if (g.Kind == Kind.Sealed) Data.SealedSet = set.m_Id.ToString();
-            else
-            {
-                while (Data.DraftSets.Count < g.Boosters) Data.DraftSets.Add(null);
-                Data.DraftSets[slot] = set.m_Id.ToString();
-            }
+            if (g == null || set == null || g.Kind == Kind.Constructed || slot < 0 || slot >= g.Boosters) return;
+            Customize(tournamentId);
+            BoosterPick p = PickOf(g.Kind);
+            while (p.Each.Count < g.Boosters) p.Each.Add(null);
+            p.Each[slot] = set.m_Id.ToString();
             Save();
             Debug.Log("[HexRevival] [Battlegrounds] " + g.Name + " booster " + (slot + 1) + ": " + set.m_Name);
         }
@@ -1155,10 +1212,14 @@ namespace HexRevival
                     foreach (KeyValuePair<string, int> kv in bySet) o.Add(kv.Key + " x" + kv.Value);
                     return "started, " + (sr.Packs != null ? "first pack: " : "pool: ") + string.Join(", ", o.ToArray());
                 case "sets":
-                    // dev: "bg sets <id> <slot 1-3> <set number 1-9>" = the booster chooser's choice; "bg sets <id>" lists them
-                    if (parts.Length > 4) ChooseBooster(id, int.Parse(parts[3]) - 1, Zymmer.SetOfNumber(int.Parse(parts[4])));
-                    List<CardSetTemplate> ch = BoosterChoice(id);
-                    return ch == null ? "no choice for " + id : string.Join(" / ", ch.ConvertAll(cs => cs != null ? cs.m_Name : "?").ToArray());
+                    // dev: "bg sets <id> all <set number 1-9> | custom | <booster 1-6> <set number>" = the booster chooser; "bg sets <id>" shows it
+                    if (parts.Length > 4 && parts[3] == "all") ChooseAll(id, Zymmer.SetOfNumber(int.Parse(parts[4])));
+                    else if (parts.Length > 3 && parts[3] == "custom") Customize(id);
+                    else if (parts.Length > 4 && parts[3] == "open") BattlegroundsSets.DevOpen = int.Parse(parts[4]) - 2;
+                    else if (parts.Length > 4) ChooseBooster(id, int.Parse(parts[3]) - 1, Zymmer.SetOfNumber(int.Parse(parts[4])));
+                    BoosterView bv = BoosterChoice(id);
+                    return bv == null ? "no choice for " + id : (bv.Custom ? "customized: " : "all " + (bv.All != null ? bv.All.m_Name : "?") + ": ")
+                        + string.Join(" / ", bv.Each.ConvertAll(cs => cs != null ? cs.m_Name : "?").ToArray());
                 case "autodeck":
                     if (r == null) return "no run " + id;
                     List<card_instance_bits> all = new List<card_instance_bits>(r.Deck.CardsInDeck);
@@ -1319,17 +1380,19 @@ namespace HexRevival
         }
     }
 
-    /// <summary>Draws Battlegrounds.MatchScore left of the gauntlet deck screen's RECORD / WINS-LOSSES frame.</summary>
     /// <summary>
-    /// The Draft and Sealed gauntlets' booster sets, chosen on the Battlegrounds screen before joining (Stuie 2026-11-03):
-    /// one button per draft round (one for the sealed pool's 6 boosters) above "Configure the AIs"; a click lists the sets.
+    /// The Draft and Sealed gauntlets' booster sets, chosen on the Battlegrounds screen before joining (Stuie 2026-11-03),
+    /// above "Configure the AIs". One drop-down sets every booster; its last entry, "Customize", adds one drop-down per
+    /// booster (3 for the draft, 6 for sealed) (user 2026-11-04).
     /// </summary>
     public class BattlegroundsSets : MonoBehaviour
     {
         private readonly Controls.UiBlocker m_Block = new Controls.UiBlocker();
         private ulong m_Id;
-        private List<CardSetTemplate> m_Slots;
-        private int m_Open = -1;
+        private Battlegrounds.BoosterView m_View;
+        private int m_Open = -2;   // -2: no list open; -1: the "all boosters" list; 0..n: booster n's list
+        /// <summary>Dev ("bg sets &lt;id&gt; open &lt;row&gt;"): opens a list as a click would (row 1 = all boosters, row 2 = booster 1...).</summary>
+        internal static int DevOpen = -3;
         private Rect m_Panel, m_List;
         private float m_Next;
 
@@ -1338,7 +1401,7 @@ namespace HexRevival
             if (Time.realtimeSinceStartup >= m_Next)
             {
                 m_Next = Time.realtimeSinceStartup + 0.25f;
-                m_Slots = null;
+                m_View = null;
                 try
                 {
                     if (!AiDecksWindow.IsOpen && !OfflineMenu.IsOpen && Saves.Current != null && !Saves.IsOnline
@@ -1348,59 +1411,72 @@ namespace HexRevival
                         UITournamentDescContext sel = vm != null && vm.m_Context != null ? vm.m_Context.SelectedTournament : null;
                         if (sel != null && sel.m_TournamentDesc != null)
                         {
-                            if (m_Id != sel.m_TournamentDesc.TournamentID) m_Open = -1;
+                            if (m_Id != sel.m_TournamentDesc.TournamentID) m_Open = -2;
                             m_Id = sel.m_TournamentDesc.TournamentID;
-                            m_Slots = Battlegrounds.BoosterChoice(m_Id);
+                            m_View = Battlegrounds.BoosterChoice(m_Id);
                         }
                     }
                 }
-                catch { m_Slots = null; }
+                catch { m_View = null; }
             }
-            if (m_Slots == null) { m_Open = -1; m_Block.Release(); m_Panel = m_List = new Rect(); return; }
+            if (DevOpen > -3) { m_Open = DevOpen; DevOpen = -3; }
+            if (m_View == null) { m_Open = -2; m_Block.Release(); m_Panel = m_List = new Rect(); return; }
             m_Block.Update(false, m_Panel, m_List);
         }
 
         private void OnGUI()
         {
-            if (m_Slots == null) return;
+            if (m_View == null) return;
             float S = GameSkin.Scale;
             GUI.depth = -900;
-            float w = 290 * S, rowH = 40 * S, gap = 6 * S, head = 30 * S;
-            float h = head + m_Slots.Count * (rowH + gap) + 8 * S;
+            int rows = 1 + (m_View.Custom ? m_View.Each.Count : 0);
+            float w = 290 * S, rowH = 36 * S, gap = 5 * S, head = 30 * S;
+            float h = head + rows * (rowH + gap) + 6 * S;
             // above the "Configure the AIs" button (AiButton: bottom right, 112 px from the bottom)
             m_Panel = new Rect(Screen.width - 14 * S - w, Screen.height - 120 * S - h, w, h);
             GUI.DrawTexture(m_Panel, GameSkin.Solid(new Color(0, 0, 0, 0.75f)));
             GameSkin.Sprite(m_Panel, "A_Frames", "Frame_Inner");
             GameSkin.Label(new Rect(m_Panel.x + 10 * S, m_Panel.y + 4 * S, w - 20 * S, head - 4 * S),
-                Loc.Get(m_Slots.Count > 1 ? "bg_draft_sets" : "bg_sealed_set"), GameSkin.Style("title", 16, GameSkin.Gold, TextAnchor.MiddleCenter));
-            for (int i = 0; i < m_Slots.Count; i++)
+                Loc.Get(m_View.Draft ? "bg_draft_sets" : "bg_sealed_set"), GameSkin.Style("title", 16, GameSkin.Gold, TextAnchor.MiddleCenter));
+            Rect openRow = new Rect();
+            for (int i = -1; i < rows - 1; i++)
             {
-                Rect b = new Rect(m_Panel.x + 8 * S, m_Panel.y + head + i * (rowH + gap), w - 16 * S, rowH);
-                string name = m_Slots[i] != null ? m_Slots[i].m_Name : "?";
-                string text = m_Slots.Count > 1 ? Loc.Get("bg_pack_n", i + 1, name) : name;
-                if (GameSkin.GoldButton(b, text + " \u25BE", true, 13)) m_Open = m_Open == i ? -1 : i;
+                Rect b = new Rect(m_Panel.x + 8 * S, m_Panel.y + head + (i + 1) * (rowH + gap), w - 16 * S, rowH);
+                string text;
+                if (i < 0) text = Loc.Get("bg_all_boosters", m_View.Custom ? Loc.Get("bg_customized") : (m_View.All != null ? m_View.All.m_Name : "?"));
+                else text = Loc.Get("bg_pack_n", i + 1, m_View.Each[i] != null ? m_View.Each[i].m_Name : "?");
+                if (GameSkin.GoldButton(b, text + " \u25BE", true, 13)) m_Open = m_Open == i ? -2 : i;
+                if (m_Open == i) openRow = b;
             }
             m_List = new Rect();
-            if (m_Open < 0 || m_Open >= m_Slots.Count) return;
+            if (m_Open < -1 || m_Open >= m_View.Each.Count || (m_Open >= 0 && !m_View.Custom)) return;
             List<CardSetTemplate> sets = Battlegrounds.SetChoices();
-            float lw = 260 * S, lh = sets.Count * (34 * S + 2 * S) + 10 * S;
-            m_List = new Rect(m_Panel.x - lw - 6 * S, Mathf.Max(60 * S, m_Panel.yMax - lh), lw, lh);
+            int items = sets.Count + (m_Open < 0 ? 1 : 0);   // the "all boosters" list ends with "Customize"
+            float itemH = 32 * S, lw = 260 * S, lh = items * (itemH + 2 * S) + 10 * S;
+            m_List = new Rect(m_Panel.x - lw - 6 * S, Mathf.Clamp(openRow.y, 10 * S, Screen.height - lh - 10 * S), lw, lh);
             GUI.DrawTexture(m_List, GameSkin.Solid(new Color(0, 0, 0, 0.85f)));
             GameSkin.Sprite(m_List, "A_Frames", "Frame_Inner");
-            for (int k = 0; k < sets.Count; k++)
+            CardSetTemplate cur = m_Open < 0 ? m_View.All : m_View.Each[m_Open];
+            for (int k = 0; k < items; k++)
             {
-                Rect r = new Rect(m_List.x + 5 * S, m_List.y + 5 * S + k * 36 * S, lw - 10 * S, 34 * S);
-                bool cur = m_Slots[m_Open] != null && m_Slots[m_Open].m_Id == sets[k].m_Id;
-                if (GameSkin.Tab(r, sets[k].m_Name, cur, 15))
+                Rect r = new Rect(m_List.x + 5 * S, m_List.y + 5 * S + k * (itemH + 2 * S), lw - 10 * S, itemH);
+                if (k == sets.Count)
                 {
-                    Battlegrounds.ChooseBooster(m_Id, m_Open, sets[k]);
-                    m_Open = -1;
+                    if (GameSkin.Tab(r, Loc.Get("bg_customize"), m_View.Custom, 15)) { Battlegrounds.Customize(m_Id); m_Open = -2; m_Next = 0; }
+                    continue;
+                }
+                if (GameSkin.Tab(r, sets[k].m_Name, cur != null && cur.m_Id == sets[k].m_Id, 15))
+                {
+                    if (m_Open < 0) Battlegrounds.ChooseAll(m_Id, sets[k]);
+                    else Battlegrounds.ChooseBooster(m_Id, m_Open, sets[k]);
+                    m_Open = -2;
                     m_Next = 0;
                 }
             }
         }
     }
 
+    /// <summary>Draws Battlegrounds.MatchScore left of the gauntlet deck screen's RECORD / WINS-LOSSES frame.</summary>
     public class BattlegroundsScore : MonoBehaviour
     {
         private float m_Next;

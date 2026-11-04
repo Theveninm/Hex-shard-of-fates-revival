@@ -159,11 +159,11 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters until the player chooses others (BoosterChoice; the server chose the product).</summary> |
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
-| Battlegrounds.cs:243 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
-| Battlegrounds.cs:1084 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:1219 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:1257 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1303 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:253 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
+| Battlegrounds.cs:1141 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:1280 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:1318 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1364 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
