@@ -1144,7 +1144,12 @@ namespace HexRevival
                         if (conv != null) d["conversationId"] = conv;
                         bool giverOpen;
                         MapGiver(st.ChampId, n, out giverOpen);
-                        if ((NodeScripts.HasRules(n.Key) || giverOpen) && st.Completed.Contains(n.Id))
+                        // The River of Whispers' skiffs (AZ1 Node00Y "To AZ2", AZ2 Node00Z "Transfer To AZ1") are used as often as
+                        // wanted: the zones are joined both ways (Src.Game: both have the do_transfer answer). Completed and not
+                        // repeatable, the client's node panel offers no action: a skiff once declined, or used once, was dead
+                        // (duxxors 2026-11-05).
+                        bool skiff = n.Id == "Node00Y" && n.Z == AZ1 || n.Id == "Node00Z" && n.Z == AZ2;
+                        if ((NodeScripts.HasRules(n.Key) || giverOpen || skiff) && st.Completed.Contains(n.Id))
                         {
                             d["completed"] = false;
                             d["repeatable"] = true;

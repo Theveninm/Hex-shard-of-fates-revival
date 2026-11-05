@@ -278,7 +278,9 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
   Dead, River of Whispers (AZ2) after Fort Romor / The Usurper (HexServer: the givers' prerequisites read on the
   playthroughs; Video: the three runs of the chronology agree). Not used: their "Blood Beneath after Tamed"
   (Vandersveldt started Blood Beneath in part 31 and finished Tamed in part 59).
-- AZ2 is reached by the boat of "River of Whispers" (AZ1 Node00Y, see the AZ2 section).
+- AZ2 is reached by the boat of "River of Whispers" (AZ1 Node00Y, see the AZ2 section). The skiffs at both ends (AZ1
+  Node00Y, AZ2 Node00Z) stay usable after each use or "No" (sent repeatable; before 1.2.20 a skiff once declined or used
+  was a completed node without any action, duxxors 2026-11-05).
 
 The dev command `sim` plays a quest script on a throwaway champion (e.g. `sim new Human; visit
 Node046; talk; visit Node047; talk; fight win; ...`) and writes the dialogues, quest steps and
