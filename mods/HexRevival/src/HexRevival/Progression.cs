@@ -926,7 +926,7 @@ namespace HexRevival
         /// Rewards of levels 2 to 40 (Src.Wiki2019). From 41 the game repeated a 10-level cycle
         /// (see CycleRewards). Codes: gold:N, pack:hp|as|cur (Howling Plains, Alachian Sea, current
         /// set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed
-        /// commons"), cards:N (random cards of the current set), stardust, chests, rarechest,
+        /// commons"), cards:N (random cards of the current set), stardust, altart, chests, rarechest,
         /// ticket, sleeve, merc (see GrantLevelReward for what each becomes in the mod).
         /// </summary>
         private static readonly string[][] LevelRewards =
@@ -936,7 +936,7 @@ namespace HexRevival
             new[] { "sleeve" }, new[] { "gold:2000" }, new[] { "merc" }, new[] { "ticket" }, new[] { "chests" },                 // 7-11
             new[] { "pack:hp", "pack:as" }, new[] { "stardust" }, new[] { "rarechest" }, new[] { "pack:cur" }, new[] { "chests" }, // 12-16
             new[] { "sleeve" }, new[] { "gold:3000" }, new[] { "cards:3" }, new[] { "ticket" }, new[] { "chests" },              // 17-21
-            new[] { "stardust" }, new[] { "gold:4000" }, new[] { "rarechest" }, new[] { "pack:cur" }, new[] { "chests" },        // 22-26 (+ common alternate arts)
+            new[] { "stardust", "altart" }, new[] { "gold:4000" }, new[] { "rarechest" }, new[] { "pack:cur" }, new[] { "chests" }, // 22-26 (+ common alternate arts)
             new[] { "sleeve" }, new[] { "gold:4000" }, new[] { "cards:3" }, new[] { "ticket" }, new[] { "chests" },              // 27-31
             new[] { "stardust" }, new[] { "gold:4000" }, new[] { "rarechest" }, new[] { "pack:cur" }, new[] { "chests" },        // 32-36
             new[] { "sleeve" }, new[] { "gold:4000" }, new[] { "cards:3" }, new[] { "ticket" },                                  // 37-40
@@ -1007,8 +1007,23 @@ namespace HexRevival
                 }
                 case "commons": GiveRandom(CurrentSet(), ERarity.Common, n); return Loc.Get("reward_cards", n);
                 case "cards": GiveRandom(CurrentSet(), (ERarity)0, n); return Loc.Get("reward_cards", n);
-                // PLACEHOLDER: stardust needs a system the mod does not have yet.
-                case "stardust": return GiveGold(300);
+                // Stardust (the mod has it since 1.2.14: extended arts, crafting): one Rare Stardust. Which stardust and how
+                // much: PLACEHOLDER (the wiki's table says "Stardust"). Before 1.2.19: 300 gold.
+                case "stardust":
+                {
+                    GiveDrop(new Loot.Drop { Item = BuiltInResources.RareStardust });
+                    InventoryItemData dust = Singleton<TemplateManager>.Instance.GetInventoryItem(BuiltInResources.RareStardust);
+                    return dust != null ? dust.m_Name.Trim() : "Rare Stardust";
+                }
+                // An alternate art (epic) card of the current set (the wiki's "common alternate arts" of levels 22-26). Which
+                // card, and at which level of the row: PLACEHOLDER (level 22). Before 1.2.19: nothing.
+                case "altart":
+                {
+                    Loot.Drop d = Zymmer.WheelAltArt(CurrentSet());
+                    if (d == null || d.Card == null) return null;
+                    GiveDrop(d);
+                    return d.Card.m_Name;
+                }
                 // A chest of the current set, opened at once (the original needed a paid Wheel of Fate spin): its
                 // contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER).
                 case "chests": return GiveChest(ERarity.Common);

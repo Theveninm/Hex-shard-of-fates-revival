@@ -123,15 +123,19 @@ namespace HexRevival
             // (sources: CampaignBoat.SeaMonstersAwake). Before 1.2.6 either line could be picked and the battle was always on.
             { "AZ2/NodeB04", new[] { R("Pre-Scylla", c => !Campaign.SeaMonstersAwake(c)), R("- Scylla", c => true) } },
             { "AZ2/NodeB10", new[] { R("Pre-Charybdis", c => !Campaign.SeaMonstersAwake(c)), R("- Charybdis", c => true) } },
-            // Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw
-            // it locked; "Step 2 - Player has Sapphire Key" at the first visit in MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26 and MHS
-            // Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt part 63 already past it. Every run had finished Gnomes Come
-            // Home before (Vincent: "Here, take this with you"), so the key may be that reward: not enough to lock the gate.
-            // Not The Blood Beneath (the Blood Key's quest): the quest tracker still shows it at both visits (MHS maplabels
-            // 0:40 / 0:46). No dialogue and no item of the game data names where the Sapphire Key comes from.
-            // Not The Three Braves either (IanUtley/hex-server's trigger, unsourced): Vandersveldt passes the gate in part 63 (0:54)
-            // and turns that quest in only in part 65 (1:33).
-            { "Node073", new[] { R("Sapphire Gate - Step 2", c => true) } },
+            // Sapphire Gate: open once The Blood Beneath is accepted (PLACEHOLDER, inferred: user's choice 2026-11-05). The gate
+            // guards a dead end whose last node is that quest's goal (Src.Game map: The Scar - Sapphire Gate - Valley of Sighs -
+            // Dusk Hollow - Eagle Mesa - Skittering Ridge), and Gurtok gives the quest with "I'll show you how to get there"
+            // (Src.Game). No dialogue or item names the key's source and no video shows it given: MHS Ardent 2017-02-07
+            // [wx5ts5GbQUE] 16:01-16:41, Gurtok's quest start, no item window. Every run had the quest in the tracker when it
+            // opened the gate (MHS UW 2017-01-18 [TtV3aIvY7SI] 0:26, MHS Ardent 2017-03-28 [Pbg0qV2w9eQ] 0:34, Vandersveldt
+            // part 63, the quest taken in part 31 7:47). Also fits, not chosen: Gnomes Come Home finished before every
+            // visit. Ruled out: The Three Braves (IanUtley/hex-server's trigger): Vandersveldt passes the gate in part 63
+            // (0:54), gets the regulator in part 64 and turns the quest in in part 65 (1:33); the sapphire conduit is
+            // installed in the robot. Before 1.2.19 the gate was always open.
+            { "Node073", new[] {
+                R("Sapphire Gate - Step 2", c => S(c, "q_blood_beneath")),
+                R("Sapphire Gate - Step 1", c => true) } },
             // Brink Ridge blockade, Bungle in the Jungle (gnomes), Blood Gate.
             { "Node019", new[] {
                 R("Blockade - Step 2", c => true) } },

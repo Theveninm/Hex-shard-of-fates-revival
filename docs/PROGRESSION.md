@@ -167,8 +167,7 @@ conversation and encounter names (Game) and the videos. Rules:
   Chamber of Awakening, or both); one of the two halls is enough to go on.
 - Finishing a dungeon completes the quest objectives naming it (the Usurper quest's objective names
   Fort Romor's template, a game data error, handled).
-- Not done: the first-attempt bonus gold of the game's hint ("a small amount of bonus gold if you
-  manage to defeat an enemy on your first attempt": amount unknown); the Crayburn watchtower's
+- The first-attempt bonus gold of the game's hint: see "Bonus gold" below. Not done: the Crayburn watchtower's
   training battle (its encounter is not in the game data).
 
 Battle rewards (Video unless noted; gold and XP on every win, items on the first win):
@@ -249,9 +248,13 @@ Install Ruby Mainline" once the ruby mainline is found). Mechanics and their sou
 - Drawbridges (Game: the "Winston - Step 1/2" and "Wallace - Step 1/2" conversations of the Zila and Zodiac rivers):
   the river's far bank (Node015, Node038) stays hidden until the bridge quest is done; talking to the bridge keeper
   starts it. Until 1.2.12 the far bank was revealed with the rest of the map (Zymmer 2026-10-31).
-- Sapphire Gate: open (PLACEHOLDER). No run on video found it locked: every one had the key at its first visit,
-  and every one had finished Gnomes Come Home before (Vincent: "Here, take this with you"), which may be where
-  the key came from.
+- Sapphire Gate: locked ("Step 1 - Locked", Game) until The Blood Beneath is accepted (PLACEHOLDER, inferred,
+  user's choice 2026-11-05; open before 1.2.19). The gate guards a dead end ending at that quest's goal (Game map: The
+  Scar - Sapphire Gate - Valley of Sighs - Dusk Hollow - Eagle Mesa - Skittering Ridge) and Gurtok gives the quest with
+  "I'll show you how to get there" (Game). Every run on video had the quest when it opened the gate (MHS UW 2017-01-18,
+  MHS Ardent 2017-03-28, Vandersveldt part 63); no item window shows the key (MHS Ardent 2017-02-07 [wx5ts5GbQUE]
+  16:01-16:41, Gurtok's quest start). Gnomes Come Home, finished before every visit too, also fits; The Three Braves
+  (hex-server's trigger) does not: Vandersveldt passes the gate in part 63 and turns that quest in in part 65.
 - Gaal fortunes: 100 gold (Game, the dialogue); the fortune is a "Fortune of ..." card of the game, for the
   next battle only (Video: the window "Your fortune for the next battle"). Which fortune is drawn: random
   (PLACEHOLDER; the runs show different ones).
@@ -398,7 +401,8 @@ Kraken Town Square library "Scrolls of Portsmeare" or armory "Portsmeare Armamen
 "Discovered Lost Riches"; Kukatan Dead End "Pocket of Lucky Coins" (Coins of Kismet), Buzzing Tangle "Fist
 Full of Berries" (Polyberry Pouch); the Graveyard's repaired robot "Robot Helper (Basic / Cannon / Shield /
 Bopper / ... / Maxed)" by the weapons installed (Video, KVC 003: the Mega-Bot 1000, then 3000, 5000,
-8000 card in every battle after the robot's repair and each weapon). Not reproduced: the Kraken's Dark Chamber (+1 charge: no matching card).
+8000 card in every battle after the robot's repair and each weapon). The Kraken's Dark Chamber ("You will begin each game with +1 charge for the remainder of the dungeon", Game):
+no effect card gives one charge, the charge is added to the player's champion after the mulligan (since 1.2.19).
 The mercenaries Mayor Galway (reward line of the Portsmeare A battle) and Sister of the Herd (Video,
 KVC 002 0:27:02 and 004 0:04:06). The Kraken's mayor lives (Video: both MyHotStream runs; "Mayor Died" follows an
 event of the battle never seen). Brutecrown's Lair of Nogg Nogg battle by ally: H-1 Vargar, H-2 Burgg, H-3 Zagg
@@ -416,10 +420,13 @@ mercenary and a party slot!") gives the mercenary, his starter deck's cards, his
 template, and one party slot (account flag CAMP_PARTYCAP, capped by race by the client). The party, edited
 with the game's own party screen, is saved per champion. Choosing a mercenary on the "Prepare for Battle"
 panel makes him play the battle with his deck and his card as champion (the game's InstantiateMercenaryCard);
-the battle's rewards go to the champion (Game: the client shows them to the champion). Mercenary leveling
-(MercLeveling) is not reproduced: the game data has one upgraded version of each mercenary, and a 2016 Steam
-thread gives two won "mercenary challenge" dungeon battles plus 25,000 gold per upgrade, but which battles were
-challenges and their bonus gold are unknown.
+the battle's rewards go to the champion (Game: the client shows them to the champion). Mercenary leveling (since 1.2.19), with the client's own mercenary sheet (level arrows, "Challenges n/2", the upgrade
+button and its gold, the profile request "mercupd"): each level is the mercenary's upgraded template of the game data
+(as far as it goes); an upgrade takes two mercenary challenges and 25,000 gold (a 2016 Steam forum thread, which one not noted; Game: the
+client's default of 2 challenges). A mercenary challenge is a battle won by a party mercenary in the dungeon room the
+client marks as the mercenary room ("/merc_node_ch", UIDungeonMapNode.IsMercNode). Which room: PLACEHOLDER, one battle
+room of each run drawn at random (not the final one; none in Castle Crayburn). The upgraded mercenary plays the battles
+and gives its party passive. Levels are saved per account (merc_levels.txt). Not known: a challenge's bonus gold.
 
 Where each mercenary comes from, on progression accounts ("unlock everything" accounts own all 82 finished
 mercenaries of the game data; the four unfinished ones, build tag FutureRelease, are never given):
@@ -572,9 +579,13 @@ a new run (no win, no loss, fight in tier 1) once the account has the flag ARENA
 tier 1 without a loss (the flag's name; when the original servers set it is not known otherwise). Confirming skips the
 five tier 1 fights ("SKIP" on the grid) "You will not receive rewards for battles skipped this way"; no price.
 
-Not done: Hogarth's dialogues, Hogarth's challenge window (the client's is the consoles' one, without
-buttons on PC: a challenge is told at the start of its fight), the challenges that change every card's values (Swarm!
-Swarm!, Rage, Charge!) or play an action for free (The Primal of Luck, Infernal Professor).
+Since 1.2.19: The Primal of Luck (your champion plays Kismet's Reverie for no cost) and Infernal Professor (each
+champion plays Infernal Professor for no cost), Game: ArenaPVE_Challenge_Body6 / 9, played once the mulligan is over
+(when: PLACEHOLDER); and two challenge cards of the game data with no text, "Arena Challenge - Runic" (actions in all
+zones get Runic, played for the opponent) and "Arena Challenge - Banners" (a random banner for each champion), both
+PLACEHOLDER (never seen). Not done: Hogarth's challenge window (the client's is the consoles' one, without buttons on
+PC: a challenge is told at the start of its fight), the challenges that change every card's values (Swarm! Swarm!,
+Rage, Charge!: no card of the game data does it).
 
 ## AI opponents
 
@@ -666,7 +677,7 @@ What each reward becomes in the mod:
 | Current set booster | a Doombringer Booster Pack in the inventory | "current set" = last set: assumption |
 | 6 fixed commons | 6 random commons of the current set | PLACEHOLDER |
 | 3 random cards | 3 random cards of the current set (common/uncommon/rare weighted 10/3/1) | weights PLACEHOLDER |
-| Stardust | 300 gold | PLACEHOLDER (no stardust yet) |
+| Stardust | one Rare Stardust (300 gold before 1.2.19) | which and how much PLACEHOLDER |
 | Common and uncommon free spin chests | a common chest of the current set, opened at once | contents Zymmer ("Set 9 Chest Loot": the set's chest equipment, PvE cards and 3 mercenaries); what one chest holds PLACEHOLDER (see below) |
 | Rare paid spin chest | a rare chest of the current set, opened at once | same |
 
@@ -674,7 +685,7 @@ A chest: what each chest rarity holds comes from the players' 2015 survey (see T
 account level chests are opened at once; booster chests go through the Wheel of Fate (see Packs).
 | Draft / Evolution entry ticket | 1 current set booster | PLACEHOLDER (no tournaments offline) |
 | Exclusive deck sleeve | one of the 24 "Awarded through Account Leveling" sleeves not owned yet | HexCodex; which one PLACEHOLDER |
-| Alternate arts | nothing | not implemented |
+| Alternate arts (levels 22-26) | an alternate art (epic) card of the current set, at level 22 (since 1.2.19) | which card and level PLACEHOLDER |
 | Sin'glar (level 9) | the Sin'glar mercenary | — |
 
 ## Dueling Pit

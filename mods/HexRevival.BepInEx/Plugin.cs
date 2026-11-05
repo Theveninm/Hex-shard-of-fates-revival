@@ -105,6 +105,8 @@ namespace HexRevival
             // Account level rewards claimed on the account panel (see AccountRewards).
             apply("Profile.Network.ProfileAccountXpState", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "ProfileAccountXpState", null, "Profile_AccountXpState"));
             apply("Profile.Network.ProfileAccountXpClaim", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "ProfileAccountXpClaim", null, "Profile_AccountXpClaim"));
+            // Mercenary upgrades (the mercenary sheet's button, see Mercenaries leveling).
+            apply("Profile.Network.MercAction", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "MercAction", null, "Profile_MercAction"));
             apply("Profile.Network.DeckTemplateSave", () => Prefix(harmony, typeof(Game.Shared.Profile.Network), "DeckTemplateSave", null, "Profile_DeckTemplateSave"));
             // Local store (see Store.cs).
             apply("EscrowService.GetStoreItems.Request", () => Prefix(harmony, typeof(Game.Client.Network.Escrow.EscrowService.GetStoreItems), "Request",
@@ -649,6 +651,9 @@ namespace HexRevival
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
         { __result = null; DeckTemplates.OnSaveRequest(__2, __3, __4); return false; }
+        public static bool Profile_MercAction(Game.Shared.ResourceId __2, int __3, int __4,
+            Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __5, ref IAsyncResult __result)
+        { __result = null; HexRevival.Mercenaries.OnMercAction(__2, __3, __4, __5); return false; }
         public static bool Profile_AccountXpState(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __2, ref IAsyncResult __result)
         { __result = null; AccountRewards.OnState(__2); return false; }
         public static bool Profile_AccountXpClaim(Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __2, ref IAsyncResult __result)
