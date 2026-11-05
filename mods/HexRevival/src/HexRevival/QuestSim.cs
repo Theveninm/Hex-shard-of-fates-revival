@@ -30,6 +30,7 @@ namespace HexRevival
     ///   dleave                leaves the dungeon (forfeit)
     ///   zone AZ2              the champion goes to that zone (whole map visible)
     ///   quests                quest progress of the champion
+    ///   finish &lt;script&gt; ...  starts and finishes these quests at once
     /// The report is written to HexRevivalSim.txt.
     /// </summary>
     public static class QuestSim
@@ -147,6 +148,10 @@ namespace HexRevival
                     break;
                 case "quests":
                     Note("  " + Quests.Command(new[] { "quest", "of", Champ.ToString() }));
+                    break;
+                case "finish":
+                    // the quests given are finished at once, objective by objective (to reach a later quest quickly)
+                    for (int i = 1; i < p.Length; i++) Note("  " + Quests.SimFinish(Champ, p[i]));
                     break;
                 default:
                     Note("  unknown step");
