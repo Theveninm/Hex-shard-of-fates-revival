@@ -265,13 +265,13 @@ namespace HexRevival
         // gold cost) reads a MercLeveling per mercenary (PlayerProfile.GetMercLevel: Level, Challenge, ChallengeReq,
         // GoldCost) and upgrades with the profile request "mercupd" (Profile.Network.MercAction), answered with a
         // MercLevelingResponse. Each level is the mercenary template's upgrade (m_UpgradeTemplateId, up to its
-        // MaxUpgradeLevel). Src.Steam2016 (a player's thread): two won "mercenary challenge" dungeon battles plus 25,000
+        // MaxUpgradeLevel). A 2016 Steam forum thread (which one: not noted when it was read): two won "mercenary challenge" dungeon battles plus 25,000
         // gold per upgrade; the client's own default is 2 challenges (PlayerProfile.GetCurrentMercenaryUpgradeTemplate).
         // Where the challenges are: see Dungeons.PickMercNode (PLACEHOLDER). Not reproduced before 1.2.19.
 
-        /// <summary>Gold per upgrade (Src.Steam2016; the same for every level and mercenary: PLACEHOLDER).</summary>
+        /// <summary>Gold per upgrade (the 2016 Steam thread; the same for every level and mercenary: PLACEHOLDER).</summary>
         public const int UpgradeGold = 25000;
-        /// <summary>Challenges per upgrade (Src.Steam2016, Src.Game: the client's default).</summary>
+        /// <summary>Challenges per upgrade (the 2016 Steam thread; Src.Game: the client's default).</summary>
         public const int ChallengesPerLevel = 2;
 
         private class Lvl { public int Level = 1, Challenges; }

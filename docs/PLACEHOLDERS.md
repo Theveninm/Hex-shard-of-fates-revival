@@ -1,4 +1,4 @@
-# Placeholder register (updated 2026-11-04: Water Elemental videos checked)
+# Placeholder register (updated 2026-11-05: review of what is missing, 1.2.19)
 
 Every value or behaviour in the mod that is not backed by a source is tagged `PLACEHOLDER` in the code
 (or `Source = Src.Placeholder` in the reward tables). This file lists them so that, when a new source turns
@@ -8,6 +8,28 @@ up, it is clear what to check. Regenerate the full table with:
 Rule (from 1.2.6): no guess without the tag. A guess that the existing videos could settle is not a
 placeholder, it is unfinished work: check the videos first (they are in campaign order, see
 claude/campaign-chronology-and-dungeons.md), and use a placeholder only for what no video shows.
+
+## Review of what is missing (2026-11-05, 1.2.19)
+The user asked for everything still missing to be done, "even if we're not 100% sure": each guess below is tagged
+PLACEHOLDER in the code, with the reasoning next to it.
+
+| What | Was | Now | Source / why |
+|---|---|---|---|
+| Sapphire Gate (Node073) | always open | locked ("Step 1 - Locked") until The Blood Beneath is accepted | PLACEHOLDER, inferred: the gate guards the dead end that leads to that quest's goal (Game map: The Scar - Sapphire Gate - Valley of Sighs - Dusk Hollow - Eagle Mesa - Skittering Ridge); Gurtok: "I'll show you how to get there" (Game); every run had the quest when it opened the gate (MHS UW 2017-01-18, MHS Ardent 2017-03-28, Vandersveldt 63). No video shows the key given (MHS Ardent 2017-02-07 [wx5ts5GbQUE] 16:01-16:41: Gurtok's quest start, no item window). Ruled out: The Three Braves (hex-server's trigger: Vandersveldt opens the gate in part 63, gets the regulator in 64 and turns the quest in in 65; the sapphire conduit is installed in the robot); the other "sapphire" conversations (Crayburn's fallen sapphire, taming hints, AZ2/AZ3 content). Also fits: Gnomes Come Home (finished before every visit) |
+| Mercenary leveling | not reproduced | the client's mercenary sheet works: 2 challenges + 25,000 gold per level, the upgraded template plays and gives its passive | Game (the client's sheet, MercLeveling, "mercupd", default 2 challenges); a 2016 Steam thread (2 challenges, 25,000 gold). PLACEHOLDER: the same cost for every level |
+| Mercenary challenge room ("/merc_node_ch") | none | one battle room of each dungeon run, drawn at random (not the final one, none in Castle Crayburn); a win there by a party mercenary is one challenge for it | Game: the client marks the room (UIDungeonMapNode.IsMercNode); which room and the rule: PLACEHOLDER (no video shows the marker) |
+| Kraken Dark Chamber | not reproduced | +1 charge for the player's champion in every later battle of the run | Game: "You will begin each game with +1 charge for the remainder of the dungeon" |
+| Arena: The Primal of Luck, Infernal Professor | not done | your champion plays Kismet's Reverie / each champion plays Infernal Professor, for no cost, after the mulligan | Game: ArenaPVE_Challenge_Body6 / 9 (when they are played: PLACEHOLDER) |
+| Arena: "Arena Challenge - Runic", "Arena Challenge - Banners" | not used | two more challenges: the opponent plays Runic ("Actions in all zones get Runic"), each champion plays Banners (a random banner) | Game: AI Only Cards with no text or conversation; who plays them: PLACEHOLDER |
+| Account level stardust | 300 gold | one Rare Stardust | the mod has stardust since 1.2.14; which and how much: PLACEHOLDER |
+| Account level alternate arts | nothing | an alternate art card of the current set at level 22 | Src.Wiki2019 ("common alternate arts" in levels 22-26); which card and level: PLACEHOLDER |
+
+Still not done, and why: Swarm! Swarm!, Rage and Charge! (arena: they change every card's values, no card of the game
+data does it); the dungeons' "Challenge Completed" gold line (condition never shown: see PROGRESSION.md); Pappy
+Jasper's Whip; Mayor Galway's death; the Kraken's sea hag curses and tentacles (in-battle scenes); the Crayburn
+watchtower's training battle (no encounter in the game data); Hogarth's challenge window (console only); Swiss and
+single elimination tournaments; the Wheel of Fate items, event and Kickstarter items with no source of how they were
+won; Horwich Sea's "Princess Revert" (no run shows it); the never-released content listed below.
 
 ## Settled from the Water Elemental videos (2026-11-04, Src.Video)
 A Necrotic champion's let's play, "Chronicles of Entrath" parts 1-26 (Feb 2016 - Mar 2017: Crayburn to Brutecrown Bluff),
@@ -28,7 +50,7 @@ runs from Oct 2016 to early Mar 2017 (Smoldering Dead, Devonshire Keep here; Tra
 for MHS UW) but given in 2016 (Tranquil Dream 500, Fort Romor 1000) and to the Elf in 2017 (the mod keeps the 2017
 values); Frost Ring Arena 2015: 6 wins, no loss, withdrew with 6 gold pouches (900 gold) and 2 chests after tier 1's
 boss (one gave Vial of Fecundity, an arena equipment) — an older arena, its gold not used.
-Not settled by these videos: Sapphire Gate key, Sister Midnight's Cunning/Instinct (2016 client, no form shown),
+Not settled by these videos: Sapphire Gate key (see the 2026-11-05 review), Sister Midnight's Cunning/Instinct (2016 client, no form shown),
 Fort Romor defence after a loss (part 17 wins all three lords), Brutecrown allies' order (part 26 chose Zagg again:
 Vargar then Burgg at the Crumbling Gates, as KVC).
 
@@ -133,7 +155,7 @@ Hogarth's challenge window (the client's is the consoles', without buttons on PC
 ## Campaign placeholders still open
 | Where | Placeholder | Why it stays |
 |---|---|---|
-| NodeScripts.cs (Node073) | Sapphire Gate open | no run saw it locked; every run had the key at the first visit. Not The Blood Beneath (still in the tracker at both visits); no dialogue or item names the key's source (checked 2026-10-31) |
+| NodeScripts.cs (Node073) | Sapphire Gate locked until The Blood Beneath is accepted (1.2.19) | inferred from the map and Gurtok's line, see the review above; no video shows the key given |
 | CampaignBoat.cs SeaMonstersAwake | wake chance 1 in 3 per voyage | the trigger was server-side: the quest tracker shows MHS Ardent attacked with no sea quest done after calm 3rd and 5th voyages, and KVC still calm after a quest turn-in; only the chance is a guess (2026-10-31) |
 | Progression.cs usurper/NodeE | Finanif reward | Shepherd's Rest never fought (MHS Ardent, KVC skip it) |
 | Progression.cs kukatan/NodeQ | Tomb of Omens reward | never visited on video (checked 2026-10-31: KVC parts 4, 9, 15 and MHS's 2019 Kukatan run go from the Mausoleum to the Black Hall and the Forgotten Crypt) |
@@ -176,7 +198,9 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Arena.cs:624 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
 | Arena.cs:625 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
 | Arena.cs:652 | A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary> |
-| Arena.cs:796 | soon as its tunneling count is reached (0 for a card without Tunneling). Which card: PLACEHOLDER (a random troop |
+| Arena.cs:799 | soon as its tunneling count is reached (0 for a card without Tunneling). Which card: PLACEHOLDER (a random troop |
+| Arena.cs:819 | (Src.Game: ArenaPVE_Challenge_Body6 / 9). Played (cast) once the mulligan is over (PLACEHOLDER: when). |
+| Arena.cs:824 | ..."), never seen on video. PLACEHOLDER: played once for the opponent (Runic: it speaks of every action) and for |
 | Battlegrounds.cs:28 | draft timer are PLACEHOLDER (not known). The client's own screens are driven through its TournamentManager: |
 | Battlegrounds.cs:48 | PLACEHOLDER |
 | Battlegrounds.cs:62 | PLACEHOLDER: the limited gauntlets use the last set's boosters until the player chooses others (BoosterChoice; the server chose the product).</summary> |
@@ -191,16 +215,19 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:415 | PLACEHOLDER: the blast's victim plays second |
-| Dungeons.cs:736 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
-| Dungeons.cs:759 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
-| Dungeons.cs:1204 | it stays (not seen: PLACEHOLDER). |
+| Dungeons.cs:591 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
+| Dungeons.cs:761 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
+| Dungeons.cs:784 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
+| Dungeons.cs:1242 | it stays (not seen: PLACEHOLDER). |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |
 | Loot.cs:105 | Legendary 1; Vandersveldt, Water Elemental, MyHotStream). A small sample: PLACEHOLDER precision. |
 | Loot.cs:118 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:120 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
-| NodeScripts.cs:126 | Sapphire Gate: where the Sapphire Key came from is unknown (PLACEHOLDER: the gate is open). Src.Video: no run saw |
+| Mercenaries.cs:270 | Where the challenges are: see Dungeons.PickMercNode (PLACEHOLDER). Not reproduced before 1.2.19. |
+| Mercenaries.cs:272 | Gold per upgrade (the 2016 Steam thread; the same for every level and mercenary: PLACEHOLDER).</summary> |
+| NodeScripts.cs:126 | Sapphire Gate: open once The Blood Beneath is accepted (PLACEHOLDER, inferred: user's choice 2026-11-05). The gate |
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
 | Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
@@ -219,20 +246,24 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PrizePacks.cs:57 | "Nearly 1 in 3" a booster; sleeves "one of the rarest things" (PLACEHOLDER 5%); otherwise an alternate art card. |
 | Progression.cs:23 | a PLACEHOLDER chosen for the mod, to be replaced when better information turns up. |
 | Progression.cs:152 | Underworld and Ardent runs, Vandersveldt), values of the Dec 2016+ client; PLACEHOLDER where noted. |
+| Progression.cs:181 | Finanif: not read |
 | Progression.cs:205 | ---- AZ2 map battles (Src.Video, MyHotStream Underworld run; the same for both factions: PLACEHOLDER for the |
+| Progression.cs:285 | { "kukatan/NodeQ", new Reward { Gold = 600, Xp = 525, Source = Src.Placeholder, Note = "Tomb of Omens never fought on video" } }, |
 | Progression.cs:322 | Seen on video: Necrotic, Elf, Human (KVC); the other five follow the same rule (PLACEHOLDER: inferred). |
 | Progression.cs:560 | Gold of a quest whose reward is unknown. PLACEHOLDER.</summary> |
+| Progression.cs:575 | if (!QuestRewards.TryGetValue(script, out r)) r = new Reward { Gold = QuestGold, Source = Src.Placeholder }; |
 | Progression.cs:773 | no list for that set: the old PLACEHOLDER gold |
 | Progression.cs:809 | "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is |
 | Progression.cs:812 | their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown). |
 | Progression.cs:928 | set), commons:N (PLACEHOLDER: random commons of the current set for the wiki's "fixed |
-| Progression.cs:1010 | PLACEHOLDER: stardust needs a system the mod does not have yet. |
-| Progression.cs:1013 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
-| Progression.cs:1016 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
-| Progression.cs:1031 | level: PLACEHOLDER). |
-| Progression.cs:1044 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
-| Progression.cs:1134 | no account XP for Siege battles: PLACEHOLDER, not known |
-| Progression.cs:1135 | same for the Battlegrounds: PLACEHOLDER |
+| Progression.cs:1011 | much: PLACEHOLDER (the wiki's table says "Stardust"). Before 1.2.19: 300 gold. |
+| Progression.cs:1019 | card, and at which level of the row: PLACEHOLDER (level 22). Before 1.2.19: nothing. |
+| Progression.cs:1028 | contents from Zymmer's notes (Src.Zymmer), "chests" a common chest, "rarechest" a rare one (PLACEHOLDER). |
+| Progression.cs:1031 | PLACEHOLDER: tournament entry tickets have no offline use: a current set booster instead. |
+| Progression.cs:1046 | level: PLACEHOLDER). |
+| Progression.cs:1059 | Random cards of a set (rarity 0 = any of common/uncommon/rare, weighted 10/3/1: PLACEHOLDER).</summary> |
+| Progression.cs:1149 | no account XP for Siege battles: PLACEHOLDER, not known |
+| Progression.cs:1150 | same for the Battlegrounds: PLACEHOLDER |
 | PveFullSets.cs:25 | the TemplateManager when the store is built. Price PLACEHOLDER (see GoldPrice). |
 | PveFullSets.cs:29 | PLACEHOLDER gold price (written as the other platinum-era products: converted by the account's price settings).</summary> |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
