@@ -577,10 +577,34 @@ namespace HexRevival
                         if (!r.Steps.ContainsKey("NodeG")) { r.Steps.Remove("NodeF"); r.Seen.Remove("NodeF:0"); }
                         r.Steps.Remove("NodeG");
                     }
+                    if (!r.Vars.ContainsKey("mercnode")) PickMercNode(r);   // runs from before 1.2.19
                     s_Runs[r.Champ] = r;
                 }
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Dungeons] load: " + e); }
+        }
+
+        /// <summary>
+        /// The run's mercenary challenge room (the client's "/merc_node_ch": the room's map marker turns to its mercenary
+        /// state once the player has a party slot, UIDungeonMapNode.IsMercNode). A battle won there by a party mercenary
+        /// counts as one of the challenges that mercenary needs for its next level (see Mercenaries.AddChallenge).
+        /// Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server
+        /// chose it, no video shows the marker (the runs with mercenaries are AZ2 ones, KVC). Castle Crayburn has none.
+        /// </summary>
+        private static void PickMercNode(Run r)
+        {
+            Def d = r.Def;
+            List<string> rooms = new List<string>();
+            if (d != null && !d.Starter)
+                foreach (Room room in d.Rooms.Values)
+                    if (!room.Final && room.Steps.Exists(st => st.Enc != null)) rooms.Add(room.Id);
+            r.Vars["mercnode"] = rooms.Count > 0 ? rooms[UnityEngine.Random.Range(0, rooms.Count)] : "-";
+        }
+
+        private static string MercNode(Run r)
+        {
+            string n;
+            return r.Vars.TryGetValue("mercnode", out n) && n != "-" && RoomOf(r, n) != null && !Cleared(r, n) ? n : null;
         }
 
         private static string Null(string s) { return s == "" ? null : s; }
@@ -619,6 +643,7 @@ namespace HexRevival
             }
             if (d.Key == "usurper") r.Vars["lastrites"] = "1";   // new layout (see Load)
             r.VisitedNodes.Add(d.Start);
+            PickMercNode(r);
             s_Runs[champ] = r;
             Save();
             Debug.Log("[HexRevival] [Dungeons] champion " + champ + " enters " + d.Name);
@@ -877,6 +902,8 @@ namespace HexRevival
             pub["visited_paths"] = new List<object>(r.VisitedPaths.ToArray());
             pub["quest_nodes"] = new List<object>();
             if (r.Key == "fortromor") pub[DefenceList] = DefencesLeft(r);
+            string mercNode = MercNode(r);
+            if (mercNode != null) pub["merc_node_ch"] = mercNode;
             // Castle Crayburn (Src.Game "/IsStarterDungeon"): no back button (it would abandon the run:
             // there is no map to go back to yet) and no deck editing. The home button keeps the run.
             if (d.Starter) pub["IsStarterDungeon"] = true;
@@ -1120,7 +1147,7 @@ namespace HexRevival
         // Battles
         // ------------------------------------------------------------------
 
-        private class Battle { public Run Run; public string Room; public Step Step; public string Reward, Success, Enc; }
+        private class Battle { public Run Run; public string Room; public Step Step; public string Reward, Success, Enc, Merc; }
         private static Battle s_Battle;
 
         private static void StartBattle(Run r, string room, Step s, string enc)
@@ -1129,7 +1156,9 @@ namespace HexRevival
             Choice(r, room, s, out evt);
             s_Battle = new Battle { Run = r, Room = room, Step = s, Reward = Resolve(r, room, ByChoice(s.OnReward, evt, s.Reward)), Success = ByChoice(s.OnSuccess, evt, s.Success), Enc = enc };
             Debug.Log("[HexRevival] [Dungeons] battle " + r.Def.Name + " " + room + " (" + Resolve(r, room, s.Enc) + ")");
+            Opponents.NextSetup = BattleSetup(r);
             Campaign.LaunchBattle(r.Champ, enc, r.Def.Name + " " + room, Effects(r));
+            s_Battle.Merc = Campaign.LastBattleMerc;
         }
 
         // ------------------------------------------------------------------
@@ -1153,9 +1182,18 @@ namespace HexRevival
             { "kraken/NodeH", "Discovered Lost Riches" },      // Algae Cave: "two random cards ... cost -1 each game"
             { "kukatan/NodeG", "Pocket of Lucky Coins" },      // Dead End: "begin each game with a Coins of Kismet"
             { "kukatan/NodeS", "Fist Full of Berries" },       // Buzzing Tangle: "begin each game with a Polyberry Pouch"
-            // Dark Chamber ("+1 charge each game"): no effect card gives one charge ("Energized to Defeat the Kraken"
-            // gives two): not reproduced.
+            // Dark Chamber: "You will begin each game with +1 charge for the remainder of the dungeon" (Src.Game). No effect
+            // card gives one charge ("Energized to Defeat the Kraken" gives two): the charge is added to the player's
+            // champion once the mulligan is over (BattleSetup), as the arena's modifiers. Not reproduced before 1.2.19.
+            { "kraken/NodeM", "+charge" },
         };
+
+        /// <summary>The game's own effects of the run that are not effect cards ("fx:+charge"), applied after the mulligan.</summary>
+        private static Action<StandaloneSession, Player, Player> BattleSetup(Run r)
+        {
+            if (!r.Vars.ContainsKey("fx:+charge")) return null;
+            return (ss, ai, me) => { if (me != null) ss.AddChargePoints(me.m_ChampionCard, 1, false); };
+        }
 
         /// <summary>
         /// Effect cards for the run's next battle: its boons, and in the Great Machine Graveyard the repaired robot
@@ -1166,7 +1204,7 @@ namespace HexRevival
         private static List<string> Effects(Run r)
         {
             List<string> res = new List<string>();
-            foreach (KeyValuePair<string, string> kv in r.Vars) if (kv.Key.StartsWith("fx:")) res.Add(kv.Key.Substring(3));
+            foreach (KeyValuePair<string, string> kv in r.Vars) if (kv.Key.StartsWith("fx:") && !kv.Key.StartsWith("fx:+")) res.Add(kv.Key.Substring(3));
             string defence;
             if (r.Vars.TryGetValue("defence", out defence)) res.Add(defence);   // Fort Romor (card template id)
             if (r.Def.Key == "machinegraveyard" && Cleared(r, "NodeH"))
@@ -1211,6 +1249,12 @@ namespace HexRevival
             string enc = b.Enc;
             if (won)
             {
+                // The mercenary challenge room won by a party mercenary: one challenge for it (see PickMercNode).
+                if (room == MercNode(r) && !string.IsNullOrEmpty(b.Merc))
+                {
+                    r.Vars["mercnode"] = "-";
+                    Mercenaries.AddChallenge(b.Merc);
+                }
                 if (enc != null) Quests.SetFlag(r.Champ, "won:" + enc, "1");
                 if (enc != null) Quests.OnEncounterWon(r.Champ, enc, Progression.AnyTamed());
                 r.Outcome = Conv(r, room, b.Success);

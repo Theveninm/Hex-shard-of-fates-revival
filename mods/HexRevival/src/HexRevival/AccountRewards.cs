@@ -106,7 +106,7 @@ namespace HexRevival
             switch (p[0])
             {
                 case "gold": type = "GOLD"; qty = n; return;
-                case "stardust": type = "GOLD"; qty = 300; return;   // PLACEHOLDER (see GrantLevelReward)
+                case "stardust": type = "INVENTORY"; payout = Guid(Game.Shared.Resources.BuiltInResources.RareStardust); return;   // PLACEHOLDER (see GrantLevelReward)
                 case "ticket":
                 case "pack":
                 {
@@ -128,11 +128,13 @@ namespace HexRevival
                 case "commons":
                 case "cards":
                 case "sleeve":
+                case "altart":
                 {
                     // A text row (the game's "DPAYOUT_<id>" localization key, added here).
                     type = "DPAYOUT";
                     payout = "hexrevival_" + p[0] + "_" + level;
-                    string text = p[0] == "sleeve" ? Loc.Get("axp_sleeve") : Loc.Get(p[0] == "commons" ? "axp_commons" : "axp_cards", n, cur != null ? cur.m_Name : "?");
+                    string text = p[0] == "sleeve" ? Loc.Get("axp_sleeve") : p[0] == "altart" ? Loc.Get("axp_altart", cur != null ? cur.m_Name : "?")
+                        : Loc.Get(p[0] == "commons" ? "axp_commons" : "axp_cards", n, cur != null ? cur.m_Name : "?");
                     AddLocalization("DPAYOUT_" + payout, text);
                     return;
                 }
@@ -198,7 +200,6 @@ namespace HexRevival
                     {
                         int n;
                         if (code.StartsWith("gold:") && int.TryParse(code.Substring(5), out n)) gold += n;
-                        else if (code == "stardust") gold += 300;
                         else if ((code.StartsWith("pack:") || code == "ticket") && GivePack(code, results, got)) { }
                         else
                         {

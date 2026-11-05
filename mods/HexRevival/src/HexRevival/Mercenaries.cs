@@ -7,6 +7,8 @@ using Game.Client.Campaign;
 using Game.Shared;
 using Game.Shared.Campaign.Messages;
 using Game.Shared.Domain;
+using Game.Shared.Network;
+using Reckoning.Profile.Messages;
 using Reckoning.Game;
 using UnityEngine;
 
@@ -165,6 +167,8 @@ namespace HexRevival
             s_Pending = false;
             try { EnsureStarterDecks(profile); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] starter decks: " + e); }
+            try { PushLevels(profile); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] levels: " + e); }
             foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
             {
                 try
@@ -186,6 +190,8 @@ namespace HexRevival
             Saves.Current.Claims.Add("merc:" + mercItem);
             Saves.SaveCurrent();
             RefreshPartyCap(GameClient.Instance.PlayerProfile);
+            InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(mercItem) as InventoryMercenaryData;
+            if (data != null) try { GameClient.Instance.PlayerProfile.UpdateMercLevel(Info(data)); } catch { }
         }
 
         private static void RefreshPartyCap(PlayerProfile profile)
@@ -225,7 +231,7 @@ namespace HexRevival
             if (data == null || data.MercenaryTemplate == null || member == null) return 0;
             Game.Shared.Profile.ProfileDeckTemplate t = DeckTemplates.Get(member.DeckTemplate);
             if (t == null) return 0;
-            mercTemplate = data.MercenaryTemplate.Id;
+            mercTemplate = AtLevel(data, Level(item)).Id;   // its upgraded version once leveled (see Level)
             t.Champ = mercTemplate;
             return Decks.FromTemplate(champ, t);
         }
@@ -245,16 +251,165 @@ namespace HexRevival
             foreach (CampSysGeneral.Party.ChampionParty.ChampionPartyMember m in party.Members)
             {
                 InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(m.Mercenary) as InventoryMercenaryData;
-                MercenaryTemplate t = data != null ? data.MercenaryTemplate : null;
-                for (int i = 0; t != null && i < m.Upgrade; i++)
-                {
-                    MercenaryTemplate up = MercenaryTemplate.GetUpgradeTemplate(t);
-                    if (up == null) break;
-                    t = up;
-                }
+                MercenaryTemplate t = AtLevel(data, Math.Max(m.Upgrade + 1, Level(m.Mercenary)));
                 if (t != null) res.Add(t.Id);
             }
             return res.Count > 0 ? res : null;
+        }
+
+        // ------------------------------------------------------------------
+        // Leveling
+        // ------------------------------------------------------------------
+        //
+        // The client's mercenary sheet (UICampaignCharacterSheet: level arrows, "Challenges n/2", the upgrade button and its
+        // gold cost) reads a MercLeveling per mercenary (PlayerProfile.GetMercLevel: Level, Challenge, ChallengeReq,
+        // GoldCost) and upgrades with the profile request "mercupd" (Profile.Network.MercAction), answered with a
+        // MercLevelingResponse. Each level is the mercenary template's upgrade (m_UpgradeTemplateId, up to its
+        // MaxUpgradeLevel). Src.Steam2016 (a player's thread): two won "mercenary challenge" dungeon battles plus 25,000
+        // gold per upgrade; the client's own default is 2 challenges (PlayerProfile.GetCurrentMercenaryUpgradeTemplate).
+        // Where the challenges are: see Dungeons.PickMercNode (PLACEHOLDER). Not reproduced before 1.2.19.
+
+        /// <summary>Gold per upgrade (Src.Steam2016; the same for every level and mercenary: PLACEHOLDER).</summary>
+        public const int UpgradeGold = 25000;
+        /// <summary>Challenges per upgrade (Src.Steam2016, Src.Game: the client's default).</summary>
+        public const int ChallengesPerLevel = 2;
+
+        private class Lvl { public int Level = 1, Challenges; }
+        private static Dictionary<ResourceId, Lvl> s_Levels;
+        private static string s_LevelsFrom;
+        private static string LevelsPath { get { return Saves.File("merc_levels.txt"); } }
+
+        // File: one line per mercenary: merc item id|level|challenges
+        private static Dictionary<ResourceId, Lvl> Levels
+        {
+            get
+            {
+                if (s_Levels != null && s_LevelsFrom == LevelsPath) return s_Levels;
+                s_LevelsFrom = LevelsPath;
+                s_Levels = new Dictionary<ResourceId, Lvl>();
+                try
+                {
+                    if (File.Exists(LevelsPath))
+                        foreach (string line in File.ReadAllLines(LevelsPath))
+                        {
+                            string[] p = line.Split('|');
+                            ResourceId id;
+                            int lv, ch;
+                            if (p.Length < 3 || !ResourceId.TryParse(p[0], out id) || !int.TryParse(p[1], out lv) || !int.TryParse(p[2], out ch)) continue;
+                            s_Levels[id] = new Lvl { Level = Math.Max(1, lv), Challenges = Math.Max(0, ch) };
+                        }
+                }
+                catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] levels: " + e); }
+                return s_Levels;
+            }
+        }
+
+        private static void SaveLevels()
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (KeyValuePair<ResourceId, Lvl> kv in Levels) sb.Append(kv.Key).Append('|').Append(kv.Value.Level).Append('|').Append(kv.Value.Challenges).Append('\n');
+                File.WriteAllText(LevelsPath, sb.ToString());
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] save levels: " + e); }
+        }
+
+        /// <summary>The mercenary's level (1 = its base template).</summary>
+        public static int Level(ResourceId mercItem) { Lvl l; return Levels.TryGetValue(mercItem, out l) ? l.Level : 1; }
+
+        private static Lvl LvlOf(ResourceId mercItem)
+        {
+            Lvl l;
+            if (!Levels.TryGetValue(mercItem, out l)) Levels[mercItem] = l = new Lvl();
+            return l;
+        }
+
+        /// <summary>The mercenary's template at a level (its base template, upgraded level - 1 times as far as it goes).</summary>
+        public static MercenaryTemplate AtLevel(InventoryMercenaryData data, int level)
+        {
+            MercenaryTemplate t = data != null ? data.MercenaryTemplate : null;
+            for (int i = 1; t != null && i < level; i++)
+            {
+                MercenaryTemplate up = MercenaryTemplate.GetUpgradeTemplate(t);
+                if (up == null) break;
+                t = up;
+            }
+            return t;
+        }
+
+        private static int MaxLevel(InventoryMercenaryData data)
+        {
+            int n = 1;
+            MercenaryTemplate t = data != null ? data.MercenaryTemplate : null;
+            while (t != null && (t = MercenaryTemplate.GetUpgradeTemplate(t)) != null && n < 10) n++;
+            return n;
+        }
+
+        private static MercLeveling Info(InventoryMercenaryData data)
+        {
+            Lvl l = LvlOf(data.m_Id);
+            return new MercLeveling { MercId = data.m_Id, Level = l.Level, Challenge = l.Challenges, ChallengeReq = ChallengesPerLevel, GoldCost = UpgradeGold, Owned = true };
+        }
+
+        /// <summary>The client's leveling data of every owned mercenary (login, after the templates are parsed).</summary>
+        public static void PushLevels(PlayerProfile profile)
+        {
+            if (profile == null) return;
+            int n = 0;
+            foreach (InventoryMercenaryData m in Obtainable())
+            {
+                if (Inventory.Count(m.m_Id) == 0) continue;
+                try { profile.UpdateMercLevel(Info(m)); n++; }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Mercenaries] level " + m.m_Name + ": " + e.Message); return; }
+            }
+            Debug.Log("[HexRevival] [Mercenaries] leveling data of " + n + " mercenaries given");
+        }
+
+        /// <summary>A mercenary challenge won by this mercenary (its item id as the client sent it).</summary>
+        public static void AddChallenge(string mercItem)
+        {
+            ResourceId id;
+            if (string.IsNullOrEmpty(mercItem) || !ResourceId.TryParse(mercItem, out id) || !id.IsValid) return;
+            InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(id) as InventoryMercenaryData;
+            if (data == null) return;
+            Lvl l = LvlOf(id);
+            if (l.Level >= MaxLevel(data)) return;
+            if (l.Challenges < ChallengesPerLevel) l.Challenges++;
+            SaveLevels();
+            try { GameClient.Instance.PlayerProfile.UpdateMercLevel(Info(data)); } catch { }
+            Debug.Log("[HexRevival] [Mercenaries] challenge for " + data.m_Name + ": " + l.Challenges + "/" + ChallengesPerLevel);
+            Notices.Show(Loc.Get("merc_challenge", data.m_Name, l.Challenges, ChallengesPerLevel));
+        }
+
+        /// <summary>Profile.Network.MercAction (Harmony prefix): the mercenary sheet's upgrade button.</summary>
+        public static void OnMercAction(ResourceId mercItem, int challenges, int payGold, Action<CustomNetworkResponse<Game.Shared.Profile.Network.Response>> notify)
+        {
+            CustomNetworkResponse<Game.Shared.Profile.Network.Response> rsp = new CustomNetworkResponse<Game.Shared.Profile.Network.Response>();
+            InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(mercItem) as InventoryMercenaryData;
+            Saves.Info s = Saves.Current;
+            Lvl l = data != null ? LvlOf(mercItem) : null;
+            string error = data == null || s == null ? "unknown mercenary" : l.Level >= MaxLevel(data) ? "maximum level"
+                : l.Challenges < ChallengesPerLevel ? "challenges missing" : s.Gold < UpgradeGold ? "not enough gold" : null;
+            if (error != null)
+            {
+                Debug.LogWarning("[HexRevival] [Mercenaries] upgrade refused: " + error);
+                // Not a MercLevelingResponse: the client shows its "Mercenary_Upgrade_Response_Error" alert. (Its button
+                // only asks when the challenges are done and the gold is there.)
+                rsp.Message = new Game.Shared.Profile.Network.Response { Envelope = EncData.Encode(new MercLeveling { MercId = mercItem }) };
+            }
+            else
+            {
+                s.Gold -= UpgradeGold;
+                Saves.SaveCurrent();
+                l.Level++;
+                l.Challenges = 0;
+                SaveLevels();
+                Debug.Log("[HexRevival] [Mercenaries] " + data.m_Name + " upgraded to level " + l.Level);
+                MercLevelingResponse r = new MercLevelingResponse { LevelInfo = Info(data), AccountGold = s.Gold };
+                rsp.Message = new Game.Shared.Profile.Network.Response { Envelope = EncData.Encode(r) };
+            }
+            if (notify != null) Campaign.Enqueue(() => notify(rsp));
         }
 
         /// <summary>True for a mercenary's template (a deck whose champion is a mercenary is played by it).</summary>

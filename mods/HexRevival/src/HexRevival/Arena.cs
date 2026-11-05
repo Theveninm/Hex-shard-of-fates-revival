@@ -718,6 +718,8 @@ namespace HexRevival
             /// </summary>
             public string Conversation;
             public Action<StandaloneSession, Player, Player> Setup;
+            /// <summary>The mod's own text (Loc) of a challenge the game gives no text for.</summary>
+            public string TextKey;
             /// <summary>In the game's language (the card's name as the game shows it).</summary>
             public string Name
             {
@@ -734,6 +736,7 @@ namespace HexRevival
                 {
                     string[] conv = Conversation != null ? ConversationTexts(Conversation) : null;
                     if (conv != null) return conv[2];
+                    if (TextKey != null) return Loc.Get(TextKey);
                     if (GameText > 0) return Localization.Get("ArenaPVE_Challenge_Body" + GameText).Replace("[b]", "").Replace("[/b]", "").Replace("\\n", " ").Replace("\n", " ");
                     return Loc.Get(Player != null ? "arena_ch_reflection_text" : "arena_ch_opponent_text", CardName(Card));
                 }
@@ -759,9 +762,9 @@ namespace HexRevival
         /// <summary>
         /// The challenges seen (Src.Video: their texts on the battle screen; all with the goal "Win the game"), and those
         /// of Hogarth's challenges in the game's texts (Src.Game: ArenaPVE_Challenge_Header/Body 1-10): Shards Aplenty (2),
-        /// Inferno (3), The Ol' Switcheroo (7), The Pacts (8). Not done: Swarm! Swarm! (troops cost -1), Rage (troops gain
-        /// Rage 1) and Charge! (an additional charge) change every card's values, which the engine only allows through
-        /// its own effects; The Primal of Luck and Infernal Professor play an action for free. Cerebral Fulmination (1) is in both: "each champion" in the game's text,
+        /// Inferno (3), The Ol' Switcheroo (7), The Pacts (8). The Primal of Luck (6) and Infernal Professor (9): see below. Not done:
+        /// Swarm! Swarm! (troops cost -1), Rage (troops gain Rage 1) and Charge! (resources gain an additional charge) change
+        /// every card's values, which the engine only allows through its own effects (no card of the game data does it). Cerebral Fulmination (1) is in both: "each champion" in the game's text,
         /// the opponent only on video; the video's is kept. The client's Hogarth window for challenges is the consoles'
         /// (no buttons on PC): the challenge is told at the start of the fight, as before.
         /// </summary>
@@ -811,6 +814,17 @@ namespace HexRevival
             { "incantation", new Challenge { Key = "incantation", Conversation = "Challenge08 - Incantation", Setup = (ss, ai, me) => { AddCards(ss, ai, RandomIncantation(), 1, ECardCollections.CastSpells); AddCards(ss, me, RandomIncantation(), 1, ECardCollections.CastSpells); } } },
             { "prosperity", new Challenge { Key = "prosperity", Conversation = "Challenge09 - Shrine of Prosperity",
                 AI = new Opponents.Handicap { InPlay = new List<string> { "Shrine of Prosperity" } } } },
+            // Hogarth's challenges 6 and 9 of the game's texts, applied with the encounter modifiers since 1.2.19: "your champion
+            // will play the card Kismet's Reverie for no cost", "each champion will play the card Infernal Professor for no cost"
+            // (Src.Game: ArenaPVE_Challenge_Body6 / 9). Played (cast) once the mulligan is over (PLACEHOLDER: when).
+            { "primalofluck", new Challenge { Key = "primalofluck", GameText = 6, Setup = (ss, ai, me) => AddCards(ss, me, "Kismet's Reverie", 1, ECardCollections.CastSpells) } },
+            { "professor", new Challenge { Key = "professor", GameText = 9, Setup = (ss, ai, me) => { AddCards(ss, ai, "Infernal Professor", 1, ECardCollections.CastSpells); AddCards(ss, me, "Infernal Professor", 1, ECardCollections.CastSpells); } } },
+            // Two arena challenge cards of the game data with no text or conversation (Src.Game: "Arena Challenge - Runic",
+            // "Actions in all zones get Runic."; "Arena Challenge - Banners", "Choose one at random: Summon an Arcane Banner;
+            // ..."), never seen on video. PLACEHOLDER: played once for the opponent (Runic: it speaks of every action) and for
+            // each champion (Banners), as Hogarth's other "each champion" challenges.
+            { "runic", new Challenge { Key = "runic", TextKey = "arena_ch_runic_text", Setup = (ss, ai, me) => AddCards(ss, ai, "Arena Challenge - Runic", 1, ECardCollections.CastSpells) } },
+            { "banners", new Challenge { Key = "banners", TextKey = "arena_ch_banners_text", Setup = (ss, ai, me) => { AddCards(ss, ai, "Arena Challenge - Banners", 1, ECardCollections.CastSpells); AddCards(ss, me, "Arena Challenge - Banners", 1, ECardCollections.CastSpells); } } },
             { "headless", new Challenge { Key = "headless", Conversation = "Challenge10 - Headless Executioner", Setup = (ss, ai, me) => AddCards(ss, ai, "Headless Executioner", 1, ECardCollections.CastSpells) } },
         };
 
@@ -872,7 +886,8 @@ namespace HexRevival
             return null;
         }
         private static readonly string[] ChallengeKeys = { "reflection", "primordial", "gooplasm", "fulmination", "inferno", "pacts", "shards", "switcheroo",
-            "commandtower", "tunneling", "boobytraps", "soothingsong", "masteryoftime", "incantation", "prosperity", "headless" };
+            "commandtower", "tunneling", "boobytraps", "soothingsong", "masteryoftime", "incantation", "prosperity", "headless",
+            "primalofluck", "professor", "runic", "banners" };
 
         private class BuffDef { public ArenaBuff Shown; public Opponents.Handicap Effect; }
 

@@ -2000,6 +2000,9 @@ namespace HexRevival
         /// <summary>Mercenary picked on the battle panel ("merc=" argument of the client's "start" event), for the next battle.</summary>
         private static string s_MercChoice;
 
+        /// <summary>The mercenary item id of the party member playing the last battle launched (null: the champion).</summary>
+        internal static string LastBattleMerc;
+
         /// <summary>Reads the mercenary choice of a "start" event (campaign map or dungeon).</summary>
         internal static void NoteStartArgs(object[] args)
         {
@@ -2024,6 +2027,7 @@ namespace HexRevival
                 PlayerChampion ch = GameClient.Instance.PlayerProfile.GetPvEChampionById(champId);
                 ResourceId merc;
                 ulong mercDeck = Mercenaries.BattleDeck(champId, s_MercChoice, out merc);
+                LastBattleMerc = mercDeck != 0 ? s_MercChoice : null;
                 s_MercChoice = null;
                 ulong sub = mercDeck != 0 ? mercDeck : SubChampionDeck(champId);
                 if (sub != 0) deck = new UID(UID.Type.Deck, sub);
