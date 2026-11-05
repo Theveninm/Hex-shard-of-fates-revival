@@ -340,6 +340,17 @@ namespace HexRevival
                 if (d.Objectives[i].LocId == locId && !p.Done.Contains(i)) { Complete(champ, d, p, i); break; }
         }
 
+        /// <summary>Quest simulation: starts a quest and completes its objectives in order.</summary>
+        internal static string SimFinish(ulong champ, string script)
+        {
+            Def d = GetDef(script);
+            if (d == null) return script + ": unknown";
+            Start(champ, script);
+            Progress p = Get(champ, script);
+            for (int i = 0; i < d.Objectives.Count && !p.Finished; i++) if (!p.Done.Contains(i)) Complete(champ, d, p, i);
+            return script + (p.Finished ? " finished" : " not finished");
+        }
+
         /// <summary>Sends an active quest's state again (its panel counters changed).</summary>
         public static void Refresh(ulong champ, string script)
         {
