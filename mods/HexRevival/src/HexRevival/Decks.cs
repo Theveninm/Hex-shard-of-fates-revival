@@ -779,7 +779,11 @@ namespace HexRevival
                 s_Decks[d.Id] = d;
                 LastDeck = new UID(UID.Type.Deck, d.Id);
                 Save();
-                if (d.PveChampion != 0) Champions.SetDeck(d.PveChampion, d.Id);
+                // A champion's first deck becomes its deck; once it has one, a new deck saved for it is the campaign deck
+                // editor's "Save as Deck Template" (UIDeckEditorViewModel.SaveDeck as a copy): a template to load later, the
+                // champion keeps its deck. Before, the template became the champion's deck, so it was missing from the
+                // load list and the next save renamed it "<champion> Campaign Deck" (duxxors 2026-11-07).
+                if (d.PveChampion != 0) { if (!Champions.HasDeck(d.PveChampion)) Champions.SetDeck(d.PveChampion, d.Id); }
                 else
                 {
                     // Saved from the deck editor: the AI settings chosen before the first save, or the copied deck's.

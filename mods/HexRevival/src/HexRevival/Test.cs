@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -974,6 +975,38 @@ namespace HexRevival
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
+                case "widgetinfo":
+                    {
+                        // dev: "widgetinfo <path text>" = depth, alpha, colour, size and panel of the widgets whose path contains the text
+                        StringBuilder wi = new StringBuilder();
+                        foreach (UIWidget w in UnityEngine.Object.FindObjectsOfType<UIWidget>())
+                        {
+                            if (w == null || !w.gameObject.activeInHierarchy) continue;
+                            string wpath = w.name;
+                            for (Transform t = w.transform.parent; t != null; t = t.parent) wpath = t.name + "/" + wpath;
+                            if (parts.Length < 2 || wpath.IndexOf(parts[1], StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            UILabel lb = w as UILabel;
+                            wi.Append(wpath).Append(" ").Append(w.GetType().Name).Append(" depth=").Append(w.depth).Append(" alpha=").Append(w.alpha).Append(" final=").Append(w.finalAlpha)
+                              .Append(" col=").Append(w.color).Append(" size=").Append(w.width).Append("x").Append(w.height).Append(" pos=").Append(w.transform.localPosition)
+                              .Append(" enabled=").Append(w.enabled).Append(" panel=").Append(w.panel != null ? w.panel.name + "/" + w.panel.depth : "-");
+                            if (lb != null) wi.Append(" font=").Append(lb.bitmapFont != null ? lb.bitmapFont.name : "-").Append(" ttf=").Append(lb.trueTypeFont != null ? lb.trueTypeFont.name : "-").Append(" text='").Append(lb.text).Append("' processed='").Append(lb.processedText).Append("' overflow=").Append(lb.overflowMethod);
+                            wi.Append("\n");
+                        }
+                        return wi.ToString();
+                    }
+                case "settext":
+                    // dev: "settext <path text> <text...>" = types into the visible input field whose path contains the text (as the keyboard would)
+                    if (parts.Length < 3) return "settext <path> <text>";
+                    foreach (UIInput inp in UnityEngine.Object.FindObjectsOfType<UIInput>())
+                    {
+                        if (inp == null || !inp.gameObject.activeInHierarchy) continue;
+                        string ipath = inp.name;
+                        for (Transform t = inp.transform.parent; t != null; t = t.parent) ipath = t.name + "/" + ipath;
+                        if (ipath.IndexOf(parts[1], StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        inp.value = string.Join(" ", parts, 2, parts.Length - 2);
+                        return "set " + ipath + " = '" + inp.value + "'";
+                    }
+                    return "no input " + parts[1];
                 case "sleeves": return Sleeves.Command(parts);
                 case "duelpit":   // dev probe: the console Dueling Pit button and view on the landing page
                     {
