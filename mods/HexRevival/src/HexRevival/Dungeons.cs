@@ -95,6 +95,9 @@ namespace HexRevival
             public Def Add(string id, params Step[] steps) { Rooms[id] = new Room { Id = id, Steps = new List<Step>(steps) }; return this; }
             public Def Final(string id) { Rooms[id].Final = true; return this; }
             public Def Flag(string var, string room) { Flags[var] = room; return this; }
+            /// <summary>Prefab nodes with nothing behind them in the game data: never shown (see the Usurper's NodeG).</summary>
+            public HashSet<string> Unused = new HashSet<string>();
+            public Def Hide(string id) { Unused.Add(id); return this; }
         }
 
         private static Step Talk(string conv) { return new Step { Conv = conv }; }
@@ -179,7 +182,11 @@ namespace HexRevival
                 // events are shifted by one node there (NodeG "The Banshee" fires the Last Rites battle, NodeF the
                 // Shepherd's Rest one); The Banshee's own conversation and encounter are not in the game data.
                 .Add("NodeF", new Step { Conv = us + "Last Rites", Enc = "Usurper Last Rites", Success = us + "Last Rites Success", Fail = us + "Last Rites Fail", Reward = "usurper/NodeF" })
-                .Final("NodeF"));
+                .Final("NodeF")
+                // The Banshee (NodeG, past Last Rites): the prefab's last node, with no conversation or encounter of its own
+                // in the game data (dungeon audit, 1.2.4). Shown, it flashed on the map as Verrev fell, just before the
+                // dungeon closed (Stigro 2026-11-07, who remembers players looking for its trigger): never shown now.
+                .Hide("NodeG"));
 
             // The Smoldering Dead (Node 24): King Edmund III's burial vault (entrance battle by faction).
             const string sd = "The Smoldering Dead - ";
@@ -699,7 +706,7 @@ namespace HexRevival
                 HashSet<string> next;
                 if (edges.TryGetValue(n, out next))
                     foreach (string m in next)
-                        if (vis.Add(m)) todo.Enqueue(m);
+                        if (!r.Def.Unused.Contains(m) && vis.Add(m)) todo.Enqueue(m);
             }
             return vis;
         }
