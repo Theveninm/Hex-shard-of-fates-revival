@@ -214,11 +214,11 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
-| Dungeons.cs:415 | PLACEHOLDER: the blast's victim plays second |
-| Dungeons.cs:591 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
-| Dungeons.cs:761 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
-| Dungeons.cs:784 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
-| Dungeons.cs:1242 | it stays (not seen: PLACEHOLDER). |
+| Dungeons.cs:422 | PLACEHOLDER: the blast's victim plays second |
+| Dungeons.cs:598 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
+| Dungeons.cs:768 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
+| Dungeons.cs:791 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
+| Dungeons.cs:1249 | it stays (not seen: PLACEHOLDER). |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |
@@ -231,15 +231,15 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
 | Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:190 | better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki |
-| Packs.cs:208 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
-| Packs.cs:249 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
-| Packs.cs:322 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:356 | an alternate art of the set (which one: PLACEHOLDER) |
-| Packs.cs:363 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:405 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
-| Packs.cs:451 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
-| Packs.cs:525 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:193 | PLACEHOLDER: uncommon 2%, rare 0.5%, legendary 0.1% (no source gives the odds). |
+| Packs.cs:216 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
+| Packs.cs:257 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
+| Packs.cs:330 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:364 | an alternate art of the set (which one: PLACEHOLDER) |
+| Packs.cs:371 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:413 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
+| Packs.cs:459 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:533 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |

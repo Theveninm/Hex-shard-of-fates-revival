@@ -162,7 +162,8 @@ conversation and encounter names (Game) and the videos. Rules:
 - The Usurper: Verrev is fought in Last Rites, after its dialogue (Video: MyHotStream Ardent 2017-03-22). The
   game data's node events are shifted by one node in the Usurper, the Tranquil Dream and Fort Romor (each node
   fires the previous node's battle), so they are not used to place battles; the node titles, the conversation
-  owners and the videos are. The Banshee (NodeG) has no conversation or encounter in the game data.
+  owners and the videos are. The Banshee (NodeG) has no conversation or encounter in the game data: it is never shown
+  (until 1.2.21 it flashed on the map as Verrev fell; Stigro 2026-11-07).
 - The Usurper: Shepherd's Rest battle by who is dead (Ghuuhg in the Hall of Vermin, Mistsim in the
   Chamber of Awakening, or both); one of the two halls is enough to go on.
 - Finishing a dungeon completes the quest objectives naming it (the Usurper quest's objective names
@@ -777,8 +778,10 @@ legendary and 1 treasure chest (Game: the store's text). PLACEHOLDER: the top ca
 otherwise epic 1 time in 5 in the sets that have epics, otherwise rare. Primal pack: 13 rares, 2 legendaries,
 1 legendary chest (Game).
 
-**Treasure chests and the Wheel of Fate.** A booster's chest is common (Survey2015: 93 of 93; the 2014 wiki says
-"of a random rarity", without odds). Before opening it,
+**Treasure chests and the Wheel of Fate.** A booster's chest is of a random rarity (Wiki 2014: "common, uncommon,
+rare or legendary", without odds; Stigro 2026-11-07 remembers every rarity but primal from boosters), mostly common
+(Survey2015: 93 of 93 common; Survey2014's uncommon spins are about its common chests' upgrades): uncommon 2%, rare 0.5%,
+legendary 0.1% (PLACEHOLDER; common only before 1.2.22). Before opening it,
 the chest can be spun on the Wheel of Fate for 1,200 / 3,100 / 8,500 / 30,000 gold (common / uncommon / rare /
 legendary; Game, Wiki). An upgraded legendary chest becomes a primal chest, the only way to get one (Wiki). Outcomes (Game payout table): 1 eye a paid re-spin, 2 eyes a free re-spin, 3 eyes an upgrade;
 three stars a mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls

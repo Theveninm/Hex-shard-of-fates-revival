@@ -185,13 +185,21 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// A booster's chest: common. Src.Survey2015, the players' chest survey (Google sheet
-        /// 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs): all 93 chests recorded from boosters were common, 1 item each;
-        /// better chests came from the wheel's upgrades. PLACEHOLDER: no rarer chest at all (a small sample). The wiki
-        /// (Src.Wiki, "Treasure Chest", 2014) says "of a random rarity (common, uncommon, rare or legendary)", without
-        /// odds; the later survey is kept.
+        /// A booster's chest: of a random rarity, mostly common. Src.Wiki ("Treasure Chest", 2014): "one Treasure Chest
+        /// of a random rarity (common, uncommon, rare or legendary)", without odds; Stigro (2026-11-07) remembers getting
+        /// every rarity but primal from boosters. Src.Survey2015: all 93 chests recorded from boosters were common, so
+        /// the rarer ones were rare. Src.Survey2014 agrees: its 287 uncommon spins are about what the 277 upgrades of its
+        /// 1,807 common spins produce, which leaves room for few uncommon chests from boosters.
+        /// PLACEHOLDER: uncommon 2%, rare 0.5%, legendary 0.1% (no source gives the odds).
         /// </summary>
-        private static ETreasureChestType RollRarity() { return ETreasureChestType.Common; }
+        private static ETreasureChestType RollRarity()
+        {
+            int v = s_Rng.Next(1000);
+            if (v < 1) return ETreasureChestType.Legendary;
+            if (v < 6) return ETreasureChestType.Rare;
+            if (v < 26) return ETreasureChestType.Uncommon;
+            return ETreasureChestType.Common;
+        }
 
         // ------------------------------------------------------------------
         // Holiday gift boxes
@@ -711,7 +719,7 @@ namespace HexRevival
             }
             if (sub == "sim" && parts.Length > 2)
             {
-                // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare
+                // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare, chest rarities
                 CardSetTemplate set = Progression.FindSet(parts[2].Replace('_', ' '));
                 if (set == null) return "no set " + parts[2];
                 int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0;
@@ -727,6 +735,9 @@ namespace HexRevival
                 foreach (KeyValuePair<ERarity, int> kv in count) outl.Add(kv.Key + "=" + kv.Value);
                 foreach (ERarity r in new[] { ERarity.Common, ERarity.Uncommon, ERarity.Rare, ERarity.Epic, ERarity.Legendary })
                     outl.Add("pool " + r + "=" + Progression.Pool(set, r).Count);
+                Dictionary<ETreasureChestType, int> chests = new Dictionary<ETreasureChestType, int>();
+                for (int k = 0; k < n; k++) { ETreasureChestType c = RollRarity(); int v; chests.TryGetValue(c, out v); chests[c] = v + 1; }
+                foreach (KeyValuePair<ETreasureChestType, int> kv in chests) outl.Add("chest " + kv.Key + "=" + kv.Value);
                 return set.m_Name + ": " + n + " packs, " + total + " cards, " + noRare + " without a rare; " + string.Join(", ", outl.ToArray());
             }
             if (sub == "give" && parts.Length > 2)
