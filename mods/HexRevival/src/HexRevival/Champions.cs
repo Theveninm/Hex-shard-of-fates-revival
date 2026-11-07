@@ -246,6 +246,13 @@ namespace HexRevival
         }
 
         /// <summary>New deck created for a champion (first save): it becomes its deck.</summary>
+        /// <summary>The champion has a deck of its own that still exists.</summary>
+        public static bool HasDeck(ulong championId)
+        {
+            champion_bits c = Find(championId);
+            return c != null && c.LastDeckID != 0 && Decks.Exists(c.LastDeckID);
+        }
+
         public static void SetDeck(ulong championId, ulong deckId)
         {
             champion_bits c = Find(championId);
