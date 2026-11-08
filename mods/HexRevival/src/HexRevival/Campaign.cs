@@ -83,6 +83,10 @@ namespace HexRevival
                 { "Node034", EFactions.Aria }, { "Node008", EFactions.Aria },
                 { "Node017", EFactions.Underworld }, { "Node011", EFactions.Underworld },
             },
+            // The Thunderfield (a dead end after Node048) is the coyotles' hometown: its three conversations are a coyotle's
+            // homecoming (Short Buffalo "It is good to be back here in the Thunderfield", Whispering Breeze "my friend from
+            // Crayburn Castle", the coyotle's sparring partner; Src.Game). Src.Video: no run of another race entered it.
+            NodeRace = new Dictionary<string, ERace> { { "Node049", ERace.Coyotle } },
             // Panorama level of each hub (Src.HexServer, read from the client's asset bundles).
             Panoramas = new Dictionary<string, string[]>
             {

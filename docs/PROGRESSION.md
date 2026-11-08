@@ -306,7 +306,9 @@ by the dialogue's event. The other faction's hub is not on the map (Game: every 
 Ardent giver's, every one of Naagaan an Underworld giver's; Video: no run entered the other one).
 The Necropolis (node 26, past the Deathless Path) is the necrotics' hometown: only a necrotic champion sees it (Game:
 its three conversations, "Return to Necropolis", are a necrotic's homecoming; Video: no Ardent run went past the
-Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). Quest
+Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). The same goes for the AZ1 Thunderfield (node 49), the coyotles'
+hometown: only a coyotle champion sees it (Game: Short Buffalo's and Whispering Breeze's lines are a coyotle's
+homecoming; Video: no other race entered it). Quest
 objectives without ids in the templates are matched by encounter name (`Quests.AZ2Objectives`; Mithral River:
 Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot / Lazgar Chul; Video, both runs).
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
@@ -451,7 +453,7 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 | Clatterclank | Great Machine Graveyard Pack (Zymmer) | 1 time in 100 in a Great Machine Graveyard pack (PLACEHOLDER odds) |
 | Thokoht | Alachian Sea ("Adventure Zone II"), how is unknown (not in Zymmer's notes) | not obtainable |
 | Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing | Kismet's Reserve packs (Zymmer; themes Oni, Boonberries, Vampires, 2017 Convocation: Game) | the store's Kismet packs (see Store) |
-| Scion of Uruunaz | Dragon's Blood Deck (Game), the Kickstarter Champion tier's starter deck and above, granted July 2017 (HexTcg2017; tier: Stigro 2026-11-08) | the Kickstarter Champion tier code and above, or KS-DRAGONSBLOOD alone (with the Uruunaz The Merciless Sleeve, Nefarious Corruptor, Violet's Attendant and six equipment; the rest of the deck list and its animated alternate arts are unknown) |
+| Scion of Uruunaz | Dragon's Blood Deck (Game), the Kickstarter Champion tier's starter deck and above, granted July 2017 (HexTcg2017; tier: Stigro 2026-11-08) | the Kickstarter Champion tier code and above, or KS-DRAGONSBLOOD alone (with the Uruunaz The Merciless Sleeve, the alternate art of Uruunaz the Merciless, whose picture is the sleeve's, Nefarious Corruptor, Violet's Attendant and six equipment; the rest of the deck list is unknown, Hex Codex has none) |
 | Kickstarter, GenCon 2013/2014, Salty Sam (tournament reward) | out of the game | not obtainable |
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)

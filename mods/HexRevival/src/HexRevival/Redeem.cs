@@ -133,8 +133,10 @@ namespace HexRevival
             // "Dragon's Blood Starter Deck Out Now!": Nefarious Corrupter and Violet's Attendant socketed, the Scion of
             // Uruunaz equipment below, sleeves and animated alternate arts). Src.Game: the mercenary Scion of Uruunaz
             // ("Dragon's Blood Deck") and the Uruunaz The Merciless Sleeve, both of Frostheart's time like the equipment.
-            // Not given: the rest of the deck list and the animated alternate arts (not listed by any source found; the
-            // game data holds no alternate-art Uruunaz). Its own code too, for accounts that redeemed the tier before 1.2.23.
+            // The deck's alternate art: Uruunaz the Merciless (Frostheart) in its alternate art, whose picture (a0007621) is
+            // the sleeve's (Src.Game; Src.HexCodex: "Alternate art, released 29 Jun 2017"; Stigro: "alt-art Uruunaz the
+            // Merciless"). Not given: the rest of the deck list (not in any source found, Hex Codex included). Its own
+            // code too, for accounts that redeemed the tier before 1.2.23.
             { "KS-DRAGONSBLOOD", new Bundle
             {
                 Title = "Kickstarter Dragon's Blood Starter Deck",
@@ -142,6 +144,7 @@ namespace HexRevival
                 {
                     new Card("67b00482-be3c-408f-bae5-4764fe990b2e", "Nefarious Corruptor", 1),
                     new Card("2ace9ad9-33d3-4e2a-94ea-e9243e4d8806", "Violet's Attendant", 1),
+                    new Card("46560240-f362-4ee4-8145-355070a6c96a", "Uruunaz the Merciless (alternate art)", 1),
                 },
                 Items = new[] { "Scion of Uruunaz", "Uruunaz The Merciless Sleeve", "Nefarious Helm", "Vial of Dragon's Blood",
                     "Blighted Breastplate", "Bookmark Blade", "Callow Clogs", "Blightbark Gauntlets" },
