@@ -37,6 +37,7 @@ namespace HexRevival
     {
         public const string CrayburnId = "5bcba43a-95c7-44b4-ba09-a3555a5edf05";
         public const string UsurperId = "39f31d36-c96d-4858-a581-6bc4dfc90b5f";
+        public const string GraveyardId = "c875a374-7871-4a51-bb2e-cca8d5061ae2";
 
         /// <summary>Dungeon campaign ids: DunBase + champion (panoramas below, quests above).</summary>
         internal const ulong DunBase = 1500000;
@@ -253,7 +254,7 @@ namespace HexRevival
             // the entrance; its legs (Scraptooth Hills), battery (Valley of Rubbish) and arms (the Great Heap) won, its torso
             // found in the Assembly Yard; then its three weapons, a Scrapborn daughter of Kazraga, and Scutt.
             const string gm = "Great Machine Graveyard - ";
-            s_Defs.Add(new Def { Key = "machinegraveyard", Id = "c875a374-7871-4a51-bb2e-cca8d5061ae2", Name = "Great Machine Graveyard", Folder = "greatmachinegraveyard", Zone = "AZ2", AZ1Node = "Node044", Start = "NodeA" }
+            s_Defs.Add(new Def { Key = "machinegraveyard", Id = GraveyardId, Name = "Great Machine Graveyard", Folder = "greatmachinegraveyard", Zone = "AZ2", AZ1Node = "Node044", Start = "NodeA" }
                 .Add("NodeA", Talk(gm + "Entrance"))
                 .Add("NodeB", Fight(gm, "Scraptooth Hills", "Great Machine Graveyard B - Scraptooth Hills", "machinegraveyard/NodeB"))
                 .Add("NodeC", Fight(gm, "Barking Cavern", "Great Machine Graveyard C - Barking Caverns", "machinegraveyard/NodeC"))
@@ -274,6 +275,11 @@ namespace HexRevival
                     new Step { Conv = gm + "Scraptooth Colosseum - Scrapborn {RIVAL2}", Enc = "Great Machine Graveyard M{RIVAL2N} - Scraptooth Arena - {RIVAL2}", Success = gm + "Scraptooth Colosseum Success", Fail = gm + "Scraptooth Colosseum Fail", Reward = "machinegraveyard/NodeM" })
                 .Add("NodeN", Fight(gm, "Scraptooth Throne Room", "Great Machine Graveyard N - Scraptooth Throne Room", "machinegraveyard/NodeN"))
                 .Flag("dross_key_found", "NodeC")      // the Barking Cavern's rusted key opens Dross' collar
+                // NodeL: a prefab node off the Assembly Yard with no room in the dungeon template (Src.Game: no item, no
+                // window text), never on the map (Src.Video: MHS Ardent 2018-02-09 [GOi3tlF184Y] 1:50, the Assembly Yard's
+                // paths lead to the Colosseum, Big Magnet Thing, the Crusher and the Melting Pot only); shown as a bare
+                // "NodeL" until 1.2.24 (mornox, 2026-11-08).
+                .Hide("NodeL")
                 .Final("NodeN"));
 
             // The Kraken (Node 19; Blue Sparrow / Renner): Portsmeare's mind-controlled villagers, the sail through the
@@ -1137,6 +1143,38 @@ namespace HexRevival
             string fx;
             if (s != null && s.Enc == null && RoomEffects.TryGetValue(r.Def.Key + "/" + room, out fx)) r.Vars["fx:" + fx] = "1";
             r.Steps[room] = Done(r, room) + 1;
+            if (r.Def.Key == "machinegraveyard") GraveyardQuest(r, room);
+        }
+
+        /// <summary>
+        /// Starting hand of the Ruins of Kukatan's glyph puzzles ("(Memory)" battles). "Solve the Glyphs" lays the glyphs: 3 on its
+        /// first turn in both puzzles (Src.Video: KVC part 4 [EZBSXKhjI4Q], Perilous Hallway 22:56 three glyphs, then 4, then 5;
+        /// Etchings of the Lost Ones 46:40 three, then 6, then 7), then "a card for each hidden counter" (3 or 5 at the start, one
+        /// more each turn; Src.Game). Its template's hand is the usual 7 (Src.Game): it drew every glyph at once, and in the
+        /// Perilous Hallway lost at once for an empty deck (mornox, 2026-11-08). The scene's "Player Win Condition" ability
+        /// (73eb53fb...) is not in the game data: the server's. "Remember the Glyphs" (the player's runes, all in play) draws
+        /// nothing. PLACEHOLDER only for the Tomb of Omens' glyphs (seven counters), never seen: 3 as the others.
+        /// </summary>
+        public static int StartingHand(Player player, int size)
+        {
+            string name = player != null && player.m_ChampionCard != null && player.m_ChampionCard.m_CardTemplate != null ? player.m_ChampionCard.m_CardTemplate.m_Name : null;
+            return name == "Solve the Glyphs" ? 3 : name == "Remember the Glyphs" ? 0 : size;
+        }
+
+        /// <summary>
+        /// The junkyard robot's quest (Quests.Graveyard), from the Graveyard's own talks (Src.Game): the robot head found at the
+        /// Entrance gives it ("Are you offering to help me if I reassemble the rest of you?"), the Assembly Yard repairs the
+        /// robot, and each weapon counts once installed (Big Magnet Thing, the Crusher, the Melting Pot, after their battle).
+        /// Src.Video: MHS Ardent 2018-01-30 [9MbvTElf-vg], the quest in the tracker right after the robot head's talk; 2018-02-09
+        /// [GOi3tlF184Y] 1:50, "Repair the junkyard robot" done after the Assembly Yard, the three "(Optional)" weapons open.
+        /// </summary>
+        private static void GraveyardQuest(Run r, string room)
+        {
+            if (room == "NodeA") Quests.Start(r.Champ, Quests.Graveyard);
+            else if (room == "NodeH") Quests.CompleteLoc(r.Champ, Quests.Graveyard, "Repair");
+            else if (Cleared(r, room) && room == "NodeI") Quests.CompleteLoc(r.Champ, Quests.Graveyard, "Opt_Shield");
+            else if (Cleared(r, room) && room == "NodeJ") Quests.CompleteLoc(r.Champ, Quests.Graveyard, "Opt_Bopper");
+            else if (Cleared(r, room) && room == "NodeK") Quests.CompleteLoc(r.Champ, Quests.Graveyard, "Opt_Cannon");
         }
 
         /// <summary>A step was done: the next one starts by itself (same room), or the dungeon is finished. True if the dungeon was left.</summary>

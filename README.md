@@ -212,13 +212,14 @@ source (a video, a screenshot, a guide of the time) are welcome: please open an 
 
 To the players who report bugs and suggest features, among them **mornox** (the mercenaries, the Razortooth Forest
 blockade, the faction locations of the campaign map, gems not saved in decks, equipment missing in battle, the
-taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns, the gems of the campaign, the Alachian Sea's closed ways), **KrystoferRobin** (the mercenary slots of the battle
+taming quest, the Tranquil Dream rooms, mercenary equipment, the cards shown on top of the deck, the mercenary party passives, the Burk Heart and Eagle Mesa battles, the gnome escort, the Alachian Sea towns, the gems of the campaign, the Alachian Sea's closed ways, the Kukatan glyph puzzles, the Graveyard robot's quest, Eurig and the unfinished map rooms), **KrystoferRobin** (the mercenary slots of the battle
 panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice cards, the choice cards without art) and **InfinityAbyss** (the
 champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
 from, for the tutorial's last battle that froze, and for the report behind 1.2.13 (the AI attacking into blockers,
 damage display, one-shot texts, campaign packs, the store's drop lists). To **Criesener** for the macOS version,
 crafting and the redeem codes. To **Stuie** for the choice of the draft's sets. To **Stigro** for the booster chests' rarities and their odds, the
-Bleak Citadel's phantom room, the ship's first talents, the Necropolis and the Dragon's Blood deck. To **RomoSJR** for
+Bleak Citadel's phantom room, the ship's first talents, the Necropolis, the Dragon's Blood deck and the AI removing its own troops. To **Ghulzen** for Portal in
+the gauntlets. To **RomoSJR** for
 Hex Codex, the source of the AI's tournament decks, the sleeves and much of the equipment.
 
 ## Building from source

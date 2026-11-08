@@ -123,6 +123,19 @@ namespace HexRevival
             return t == UID.Type.AIPlayer || t == UID.Type.ServiceAI;
         }
 
+        /// <summary>
+        /// The client AI's "is this card mine?" (AIHints.MyCard): the game asks whether the card's controller is a ServiceAI, the
+        /// id type of the original servers' AI (Src.Game: AIService). The mod's AI is an AIPlayer (ServiceAI only in the tutorial),
+        /// so the AI took every card for the opponent's: it answered the player's removal on its own troop by removing that troop
+        /// itself (AITactical: "a card on the chain targets an opposing troop: remove it"), Stigro 2026-11-08, and misjudged its
+        /// own cards elsewhere (buffs, transforms, debuffs, rage). Now an AI's card is its own.
+        /// </summary>
+        public static bool AiOwns(Game.Shared.AI.AIHints h)
+        {
+            try { return h != null && h.TheCard != null && h.TheCard.Controller.GetUIDType() == UID.Type.AIPlayer; }
+            catch { return false; }
+        }
+
         private static string PlayerSig(Player p)
         {
             int hp = (p.m_ChampionCard != null) ? p.m_ChampionCard.CurrentDefenseValue : 0;
@@ -1178,7 +1191,7 @@ namespace HexRevival
                     if (s_CardSig.TryGetValue(key, out old) && old == sig)
                         continue;
                     s_CardSig[key] = sig;
-                    CardUpdatedSessionEventArgs e = BuildCardUpdate(self, card);
+                    CardUpdatedSessionEventArgs e = BuildCardUpdate(self, card, viewer);
                     if (!visible)
                         e.Nulling = true;
                     Dispatch(self, viewer, e);
@@ -1210,7 +1223,18 @@ namespace HexRevival
             return e;
         }
 
-        private static CardUpdatedSessionEventArgs BuildCardUpdate(StandaloneSession self, Card card)
+        /// <summary>
+        /// A player who sees hidden counters: an AI only. The game's "hidden" counters (CardCounterTemplate.m_Hidden, "Is this
+        /// counter hidden from everyone?") were kept by the server: the client draws every counter it is sent (GoCardBuilder).
+        /// The Ruins of Kukatan's glyph puzzles mark the order of the glyphs with them, and the player saw the order on the
+        /// runes (mornox, 2026-11-08).
+        /// </summary>
+        private static bool SeesHidden(Player viewer)
+        {
+            return viewer != null && IsAIId(viewer.m_PlayerId);
+        }
+
+        private static CardUpdatedSessionEventArgs BuildCardUpdate(StandaloneSession self, Card card, Player viewer)
         {
             CardUpdatedSessionEventArgs e = new CardUpdatedSessionEventArgs();
             e.SessionId = self.m_SessionId;
@@ -1277,6 +1301,7 @@ namespace HexRevival
             {
                 foreach (KeyValuePair<CardCounterTemplate, int> counter in card.Counters)
                 {
+                    if (counter.Key.m_Hidden && !SeesHidden(viewer)) continue;
                     e.CounterTemplates.Add(counter.Key.CardCounterId);
                     e.CounterCounts.Add(counter.Value);
                 }
