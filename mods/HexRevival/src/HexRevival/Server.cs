@@ -203,6 +203,12 @@ namespace HexRevival
                 EnqueueNow(self, transaction);
                 return true;
             }
+            // A player who plays a card or uses an ability drops its option list; the next list must be sent even when it
+            // is identical. Mad Aradam returns a 0-cost card to its owner's hand: nothing changed, deduplication sent no
+            // list and the player could not play anything any more (mornox).
+            if (transaction is PlaySpellTransaction || transaction is PlayTroopTransaction || transaction is PlayArtifactTransaction
+                || transaction is PlayResourceTransaction || transaction is ActivateAbilityTransaction || transaction is ChoosePlayTransaction)
+                s_OptionsSigByPlayer.Remove(transaction.m_PlayerId);
             if (NetCodec.Loopback && !IsAIId(transaction.m_PlayerId)) transaction = NetCodec.LoopTransaction(transaction);
             // The AI's blocks, made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks).
             if (transaction is CommitTroopsToDefenseTransaction && IsAIId(transaction.m_PlayerId))
