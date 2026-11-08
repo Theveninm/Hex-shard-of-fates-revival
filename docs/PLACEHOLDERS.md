@@ -211,8 +211,8 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:1280 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
 | Battlegrounds.cs:1318 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
 | Battlegrounds.cs:1364 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
-| CampaignBoat.cs:127 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
-| CampaignBoat.cs:139 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
+| CampaignBoat.cs:136 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
+| CampaignBoat.cs:148 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
 | Dungeons.cs:422 | PLACEHOLDER: the blast's victim plays second |
 | Dungeons.cs:598 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
@@ -231,15 +231,15 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | PackContents.cs:15 | each card's or item's own chance. Not in the original game; the odds are the mod's (PLACEHOLDER where they are). |
 | Packs.cs:31 | (common, uncommon, rare) of a wheel prize came (Zymmer.Wheel*); both as tabulated by Src.HexServer. PLACEHOLDER: the |
 | Packs.cs:118 | (PLACEHOLDER chance), given when the opening is over. |
-| Packs.cs:193 | PLACEHOLDER: uncommon 2%, rare 0.5%, legendary 0.1% (no source gives the odds). |
-| Packs.cs:216 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
-| Packs.cs:257 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
-| Packs.cs:330 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
-| Packs.cs:364 | an alternate art of the set (which one: PLACEHOLDER) |
-| Packs.cs:371 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
-| Packs.cs:413 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
-| Packs.cs:459 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
-| Packs.cs:533 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
+| Packs.cs:194 | PLACEHOLDER: uncommon 27%, rare 10%, legendary 4% (small samples; no source gives the odds). |
+| Packs.cs:217 | no source found (PLACEHOLDER): 1 booster in 10 during the holiday (Sleeves.HolidaysNow, PLACEHOLDER dates), and |
+| Packs.cs:258 | PLACEHOLDER: the gold in a gift box when its holiday has nothing left the player does not own (a chest's fallback).</summary> |
+| Packs.cs:331 | that show it. The reel colors are independent: PLACEHOLDER red 20%, gold 5%. |
+| Packs.cs:365 | an alternate art of the set (which one: PLACEHOLDER) |
+| Packs.cs:372 | "Exclusive rewards": one of the set's wheel items (PLACEHOLDER, see the class). |
+| Packs.cs:414 | gives a random PvP card of the chest's set (any rarity, every card alike: PLACEHOLDER) and a random PvE card of |
+| Packs.cs:460 | PLACEHOLDER: how often a booster also holds one of its set's booster sleeves.</summary> |
+| Packs.cs:534 | A set without a chest list: gold (the account chests' old PLACEHOLDER). |
 | PrizePacks.cs:20 | PLACEHOLDER (the sleeves are the game data's own: "Available in the 2018 Siege Pack" / "Cosmic Coin Pack"). |
 | PrizePacks.cs:34 | PLACEHOLDER sets: the PvE promo cards and the alternate arts of the 2018 set (Doombringer, set 9).</summary> |
 | PrizePacks.cs:43 | PLACEHOLDER odds: PvE card 40%, alternate art shard 20%, sleeve 15%, alternate art card 10%, equipment 10%, mercenary 5%. |

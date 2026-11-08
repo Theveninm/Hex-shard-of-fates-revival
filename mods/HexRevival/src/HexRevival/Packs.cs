@@ -186,18 +186,19 @@ namespace HexRevival
 
         /// <summary>
         /// A booster's chest: of a random rarity, mostly common. Src.Wiki ("Treasure Chest", 2014): "one Treasure Chest
-        /// of a random rarity (common, uncommon, rare or legendary)", without odds; Stigro (2026-11-07) remembers getting
-        /// every rarity but primal from boosters. Src.Survey2015: all 93 chests recorded from boosters were common, so
-        /// the rarer ones were rare. Src.Survey2014 agrees: its 287 uncommon spins are about what the 277 upgrades of its
-        /// 1,807 common spins produce, which leaves room for few uncommon chests from boosters.
-        /// PLACEHOLDER: uncommon 2%, rare 0.5%, legendary 0.1% (no source gives the odds).
+        /// of a random rarity (common, uncommon, rare or legendary)", without odds. Players' pack openings on video
+        /// (Stigro 2026-11-08): 100 packs, one of them primal, gave 5 legendary, 10 rare, 28 uncommon and 61 common
+        /// chests (youtu.be/opra-_rYYMQ), and 50 beta packs 2 legendary (youtu.be/OtEsywfZokk): about 4% legendary,
+        /// 10% rare, 27% uncommon. Src.Survey2015's 93 booster chests were all common, but its sheet seems to have
+        /// recorded only common chests; the videos are what was actually opened. A primal pack's chest is legendary.
+        /// PLACEHOLDER: uncommon 27%, rare 10%, legendary 4% (small samples; no source gives the odds).
         /// </summary>
         private static ETreasureChestType RollRarity()
         {
             int v = s_Rng.Next(1000);
-            if (v < 1) return ETreasureChestType.Legendary;
-            if (v < 6) return ETreasureChestType.Rare;
-            if (v < 26) return ETreasureChestType.Uncommon;
+            if (v < 40) return ETreasureChestType.Legendary;
+            if (v < 140) return ETreasureChestType.Rare;
+            if (v < 410) return ETreasureChestType.Uncommon;
             return ETreasureChestType.Common;
         }
 

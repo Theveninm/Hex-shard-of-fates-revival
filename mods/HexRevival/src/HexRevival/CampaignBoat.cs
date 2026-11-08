@@ -61,13 +61,22 @@ namespace HexRevival
             SyncShipLevel(champ);
         }
 
-        private static void SyncShipLevel(ulong champ)
+        /// <summary>The ship's level (1 + its talent points) and mandatory talents, in the save and the client's profile.</summary>
+        internal static void SyncShipLevel(ulong champ)
         {
             champion_bits ship = Ship(champ);
             int points; int.TryParse(Quests.Flag(champ, "boat:points"), out points);
-            if (ship == null || ship.Level == 1 + points) return;
+            if (ship == null) return;
+            bool talents = Champions.AddMandatoryTalents(ship.Id);
+            if (ship.Level == 1 + points && !talents) return;
             Champions.SetLevel(ship.Id, 1 + points);
-            try { GameClient.Instance.PlayerProfile.GetPvEChampionById(ship.Id).SourceBits.Level = 1 + points; } catch { }
+            try
+            {
+                champion_bits client = GameClient.Instance.PlayerProfile.GetPvEChampionById(ship.Id).SourceBits;
+                client.Level = 1 + points;
+                client.ChampionTalents = new List<ResourceId>(ship.ChampionTalents);
+            }
+            catch { }
         }
 
         /// <summary>Champion that fights at this node: the ship at sea, otherwise the champion.</summary>

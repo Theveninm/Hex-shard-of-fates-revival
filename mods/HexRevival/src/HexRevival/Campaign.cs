@@ -54,6 +54,7 @@ namespace HexRevival
             public Dictionary<string, string> NumberAlias;             // node -> number in its names
             public Dictionary<string, EFactions> HubFaction;           // hubs whose quest givers serve one faction
             public Dictionary<string, EFactions> NodeFaction;          // locations that only one faction sees
+            public Dictionary<string, ERace> NodeRace;                 // locations that only one race sees
             public Dictionary<string, string> TitleNode;               // node title (upper case, no spaces) -> node
             /// <summary>
             /// AZ2 names a node's faction variants with a letter ("NODE 6A ... (vs Ardent)", "Node 6B ... -
@@ -105,6 +106,11 @@ namespace HexRevival
             // every conversation of Wakuna is an Ardent giver's, every one of Naagaan an Underworld giver's; Src.Video: no run
             // entered the other faction's town (the Underworld runs stopped at Wakuna Ridge, the Ardent ones at the Deathless Path).
             NodeFaction = new Dictionary<string, EFactions> { { "Node007", EFactions.Aria }, { "Node027", EFactions.Underworld } },
+            // The Necropolis past the Deathless Path is the necrotics' hometown, "Return to Necropolis": its three
+            // conversations (Drokkord, Iddi, Margugram) are only for a necrotic ("Welcome back", "my friend from Crayburn
+            // Castle", "we Awakened him"). Src.Video: no Ardent run went past the Deathless Path. A human champion was
+            // greeted as a necrotic there before 1.2.23 (Stigro, 2026-11-08).
+            NodeRace = new Dictionary<string, ERace> { { "Node026", ERace.Necrotic } },
             // Hubs: Wakuna (coyotle) and Naagaan (necrotic), the client's AZ2 panorama bundles.
             Panoramas = new Dictionary<string, string[]>
             {
@@ -365,13 +371,15 @@ namespace HexRevival
                 if (st.Completed.Contains(n.Id) && Quests.TamingPending(st.ChampId, EncOf(st.ChampId, n))) st.Completed.Remove(n.Id);
         }
 
-        /// <summary>A location of the other faction's (its hub, its dungeon): hidden from this champion.</summary>
+        /// <summary>A location of the other faction's (its hub, its dungeon) or of another race's (the Necropolis): hidden from this champion.</summary>
         private static bool OtherFactions(ulong champ, MapNode n)
         {
-            EFactions f;
-            if (n.Z.NodeFaction == null || !n.Z.NodeFaction.TryGetValue(n.Id, out f)) return false;
             champion_bits c = Champions.Get(champ);
-            return c != null && c.Race.GetFaction() != f;
+            if (c == null) return false;
+            EFactions f;
+            ERace r;
+            if (n.Z.NodeFaction != null && n.Z.NodeFaction.TryGetValue(n.Id, out f) && c.Race.GetFaction() != f) return true;
+            return n.Z.NodeRace != null && n.Z.NodeRace.TryGetValue(n.Id, out r) && c.Race != r;
         }
 
         /// <summary>The node's battle for this champion (faction, dialogue choice).</summary>
