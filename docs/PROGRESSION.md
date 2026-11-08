@@ -306,7 +306,9 @@ by the dialogue's event. The other faction's hub is not on the map (Game: every 
 Ardent giver's, every one of Naagaan an Underworld giver's; Video: no run entered the other one).
 The Necropolis (node 26, past the Deathless Path) is the necrotics' hometown: only a necrotic champion sees it (Game:
 its three conversations, "Return to Necropolis", are a necrotic's homecoming; Video: no Ardent run went past the
-Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). Quest
+Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). The same goes for the AZ1 Thunderfield (node 49), the coyotles'
+hometown: only a coyotle champion sees it (Game: Short Buffalo's and Whispering Breeze's lines are a coyotle's
+homecoming; Video: no other race entered it). Quest
 objectives without ids in the templates are matched by encounter name (`Quests.AZ2Objectives`; Mithral River:
 Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot / Lazgar Chul; Video, both runs).
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
