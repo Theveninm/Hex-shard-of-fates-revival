@@ -145,9 +145,14 @@ namespace HexRevival
                     new Card("67b00482-be3c-408f-bae5-4764fe990b2e", "Nefarious Corruptor", 1),
                     new Card("2ace9ad9-33d3-4e2a-94ea-e9243e4d8806", "Violet's Attendant", 1),
                     new Card("46560240-f362-4ee4-8145-355070a6c96a", "Uruunaz the Merciless (alternate art)", 1),
-                    // Tome of Uruunaz (PvE promo, Frostheart): "Entrusted only to his scion" (Src.Game), and two of the deck's
-                    // equipment, Bookmark Blade and Vial of Dragon's Blood, are its own (Stigro, 2026-11-08). PLACEHOLDER: 1 copy.
-                    new Card("fb68bfdc-893c-415f-aa46-43bc73432b70", "Tome of Uruunaz", 1),
+                    // The cards the deck's equipment is made for (Src.Game: each piece names its card): Tome of Uruunaz (Bookmark
+                    // Blade, Vial of Dragon's Blood; "Entrusted only to his scion"; Stigro, 2026-11-08), Blightbark Vampire (Blighted
+                    // Breastplate), Naive Lackey (Callow Clogs), Blightbark Thrall (Blightbark Gauntlets). PLACEHOLDER: 4 copies
+                    // each (user, 2026-11-08; the real counts are unknown).
+                    new Card("fb68bfdc-893c-415f-aa46-43bc73432b70", "Tome of Uruunaz", 4),
+                    new Card("8147332f-5de6-4650-87b4-a9ae2c2451ff", "Blightbark Vampire", 4),
+                    new Card("552f5d62-f3e6-4707-9b7b-df292ed489dc", "Naive Lackey", 4),
+                    new Card("7794ea00-577b-4049-abf4-42b86aaeaa57", "Blightbark Thrall", 4),
                 },
                 Items = new[] { "Scion of Uruunaz", "Uruunaz The Merciless Sleeve", "Nefarious Helm", "Vial of Dragon's Blood",
                     "Blighted Breastplate", "Bookmark Blade", "Callow Clogs", "Blightbark Gauntlets" },
