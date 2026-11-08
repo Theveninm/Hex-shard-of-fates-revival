@@ -954,6 +954,7 @@ namespace HexRevival
                     UIBattle.Instance.OnButton(parts.Length > 1 ? parts[1] : "Pass", 0, "");
                     return "button " + (parts.Length > 1 ? parts[1] : "Pass");
                 case "server": return ServerDump(gc);
+                case "abildump": return AbilityDump.Command(gc, parts);   // dev: the rule data of a battle's cards (see AbilityDump)
                 case "anims": return AnimsDump();
                 case "cheat": return Cheats.Execute(gc, parts);
                 case "menu": return OfflineMenu.Command(parts);
