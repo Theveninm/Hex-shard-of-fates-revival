@@ -756,6 +756,9 @@ namespace HexRevival
             Patches.PendingEncounterSetup = e =>
             {
                 e.SessionFlags |= ESessionFlags.IsTournament;
+                // PLACEHOLDER: which PvP format the gauntlets' games had (the server sent it). Immortal: every PvP set (a
+                // limited pool can be of any set, see BoosterChoice; the constructed gauntlet takes any PvP deck).
+                Patches.PvpFlags(e, true);
                 if (g.Kind == Kind.Sealed) e.SessionFlags |= ESessionFlags.IsSealed;
                 if (g.Kind == Kind.Draft) e.SessionFlags |= ESessionFlags.IsDraft;
                 e.TournamentID = id;
@@ -1349,8 +1352,12 @@ namespace HexRevival
             if (ai == null && decks.Count > 0) ai = decks[UnityEngine.Random.Range(0, decks.Count)];
             EDeckPersonality personality = Opponents.PersonalityOf(o);
             s_LadderBattle = ladderId == 0;
-            Patches.PendingEncounterSetup = e => e.SeriesFormat = ladderId == 0 ? SessionStateEncounterData.SeriesType.LADDER_CONSTRUCTED
-                : ladderId == 3 ? SessionStateEncounterData.SeriesType.LADDER_IMMORTAL : SessionStateEncounterData.SeriesType.LADDER_UNRANKED;
+            Patches.PendingEncounterSetup = e =>
+            {
+                e.SeriesFormat = ladderId == 0 ? SessionStateEncounterData.SeriesType.LADDER_CONSTRUCTED
+                    : ladderId == 3 ? SessionStateEncounterData.SeriesType.LADDER_IMMORTAL : SessionStateEncounterData.SeriesType.LADDER_UNRANKED;
+                Patches.PvpFlags(e, ladderId == 3);   // the immortal ladder (3); the others standard (Src.Game: the series types)
+            };
             LocalServer.Later(() =>
             {
                 Manager.InUnrankedMatch = false;

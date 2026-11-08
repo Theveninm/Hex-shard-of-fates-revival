@@ -308,7 +308,11 @@ The Necropolis (node 26, past the Deathless Path) is the necrotics' hometown: on
 its three conversations, "Return to Necropolis", are a necrotic's homecoming; Video: no Ardent run went past the
 Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). The same goes for the AZ1 Thunderfield (node 49), the coyotles'
 hometown: only a coyotle champion sees it (Game: Short Buffalo's and Whispering Breeze's lines are a coyotle's
-homecoming; Video: no other race entered it). Quest
+homecoming; Video: no other race entered it). A map battle named for neither faction is fought only by the faction whose
+conversations hold its "success" / "fail" outcomes, the other one just talks (Game: Lebus Pass's Darkspire Scout and
+Mithral River's Constantina for the Underworld, Mithral Falls' Eurig for the Ardent; Video: MHS UW fights the
+Darkspire Scout, MHS Ardent fights Eurig; until 1.2.24 Eurig fought Underworld champions too, mornox 2026-11-08). Lake
+Kukatan (node 41, a dead end after the Ruins of Kukatan) is never shown: its only conversation is "CUT", "TBD". Quest
 objectives without ids in the templates are matched by encounter name (`Quests.AZ2Objectives`; Mithral River:
 Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot / Lazgar Chul; Video, both runs).
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
@@ -393,7 +397,13 @@ Graveyard's Colosseum (Video, KVC: ally Zagg -> Vargar then Burgg; the order for
 scenes' order, PLACEHOLDER); the Graveyard robot's
 weapons (Big Magnet Thing = Magnet Shield, Crusher = Big Bopper, Melting Pot = Slag Cannon); Dross's
 roundabout (no battle, the post broken, or the collar trap: the AI plays first); Kukatan's journal
-(Bone Thicket) choosing the "Memory" mini-game battles over the traps; the Tomb of Lingerers' explorers
+(Bone Thicket) choosing the "Memory" mini-game battles over the traps (the glyphs: no starting hand for
+"Solve the Glyphs" and "Remember the Glyphs", PLACEHOLDER from their texts: with the usual 7, Solve the Glyphs drew
+every glyph and, in the Perilous Hallway, lost at once for an empty deck, mornox 2026-11-08; the glyphs' hidden
+counters are not shown to the player, as the server kept them); the Graveyard robot's quest (Game: started by the
+robot head at the Entrance, "Repair" in the Assembly Yard, each weapon an optional objective, turned in to Reese or
+Tezozo; until 1.2.24 nothing counted the repair, and the turn-in never came, mornox 2026-11-08); the Graveyard's
+NodeL, a prefab node with no room in the template, never shown; the Tomb of Lingerers' explorers
 of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ardent); Lukaz in two
 battles with one reward (Video: one window for Echo Ridge).
 Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your
@@ -555,6 +565,7 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Opponents | constructed: the opponent pack (see AI opponents); draft: another drafter's picks; sealed: a pool of 6 boosters | PLACEHOLDER |
 | Ladder (ranked) | a star lost per loss; a star per win, one more from the second win in a row; never below 0; unranked and Immortal matches change nothing; no tier rewards | Steam2016 (a player, Sep 2016: "lose 1 star per loss", "1 extra for a win streak of 2 or more"; matches were best of 3 then); floor at 0 PLACEHOLDER; the tiers are the client's own (Game LadderTiers) |
 | Account XP | none for Battlegrounds games | PLACEHOLDER |
+| Game format | the gauntlets' games are Immortal PvP games, the ladder's Standard (Immortal for the Immortal ladder), the Dueling Pit's Standard as the client's own: random cards (Portal...) come from the PvP sets; until 1.2.24 every game was a PvE one and Portal made PvE cards in a sealed gauntlet (Ghulzen 2026-11-08) | Game (Session.GetSetsValidInFormat); the gauntlets' format PLACEHOLDER |
 
 A best-of-3 match is played one game at a time: after each game the player is back in the deck builder
 (reserve changes allowed) and "Play a Game" plays the next one. Runs are saved (battlegrounds.json) and

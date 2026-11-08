@@ -5,7 +5,7 @@ Update it in the same pull request as any change that adds, settles or removes a
 feature, and give the user the new text with each release (CLAUDE.md, release step 5).
 Detailed register: docs/PLACEHOLDERS.md; sources: docs/PROGRESSION.md.
 Discord limit: 4,000 characters with Nitro, 2,000 without. Split the post at a section heading if it grows past that.
-Last updated: 1.2.24 (2026-11-08).
+Last updated: 1.2.25 (2026-11-08).
 -->
 Here is the list of the elements that are already known to be missing or placeholders, if you have information about their original behavior, don't hesitate to post it, also, if you find something missing that is not part of that list, please report it so that i can investigate:
 *Guesses are marked PLACEHOLDER in the code and listed in docs/PLACEHOLDERS.md. Any video or memory that settles one is welcome!*
@@ -27,8 +27,8 @@ Here is the list of the elements that are already known to be missing or placeho
 • **AZ2 map battles**: same rewards for both factions (only the Underworld run was recorded)
 • **Scylla & Charybdis**: 1-in-3 chance per voyage that they wake (the real trigger was on the server)
 • **The Kraken**: Mayor Galway never dies (that ending was never seen); the sea hag curses and tentacles aren't reproduced
-• **Ruins of Kukatan**: Tomb of Omens reward is a guess (never visited on video)
-• **Great Machine Graveyard**: your Brutecrown ally if you skipped Brutecrown Bluff is a guess (Vargar); who plays first after the Roundabout's blast is a guess
+• **Ruins of Kukatan**: Tomb of Omens reward is a guess (never visited on video); glyph puzzles' opening hand guessed
+• **Great Machine Graveyard**: your ally if you skipped Brutecrown Bluff (Vargar) and who plays first after the Roundabout's blast are guesses
 
 **🧑‍🤝‍🧑 Mercenaries**
 • Every upgrade costs the same (2 challenges + 25,000 gold): only one level's price is known
@@ -51,7 +51,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • **Kickstarter Dragon's Blood deck**: only part of its deck list is known
 
 **⚔️ Other modes**
-• **Battlegrounds**: prizes, draft timer, ladder ranks and stars are guesses; Swiss and single-elimination tournaments are missing
+• **Battlegrounds**: prizes, draft timer, ladder stars, gauntlet format are guesses; Swiss and single-elimination tournaments are missing
 • **Siege**: which defenses you face, and how often AI players attack yours
 • **Dueling Pit**: which deck the AI picks
 • **Account XP**: Siege and Battlegrounds games give none (not known)

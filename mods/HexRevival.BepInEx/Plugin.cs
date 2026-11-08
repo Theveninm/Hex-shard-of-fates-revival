@@ -200,6 +200,8 @@ namespace HexRevival
                 apply("UIArenaCampaignViewModel.Start", () => harmony.Patch(AccessTools.Method(typeof(UIArenaCampaignViewModel), "Start"), postfix: new HarmonyMethod(typeof(Hooks), "Arena_Start")));
                 apply("UIArenaCampaignViewModel.BattleChampion", () => Prefix(harmony, typeof(UIArenaCampaignViewModel), "BattleChampion", Type.EmptyTypes, "Arena_Battle"));
                 // The Dueling Pit's Versus AI (see DuelingPit.cs).
+                apply("AIHints.MyCard", () => harmony.Patch(AccessTools.PropertyGetter(typeof(Game.Shared.AI.AIHints), "MyCard"), postfix: new HarmonyMethod(typeof(Hooks), "AIHints_MyCard")));
+                apply("Player.CalculateStartingHandSize", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Player), "CalculateStartingHandSize"), postfix: new HarmonyMethod(typeof(Hooks), "Player_StartingHandSize")));
                 apply("UIDeckTestDrawStatsViewModel.SetVisible", () => harmony.Patch(AccessTools.Method(typeof(UIDeckTestDrawStatsViewModel), "SetVisible", new[] { typeof(bool) }), postfix: new HarmonyMethod(typeof(Hooks), "TestDraw_SetVisible")));
                 apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available")));
                 apply("Localization.Get", () => harmony.Patch(AccessTools.Method(typeof(Localization), "Get", new[] { typeof(string) }), postfix: new HarmonyMethod(typeof(Hooks), "Localization_Get")));
@@ -606,6 +608,8 @@ namespace HexRevival
         public static void Arena_ChampionHud(UIArenaCampaignContext __instance, DeckCache __0) { Arena.OnAssignChampionHud(__instance, __0); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
         public static void Gems_Available(UISocketCardViewModel __instance) { Gems.BeforeAvailableGems(__instance); }
+        public static void AIHints_MyCard(Game.Shared.AI.AIHints __instance, ref bool __result) { if (!__result) __result = Server.AiOwns(__instance); }
+        public static void Player_StartingHandSize(Game.Shared.Player __instance, ref int __result) { __result = Dungeons.StartingHand(__instance, __result); }
         public static void TestDraw_SetVisible(UIDeckTestDrawStatsViewModel __instance, bool __0) { DeckEditorFixes.TestDrawShown(__instance, __0); }
         public static void Localization_Get(string key, ref string __result) { if (key != null && key.StartsWith("hexrevival-")) { string t = DuelingPit.Localize(key); if (t != null) __result = t; } }
         public static bool Tournament_Join(UITournamentPendingViewModel __instance) { return DuelingPit.OnJoin(__instance, null); }

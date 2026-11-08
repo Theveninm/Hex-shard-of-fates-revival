@@ -161,6 +161,7 @@ namespace HexRevival
             public string Dungeon;        // dungeon entered from this node (Dungeons key)
             public Dictionary<string, string> Variants; // battle by faction and dialogue choice ("UW:help", "AR"...), see FactionNodes
             public string FactionOnly;    // "AR" / "UW": the battle is that faction's only (the other one just talks)
+            public bool Cut;              // content cut before release ("... - CUT", "TBD"): never on the map
         }
 
         /// <summary>Dev "hauses": every Shroom Haus node of both zones, with the cards it offers.</summary>
@@ -661,7 +662,7 @@ namespace HexRevival
         /// <summary>A location the map shows this champion.</summary>
         private static bool Shown(CampState st, MapNode n)
         {
-            return st.Visible.Contains(n.Id) && !OtherFactions(st.ChampId, n) && !(n.Z == AZ1 && Gnomes.Hidden(st.ChampId, n.Id)) && !ClosedWay(st, n);
+            return st.Visible.Contains(n.Id) && !n.Cut && !OtherFactions(st.ChampId, n) && !(n.Z == AZ1 && Gnomes.Hidden(st.ChampId, n.Id)) && !ClosedWay(st, n);
         }
 
         /// <summary>Conversation shown before a node's battle (null if none).</summary>
@@ -789,6 +790,7 @@ namespace HexRevival
                     string u = battles[0].m_Name.ToUpperInvariant();
                     if (u.Contains("(VS") && u.Contains("ARDENT")) n.FactionOnly = "AR";
                     else if (u.Contains("(VS") && u.Contains("UNDERWORLD")) n.FactionOnly = "UW";
+                    else n.FactionOnly = OutcomeFaction(n, number, tm);
                 }
                 if (battles.Count > 1)
                 {
@@ -824,8 +826,34 @@ namespace HexRevival
             {
                 n.Type = "Convo";
                 n.Conversation = best.m_Id.ToString();
+                // Lake Kukatan (AZ2 Node041, a dead end after Node040): its only conversation is "AZ2 - Node 41 - CUT", "TBD"
+                // (Src.Game). It showed "TBD" once the Ruins of Kukatan were done (mornox, 2026-11-08).
+                n.Cut = best.m_Name.ToUpperInvariant().Contains("- CUT");
                 n.HausConversation = best.m_Name.IndexOf("Shroom house", StringComparison.OrdinalIgnoreCase) >= 0;
             }
+        }
+
+        /// <summary>
+        /// The faction that fights at a node whose one battle is named for neither: the one whose conversations have the
+        /// battle's "success" / "fail" outcomes while the other faction's only talk (Src.Game: Lebus Pass, Darkspire Scout for
+        /// the Underworld; Mithral River, Constantina for the Underworld; Mithral Falls, Eurig for the Ardent). Src.Video: MHS
+        /// UW fights the Darkspire Scout (2017-03-31 [DgiFRWk3BnA]), MHS Ardent fights Eurig (2018-03-02 [1J8Yu111AQU]); until
+        /// 1.2.24 Eurig fought Underworld champions too (mornox, 2026-11-08). Null when both or neither have outcomes.
+        /// </summary>
+        private static string OutcomeFaction(MapNode n, string number, TemplateManager tm)
+        {
+            bool arTalk = false, uwTalk = false, arFight = false, uwFight = false;
+            foreach (ConversationTemplate c in tm.ConversationTemplates.Values)
+            {
+                if (c == null || c.m_Name == null || !n.Z.Matches(NameNumber(c.m_Name, n.Z.Prefix), number)) continue;
+                string u = c.m_Name.ToUpperInvariant().Trim();
+                bool outcome = u.Contains(" SUCCESS - ") || u.Contains(" FAIL - ");
+                if (u.EndsWith("- ARDENT")) { if (outcome) arFight = true; else arTalk = true; }
+                else if (u.EndsWith("- UNDERWORLD")) { if (outcome) uwFight = true; else uwTalk = true; }
+            }
+            if (arFight && !uwFight && uwTalk) return "AR";
+            if (uwFight && !arFight && arTalk) return "UW";
+            return null;
         }
 
         /// <summary>
@@ -2299,12 +2327,13 @@ namespace HexRevival
             {
                 // dev: "camp fight Node066 Diff_6" = start that node's battle for the current champion's campaign, as if the event had been chosen
                 ulong champ = GameClient.Instance.PlayerProfile.GetCurrentChampion().Id;
-                CampState st = GetChamp(champ, false);
-                MapNode n = FindNode(st.Z, parts[2]);
+                CampState st = GetChamp(champ, true);
+                if (st == null) return "no campaign for champion " + champ;
+                MapNode n = FindNode(Array.IndexOf(parts, "AZ2") >= 0 ? AZ2 : st.Z, parts[2]);   // "AZ2" anywhere: that zone's node
                 string enc = n != null ? n.Encounter ?? n.FightEncounter : null;
-                if (st == null || enc == null) return "no campaign for champion " + champ + " or no battle at " + parts[2];
+                if (enc == null) return "no battle at " + parts[2];
                 st.ALoc = n.Name;
-                LastEvent = parts.Length > 3 && !parts[3].StartsWith("merc=") ? parts[3] : "start";
+                LastEvent = parts.Length > 3 && !parts[3].StartsWith("merc=") && parts[3] != "AZ2" ? parts[3] : "start";
                 foreach (string a in parts) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);   // "merc=<mercenary item id>": played by that party member
                 int diff;
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;

@@ -207,18 +207,20 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Battlegrounds.cs:64 | PLACEHOLDER: basic shards of each kind added to a limited pool (the deck builder needs them).</summary> |
 | Battlegrounds.cs:66 | PLACEHOLDER: time to pick a draft card.</summary> |
 | Battlegrounds.cs:253 | PLACEHOLDER prize: one booster per match won (unopened, to the inventory).</summary> |
-| Battlegrounds.cs:1141 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
-| Battlegrounds.cs:1280 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
-| Battlegrounds.cs:1318 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
-| Battlegrounds.cs:1364 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
+| Battlegrounds.cs:759 | PLACEHOLDER: which PvP format the gauntlets' games had (the server sent it). Immortal: every PvP set (a |
+| Battlegrounds.cs:1144 | Tournaments" for a constructed gauntlet (3 wins as well: PLACEHOLDER). One not owned yet. |
+| Battlegrounds.cs:1283 | The stars at which the ladder's tiers start (the AI configuration's default tiers; PLACEHOLDER).</summary> |
+| Battlegrounds.cs:1321 | past the iron ranks (PLACEHOLDER: the iron ranks of new players are not known) |
+| Battlegrounds.cs:1371 | so a win gives 1 star). Never below 0 stars (PLACEHOLDER). Returns true if it was a ladder match. |
 | CampaignBoat.cs:136 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:148 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
-| Dungeons.cs:422 | PLACEHOLDER: the blast's victim plays second |
-| Dungeons.cs:598 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
-| Dungeons.cs:768 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
-| Dungeons.cs:791 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
-| Dungeons.cs:1249 | it stays (not seen: PLACEHOLDER). |
+| Dungeons.cs:426 | PLACEHOLDER: the blast's victim plays second |
+| Dungeons.cs:602 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
+| Dungeons.cs:772 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
+| Dungeons.cs:795 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
+| Dungeons.cs:1153 | server's. PLACEHOLDER: no starting hand, from the champions' texts. |
+| Dungeons.cs:1282 | it stays (not seen: PLACEHOLDER). |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |

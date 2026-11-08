@@ -159,6 +159,8 @@ namespace HexRevival
         private static void StartBattle()
         {
             s_Started = true;
+            // The game's format decides the random cards' sets (Patches.PvpFlags); "pve" and "free" stay PvE.
+            if (IsHost && (Format == "immortal" || Format == "standard")) { bool immortal = Format == "immortal"; Patches.PendingEncounterSetup = e => Patches.PvpFlags(e, immortal); }
             Patches.StartMatch(s_MyDeck, Patches.NeutralEncounterId, null, OpponentName);
         }
 

@@ -115,7 +115,7 @@ namespace HexRevival
                     if (d != null && d.m_DeckName == opp.m_DeckName + " - AI" && d.m_ChampionId == opp.m_ChampionId) { opp = d; break; }
                 vm.SetView(DuelingPitVM.EDuelingPitView.None);
                 Opponents.SetNext(new Opponents.Opponent { Name = opp.m_DeckName, Prebuilt = opp.m_DeckName });
-                Patches.PendingEncounterSetup = e => e.SessionFlags |= ESessionFlags.IsDuelingPit;
+                Patches.PendingEncounterSetup = e => { e.SessionFlags |= ESessionFlags.IsDuelingPit; Patches.PvpFlags(e, false); };   // as the client's own (DuelingPitVM)
                 Debug.Log("[HexRevival] [DuelingPit] " + mine.m_DeckName + " vs " + opp.m_DeckName);
                 Patches.StartMatch(Decks.SetTemporary(mine), Patches.NeutralEncounterId, opp, "Dueling Pit vs " + opp.m_DeckName, checkOwned: false);
             }

@@ -321,6 +321,19 @@ namespace HexRevival
         /// <summary>Settings of the next match's encounter data (Siege and Battlegrounds flags), applied once.</summary>
         public static Action<SessionStateEncounterData> PendingEncounterSetup;
 
+        /// <summary>
+        /// A PvP game's format flags in place of the PvE one. The game's random cards (Portal, "create a random card"...) come
+        /// from the format's sets: Session.GetSetsValidInFormat gives the PvE sets unless IsStandardPvP or IsImmortalPvP is set
+        /// (Src.Game). Until 1.2.24 every game of the mod was flagged PvE, so Portal made PvE cards in a sealed gauntlet
+        /// (Ghulzen, 2026-11-08). The client's own PvP games: the Dueling Pit IsStandardPvP (DuelingPitVM.FindMatch), deck
+        /// tests by the deck's format (UIDeckBuilderVM).
+        /// </summary>
+        public static void PvpFlags(SessionStateEncounterData e, bool immortal)
+        {
+            e.SessionFlags &= ~ESessionFlags.IsPvE;
+            e.SessionFlags |= immortal ? ESessionFlags.IsImmortalPvP : ESessionFlags.IsStandardPvP;
+        }
+
         public static void StartMatch(UID playerDeck, ResourceId scene, DeckTemplate aiDeck, string label,
             EDeckPersonality aiPersonality = EDeckPersonality.Default, string siegeMessage = null, bool checkOwned = true)
         {

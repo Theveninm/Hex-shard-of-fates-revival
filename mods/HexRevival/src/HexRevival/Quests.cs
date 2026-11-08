@@ -43,6 +43,7 @@ namespace HexRevival
             public string Creature;       // X of a taming objective ("Bubblebee")
             public string Title;          // objective text shown by the journal (English)
             public string ScriptVar;      // Collect: the public variable the quest panel shows ("Current gnomes:N")
+            public bool Optional;         // "(Optional) ..." (the Graveyard robot's weapons): never blocks the next objective
         }
 
         public class Def
@@ -136,6 +137,7 @@ namespace HexRevival
                     Objective ob = new Objective { LocId = o.m_QuestLocationId };
                     string title = o.m_Title != null && o.m_Title.Count > 0 ? o.m_Title[0].m_Text : "";
                     ob.Title = title;
+                    ob.Optional = title.StartsWith("(Optional)") || (ob.LocId != null && ob.LocId.StartsWith("Opt_"));
                     QuestObjectiveEncounter enc = o as QuestObjectiveEncounter;
                     QuestObjectiveDungeon dun = o as QuestObjectiveDungeon;
                     QuestObjectiveConversation conv = o as QuestObjectiveConversation;
@@ -361,10 +363,10 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Quests] refresh " + script + ": " + e.Message); }
         }
 
-        /// <summary>Index of the first objective not done (Objectives.Count when all are done).</summary>
+        /// <summary>Index of the first objective not done, optional ones left aside (Objectives.Count when all are done).</summary>
         public static int FirstOpen(Def d, Progress p)
         {
-            for (int i = 0; i < d.Objectives.Count; i++) if (!p.Done.Contains(i)) return i;
+            for (int i = 0; i < d.Objectives.Count; i++) if (!p.Done.Contains(i) && !d.Objectives[i].Optional) return i;
             return d.Objectives.Count;
         }
 
@@ -377,6 +379,8 @@ namespace HexRevival
             Def d = GetDef(script);
             Progress p = Get(champ, script);
             if (d == null || p == null || p.Finished) return false;
+            // Saves of 1.2.24 and before: the Graveyard finished, the repair never counted.
+            if (script == Graveyard && Flag(champ, "dungeon:" + Dungeons.GraveyardId) != null) GraveyardDone(d, p);
             int i = FirstOpen(d, p);
             if (i >= d.Objectives.Count || d.Objectives[i].Kind != "Conversation") return false;
             // Templates often list one faction's turn-in only: the last objective accepts any turn-in of the quest.
@@ -407,6 +411,7 @@ namespace HexRevival
                 if (o.Kind == "Dungeon" && o.Dungeon != null && Flag(champ, "dungeon:" + ObjectiveDungeon(script, o)) != null) p.Done.Add(i);
             }
             if (script == "az01_q_cross_the_river" && Flag(champ, "won:Node014") != null) p.Done.Add(0);
+            if (script == Graveyard && Flag(champ, "dungeon:" + Dungeons.GraveyardId) != null) GraveyardDone(d, p);
             Save();
             Log(champ + " started " + script);
             NotifyStarted(champ, d);
@@ -483,6 +488,7 @@ namespace HexRevival
         public static void OnDungeonDone(ulong champ, string dungeonId)
         {
             SetFlag(champ, "dungeon:" + dungeonId, "1");
+            if (dungeonId == Dungeons.GraveyardId) { Progress gp = Get(champ, Graveyard); Def gd = GetDef(Graveyard); if (gp != null && gd != null && !gp.Finished) GraveyardDone(gd, gp); }
             foreach (KeyValuePair<string, Progress> q in new List<KeyValuePair<string, Progress>>(Of(champ)))
             {
                 if (q.Value.Finished) continue;
@@ -671,6 +677,21 @@ namespace HexRevival
 
         public const string Gnomes = "q_gnomes_come_home";
 
+        /// <summary>
+        /// The junkyard robot's quest (Great Machine Graveyard). Src.Game: its objectives "Repair the junkyard robot" and the three
+        /// "(Optional) Acquire the ..." weapons name no dungeon, so nothing completed them, and the turn-in to Reese (Naagaan)
+        /// or Tezozo (Wakuna) never came (mornox, 2026-11-08). Now: started by the robot head at the Graveyard Entrance, the
+        /// repair done in the Assembly Yard and each weapon once installed (Dungeons.StepDone).
+        /// </summary>
+        public const string Graveyard = "q_great_machine_graveyard";
+
+        /// <summary>The Graveyard finished: the robot was repaired on the way (the Assembly Yard leads to Scutt), and Scutt is dead.</summary>
+        private static void GraveyardDone(Def d, Progress p)
+        {
+            for (int i = 0; i < d.Objectives.Count; i++)
+                if (d.Objectives[i].LocId == "Repair" || d.Objectives[i].Kind == "Dungeon" && d.Objectives[i].Dungeon == Dungeons.GraveyardId) p.Done.Add(i);
+        }
+
 
         public enum Role { None, Start, NotComplete, End, Repeat }
 
@@ -765,11 +786,10 @@ namespace HexRevival
             if (u.Contains("ROBOT - STEP 3 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step2B");
             if (u.Contains("ROBOT - STEP 4 - INSTALL")) CompleteLoc(champ, "az01_three_braves", "Step3B");
             if (u.Contains("BLUEJAY - STEP 4")) CompleteLoc(champ, "az01_three_braves", "Step6");
-            // AZ2 quests given on the map: Brutecrown Delta (Belarius / Takumi at McGinty Coast), the
-            // junkyard robot (Great Machine Graveyard), the harbor of Portsmeare (The New Land).
+            // AZ2 quests given on the map: Brutecrown Delta (Belarius / Takumi at McGinty Coast), the harbor of Portsmeare
+            // (The New Land). The junkyard robot's quest starts inside the Great Machine Graveyard (Dungeons.StepDone).
             string script = QuestOf(convName);
             if (script != null && RoleOf(convName) == Role.Start && u.StartsWith("AZ2")) Start(champ, script);
-            if (u.Contains("AZ2 - NODE 45 - ROBOT")) Start(champ, "q_great_machine_graveyard");
             if (u.Contains("PORTSMEARE HARBOR")) CompleteLoc(champ, "q_the_new_land", "Step1");
         }
 
