@@ -163,6 +163,9 @@ namespace HexRevival
                 }
                 s_Champions.Add(c);
                 Save();
+                // The ship's talent points were earned when it was named, before the client created it: its level and
+                // starting talents go with the answer, before its talent window opens.
+                if (c.OwnerChampionId != 0 && c.ChampionClass == EChampionClass.Boat) Campaign.SyncShipLevel(c.OwnerChampionId);
                 AddChampionResponse r = LocalServer.Ok<AddChampionResponse>();
                 r.ChampionBits = c;
                 r.DeckBits = deck;
@@ -286,6 +289,24 @@ namespace HexRevival
             if (c == null || c.Level == level) return;
             c.Level = level;
             Save();
+        }
+
+        /// <summary>
+        /// Gives a champion the talents its level makes mandatory (the game's ETalentSelectionType.NoDeselect ones, such as
+        /// the ship's four starting talents). The client adds them only when it saves talents, and its talent window
+        /// locks every talent that needs them: a new ship's window offered nothing until a first Set Sail (Stigro,
+        /// 2026-11-08). True when some were added.
+        /// </summary>
+        public static bool AddMandatoryTalents(ulong id)
+        {
+            champion_bits c = Find(id);
+            if (c == null) return false;
+            if (c.ChampionTalents == null) c.ChampionTalents = new List<ResourceId>();
+            int had = c.ChampionTalents.Count;
+            Game.Shared.Talents.TalentManager.AddMandatoryTalents(c, c.ChampionTalents);
+            if (c.ChampionTalents.Count == had) return false;
+            Save();
+            return true;
         }
 
         /// <summary>A champion's sub-champion of that class (the AZ2 boat), null if not created yet.</summary>

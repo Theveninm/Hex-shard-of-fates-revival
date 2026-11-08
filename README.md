@@ -217,7 +217,8 @@ panel, the empty Saramago Crater and Johannes Bog windows, Rotmutt's choice card
 champion creation and selection hang). To **Zymmer** for the notes on where every card, equipment and mercenary came
 from, for the tutorial's last battle that froze, and for the report behind 1.2.13 (the AI attacking into blockers,
 damage display, one-shot texts, campaign packs, the store's drop lists). To **Criesener** for the macOS version,
-crafting and the redeem codes. To **Stuie** for the choice of the draft's sets. To **RomoSJR** for
+crafting and the redeem codes. To **Stuie** for the choice of the draft's sets. To **Stigro** for the booster chests' rarities and their odds, the
+Bleak Citadel's phantom room, the ship's first talents, the Necropolis and the Dragon's Blood deck. To **RomoSJR** for
 Hex Codex, the source of the AI's tournament decks, the sleeves and much of the equipment.
 
 ## Building from source

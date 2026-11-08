@@ -975,6 +975,30 @@ namespace HexRevival
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
+                case "talentcheck":   // dev: "talentcheck <race> <class> <level>" = the talents that level makes mandatory, and those then unlocked
+                    {
+                        if (parts.Length < 4) return "usage: talentcheck <race> <class> <level>";
+                        Game.Shared.Domain.champion_bits c = new Game.Shared.Domain.champion_bits();
+                        c.Race = (ERace)Enum.Parse(typeof(ERace), parts[1], true);
+                        c.ChampionClass = (EChampionClass)Enum.Parse(typeof(EChampionClass), parts[2], true);
+                        c.Level = int.Parse(parts[3]);
+                        c.ChampionTalents = new List<ResourceId>();
+                        Game.Shared.Talents.TalentManager.AddMandatoryTalents(c, c.ChampionTalents);
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        List<string> o = new List<string>();
+                        foreach (ResourceId t in c.ChampionTalents) o.Add("mandatory " + tm.GetChampionTalentTemplate(t).m_Name);
+                        ChampionClassData cd = tm.LookupChampionClassTemplate(c.Race, c.ChampionClass);
+                        if (cd != null)
+                            foreach (ChampionTalentGroupData g in cd.m_TalentGroups)
+                                foreach (ResourceId id in g.m_Talents)
+                                {
+                                    ChampionTalentData t = tm.GetChampionTalentTemplate(id);
+                                    if (t != null) o.Add(t.m_Name + " min " + t.m_MinLevel + " cost " + t.m_Cost + " sel " + t.m_SelectionType
+                                        + " unlocked(empty)=" + Game.Shared.Talents.TalentManager.IsTalentUnlocked(c, t, new List<ResourceId>())
+                                        + " unlocked(mandatory)=" + Game.Shared.Talents.TalentManager.IsTalentUnlocked(c, t, c.ChampionTalents));
+                                }
+                        return string.Join("\n", o.ToArray());
+                    }
                 case "widgetinfo":
                     {
                         // dev: "widgetinfo <path text>" = depth, alpha, colour, size and panel of the widgets whose path contains the text

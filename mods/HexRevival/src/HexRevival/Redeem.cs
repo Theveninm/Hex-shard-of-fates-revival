@@ -119,7 +119,7 @@ namespace HexRevival
             { "KS-CHAMPION", new Bundle
             {
                 Title = "Kickstarter Champion Tier",
-                Includes = new[] { "KS-KNIGHT" },
+                Includes = new[] { "KS-KNIGHT", "KS-DRAGONSBLOOD" },
                 Boosters = new Dictionary<string, int> { { "Shards of Fate", 85 } },
                 Cards = new[]
                 {
@@ -127,6 +127,24 @@ namespace HexRevival
                     new Card("9d8c42f9-bc5a-4a42-b904-0f98ae83945e", "The Wrath of Zakiir", 1),
                 },
                 Items = new[] { "Mephistophelius", "Champion Deck Sleeve" },
+            } },
+            // The Dragon's Blood starter deck, a Kickstarter reward of the Champion tier and above (Stigro, 2026-11-08),
+            // granted in July 2017 ("Uruunaz Blood Starter Deck Kickstarter Reward", Src.HexTcg2017: hextcg.com
+            // "Dragon's Blood Starter Deck Out Now!": Nefarious Corrupter and Violet's Attendant socketed, the Scion of
+            // Uruunaz equipment below, sleeves and animated alternate arts). Src.Game: the mercenary Scion of Uruunaz
+            // ("Dragon's Blood Deck") and the Uruunaz The Merciless Sleeve, both of Frostheart's time like the equipment.
+            // Not given: the rest of the deck list and the animated alternate arts (not listed by any source found; the
+            // game data holds no alternate-art Uruunaz). Its own code too, for accounts that redeemed the tier before 1.2.23.
+            { "KS-DRAGONSBLOOD", new Bundle
+            {
+                Title = "Kickstarter Dragon's Blood Starter Deck",
+                Cards = new[]
+                {
+                    new Card("67b00482-be3c-408f-bae5-4764fe990b2e", "Nefarious Corruptor", 1),
+                    new Card("2ace9ad9-33d3-4e2a-94ea-e9243e4d8806", "Violet's Attendant", 1),
+                },
+                Items = new[] { "Scion of Uruunaz", "Uruunaz The Merciless Sleeve", "Nefarious Helm", "Vial of Dragon's Blood",
+                    "Blighted Breastplate", "Bookmark Blade", "Callow Clogs", "Blightbark Gauntlets" },
             } },
             { "KS-KING", new Bundle
             {

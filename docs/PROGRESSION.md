@@ -37,6 +37,7 @@ data alone. In the code, a sourced campaign decision carries its reference in a 
 | Video | reward windows read on gameplay videos: Vandersveldt let's play (Necrotic, early 2016), MyHotStream "Underworld Campaign" (Necrotic, 2016-2018) and "Ardent Campaign" (Elf, Dec 2016-2018), Amaz let's play (Vennen). Values of the Dec 2016+ client are used where versions differ |
 | Survey2014 | players' Wheels of Fate survey, April-May 2014: 2,167 spins by chest rarity and outcome, and which version (common / uncommon / rare) of each prize came (Google sheet 1CAfwv-xqUZN-pJXx4r7Kpbz0PCtcmOFuzh0eSFAQ6Gw; the prize versions as tabulated by HexServer) |
 | Survey2015 | players' treasure chest survey, July 2015: chests from boosters and what they held, about 1,700 drops of Set 1-3 chests by chest rarity and kind of prize (Google sheet 193MgoYZ5OJc5F7UMXq39-GBmzBUhCT7s9ltcKGWtIVs; the per-rarity frequencies and the alternate art lists as tabulated by HexServer) |
+| HexTcg2017 | the developer's news "Dragon's Blood Starter Deck Out Now!", July 14, 2017 (hextcg.com/uruunaz-starter-deck-now): the Kickstarter deck granted, two socketed cards and the Scion of Uruunaz equipment |
 | HexCodex | Hex Codex by RomoSJR, a fan encyclopedia (hex-codex.romosjr.workers.dev, 2026): its equipment list (where each piece was obtained: 138 pieces Zymmer's notes miss are added to the same pools, `assets/codex_equipment.txt` by `tools/gen_codex_equipment.py`; its mercenary list agrees with the notes), its tournament database (46,674 decks from 1,550 constructed events, 2016-2020), its sleeve list (how each of the 425 sleeves was obtained, `assets/sleeve_sources.txt` by `tools/gen_sleeves.py`), and its Frost Ring Arena, Siege and Dueling Pit pages, which quote the game's own texts |
 | Wiki | HEX fandom wiki (hextcg.fandom.com), mostly 2014-2015 pages: "Treasure Chest", "Wheels of Fate" |
 
@@ -302,7 +303,10 @@ skiff of "River of Whispers" and left by the "Transfer To AZ1" node. The faction
 and Naagaan (Underworld): only the champion's faction's hub has NPCs. The template's A/B node variants
 (Ardent / Underworld, a demon swap at Harp Rock) are one map node each, the battle chosen by faction or
 by the dialogue's event. The other faction's hub is not on the map (Game: every conversation of Wakuna is an
-Ardent giver's, every one of Naagaan an Underworld giver's; Video: no run entered the other one). Quest
+Ardent giver's, every one of Naagaan an Underworld giver's; Video: no run entered the other one).
+The Necropolis (node 26, past the Deathless Path) is the necrotics' hometown: only a necrotic champion sees it (Game:
+its three conversations, "Return to Necropolis", are a necrotic's homecoming; Video: no Ardent run went past the
+Deathless Path; until 1.2.22 every champion could enter and was greeted as a necrotic, Stigro 2026-11-08). Quest
 objectives without ids in the templates are matched by encounter name (`Quests.AZ2Objectives`; Mithral River:
 Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot / Lazgar Chul; Video, both runs).
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
@@ -340,7 +344,10 @@ Artifact: Hex Battery, Forge Flock, Junk Barrier (MHS 2017-10-19 0:33).
   abilities), with its own deck (first a copy of the champion's deck) and talents. Ship talent points
   (Video): 3 when the ship is named, 1 for the first win over the Cloud Queen, the Cloud King, the Storm
   of the Century and Bloodhorn (7 in all, as on the videos' Ship Port); shown as a talent point line of
-  the reward window (the original said "Ship Talent Point"). Sea battles' XP goes to the champion (Video).
+  the reward window (the original said "Ship Talent Point"). The ship starts with its four mandatory talents
+  (Aye, Captain. It's Just You; Basic Hull; Tattered Banner; Cannons: the game's "no deselect" talents), which
+  the second row needs; until 1.2.22 it got them only at its first Set Sail, so the first Ship Port offered
+  no talent (Stigro 2026-11-08). Sea battles' XP goes to the champion (Video).
 - Hull (the ship's health): 40, or 60 with "Heavy Hull", kept from one sea battle to the next of a
   voyage (Game: Basic Hull "The Hull of your ship persists across encounters", the Ship Port "When
   running low on hull, you can return here for repairs"; the client reports the battle's end health, +5
@@ -444,7 +451,7 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 | Clatterclank | Great Machine Graveyard Pack (Zymmer) | 1 time in 100 in a Great Machine Graveyard pack (PLACEHOLDER odds) |
 | Thokoht | Alachian Sea ("Adventure Zone II"), how is unknown (not in Zymmer's notes) | not obtainable |
 | Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing | Kismet's Reserve packs (Zymmer; themes Oni, Boonberries, Vampires, 2017 Convocation: Game) | the store's Kismet packs (see Store) |
-| Scion of Uruunaz | Dragon's Blood deck | not obtainable (no such deck product in the game data) |
+| Scion of Uruunaz | Dragon's Blood Deck (Game), the Kickstarter Champion tier's starter deck and above, granted July 2017 (HexTcg2017; tier: Stigro 2026-11-08) | the Kickstarter Champion tier code and above, or KS-DRAGONSBLOOD alone (with the Uruunaz The Merciless Sleeve, Nefarious Corruptor, Violet's Attendant and six equipment; the rest of the deck list and its animated alternate arts are unknown) |
 | Kickstarter, GenCon 2013/2014, Salty Sam (tournament reward) | out of the game | not obtainable |
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)
@@ -779,9 +786,9 @@ otherwise epic 1 time in 5 in the sets that have epics, otherwise rare. Primal p
 1 legendary chest (Game).
 
 **Treasure chests and the Wheel of Fate.** A booster's chest is of a random rarity (Wiki 2014: "common, uncommon,
-rare or legendary", without odds; Stigro 2026-11-07 remembers every rarity but primal from boosters), mostly common
-(Survey2015: 93 of 93 common; Survey2014's uncommon spins are about its common chests' upgrades): uncommon 2%, rare 0.5%,
-legendary 0.1% (PLACEHOLDER; common only before 1.2.22). Before opening it,
+rare or legendary", without odds), mostly common: players' pack openings on video (Stigro 2026-11-08; 100 packs gave
+4 legendary, 10 rare, 28 uncommon chests besides the primal pack's, 50 beta packs 2 legendary): uncommon 27%, rare 10%,
+legendary 4% (PLACEHOLDER; common only before 1.2.22, uncommon 2% / rare 0.5% / legendary 0.1% in 1.2.22; Survey2015's 93 booster chests were all common, it seems to have recorded common ones only). Before opening it,
 the chest can be spun on the Wheel of Fate for 1,200 / 3,100 / 8,500 / 30,000 gold (common / uncommon / rare /
 legendary; Game, Wiki). An upgraded legendary chest becomes a primal chest, the only way to get one (Wiki). Outcomes (Game payout table): 1 eye a paid re-spin, 2 eyes a free re-spin, 3 eyes an upgrade;
 three stars a mercenary, crowns a PvE card's equipment, hands an upgrade, moons a PvE card, mushrooms sleeves, skulls
