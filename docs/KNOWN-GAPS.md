@@ -27,7 +27,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • **AZ2 map battles**: same rewards for both factions (only the Underworld run was recorded)
 • **Scylla & Charybdis**: 1-in-3 chance per voyage that they wake (the real trigger was on the server)
 • **The Kraken**: Mayor Galway never dies (that ending was never seen); the sea hag curses and tentacles aren't reproduced
-• **Ruins of Kukatan**: Tomb of Omens reward is a guess (never visited on video); glyph puzzles' opening hand guessed
+• **Ruins of Kukatan**: Tomb of Omens reward and glyph puzzle are guesses (never visited on video)
 • **Great Machine Graveyard**: your ally if you skipped Brutecrown Bluff (Vargar) and who plays first after the Roundabout's blast are guesses
 
 **🧑‍🤝‍🧑 Mercenaries**

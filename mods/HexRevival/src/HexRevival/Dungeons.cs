@@ -276,7 +276,9 @@ namespace HexRevival
                 .Add("NodeN", Fight(gm, "Scraptooth Throne Room", "Great Machine Graveyard N - Scraptooth Throne Room", "machinegraveyard/NodeN"))
                 .Flag("dross_key_found", "NodeC")      // the Barking Cavern's rusted key opens Dross' collar
                 // NodeL: a prefab node off the Assembly Yard with no room in the dungeon template (Src.Game: no item, no
-                // window text), shown as a bare "NodeL" until 1.2.24 (mornox, 2026-11-08).
+                // window text), never on the map (Src.Video: MHS Ardent 2018-02-09 [GOi3tlF184Y] 1:50, the Assembly Yard's
+                // paths lead to the Colosseum, Big Magnet Thing, the Crusher and the Melting Pot only); shown as a bare
+                // "NodeL" until 1.2.24 (mornox, 2026-11-08).
                 .Hide("NodeL")
                 .Final("NodeN"));
 
@@ -1145,23 +1147,26 @@ namespace HexRevival
         }
 
         /// <summary>
-        /// Starting hand of the Ruins of Kukatan's glyph puzzles ("(Memory)" battles): none. Their champions, "Solve the Glyphs"
-        /// (the glyphs shown) and "Remember the Glyphs" (the player's runes, all in play), have the usual 7 (Src.Game), but Solve
-        /// the Glyphs draws "a card for each hidden counter" at the start of its turn (3, 5 or 7 at first, one more each turn) and
-        /// its deck holds 5 or 7 glyphs: with a hand of 7 it drew them all, and lost at once for an empty deck in the Perilous
-        /// Hallway (mornox, 2026-11-08). The scene's "Player Win Condition" ability (73eb53fb...) is not in the game data: the
-        /// server's. PLACEHOLDER: no starting hand, from the champions' texts.
+        /// Starting hand of the Ruins of Kukatan's glyph puzzles ("(Memory)" battles). "Solve the Glyphs" lays the glyphs: 3 on its
+        /// first turn in both puzzles (Src.Video: KVC part 4 [EZBSXKhjI4Q], Perilous Hallway 22:56 three glyphs, then 4, then 5;
+        /// Etchings of the Lost Ones 46:40 three, then 6, then 7), then "a card for each hidden counter" (3 or 5 at the start, one
+        /// more each turn; Src.Game). Its template's hand is the usual 7 (Src.Game): it drew every glyph at once, and in the
+        /// Perilous Hallway lost at once for an empty deck (mornox, 2026-11-08). The scene's "Player Win Condition" ability
+        /// (73eb53fb...) is not in the game data: the server's. "Remember the Glyphs" (the player's runes, all in play) draws
+        /// nothing. PLACEHOLDER only for the Tomb of Omens' glyphs (seven counters), never seen: 3 as the others.
         /// </summary>
         public static int StartingHand(Player player, int size)
         {
             string name = player != null && player.m_ChampionCard != null && player.m_ChampionCard.m_CardTemplate != null ? player.m_ChampionCard.m_CardTemplate.m_Name : null;
-            return name == "Solve the Glyphs" || name == "Remember the Glyphs" ? 0 : size;
+            return name == "Solve the Glyphs" ? 3 : name == "Remember the Glyphs" ? 0 : size;
         }
 
         /// <summary>
         /// The junkyard robot's quest (Quests.Graveyard), from the Graveyard's own talks (Src.Game): the robot head found at the
         /// Entrance gives it ("Are you offering to help me if I reassemble the rest of you?"), the Assembly Yard repairs the
         /// robot, and each weapon counts once installed (Big Magnet Thing, the Crusher, the Melting Pot, after their battle).
+        /// Src.Video: MHS Ardent 2018-01-30 [9MbvTElf-vg], the quest in the tracker right after the robot head's talk; 2018-02-09
+        /// [GOi3tlF184Y] 1:50, "Repair the junkyard robot" done after the Assembly Yard, the three "(Optional)" weapons open.
         /// </summary>
         private static void GraveyardQuest(Run r, string room)
         {

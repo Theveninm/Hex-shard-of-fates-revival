@@ -312,7 +312,8 @@ homecoming; Video: no other race entered it). A map battle named for neither fac
 conversations hold its "success" / "fail" outcomes, the other one just talks (Game: Lebus Pass's Darkspire Scout and
 Mithral River's Constantina for the Underworld, Mithral Falls' Eurig for the Ardent; Video: MHS UW fights the
 Darkspire Scout, MHS Ardent fights Eurig; until 1.2.24 Eurig fought Underworld champions too, mornox 2026-11-08). Lake
-Kukatan (node 41, a dead end after the Ruins of Kukatan) is never shown: its only conversation is "CUT", "TBD". Quest
+Kukatan (node 41, a dead end after the Ruins of Kukatan) is never shown: its only conversation is "CUT", "TBD"
+(Video: MHS Ardent 2018-01-29, nothing past the Ruins once they are done). Quest
 objectives without ids in the templates are matched by encounter name (`Quests.AZ2Objectives`; Mithral River:
 Eurig for the Ardent, Constantina for the Underworld; Raiders: Xentoth's Zealot / Lazgar Chul; Video, both runs).
 Quest givers on the map (Brutecrown Delta at McGinty Coast) follow the hubs' order: the turn-in when ready, the
@@ -397,13 +398,15 @@ Graveyard's Colosseum (Video, KVC: ally Zagg -> Vargar then Burgg; the order for
 scenes' order, PLACEHOLDER); the Graveyard robot's
 weapons (Big Magnet Thing = Magnet Shield, Crusher = Big Bopper, Melting Pot = Slag Cannon); Dross's
 roundabout (no battle, the post broken, or the collar trap: the AI plays first); Kukatan's journal
-(Bone Thicket) choosing the "Memory" mini-game battles over the traps (the glyphs: no starting hand for
-"Solve the Glyphs" and "Remember the Glyphs", PLACEHOLDER from their texts: with the usual 7, Solve the Glyphs drew
-every glyph and, in the Perilous Hallway, lost at once for an empty deck, mornox 2026-11-08; the glyphs' hidden
-counters are not shown to the player, as the server kept them); the Graveyard robot's quest (Game: started by the
-robot head at the Entrance, "Repair" in the Assembly Yard, each weapon an optional objective, turned in to Reese or
-Tezozo; until 1.2.24 nothing counted the repair, and the turn-in never came, mornox 2026-11-08); the Graveyard's
-NodeL, a prefab node with no room in the template, never shown; the Tomb of Lingerers' explorers
+(Bone Thicket) choosing the "Memory" mini-game battles over the traps (the glyphs: "Solve the Glyphs" opens with 3
+glyphs, then one per hidden counter, Video: KVC part 4, Perilous Hallway 3 / 4 / 5, Etchings 3 / 6 / 7; its template's
+hand of 7 drew every glyph and, in the Perilous Hallway, lost at once for an empty deck until 1.2.24, mornox
+2026-11-08; the Tomb of Omens' glyphs never seen, 3 as the others, PLACEHOLDER; the glyphs' hidden counters are not
+shown to the player, Video: no counter on the runes); the Graveyard robot's quest (Game, Video MHS Ardent 2018-01-30
+and 2018-02-09: started by the robot head at the Entrance, "Repair" in the Assembly Yard, each weapon an optional
+objective, turned in to Reese or Tezozo; until 1.2.24 nothing counted the repair, and the turn-in never came, mornox
+2026-11-08); the Graveyard's NodeL, a prefab node with no room in the template, never shown (Video: MHS Ardent
+2018-02-09, the Assembly Yard leads to four rooms); the Tomb of Lingerers' explorers
 of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ardent); Lukaz in two
 battles with one reward (Video: one window for Echo Ridge).
 Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your

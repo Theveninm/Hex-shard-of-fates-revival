@@ -827,7 +827,8 @@ namespace HexRevival
                 n.Type = "Convo";
                 n.Conversation = best.m_Id.ToString();
                 // Lake Kukatan (AZ2 Node041, a dead end after Node040): its only conversation is "AZ2 - Node 41 - CUT", "TBD"
-                // (Src.Game). It showed "TBD" once the Ruins of Kukatan were done (mornox, 2026-11-08).
+                // (Src.Game), and the map shows nothing past the Ruins once they are done (Src.Video: MHS Ardent 2018-01-29
+                // [dMOtPXQX2To] 10:27). It showed "TBD" in the mod (mornox, 2026-11-08).
                 n.Cut = best.m_Name.ToUpperInvariant().Contains("- CUT");
                 n.HausConversation = best.m_Name.IndexOf("Shroom house", StringComparison.OrdinalIgnoreCase) >= 0;
             }

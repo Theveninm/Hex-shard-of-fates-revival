@@ -215,12 +215,12 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | CampaignBoat.cs:136 | of a voyage, 1 time in 3 (PLACEHOLDER chance; it fits 2 to 4 calm voyages before). Saves where a sea quest was |
 | CampaignBoat.cs:148 | PLACEHOLDER: chance that Scylla and Charybdis wake at the start of a voyage.</summary> |
 | DuelingPit.cs:21 | chosen deck against another of the five, piloted by the AI with its "- AI" version (which one: PLACEHOLDER, drawn |
-| Dungeons.cs:426 | PLACEHOLDER: the blast's victim plays second |
-| Dungeons.cs:602 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
-| Dungeons.cs:772 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
-| Dungeons.cs:795 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
-| Dungeons.cs:1153 | server's. PLACEHOLDER: no starting hand, from the champions' texts. |
-| Dungeons.cs:1282 | it stays (not seen: PLACEHOLDER). |
+| Dungeons.cs:428 | PLACEHOLDER: the blast's victim plays second |
+| Dungeons.cs:604 | Which room: PLACEHOLDER, one battle room of the run drawn at random (not the final one); the original server |
+| Dungeons.cs:774 | Brutecrown Bluff not played: PLACEHOLDER (Vargar) |
+| Dungeons.cs:797 | seen: their totals (12-13, 14-15) and the limits between the seen ones are PLACEHOLDER. |
+| Dungeons.cs:1156 | nothing. PLACEHOLDER only for the Tomb of Omens' glyphs (seven counters), never seen: 3 as the others. |
+| Dungeons.cs:1287 | it stays (not seen: PLACEHOLDER). |
 | Fortunes.cs:17 | [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show |
 | Hometown.cs:28 | PLACEHOLDER: the quest giver is shown once the sparring match is won (the client's quest hint follows the sparring |
 | Loot.cs:65 | Dead packs (Src.LootTables2016). Both PLACEHOLDER by analogy. Src.Video agrees for Fort Romor: its packs |
