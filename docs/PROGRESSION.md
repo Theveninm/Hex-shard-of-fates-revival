@@ -466,7 +466,7 @@ mercenaries of the game data; the four unfinished ones, build tag FutureRelease,
 | Clatterclank | Great Machine Graveyard Pack (Zymmer) | 1 time in 100 in a Great Machine Graveyard pack (PLACEHOLDER odds) |
 | Thokoht | Alachian Sea ("Adventure Zone II"), how is unknown (not in Zymmer's notes) | not obtainable |
 | Sekki, Jusicus Elderberry, Vlastislav the Deathless, Tealwing | Kismet's Reserve packs (Zymmer; themes Oni, Boonberries, Vampires, 2017 Convocation: Game) | the store's Kismet packs (see Store) |
-| Scion of Uruunaz | Dragon's Blood Deck (Game), the Kickstarter Champion tier's starter deck and above, granted July 2017 (HexTcg2017; tier: Stigro 2026-11-08) | the Kickstarter Champion tier code and above, or KS-DRAGONSBLOOD alone (with the Uruunaz The Merciless Sleeve, the alternate art of Uruunaz the Merciless, whose picture is the sleeve's, Nefarious Corruptor, Violet's Attendant and six equipment; the rest of the deck list is unknown, Hex Codex has none) |
+| Scion of Uruunaz | Dragon's Blood Deck (Game), the Kickstarter Champion tier's starter deck and above, granted July 2017 (HexTcg2017; tier: Stigro 2026-11-08) | the Kickstarter Champion tier code and above, or KS-DRAGONSBLOOD alone (with the Uruunaz The Merciless Sleeve, the alternate art of Uruunaz the Merciless, whose picture is the sleeve's, Tome of Uruunaz ("Entrusted only to his scion"; two of the deck's equipment are its own; Stigro 2026-11-08; 1 copy, PLACEHOLDER), Nefarious Corruptor, Violet's Attendant and six equipment; the rest of the deck list is unknown, Hex Codex has none) |
 | Kickstarter, GenCon 2013/2014, Salty Sam (tournament reward) | out of the game | not obtainable |
 
 ### Rewards (Video, MyHotStream Underworld run, unless noted)

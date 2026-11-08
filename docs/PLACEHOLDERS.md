@@ -268,6 +268,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Progression.cs:1150 | same for the Battlegrounds: PLACEHOLDER |
 | PveFullSets.cs:25 | the TemplateManager when the store is built. Price PLACEHOLDER (see GoldPrice). |
 | PveFullSets.cs:29 | PLACEHOLDER gold price (written as the other platinum-era products: converted by the account's price settings).</summary> |
+| Redeem.cs:149 | equipment, Bookmark Blade and Vial of Dragon's Blood, are its own (Stigro, 2026-11-08). PLACEHOLDER: 1 copy. |
 | Siege.cs:619 | PLACEHOLDER: the other defenses of the list are attacked by simulated players (how often and how well is not |
 | Sleeves.cs:20 | - "Obtained by opening [set] Booster Packs": sometimes in an opened booster (PLACEHOLDER chance, Packs); |
 | Sleeves.cs:22 | - "Awarded through Account Leveling": the account level rewards "sleeve" (Progression; which one: PLACEHOLDER); |
