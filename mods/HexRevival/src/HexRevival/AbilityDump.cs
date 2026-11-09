@@ -99,6 +99,9 @@ namespace HexRevival
         private static void Template(StringBuilder sb, TemplateManager tm, CardTemplate t)
         {
             sb.Append("  template ").Append(t.m_Id.m_Guid).Append(' ').Append(t.m_CardType).Append(" cost ").Append(t.m_ResourceCost).Append('\n');
+            sb.Append("    lineage=").Append(t.m_LineageId.m_Guid).Append(" altArt=").Append(t.m_HasAlternateArt).Append(" eqMod=").Append(t.m_EquipmentModifiedCard)
+              .Append(" equipment=").Append(Describe(t.m_EquipmentSlots, 0)).Append(" displayOnly=").Append(Describe(t.m_EquipmentIsDisplayOnly, 0)).Append('\n');
+            if (t.tac != null) sb.Append("    tac: ").Append(t.tac.TextDescription("")).Append('\n');
             foreach (CardAbilityContainer a in t.m_CardAbilities) { sb.Append("  ability "); Ability(sb, tm, a.m_CardAbilityId, "    "); }
         }
 
