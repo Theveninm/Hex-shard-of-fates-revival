@@ -916,6 +916,7 @@ namespace HexRevival
                     if (player == null || session == null) return "noplayer";
                     foreach (SessionCardId id in session.Cache.GetCardsInCollection(ECardCollections.Hand, player.m_PlayerId)) { player.Discard(id); return "discard " + id; }
                     return "empty hand";
+                case "aiblockall": AiBlocks.DevBlockAll = parts.Length < 2 || parts[1] != "off"; return "AI blocks the first attacker with every troop: " + AiBlocks.DevBlockAll;
                 case "block": if (player != null) player.DeclareDefense(new List<CommitTroopsToDefenseTransaction.DefenseDeclaration>()); return "block none";
                 case "assign": if (player != null) player.AssignDamageOrder(new List<AssignDamageOrderTransaction.DamageAssignment>()); return "assign none";
                 case "playable":

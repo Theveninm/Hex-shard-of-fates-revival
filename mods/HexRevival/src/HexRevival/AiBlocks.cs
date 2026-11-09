@@ -23,6 +23,9 @@ namespace HexRevival
     /// </summary>
     public static class AiBlocks
     {
+        /// <summary>Dev ("aiblockall on"): the AI blocks the first attacker with every troop it can.</summary>
+        public static bool DevBlockAll;
+
         public static void Repair(Session ss, CommitTroopsToDefenseTransaction tx)
         {
             if (ss == null || tx == null) return;
@@ -35,6 +38,14 @@ namespace HexRevival
             if (attackers == null || attackers.Count == 0) return;
 
             List<string> changes = new List<string>();
+            if (DevBlockAll)
+            {
+                // dev ("aiblockall on"): every troop of the AI able to block the first attacker blocks it (several blockers).
+                tx.m_DefenseDeclarations.Clear();
+                foreach (Card troop in defender.GetCardCollection(ECardCollections.Warzone).GetTroopCards(false))
+                    if (troop != null && troop.CanBlock(attackers[0]) == ECombatantStatus.Ok) Assign(tx, attackers[0].m_SessionCardId, troop.m_SessionCardId);
+                return;
+            }
             foreach (Card troop in defender.GetCardCollection(ECardCollections.Warzone).GetTroopCards(false))
             {
                 if (troop == null || troop.IsBlocking()) continue;
