@@ -361,12 +361,13 @@ namespace HexRevival
                 bool elite = !boss && (tier == 2 ? slot == 3 : tier >= 3 && (slot == 1 || slot == 3));
                 // The fight's role (boss, elite, common), then any deck of the tier. Uruunaz and Zakiir are common decks
                 // with a low frequency (see AiConfig).
-                Opponents.Opponent o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(x.Name));
-                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && !used.Contains(x.Name));
-                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !used.Contains(x.Name));
+                // An opponent fought once doesn't come back in the run, in its normal or elite form (Stigro, original game).
+                Opponents.Opponent o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && (boss || x.Elite == elite) && !used.Contains(BaseName(x.Name)));
+                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => x.Boss == boss && !used.Contains(BaseName(x.Name)));
+                if (o == null) o = Opponents.Pick(Opponents.Arena, tier, x => !used.Contains(BaseName(x.Name)));
                 if (o == null) o = Opponents.Pick(Opponents.Arena, tier);
                 if (o == null) { Debug.LogError("[HexRevival] [Arena] no opponent for tier " + tier + " in the arena's AI decks"); return null; }
-                used.Add(o.Name);
+                used.Add(BaseName(o.Name));
                 r.Opponents.Add(o);
                 r.Fights.Add(new ArenaFight
                 {
@@ -452,6 +453,12 @@ namespace HexRevival
         }
 
         private static bool s_InBattle;
+        /// <summary>The opponent's name without its elite suffix: "Angel of Dawn Elite" and "Angel of Dawn" are the same opponent.</summary>
+        private static string BaseName(string name)
+        {
+            return name != null && name.EndsWith(" Elite") ? name.Substring(0, name.Length - 6) : name;
+        }
+
         /// <summary>True while an arena battle is being fought (see Boards).</summary>
         public static bool InBattle { get { return s_InBattle; } }
 

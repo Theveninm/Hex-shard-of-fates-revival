@@ -916,6 +916,41 @@ namespace HexRevival
                     if (player == null || session == null) return "noplayer";
                     foreach (SessionCardId id in session.Cache.GetCardsInCollection(ECardCollections.Hand, player.m_PlayerId)) { player.Discard(id); return "discard " + id; }
                     return "empty hand";
+                case "eqtest":   // dev: "eqtest <card guid> <item name>" = that card's version with the item, as the deck editor shows it (card viewer) and, in a battle, given to the human player's hand with the item equipped
+                    {
+                        if (parts.Length < 3) return "usage: eqtest <card guid> <item name>";
+                        TemplateManager tm = Singleton<TemplateManager>.Instance;
+                        CardTemplate card = tm.GetCardTemplate(new ResourceId(new Guid(parts[1])));
+                        string iname = string.Join(" ", parts, 2, parts.Length - 2);
+                        InventoryItemData item = null;
+                        foreach (InventoryItemData it in tm.InventoryItems.Values) if (string.Equals(it.m_Name, iname, StringComparison.OrdinalIgnoreCase)) { item = it; break; }
+                        if (card == null || item == null) return "no card or item";
+                        CardTemplate eq = CardTemplate.GetEquippedCardTemplate(card, item.m_Id, ResourceId.Invalid);
+                        string res = "deck editor: " + eq.m_Id.m_Guid + " altArt=" + eq.m_HasAlternateArt + " image=" + eq.m_CardImagePath + " text=" + eq.m_GameText;
+                        UISystem.DisplayLinkedCard(eq, true, false, false);
+                        StandaloneSession ss = Server.CurrentSession;
+                        Player human = null;
+                        if (ss != null) foreach (Player pl in ss.GetAllPlayers()) if (pl != null && !Server.IsAIId(pl.m_PlayerId)) human = pl;
+                        if (human != null && ss.IsGamePlaying)
+                        {
+                            if (!human.m_Equipment.Contains(item.m_Id)) human.m_Equipment.Add(item.m_Id);
+                            Card c = Cheats.GiveToHand(ss, human, card);
+                            Server.MarkDirty();
+                            res += "\nbattle: " + (c != null ? c.m_SessionCardId + " " + c.m_CardTemplate.m_Id.m_Guid + " text=" + c.m_CardTemplate.m_GameText : "not given");
+                        }
+                        return res;
+                    }
+                case "dmgorder":   // dev: "dmgorder <from> <to>" = moves a blocker in the open damage order window
+                    {
+                        object stack = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UIBattle.Instance);
+                        BattleStateAssignCombatDamage w = null;
+                        foreach (object st in (System.Collections.IEnumerable)stack) { w = st as BattleStateAssignCombatDamage; if (w != null) break; }
+                        int from, to;
+                        if (w == null || parts.Length < 3 || !int.TryParse(parts[1], out from) || !int.TryParse(parts[2], out to)) return "no window / usage: dmgorder <from> <to>";
+                        w.DragReorder(from, to);
+                        return "moved " + from + " -> " + to;
+                    }
+                case "aiblockall": AiBlocks.DevBlockAll = parts.Length < 2 || parts[1] != "off"; return "AI blocks the first attacker with every troop: " + AiBlocks.DevBlockAll;
                 case "block": if (player != null) player.DeclareDefense(new List<CommitTroopsToDefenseTransaction.DefenseDeclaration>()); return "block none";
                 case "assign": if (player != null) player.AssignDamageOrder(new List<AssignDamageOrderTransaction.DamageAssignment>()); return "assign none";
                 case "playable":
