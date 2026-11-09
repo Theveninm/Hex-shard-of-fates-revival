@@ -302,6 +302,18 @@ namespace HexRevival
             TurnPhaseUpdatedSessionEventArgs tp = a as TurnPhaseUpdatedSessionEventArgs;
             if (tp != null)
                 return "TurnPhase " + tp.TurnPhase + " act=" + tp.ActivePlayerId + " pri=" + tp.PriorityPlayerId;
+            List<SessionEventArgs> combats = a is CombatsThatNeedDamageSessionEventArgs ? ((CombatsThatNeedDamageSessionEventArgs)a).Combats
+                : a is CombatListingSessionEventArgs ? ((CombatListingSessionEventArgs)a).Combats : null;
+            if (combats != null)
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder(a.GetType().Name.Replace("SessionEventArgs", ""));
+                foreach (SessionEventArgs c in combats)
+                {
+                    CombatSessionEventArgs ce = c as CombatSessionEventArgs;
+                    if (ce != null) sb.Append(' ').Append(ce.Id).Append(':').Append(ce.Attacker).Append('/').Append(ce.Blockers != null ? ce.Blockers.Count : 0);
+                }
+                return sb.ToString();
+            }
             return a.GetType().Name.Replace("SessionEventArgs", "");
         }
 
