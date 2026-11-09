@@ -24,7 +24,25 @@ namespace HexRevival
             if (parts.Length < 2) return "abildump battle | card <name> | <name>";
             StringBuilder sb = new StringBuilder();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
-            if (parts[1] == "battle" || parts[1] == "card")
+            if (parts[1] == "altcheck")
+            {
+                // Alternate art templates without the equipment versions of their base card (Stigro, Tinkerer's Robe).
+                Dictionary<string, CardTemplate> bases = new Dictionary<string, CardTemplate>();
+                foreach (CardTemplate t in tm.Cards.Values)
+                    if (t != null && !t.m_HasAlternateArt && !t.m_EquipmentModifiedCard && t.tac != null && t.tac.Get(ListAttrs.AlternateVersions) != null)
+                        bases[t.m_Name] = t;
+                int n = 0;
+                foreach (CardTemplate t in tm.Cards.Values)
+                {
+                    if (t == null || !t.m_HasAlternateArt || !bases.ContainsKey(t.m_Name)) continue;
+                    TACList own = t.tac != null ? t.tac.Get(ListAttrs.AlternateVersions) : null;
+                    sb.Append(own == null || own.Count == 0 ? "MISSING " : "ok      ").Append(t.m_Id.m_Guid).Append(' ').Append(t.m_Name)
+                      .Append(" base ").Append(bases[t.m_Name].m_Id.m_Guid).Append('\n');
+                    n++;
+                }
+                sb.Append(n).Append(" alternate arts of cards with equipment versions\n");
+            }
+            else if (parts[1] == "battle" || parts[1] == "card")
             {
                 StandaloneSession ss = Session(gc);
                 if (ss == null) return "no authoritative session";
