@@ -196,6 +196,18 @@ namespace HexRevival
                 catch (Exception e) { Debug.LogError("[HexRevival] RequestPlayerOptions : " + e); }
                 return true;
             }
+            if (transaction is AssignDamageOrderTransaction && TraceEvents)
+            {
+                // Trace: the damage order the player gave (blockers in the order they are dealt damage).
+                FieldInfo order = typeof(AssignDamageOrderTransaction).GetField("m_AssignedDamageOrder", BindingFlags.Instance | BindingFlags.NonPublic);
+                List<AssignDamageOrderTransaction.DamageAssignment> list = order != null ? order.GetValue(transaction) as List<AssignDamageOrderTransaction.DamageAssignment> : null;
+                if (list != null) foreach (AssignDamageOrderTransaction.DamageAssignment d in list)
+                {
+                    List<string> names = new List<string>();
+                    foreach (SessionCardId id in d.CardIds) { Card c = self.ResourceCache.GetCard(id); names.Add(id + " " + (c != null ? c.GetName() : "?")); }
+                    Debug.Log("[HexRevival] [Server] damage order " + d.CombatId + ": " + string.Join(", ", names.ToArray()));
+                }
+            }
             if (s_InServerTick)
             {
                 // Transaction issued by the engine itself during its tick (e.g. automatic pass
