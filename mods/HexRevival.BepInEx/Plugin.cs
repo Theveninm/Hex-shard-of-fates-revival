@@ -203,6 +203,7 @@ namespace HexRevival
                 apply("AIHints.MyCard", () => harmony.Patch(AccessTools.PropertyGetter(typeof(Game.Shared.AI.AIHints), "MyCard"), postfix: new HarmonyMethod(typeof(Hooks), "AIHints_MyCard")));
                 apply("Player.CalculateStartingHandSize", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Player), "CalculateStartingHandSize"), postfix: new HarmonyMethod(typeof(Hooks), "Player_StartingHandSize")));
                 apply("CardTemplate.GetEquippedCardTemplate", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.CardTemplate), "GetEquippedCardTemplate"), postfix: new HarmonyMethod(typeof(Hooks), "CardTemplate_Equipped")));
+                apply("BattleStateAssignDamage.NextStep", () => harmony.Patch(AccessTools.Method(typeof(BattleStateAssignDamage), "NextStep"), prefix: new HarmonyMethod(typeof(Hooks), "AssignDamage_NextStep")));
                 apply("Session.CheckForAlternateCardTemplate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Session), "CheckForAlternateCardTemplate"), postfix: new HarmonyMethod(typeof(Hooks), "Session_AlternateTemplate")));
                 apply("UIDeckTestDrawStatsViewModel.SetVisible", () => harmony.Patch(AccessTools.Method(typeof(UIDeckTestDrawStatsViewModel), "SetVisible", new[] { typeof(bool) }), postfix: new HarmonyMethod(typeof(Hooks), "TestDraw_SetVisible")));
                 apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available")));
@@ -612,6 +613,7 @@ namespace HexRevival
         public static void Gems_Available(UISocketCardViewModel __instance) { Gems.BeforeAvailableGems(__instance); }
         public static void AIHints_MyCard(Game.Shared.AI.AIHints __instance, ref bool __result) { if (!__result) __result = Server.AiOwns(__instance); }
         public static void Player_StartingHandSize(Game.Shared.Player __instance, ref int __result) { __result = Dungeons.StartingHand(__instance, __result); }
+        public static bool AssignDamage_NextStep(BattleStateAssignDamage __instance) { return DamageOrder.NextStep(__instance); }
         public static void CardTemplate_Equipped(Reckoning.Game.CardTemplate __0, Game.Shared.ResourceId __1, Game.Shared.ResourceId __2, ref Reckoning.Game.CardTemplate __result) { __result = AltArtEquipment.Equipped(__0, __result, t => Reckoning.Game.CardTemplate.GetEquippedCardTemplate(t, __1, __2)); }
         public static void Session_AlternateTemplate(Game.Shared.Session __instance, Reckoning.Game.CardTemplate __0, Game.Shared.Player __1, ref Reckoning.Game.CardTemplate __result) { __result = AltArtEquipment.Equipped(__0, __result, t => __instance.CheckForAlternateCardTemplate(t, __1)); }
         public static void TestDraw_SetVisible(UIDeckTestDrawStatsViewModel __instance, bool __0) { DeckEditorFixes.TestDrawShown(__instance, __0); }
