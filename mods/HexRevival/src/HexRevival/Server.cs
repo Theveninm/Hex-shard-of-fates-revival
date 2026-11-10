@@ -228,6 +228,12 @@ namespace HexRevival
                 try { AiBlocks.Repair(self, (CommitTroopsToDefenseTransaction)transaction); }
                 catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] AI blocks: " + e); }
             }
+            // A choice the AI must make while an ability resolves, left empty by the game's AI (AiTargets).
+            if (transaction is SetAbilityActivationDataTransaction && IsAIId(transaction.m_PlayerId))
+            {
+                try { AiTargets.Repair(self, (SetAbilityActivationDataTransaction)transaction); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] AI targets: " + e); }
+            }
             s_Pending.Enqueue(new PendingTransaction { Tx = transaction, Time = UnityEngine.Time.realtimeSinceStartup });
             // No MarkDirty here: sending GreenLight before the transaction is processed
             // makes the AI submit it twice (loop). See Pump.

@@ -218,7 +218,7 @@ champion creation and selection hang). To **Zymmer** for the notes on where ever
 from, for the tutorial's last battle that froze, and for the report behind 1.2.13 (the AI attacking into blockers,
 damage display, one-shot texts, campaign packs, the store's drop lists). To **Criesener** for the macOS version,
 crafting and the redeem codes. To **Stuie** for the choice of the draft's sets. To **Stigro** for the booster chests' rarities and their odds, the
-Bleak Citadel's phantom room, the ship's first talents, the Necropolis, the Dragon's Blood deck, the AI removing its own troops, equipment on alternate arts, the damage order asked twice and repeated arena opponents. To **Ghulzen** for Portal in
+Bleak Citadel's phantom room, the ship's first talents, the Necropolis, the Dragon's Blood deck, the AI removing its own troops, equipment on alternate arts, the damage order asked twice, repeated arena opponents and the AI skipping Merciless Culler's sacrifice. To **Ghulzen** for Portal in
 the gauntlets. To **RomoSJR** for
 Hex Codex, the source of the AI's tournament decks, the sleeves and much of the equipment.
 
