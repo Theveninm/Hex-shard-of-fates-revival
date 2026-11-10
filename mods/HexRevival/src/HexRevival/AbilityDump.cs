@@ -24,7 +24,42 @@ namespace HexRevival
             if (parts.Length < 2) return "abildump battle | card <name> | <name>";
             StringBuilder sb = new StringBuilder();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
-            if (parts[1] == "ability" && parts.Length > 2)
+            if (parts[1] == "invoked")
+            {
+                // "abildump invoked": cards whose effect makes another champion (or each champion) use an ability that asks
+                // its player to choose cards as it resolves (e.g. "Each champion sacrifices a troop"): the AI answers those.
+                HashSet<string> seen = new HashSet<string>();
+                foreach (CardTemplate t in tm.Cards.Values)
+                {
+                    if (t == null || t.m_CardAbilities == null) continue;
+                    foreach (CardAbilityContainer a in t.m_CardAbilities)
+                    {
+                        AbilityTemplate at = tm.GetAbilityTemplate(a.m_CardAbilityId);
+                        if (at == null) continue;
+                        foreach (AbilityEffectTargetMapping m in at.m_AbilityEffectList)
+                        {
+                            Game.Shared.Mechanics.Abilities.ActivateAbilityEffectTemplate inv = tm.GetAbilityEffectTemplate(m.m_EffectTemplateId) as Game.Shared.Mechanics.Abilities.ActivateAbilityEffectTemplate;
+                            if (inv == null) continue;
+                            AbilityTemplate invoked = tm.GetAbilityTemplate(inv.AbilityToInvoke);
+                            if (invoked == null) continue;
+                            Game.Shared.Mechanics.Abilities.TargetTemplates.AbilityTargetTemplate who = m.m_TargetTemplateIndex < at.m_AbilityTargetTemplateIds.Count ? tm.GetAbilityTargetTemplate(at.m_AbilityTargetTemplateIds[m.m_TargetTemplateIndex]) : null;
+                            string whoText = who != null ? who.m_PlayerFilter + " " + Describe(who.m_CardFilter, 3) : "?";
+                            if (!whoText.Contains("IsHero")) continue;
+                            foreach (ResourceId tid in invoked.m_AbilityTargetTemplateIds)
+                            {
+                                Game.Shared.Mechanics.Abilities.TargetTemplates.AbilityTargetTemplate tt = tm.GetAbilityTargetTemplate(tid);
+                                if (tt == null || tt.IsAutoTarget) continue;
+                                string key = t.m_Name + "|" + invoked.m_Name;
+                                if (!seen.Add(key)) continue;
+                                sb.Append(t.m_Name).Append(" | ").Append((at.m_GameText ?? "").Replace("\n", " ")).Append(" | who=").Append(whoText)
+                                  .Append(" | invokes \"").Append(invoked.m_Name).Append("\" choosing \"").Append(tt.m_GameText).Append("\" min=").Append(Describe(tt.MinTargetCount, 3)).Append('\n');
+                            }
+                        }
+                    }
+                }
+                sb.Append(seen.Count).Append(" card/ability pairs\n");
+            }
+            else if (parts[1] == "ability" && parts.Length > 2)
             {
                 // "abildump ability <guid>": one ability (e.g. one an effect invokes)
                 Ability(sb, tm, new ResourceId(new Guid(parts[2])), "  ");
