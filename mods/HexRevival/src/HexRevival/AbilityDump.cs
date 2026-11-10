@@ -24,7 +24,12 @@ namespace HexRevival
             if (parts.Length < 2) return "abildump battle | card <name> | <name>";
             StringBuilder sb = new StringBuilder();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
-            if (parts[1] == "altcheck")
+            if (parts[1] == "ability" && parts.Length > 2)
+            {
+                // "abildump ability <guid>": one ability (e.g. one an effect invokes)
+                Ability(sb, tm, new ResourceId(new Guid(parts[2])), "  ");
+            }
+            else if (parts[1] == "altcheck")
             {
                 // Alternate art templates without the equipment versions of their base card (Stigro, Tinkerer's Robe).
                 Dictionary<string, CardTemplate> bases = new Dictionary<string, CardTemplate>();
