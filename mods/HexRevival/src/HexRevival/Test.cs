@@ -970,7 +970,10 @@ namespace HexRevival
                     if (session == null || ReferenceEquals(UIBattle.Instance, null)) return "no battle";
                     string q = string.Join(" ", parts, 1, parts.Length - 1);
                     TemplateManager tm = Singleton<TemplateManager>.Instance;
-                    foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in session.Cache.Cards)
+                    // Cards in play first: a deck or discard card of the same name also has a view.
+                    List<KeyValuePair<SessionCardId, CardRepresentation>> ordered = new List<KeyValuePair<SessionCardId, CardRepresentation>>(session.Cache.Cards);
+                    ordered.Sort((a, b) => (a.Value.Collection == ECardCollections.Warzone ? 0 : 1).CompareTo(b.Value.Collection == ECardCollections.Warzone ? 0 : 1));
+                    foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in ordered)
                     {
                         CardTemplate t = tm.GetCardTemplate(kv.Value.TemplateId);
                         if (t == null || !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase)) continue;
