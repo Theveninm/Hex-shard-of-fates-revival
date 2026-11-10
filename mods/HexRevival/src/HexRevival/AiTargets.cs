@@ -33,18 +33,25 @@ namespace HexRevival
             AbilityInstance instance = ss.AbilityManager.GetAbilityInstance((long)s_Instance.GetValue(tx));
             if (data == null || instance == null || instance.m_ResponsiblePlayer == null) return;
             if (data.Disable || (data.OptedInSet && !data.OptedIn)) return;
+            // "You may ...": the AI's choice not to is kept.
+            if (instance.m_AbilityTemplate == null || instance.m_AbilityTemplate.IsOptional) return;
             Player ai = instance.m_ResponsiblePlayer;
             AbilityTemplate ability = instance.m_AbilityTemplate;
             Card source = instance.SourceCard;
             Dictionary<int, Dictionary<ResourceId, List<SessionCardId>>> legal = ss.GetPotentialTargetsForAbility(source, ai, ability.AbilityTemplateId, instance);
             if (legal == null) return;
             TemplateManager tm = Singleton<TemplateManager>.Instance;
+            // The engine's minimum counts (X counts included), in the order of the legal targets (as Session.ValidateXCost reads them).
+            List<int> mins = ss.GetMinimumTargetCountsForAbility(source, ai, ability.AbilityTemplateId, instance) ?? new List<int>();
+            int num = -1;
             foreach (KeyValuePair<int, Dictionary<ResourceId, List<SessionCardId>>> byIndex in legal)
             {
+                num++;
                 if (byIndex.Key < 0 || byIndex.Key >= ability.m_AbilityTargetTemplateIds.Count) continue;
                 AbilityTargetTemplate target = tm.GetAbilityTargetTemplate(ability.m_AbilityTargetTemplateIds[byIndex.Key]);
-                if (target == null || target.IsAutoTarget || !(target.MinTargetCount is TargetConstant)) continue;
-                int min = ((TargetConstant)target.MinTargetCount).Value;
+                if (target == null || target.IsAutoTarget) continue;
+                int min = target.MinTargetCount is TargetConstant ? ((TargetConstant)target.MinTargetCount).Value : 0;
+                if (num < mins.Count && mins[num] > min) min = mins[num];
                 AbilityTargetInstance given;
                 if (data.TargetMap == null) data.TargetMap = new Dictionary<int, AbilityTargetInstance>();
                 data.TargetMap.TryGetValue(byIndex.Key, out given);
