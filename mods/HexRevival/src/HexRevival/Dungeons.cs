@@ -1584,6 +1584,26 @@ namespace HexRevival
                 });
                 return "playing " + pc.Name;
             }
+            if (sub == "nodes")
+            {
+                // dev: "dun nodes" = the open map's nodes: shown, enabled, done, screen position, and their paths (* = drawn)
+                UIDungeonZoneViewModel vm = UnityEngine.Object.FindObjectOfType<UIDungeonZoneViewModel>();
+                if (vm == null) return "no map open";
+                BindingFlags bf = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                Dictionary<string, UIDungeonMapNode> nodes = typeof(UIDungeonZoneViewModel).GetField("m_UIDungeonMapNodes", bf).GetValue(vm) as Dictionary<string, UIDungeonMapNode>;
+                StringBuilder sb = new StringBuilder();
+                Camera cam = Camera.main;
+                foreach (UIDungeonMapNode n in nodes.Values)
+                {
+                    Vector3 sp = cam != null ? cam.WorldToScreenPoint(n.transform.position) : n.transform.position;
+                    sb.Append(n.name).Append(n.IsVisible ? " shown" : " hidden").Append(n.LocationEnabled ? "" : " disabled").Append(n.Completed ? " done" : "")
+                      .Append(" @").Append((int)sp.x).Append(',').Append((int)sp.y).Append(" ->");
+                    foreach (KeyValuePair<UIDungeonMapNode, UIDungeonMapNode.NodeConnection> c in n.Connections)
+                        sb.Append(' ').Append(c.Key.name).Append(c.Value.Path != null && c.Value.Path.gameObject.activeInHierarchy ? "*" : "");
+                    sb.Append('\n');
+                }
+                return sb.ToString();
+            }
             if (sub == "click")
             {
                 // dev: "dun click <node>" = click a node of the open map (dungeon or AZ1): walks there, or starts it if the token is on it
