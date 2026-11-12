@@ -1291,6 +1291,42 @@ namespace HexRevival
                         UIPremiumStoreItemContext sel = st.Context.Catalog.SelectedItem;
                         return sel != null ? sel.Name + " x" + sel.Quantity + " total " + sel.TotalCost : "nothing selected";
                     }
+                case "texfind":   // dev: "texfind <text> [load]" = loaded textures, materials and atlas sprites whose name contains it ("load": the Resources folder first); "texfind save <name>" = writes that texture to HexRevivalTex_<name>.png
+                    {
+                        if (parts.Length < 2) return "usage: texfind <text> [load] | texfind save <name>";
+                        if (parts[1] == "save" && parts.Length > 2)
+                        {
+                            foreach (Texture t in Resources.FindObjectsOfTypeAll<Texture>())
+                            {
+                                if (t == null || t.name != parts[2]) continue;
+                                RenderTexture rt = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGB32);
+                                RenderTexture prev = RenderTexture.active;
+                                Graphics.Blit(t, rt);
+                                RenderTexture.active = rt;
+                                Texture2D png = new Texture2D(t.width, t.height, TextureFormat.ARGB32, false);
+                                png.ReadPixels(new Rect(0, 0, t.width, t.height), 0, 0);
+                                RenderTexture.active = prev;
+                                RenderTexture.ReleaseTemporary(rt);
+                                string file = System.IO.Path.Combine(LocalServer.Root, "HexRevivalTex_" + t.name + ".png");
+                                System.IO.File.WriteAllBytes(file, png.EncodeToPNG());
+                                UnityEngine.Object.Destroy(png);
+                                return "saved " + file + " " + t.width + "x" + t.height;
+                            }
+                            return "no texture " + parts[2];
+                        }
+                        string q = parts[1].ToLowerInvariant();
+                        if (parts.Length > 2 && parts[2] == "load") Resources.LoadAll("", typeof(Texture2D));
+                        StringBuilder tf = new StringBuilder();
+                        foreach (Texture t in Resources.FindObjectsOfTypeAll<Texture>())
+                            if (t != null && t.name.ToLowerInvariant().Contains(q)) tf.Append("TEX ").Append(t.name).Append(' ').Append(t.width).Append('x').Append(t.height).Append('\n');
+                        foreach (Material m in Resources.FindObjectsOfTypeAll<Material>())
+                            if (m != null && m.name.ToLowerInvariant().Contains(q)) tf.Append("MAT ").Append(m.name).Append(" tex=").Append(m.mainTexture != null ? m.mainTexture.name : "-").Append('\n');
+                        foreach (UIAtlas a in Resources.FindObjectsOfTypeAll<UIAtlas>())
+                            if (a != null && a.spriteList != null)
+                                foreach (UISpriteData d in a.spriteList)
+                                    if (d.name.ToLowerInvariant().Contains(q)) tf.Append("SPRITE ").Append(a.name).Append('/').Append(d.name).Append(' ').Append(d.width).Append('x').Append(d.height).Append('\n');
+                        return tf.Length > 0 ? tf.ToString() : "nothing";
+                    }
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
                     {
                         if (parts.Length < 3) return "usage: invoke <type> <method>";

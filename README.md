@@ -150,8 +150,9 @@ The macOS version of the game that Steam installs on a Mac (`Hex.app`) runs HEX 
 4. Start the game with `run_bepinex.sh` in the game folder, or from Steam: right-click HEX > Properties >
    Launch options: `"<game folder>/run_bepinex.sh" %command%`
 
-**Uninstall**: double-click `Uninstall HEX Revival.command` in the game folder (it came with the archive), then clear
-the Steam launch options if you set them. It removes every version of the mod and asks whether to delete your saves too.
+**Uninstall**: double-click `Uninstall HEX Revival.command` in the game folder (it came with the archive). It removes
+every version of the mod, clears HEX's Steam launch options if they start `run_bepinex.sh` (Steam has to be closed: it
+offers to quit it), and asks whether to delete your saves too.
 
 Saves are written to `HexRevivalSaves` next to `Hex.app`. The macOS game's
 `Hex.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll` has this SHA-256 checksum (`shasum -a 256 <file>`):

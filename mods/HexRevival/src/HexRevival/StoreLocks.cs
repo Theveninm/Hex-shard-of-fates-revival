@@ -12,7 +12,8 @@ namespace HexRevival
     ///   (Store.CampaignPackUnlocked) or costs more than the player has. The game computes "not enough" itself
     ///   (UIPremiumStoreItemContext.InsufficientFunds) but its BUY button has no binding to it: it let the click through
     ///   to an error (or, for platinum, to the Buy Platinum offer).
-    /// - A lock on the banner (the catalog's tile) of each campaign pack still locked, its picture darkened.
+    /// - A lock in the middle of the banner (the catalog's tile) of each campaign pack still locked, its pictures darkened.
+///   The game has no chain picture to add to it (its only chain material, M_Chain, is a plain white texture).
     /// The store tiles are reused by the list for other products: each one is set again from its current product.
     /// </summary>
     public class StoreLocks : MonoBehaviour
@@ -24,7 +25,7 @@ namespace HexRevival
         private UIPremiumStoreViewModel m_Store;
         private float m_NextFind, m_NextTiles;
         private bool m_BuyBlocked;
-        private readonly Dictionary<UITexture, Color> m_Wallpapers = new Dictionary<UITexture, Color>();
+        private readonly Dictionary<UIWidget, Color> m_Dimmed = new Dictionary<UIWidget, Color>();
 
         private void Update()
         {
@@ -105,34 +106,37 @@ namespace HexRevival
                 {
                     UISprite s = NGUITools.AddSprite(overlay.gameObject, icons, "Icon_Lock_Large_BW", 200);
                     s.name = LockName;
-                    s.width = 80;
-                    s.height = 86;
+                    s.width = 118;
+                    s.height = 120;
                     existing = s.transform;
                 }
                 if (existing != null && existing.gameObject.activeSelf != locked) existing.gameObject.SetActive(locked);
                 if (locked && existing != null)
                 {
-                    // On the middle of the pack's picture, at the left of the banner (its bounds: the tile's thumbnail).
-                    Transform thumb = tile.transform.Find("Panel_Thumb");
-                    if (thumb != null)
-                    {
-                        Bounds b = NGUIMath.CalculateAbsoluteWidgetBounds(thumb);
-                        if (b.size.x > 0f) existing.localPosition = overlay.InverseTransformPoint(b.center);
-                    }
+                    // On the middle of the whole banner (the tile's own frame), above its picture and thumbnail (user 2026-11-12).
+                    UIWidget frame = tile.GetComponent<UIWidget>();
+                    if (frame != null) existing.position = frame.worldCenter;
                 }
-                Transform wp = tile.transform.Find("Panel_Wallpaper/Wallpapers/WallpaperSprite");
-                UITexture tex = wp != null ? wp.GetComponent<UITexture>() : null;
-                if (tex == null) continue;
-                if (locked)
-                {
-                    if (!m_Wallpapers.ContainsKey(tex)) m_Wallpapers[tex] = tex.color;
-                    tex.color = Dimmed;
-                }
-                else
-                {
-                    Color c;
-                    if (m_Wallpapers.TryGetValue(tex, out c)) { tex.color = c; m_Wallpapers.Remove(tex); }
-                }
+                Dim(tile.transform.Find("Panel_Thumb/NonUrlImage/ThumbSprite"), locked);
+                Dim(tile.transform.Find("Panel_Thumb/UrlImage"), locked);
+                Dim(tile.transform.Find("Panel_Wallpaper/Wallpapers/WallpaperSprite"), locked);
+            }
+        }
+
+        /// <summary>Darkens a banner picture while its pack is locked, and gives it back its own colour after.</summary>
+        private void Dim(Transform t, bool locked)
+        {
+            UIWidget w = t != null ? t.GetComponent<UIWidget>() : null;
+            if (w == null) return;
+            if (locked)
+            {
+                if (!m_Dimmed.ContainsKey(w)) m_Dimmed[w] = w.color;
+                w.color = Dimmed;
+            }
+            else
+            {
+                Color c;
+                if (m_Dimmed.TryGetValue(w, out c)) { w.color = c; m_Dimmed.Remove(w); }
             }
         }
     }
