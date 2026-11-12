@@ -13,7 +13,7 @@ namespace HexRevival
     ///   (UIPremiumStoreItemContext.InsufficientFunds) but its BUY button has no binding to it: it let the click through
     ///   to an error (or, for platinum, to the Buy Platinum offer).
     /// - A lock in the middle of the banner (the catalog's tile) of each campaign pack still locked, its banner picture
-    ///   darkened (the pack thumbnail stays as it is).
+    ///   and pack thumbnail darkened.
     ///   The game has no chain picture to add to it (its only chain material, M_Chain, is a plain white texture).
     /// The store tiles are reused by the list for other products: each one is set again from its current product.
     /// </summary>
@@ -118,6 +118,7 @@ namespace HexRevival
                     UIWidget frame = tile.GetComponent<UIWidget>();
                     if (frame != null) existing.position = frame.worldCenter;
                 }
+                Dim(tile.transform.Find("Panel_Thumb/NonUrlImage/ThumbSprite"), locked);
                 Dim(tile.transform.Find("Panel_Wallpaper/Wallpapers/WallpaperSprite"), locked);
             }
         }
