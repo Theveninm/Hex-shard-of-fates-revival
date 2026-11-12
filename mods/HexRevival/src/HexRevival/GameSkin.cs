@@ -27,7 +27,7 @@ namespace HexRevival
 
         public static int Px(float v) { return Mathf.RoundToInt(v * Scale); }
 
-        private static UIAtlas Atlas(string name)
+        internal static UIAtlas Atlas(string name)
         {
             UIAtlas a;
             if (s_Atlases.TryGetValue(name, out a) && a != null) return a;

@@ -166,6 +166,7 @@ namespace HexRevival
                 go.AddComponent<OnlineLobby>();
                 go.AddComponent<Community>();
                 go.AddComponent<PackContents>();
+                go.AddComponent<StoreLocks>();
                 go.AddComponent<StoreVariants>();
                 go.AddComponent<BattlegroundsScore>();
                 go.AddComponent<BattlegroundsSets>();
@@ -1276,6 +1277,20 @@ namespace HexRevival
                 case "toggles": return Settings.DumpToggles();
                 case "acctscroll": return Settings.DevScroll(parts.Length > 1 ? parts[1] : "");   // dev: the Account tab's scroll view state, "up"/"down" scrolls
                 case "click": return UiClick(string.Join(" ", parts, 1, parts.Length - 1));
+                case "storesel":   // dev: "storesel <index> [quantity]" = selects (and scrolls to) a store product, with that quantity
+                    {
+                        UIPremiumStoreViewModel st = UnityEngine.Object.FindObjectOfType<UIPremiumStoreViewModel>();
+                        int storeIdx;
+                        if (st == null || parts.Length < 2 || !int.TryParse(parts[1], out storeIdx)) return "no store / usage: storesel <index> [quantity]";
+                        typeof(UIPremiumStoreViewModel).GetMethod("SelectCatalogItem", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).Invoke(st, new object[] { storeIdx });
+                        UIScrollView sv = st.CatalogScrollPanel != null ? st.CatalogScrollPanel.GetComponent<UIScrollView>() : null;
+                        int count = st.Context.Catalog.Count;
+                        if (sv != null && count > 1) sv.SetDragAmount(0f, Mathf.Clamp01((float)storeIdx / (count - 1)), false);
+                        int qty;
+                        if (parts.Length > 2 && int.TryParse(parts[2], out qty)) st.SetQuantity(qty);
+                        UIPremiumStoreItemContext sel = st.Context.Catalog.SelectedItem;
+                        return sel != null ? sel.Name + " x" + sel.Quantity + " total " + sel.TotalCost : "nothing selected";
+                    }
                 case "invoke":   // dev: "invoke <MonoBehaviour type> <method>" = calls a method without parameters on the scene's object of that type
                     {
                         if (parts.Length < 3) return "usage: invoke <type> <method>";
