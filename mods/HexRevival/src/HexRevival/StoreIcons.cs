@@ -11,8 +11,9 @@ namespace HexRevival
     /// Store pictures the game's icon bundle (icons.ab, Src.Game) lacks for products the mod sells; the store asks the
     /// bundle for them by the product's texture name:
     /// - "&lt;texture&gt;_Thumb", the list's small picture: missing for the Starter Trials packs, the Standard Format
-    ///   Gauntlet Pack, the gift boxes, the Random Previous Kismet Pack. They get the product's full icon (the same
-    ///   picture, 128 pixels instead of 256).
+    ///   Gauntlet Pack, the gift boxes, the Random Previous Kismet Pack, the campaign packs. They get the product's full
+    ///   icon (the same picture, 128 pixels instead of 256) with its black background made transparent, as the game's
+    ///   own thumbnails have it (it showed as a black box on the banner, user 2026-11-12).
     /// - for a battleboard, "&lt;texture&gt;_Wallpaper", the banner behind its row, and "&lt;texture&gt;", the 3D board shown
     ///   on the right: missing for Frostlock and Dream Forest, which only have their picture. The banner is the middle of
     ///   the picture (the banners are 4:1, the pictures 2:1); the board is another board's model (Badlands) with this
@@ -52,7 +53,7 @@ namespace HexRevival
             try
             {
                 if (type == AssetType.Texture2D && name.EndsWith(Thumb))
-                    return m.GetAsset(bundle, subBundle, name.Substring(0, name.Length - Thumb.Length), type);
+                    return ThumbOf(m.GetAsset(bundle, subBundle, name.Substring(0, name.Length - Thumb.Length), type) as Texture2D, name);
                 if (type == AssetType.Texture2D && name.EndsWith(Wallpaper))
                 {
                     string tex = name.Substring(0, name.Length - Wallpaper.Length);
@@ -220,6 +221,62 @@ namespace HexRevival
             }
             s_PackBanners[tex] = b;
             return b;
+        }
+
+        private static readonly Dictionary<string, Texture2D> s_Thumbs = new Dictionary<string, Texture2D>();
+
+        /// <summary>
+        /// A product's icon as its list thumbnail: the black around the picture made transparent. Only the black reached
+        /// from the icon's edges, so the dark parts of the picture itself stay; the faintest pixels next to it fade.
+        /// </summary>
+        private static Texture2D ThumbOf(Texture2D icon, string name)
+        {
+            if (icon == null) return null;
+            Texture2D t;
+            if (s_Thumbs.TryGetValue(name, out t) && t != null) return t;
+            int w = icon.width, h = icon.height;
+            RenderTexture rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(icon, rt);
+                RenderTexture.active = rt;
+                t = new Texture2D(w, h, TextureFormat.ARGB32, false);
+                t.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+            const int Clear = 1, Solid = 6;   // brightest channel, 0-255: up to Clear transparent, from Solid opaque
+            Color32[] px = t.GetPixels32();
+            bool[] seen = new bool[px.Length];
+            Stack<int> todo = new Stack<int>();
+            for (int x = 0; x < w; x++) { todo.Push(x); todo.Push((h - 1) * w + x); }
+            for (int y = 0; y < h; y++) { todo.Push(y * w); todo.Push(y * w + w - 1); }
+            while (todo.Count > 0)
+            {
+                int i = todo.Pop();
+                if (seen[i]) continue;
+                Color32 c = px[i];
+                int l = Math.Max(c.r, Math.Max(c.g, c.b));
+                if (l >= Solid) continue;
+                seen[i] = true;
+                px[i].a = (byte)(l <= Clear ? 0 : 255 * (l - Clear) / (Solid - Clear));
+                if (l > Clear) continue;
+                int x = i % w, y = i / w;
+                if (x > 0) todo.Push(i - 1);
+                if (x < w - 1) todo.Push(i + 1);
+                if (y > 0) todo.Push(i - w);
+                if (y < h - 1) todo.Push(i + w);
+            }
+            t.SetPixels32(px);
+            t.Apply();
+            t.name = name;
+            s_Thumbs[name] = t;
+            Debug.Log("[HexRevival] [StoreIcons] thumbnail " + name + " from " + icon.name + ", background made transparent");
+            return t;
         }
 
         // ---- 3D models with the wrong texture ----
