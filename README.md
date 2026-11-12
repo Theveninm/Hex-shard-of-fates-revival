@@ -131,7 +131,9 @@ Use `HexRevival.exe` every time you want to play (it only reinstalls when a new 
 Your accounts (decks, champions, collection, campaign progress) are stored in the game folder, one
 folder per account in `HexRevivalSaves`.
 
-**Uninstall**: run `HexRevival.exe --uninstall` (your decks are kept).
+**Uninstall**: run `HexRevival-Uninstall.exe` (in the archive, next to `HexRevival.exe`). It removes every version of
+the mod (HEX Revival and HEX Offline) and puts the game folder back as the game ships it; it asks whether to delete your
+saves too (by default they are kept, and come back if you reinstall the mod).
 A Steam "Verify integrity of game files" does not remove the mod files, they are additions.
 
 ### macOS (native version)
@@ -147,6 +149,9 @@ The macOS version of the game that Steam installs on a Mac (`Hex.app`) runs HEX 
    `xattr -dr com.apple.quarantine "<game folder>"`
 4. Start the game with `run_bepinex.sh` in the game folder, or from Steam: right-click HEX > Properties >
    Launch options: `"<game folder>/run_bepinex.sh" %command%`
+
+**Uninstall**: double-click `Uninstall HEX Revival.command` in the game folder (it came with the archive), then clear
+the Steam launch options if you set them. It removes every version of the mod and asks whether to delete your saves too.
 
 Saves are written to `HexRevivalSaves` next to `Hex.app`. The macOS game's
 `Hex.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll` has this SHA-256 checksum (`shasum -a 256 <file>`):
