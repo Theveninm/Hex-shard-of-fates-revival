@@ -229,8 +229,10 @@ namespace HexRevival
         {
             foreach (Transform t in m_Store.transform)
                 if (t.name.StartsWith("Panel_Popup", StringComparison.Ordinal) && Shown(t)) return true;
+            // IsVisible, not isActiveAndEnabled: a closed popup can stay active (hidden), after a cancelled or refused
+            // purchase it did, and the bar never came back (user 2026-11-12).
             foreach (UIModalPopupViewModel m in FindObjectsOfType<UIModalPopupViewModel>())
-                if (m != null && m.isActiveAndEnabled) return true;
+                if (m != null && m.isActiveAndEnabled && m.IsVisible()) return true;
             return false;
         }
 

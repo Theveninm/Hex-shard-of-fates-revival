@@ -9,6 +9,10 @@
 //      then starts the game.
 // Options: --uninstall (removes the mod), --install "<folder>" (internal use, after elevation).
 //
+// Built a second time with -define:UNINSTALLER as HexRevival-Uninstall.exe (tools/launcher/build.sh): double-click
+// removes every version of the mod (HEX Revival, and its former name HEX Offline) and puts the game folder back as
+// the game ships it; the player's saves are kept unless they choose to delete them too.
+//
 // Transparency: the launcher does not use the network, reads the registry only to find Steam and
 // the game (and remembers the chosen folder there, HKCU\Software\HexRevival), copies the files of the "mod" folder shipped next to it into the game folder, and
 // asks for administrator rights only if that folder is protected, after the player agrees.
@@ -131,6 +135,18 @@ namespace HexRevivalLauncher
                 "Windows oyun klasörüne yazmaya izin vermiyor:\n{0}\n\nHEX Revival'ın yalnızca dosyalarını oraya kopyalaması gerekiyor (BepInEx ve HexRevival eklentisi).\nYönetici haklarıyla yeniden denensin mi?",
                 "Windows がゲームのフォルダーへの書き込みを許可していません:\n{0}\n\nHEX Revival はそこに自分のファイル（BepInEx と HexRevival プラグイン）をコピーするだけです。\n管理者権限で再試行しますか？",
                 "Windows 不允许写入游戏文件夹：\n{0}\n\nHEX Revival 只需要将其文件（BepInEx 和 HexRevival 插件）复制到该处。\n要以管理员权限重试吗？" } },
+            { "need_admin_remove", new[] {
+                "Windows does not allow changes to the game folder:\n{0}\n\nRetry with administrator rights?",
+                "Windows n'autorise pas la modification du dossier du jeu :\n{0}\n\nRéessayer avec les droits administrateur ?",
+                "Windows erlaubt keine Änderungen am Spielordner:\n{0}\n\nMit Administratorrechten erneut versuchen?",
+                "Windows no permite modificar la carpeta del juego:\n{0}\n\n¿Reintentar con permisos de administrador?",
+                "Windows non consente di modificare la cartella del gioco:\n{0}\n\nRiprovare con i diritti di amministratore?",
+                "O Windows não permite alterar a pasta do jogo:\n{0}\n\nTentar novamente com direitos de administrador?",
+                "Windows nie pozwala na zmiany w folderze gry:\n{0}\n\nSpróbować ponownie z uprawnieniami administratora?",
+                "Windows не разрешает изменять папку игры:\n{0}\n\nПовторить с правами администратора?",
+                "Windows oyun klasöründe değişiklik yapılmasına izin vermiyor:\n{0}\n\nYönetici haklarıyla yeniden denensin mi?",
+                "Windows がゲームのフォルダーの変更を許可していません:\n{0}\n\n管理者権限で再試行しますか？",
+                "Windows 不允许修改游戏文件夹：\n{0}\n\n要以管理员权限重试吗？" } },
             { "no_mod_folder", new[] {
                 "The \"mod\" folder is missing next to HexRevival.exe. Extract the whole archive, then try again.",
                 "Le dossier \"mod\" est absent à côté de HexRevival.exe. Extrayez toute l'archive, puis réessayez.",
@@ -179,6 +195,42 @@ namespace HexRevivalLauncher
                 "HEX Revival şuradan kaldırılsın mı:\n{0}\n\nDestelerin ve şampiyonların korunur.",
                 "次の場所から HEX Revival を削除しますか:\n{0}\n\nデッキとチャンピオンは保持されます。",
                 "从以下位置移除 HEX Revival：\n{0}\n\n你的卡组和英雄会被保留。" } },
+            { "close_game", new[] {
+                "HEX is running. Close the game, then click OK.",
+                "HEX est lancé. Fermez le jeu, puis cliquez sur OK.",
+                "HEX läuft. Schließe das Spiel und klicke dann auf OK.",
+                "HEX está abierto. Cierra el juego y pulsa Aceptar.",
+                "HEX è in esecuzione. Chiudi il gioco, poi fai clic su OK.",
+                "O HEX está aberto. Feche o jogo e clique em OK.",
+                "HEX jest uruchomiony. Zamknij grę, a potem kliknij OK.",
+                "HEX запущен. Закройте игру и нажмите OK.",
+                "HEX açık. Oyunu kapat, sonra Tamam'a tıkla.",
+                "HEX が起動しています。ゲームを閉じてから OK をクリックしてください。",
+                "HEX 正在运行。请关闭游戏，然后点击确定。" } },
+            { "uninstall_all", new[] {
+                "Remove HEX Revival (any version) from:\n{0}\n\nThe game folder goes back to the original game.",
+                "Retirer HEX Revival (toutes versions) de :\n{0}\n\nLe dossier du jeu redevient celui du jeu d'origine.",
+                "HEX Revival (jede Version) entfernen aus:\n{0}\n\nDer Spielordner wird wieder wie im Originalspiel.",
+                "¿Quitar HEX Revival (cualquier versión) de:\n{0}?\n\nLa carpeta del juego vuelve a ser la del juego original.",
+                "Rimuovere HEX Revival (qualsiasi versione) da:\n{0}\n\nLa cartella del gioco torna come quella del gioco originale.",
+                "Remover o HEX Revival (qualquer versão) de:\n{0}\n\nA pasta do jogo volta a ser a do jogo original.",
+                "Usunąć HEX Revival (każdą wersję) z:\n{0}\n\nFolder gry wróci do stanu oryginalnej gry.",
+                "Удалить HEX Revival (любую версию) из:\n{0}\n\nПапка игры вернётся к исходной игре.",
+                "HEX Revival (tüm sürümler) şuradan kaldırılsın mı:\n{0}\n\nOyun klasörü orijinal oyuna geri döner.",
+                "次の場所から HEX Revival（全バージョン）を削除しますか:\n{0}\n\nゲームフォルダーは元のゲームの状態に戻ります。",
+                "从以下位置移除 HEX Revival（所有版本）：\n{0}\n\n游戏文件夹将恢复为原版游戏。" } },
+            { "delete_saves", new[] {
+                "Also delete your HEX Revival saves (accounts, decks, champions, collection)?\n\nNo: they are kept in the game folder, and come back if you reinstall the mod.",
+                "Supprimer aussi vos sauvegardes HEX Revival (comptes, decks, champions, collection) ?\n\nNon : elles restent dans le dossier du jeu et reviennent si vous réinstallez le mod.",
+                "Auch deine HEX-Revival-Spielstände löschen (Konten, Decks, Champions, Sammlung)?\n\nNein: Sie bleiben im Spielordner und sind nach einer Neuinstallation wieder da.",
+                "¿Borrar también tus partidas de HEX Revival (cuentas, mazos, campeones, colección)?\n\nNo: se conservan en la carpeta del juego y vuelven si reinstalas el mod.",
+                "Eliminare anche i salvataggi di HEX Revival (account, mazzi, campioni, collezione)?\n\nNo: restano nella cartella del gioco e tornano se reinstalli la mod.",
+                "Apagar também os seus saves do HEX Revival (contas, baralhos, campeões, coleção)?\n\nNão: eles ficam na pasta do jogo e voltam se reinstalar o mod.",
+                "Usunąć też zapisy HEX Revival (konta, talie, czempioni, kolekcja)?\n\nNie: zostaną w folderze gry i wrócą po ponownej instalacji moda.",
+                "Удалить также сохранения HEX Revival (аккаунты, колоды, чемпионы, коллекция)?\n\nНет: они останутся в папке игры и вернутся при повторной установке мода.",
+                "HEX Revival kayıtların da silinsin mi (hesaplar, desteler, şampiyonlar, koleksiyon)?\n\nHayır: oyun klasöründe kalırlar ve modu yeniden kurarsan geri gelirler.",
+                "HEX Revival のセーブデータ（アカウント、デッキ、チャンピオン、コレクション）も削除しますか？\n\nいいえ：ゲームフォルダーに残り、MOD を再インストールすると戻ります。",
+                "同时删除你的 HEX Revival 存档（账户、卡组、英雄、收藏）吗？\n\n否：存档保留在游戏文件夹中，重新安装模组后会恢复。" } },
             { "removed", new[] {
                 "HEX Revival has been removed.",
                 "HEX Revival a été retiré.",
@@ -225,6 +277,10 @@ namespace HexRevivalLauncher
                 if (args.Length >= 2 && args[0] == "--install")
                     return Install(args[1]) ? 0 : 1;
 
+#if UNINSTALLER
+                if (args.Length >= 2 && args[0] == "--remove") return RemoveAll(args[1], args.Length >= 3 && args[2] == "--saves") ? 0 : 1;
+                return UninstallerMain();
+#else
                 string game = FindGame();
                 if (args.Length >= 1 && args[0] == "--uninstall")
                 {
@@ -244,6 +300,7 @@ namespace HexRevivalLauncher
 
                 Process.Start(new ProcessStartInfo(Path.Combine(game, ExeName)) { WorkingDirectory = game, UseShellExecute = true });
                 return 0;
+#endif
             }
             catch (Exception e)
             {
@@ -483,15 +540,70 @@ namespace HexRevivalLauncher
         {
             if (MessageBox.Show(T("uninstall_confirm", game), Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
+            if (RemoveAll(game, false)) MessageBox.Show(T("removed"), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        // ------------------------------------------------------------------
+        // The standalone uninstaller (HexRevival-Uninstall.exe, built with -define:UNINSTALLER)
+        // ------------------------------------------------------------------
+
+        private static int UninstallerMain()
+        {
+            string game = FindGame() ?? AskFolder();
+            if (game == null) return 0;
+            if (MessageBox.Show(T("uninstall_all", game), Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return 0;
+            while (GameRunning(game))
+                if (MessageBox.Show(T("close_game"), Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return 0;
+            bool saves = MessageBox.Show(T("delete_saves"), Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            bool ok;
+            if (CanWrite(game)) ok = RemoveAll(game, saves);
+            else
+            {
+                // Write-protected folder (Program Files): the same removal, with administrator rights the player agrees to.
+                if (MessageBox.Show(T("need_admin_remove", game), Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return 0;
+                try
+                {
+                    Process p = Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location, "--remove \"" + game + "\"" + (saves ? " --saves" : "")) { Verb = "runas", UseShellExecute = true });
+                    p.WaitForExit();
+                    ok = p.ExitCode == 0;
+                }
+                catch { ok = false; }
+            }
+            if (ok)
+            {
+                try { Registry.CurrentUser.DeleteSubKeyTree("Software\\HexRevival", false); } catch { }
+                try { Registry.CurrentUser.DeleteSubKeyTree("Software\\HexOffline", false); } catch { }
+                MessageBox.Show(T("removed"), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            return ok ? 0 : 1;
+        }
+
+        private static bool GameRunning(string game)
+        {
+            foreach (Process p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ExeName)))
+            {
+                try { if (string.Equals(Path.GetDirectoryName(p.MainModule.FileName), game.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) return true; }
+                catch { return true; }   // not readable (other user, rights): assumed to be this game
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Everything the mod puts in the game folder, in any version: its plugin (HexRevival, HexOffline), BepInEx and
+        /// its loader (only when no other mod uses BepInEx), and the files and folders the mod writes next to Hex.exe
+        /// (HexRevival*, HexOffline*). The saves (HexRevivalSaves, HexRevivalOnline and the HEX Offline save files) are
+        /// kept unless deleteSaves. The game's own files are never touched.
+        /// </summary>
+        private static bool RemoveAll(string game, bool deleteSaves)
+        {
             try
             {
                 string bep = Path.Combine(game, "BepInEx");
-                string plugin = Path.Combine(bep, "plugins\\HexRevival");
-                if (Directory.Exists(plugin)) Directory.Delete(plugin, true);
-                string old = Path.Combine(bep, "plugins\\HexOffline");
-                if (Directory.Exists(old)) Directory.Delete(old, true);
-                if (File.Exists(Path.Combine(game, "HexRevival.autostart"))) File.Delete(Path.Combine(game, "HexRevival.autostart"));
-                // BepInEx is removed only if no other mod uses it.
+                foreach (string name in new[] { "HexRevival", "HexOffline" })
+                {
+                    string plugin = Path.Combine(Path.Combine(bep, "plugins"), name);
+                    if (Directory.Exists(plugin)) Directory.Delete(plugin, true);
+                }
                 string plugins = Path.Combine(bep, "plugins");
                 bool otherMods = Directory.Exists(plugins) && Directory.GetFileSystemEntries(plugins).Length > 0;
                 if (!otherMods)
@@ -500,12 +612,40 @@ namespace HexRevivalLauncher
                         if (File.Exists(Path.Combine(game, f))) File.Delete(Path.Combine(game, f));
                     if (Directory.Exists(bep)) Directory.Delete(bep, true);
                 }
-                MessageBox.Show(T("removed"), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                foreach (string f in Directory.GetFiles(game))
+                {
+                    string n = Path.GetFileName(f);
+                    if (!IsModEntry(n)) continue;
+                    if (!deleteSaves && IsSave(n)) continue;
+                    File.Delete(f);
+                }
+                foreach (string d in Directory.GetDirectories(game))
+                {
+                    string n = Path.GetFileName(d);
+                    if (!IsModEntry(n)) continue;
+                    if (!deleteSaves && IsSave(n)) continue;
+                    Directory.Delete(d, true);
+                }
+                return true;
             }
             catch (Exception e)
             {
                 MessageBox.Show(T("remove_failed") + e.Message, Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
+        }
+
+        private static bool IsModEntry(string name)
+        {
+            return name.StartsWith("HexRevival", StringComparison.OrdinalIgnoreCase) || name.StartsWith("HexOffline", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The player's saves: HEX Revival's accounts and online profile, HEX Offline's decks and champions.</summary>
+        private static bool IsSave(string name)
+        {
+            return name.StartsWith("HexRevivalSaves", StringComparison.OrdinalIgnoreCase)
+                || name.StartsWith("HexRevivalOnline", StringComparison.OrdinalIgnoreCase)
+                || (name.StartsWith("HexOffline.", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
         }
     }
 }

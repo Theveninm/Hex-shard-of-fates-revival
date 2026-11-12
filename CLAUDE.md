@@ -5,7 +5,7 @@
 1. **Version number:** bump `Community.Version` (`mods/HexRevival/src/HexRevival/Community.cs`) and the launcher's
    `Version` and `AssemblyVersion` / `AssemblyFileVersion` (`tools/launcher/HexRevivalLauncher.cs`), in a pull request
    merged into `main` before building.
-2. **Archive:** build `HexRevival.dll` (`build.sh`) and `HexRevival.exe` (`tools/launcher/build.sh`) from `main`, then
+2. **Archive:** build `HexRevival.dll` (`build.sh`) and `HexRevival.exe` + `HexRevival-Uninstall.exe` (`tools/launcher/build.sh`) from `main`, then
    `tools/package.sh <version> <dll> <exe>`.
 3. **GitHub release:** the user publishes it, or it is published with the user's release script on their PC
    (location and use: the project's private notes, not this repository).
