@@ -12,7 +12,8 @@ namespace HexRevival
     ///   (Store.CampaignPackUnlocked) or costs more than the player has. The game computes "not enough" itself
     ///   (UIPremiumStoreItemContext.InsufficientFunds) but its BUY button has no binding to it: it let the click through
     ///   to an error (or, for platinum, to the Buy Platinum offer).
-    /// - A lock in the middle of the banner (the catalog's tile) of each campaign pack still locked, its pictures darkened.
+    /// - A lock in the middle of the banner (the catalog's tile) of each campaign pack still locked, its banner picture
+///   darkened (the pack thumbnail stays as it is).
 ///   The game has no chain picture to add to it (its only chain material, M_Chain, is a plain white texture).
     /// The store tiles are reused by the list for other products: each one is set again from its current product.
     /// </summary>
@@ -117,8 +118,6 @@ namespace HexRevival
                     UIWidget frame = tile.GetComponent<UIWidget>();
                     if (frame != null) existing.position = frame.worldCenter;
                 }
-                Dim(tile.transform.Find("Panel_Thumb/NonUrlImage/ThumbSprite"), locked);
-                Dim(tile.transform.Find("Panel_Thumb/UrlImage"), locked);
                 Dim(tile.transform.Find("Panel_Wallpaper/Wallpapers/WallpaperSprite"), locked);
             }
         }
@@ -130,8 +129,10 @@ namespace HexRevival
             if (w == null) return;
             if (locked)
             {
-                if (!m_Dimmed.ContainsKey(w)) m_Dimmed[w] = w.color;
-                w.color = Dimmed;
+                Color own;
+                if (!m_Dimmed.TryGetValue(w, out own)) m_Dimmed[w] = own = w.color;
+                // Its own alpha kept: the tile's empty UrlImage is hidden by an alpha of 0, and showed as a black box.
+                w.color = new Color(Dimmed.r * own.r, Dimmed.g * own.g, Dimmed.b * own.b, own.a);
             }
             else
             {
