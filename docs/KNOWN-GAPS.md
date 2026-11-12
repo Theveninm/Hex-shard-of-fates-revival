@@ -5,7 +5,7 @@ Update it in the same pull request as any change that adds, settles or removes a
 feature, and give the user the new text with each release (CLAUDE.md, release step 5).
 Detailed register: docs/PLACEHOLDERS.md; sources: docs/PROGRESSION.md.
 Discord limit: 4,000 characters with Nitro, 2,000 without. Split the post at a section heading if it grows past that.
-Last updated: 1.2.27 (2026-11-10).
+Last updated: 1.2.28 (2026-11-12).
 -->
 Here is the list of the elements that are already known to be missing or placeholders, if you have information about their original behavior, don't hesitate to post it, also, if you find something missing that is not part of that list, please report it so that i can investigate:
 *Guesses are marked PLACEHOLDER in the code and listed in docs/PLACEHOLDERS.md. Any video or memory that settles one is welcome!*
