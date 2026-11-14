@@ -206,7 +206,7 @@ namespace HexRevival
                 apply("BattleStateAssignDamage.NextStep", () => harmony.Patch(AccessTools.Method(typeof(BattleStateAssignDamage), "NextStep"), prefix: new HarmonyMethod(typeof(Hooks), "AssignDamage_NextStep")));
                 apply("Session.CheckForAlternateCardTemplate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Session), "CheckForAlternateCardTemplate"), postfix: new HarmonyMethod(typeof(Hooks), "Session_AlternateTemplate")));
                 apply("UIDeckTestDrawStatsViewModel.SetVisible", () => harmony.Patch(AccessTools.Method(typeof(UIDeckTestDrawStatsViewModel), "SetVisible", new[] { typeof(bool) }), postfix: new HarmonyMethod(typeof(Hooks), "TestDraw_SetVisible")));
-                apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available")));
+                apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available"), postfix: new HarmonyMethod(typeof(Hooks), "Gems_AvailableAfter")));
                 apply("Localization.Get", () => harmony.Patch(AccessTools.Method(typeof(Localization), "Get", new[] { typeof(string) }), postfix: new HarmonyMethod(typeof(Hooks), "Localization_Get")));
                 apply("UITournamentPendingViewModel.OnJoinTournamentClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnJoinTournamentClicked", Type.EmptyTypes, "Tournament_Join"));
                 apply("UITournamentPendingViewModel.OnTournamentDoubleClicked", () => Prefix(harmony, typeof(UITournamentPendingViewModel), "OnTournamentDoubleClicked", new[] { typeof(UITournamentDescContext) }, "Tournament_DoubleClick"));
@@ -611,6 +611,7 @@ namespace HexRevival
         public static void Arena_ChampionHud(UIArenaCampaignContext __instance, DeckCache __0) { Arena.OnAssignChampionHud(__instance, __0); }
         public static bool Arena_Battle() { Arena.Battle(); return false; }
         public static void Gems_Available(UISocketCardViewModel __instance) { Gems.BeforeAvailableGems(__instance); }
+        public static void Gems_AvailableAfter(UISocketCardViewModel __instance) { Gems.AfterAvailableGems(__instance); }
         public static void AIHints_MyCard(Game.Shared.AI.AIHints __instance, ref bool __result) { if (!__result) __result = Server.AiOwns(__instance); }
         public static void Player_StartingHandSize(Game.Shared.Player __instance, ref int __result) { __result = Dungeons.StartingHand(__instance, __result); }
         public static bool AssignDamage_NextStep(BattleStateAssignDamage __instance) { return DamageOrder.NextStep(__instance); }
