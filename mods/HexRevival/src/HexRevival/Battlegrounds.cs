@@ -181,6 +181,23 @@ namespace HexRevival
 
         private static Run RunOf(ulong tournamentId) { return Data.Runs.Find(r => r.TournamentId == tournamentId); }
 
+        /// <summary>The set formats (chapters) of every booster set of the limited gauntlet being played, null outside one.</summary>
+        internal static List<ESetFormat> LimitedGemFormats()
+        {
+            TournamentInfo cur = Manager != null ? Manager.CurrentTournament : null;
+            Run r = cur != null ? RunOf(cur.TournamentID) : null;
+            Gauntlet g = r != null ? Find(r.TournamentId) : null;
+            if (g == null || g.Kind == Kind.Constructed) return null;
+            List<ESetFormat> res = new List<ESetFormat>();
+            int boosters = r.Sets != null && r.Sets.Count > 0 ? r.Sets.Count : 1;
+            for (int i = 0; i < boosters; i++)
+            {
+                ESetFormat f = Gems.ChapterOf(Zymmer.SetNumber(SetOf(r, i)));
+                if (f != ESetFormat.Invalid && !res.Contains(f)) res.Add(f);
+            }
+            return res.Count > 0 ? res : null;
+        }
+
         private static ulong NewInstanceId() { return Data.NextInstance++; }
 
         private static TournamentManager Manager { get { return TournamentManager.m_Instance; } }
