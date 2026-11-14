@@ -181,6 +181,29 @@ namespace HexRevival
 
         private static Run RunOf(ulong tournamentId) { return Data.Runs.Find(r => r.TournamentId == tournamentId); }
 
+        private static readonly ETournamentFormats[] ChapterFlags =
+            { ETournamentFormats.Chapter1, ETournamentFormats.Chapter2, ETournamentFormats.Chapter3, ETournamentFormats.Chapter4, ETournamentFormats.Chapter5 };
+
+        /// <summary>
+        /// A gauntlet's format as the client sees it: a Sealed or Draft gauntlet carries the chapter of each of its
+        /// boosters' sets (sets 1-2 Chapter1, 3-4 Chapter2 ... 9-10 Chapter5), as the original's limited tournaments did.
+        /// The client turns them into the deck's sets (DeckValidator.TournamentFormatToNormalFormat: Standard when
+        /// none), and its champion selection offers the champions of those sets only (UIChampionSelectDialogContext
+        /// .Initialize, TournamentValidation; StuieOP, 2026-11-14: before, the Standard champions, whatever the sets).
+        /// </summary>
+        private static ETournamentFormats FormatOf(Gauntlet g, List<string> sets)
+        {
+            ETournamentFormats f = g.Format;
+            if (g.Kind == Kind.Constructed) return f;
+            if (sets == null || sets.Count == 0) sets = new List<string> { BoosterSet() != null ? BoosterSet().m_Id.ToString() : null };
+            foreach (string id in sets)
+            {
+                int n = Zymmer.SetNumber(SetById(id) ?? BoosterSet());
+                if (n >= 1 && n <= 2 * ChapterFlags.Length) f |= ChapterFlags[(n - 1) / 2];
+            }
+            return f;
+        }
+
         /// <summary>The set formats (chapters) of every booster set of the limited gauntlet being played, null outside one.</summary>
         internal static List<ESetFormat> LimitedGemFormats()
         {
@@ -247,7 +270,8 @@ namespace HexRevival
             d.RoomType = "";
             d.Description = g.Name;
             d.Style = ETournamentStyle.Asynchronous;
-            d.Format = g.Format;
+            Run dr = RunOf(g.Id);
+            d.Format = FormatOf(g, dr != null ? dr.Sets : (g.Kind != Kind.Constructed ? ChosenSets(g) : null));
             d.TournamentState = TournamentState.PlayGames.Asynchronous;
             d.TournamentStatus = ETournamentStatus.Asynchronous;
             d.MinPlayers = 1;
@@ -417,7 +441,7 @@ namespace HexRevival
             TournamentManager m = Manager;
             TournamentInfo info = new TournamentInfo();
             info.TournamentID = g.Id;
-            info.Format = g.Format;
+            info.Format = FormatOf(g, r != null ? r.Sets : null);
             info.Style = ETournamentStyle.Asynchronous;
             info.TournamentStatus = ETournamentStatus.Asynchronous;
             info.State = TournamentState.PlayGames.Asynchronous;
