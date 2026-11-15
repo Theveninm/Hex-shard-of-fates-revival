@@ -1291,6 +1291,22 @@ namespace HexRevival
                         UIPremiumStoreItemContext sel = st.Context.Catalog.SelectedItem;
                         return sel != null ? sel.Name + " x" + sel.Quantity + " total " + sel.TotalCost : "nothing selected";
                     }
+                case "deckrclick":   // dev: "deckrclick <card name>" = right-clicks that card in the open tournament deck editor's deck (its zoomed view with the gem socketing)
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        UITournamentDeckEditorViewModel te = UnityEngine.Object.FindObjectOfType<UITournamentDeckEditorViewModel>();
+                        CardCollectionViewModelBase list = te != null ? te.BottomCollection : null;
+                        if (list == null) return "no tournament deck editor";
+                        foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+                        {
+                            if (t == null || !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase)) continue;
+                            UICardTemplateContext st = list.GetStack(t);
+                            if (st == null) continue;
+                            list.GetType().GetMethod("OnCardRightClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).Invoke(list, new object[] { st });
+                            return "right-clicked " + t.m_Name + " (" + t.m_Id + ")";
+                        }
+                        return "not in the deck: " + q;
+                    }
                 case "texfind":   // dev: "texfind <text> [load]" = loaded textures, materials and atlas sprites whose name contains it ("load": the Resources folder first); "texfind save <name>" = writes that texture to HexRevivalTex_<name>.png
                     {
                         if (parts.Length < 2) return "usage: texfind <text> [load] | texfind save <name>";
