@@ -206,6 +206,10 @@ namespace HexRevival
                 apply("BattleStateAssignDamage.NextStep", () => harmony.Patch(AccessTools.Method(typeof(BattleStateAssignDamage), "NextStep"), prefix: new HarmonyMethod(typeof(Hooks), "AssignDamage_NextStep")));
                 apply("Session.CheckForAlternateCardTemplate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Session), "CheckForAlternateCardTemplate"), postfix: new HarmonyMethod(typeof(Hooks), "Session_AlternateTemplate")));
                 apply("UIDeckTestDrawStatsViewModel.SetVisible", () => harmony.Patch(AccessTools.Method(typeof(UIDeckTestDrawStatsViewModel), "SetVisible", new[] { typeof(bool) }), postfix: new HarmonyMethod(typeof(Hooks), "TestDraw_SetVisible")));
+                // The game's own memory leaks (see MemoryFixes).
+                apply("SoundGroupManager.OnSoundEffectLoaded", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "OnSoundEffectLoaded"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundLoaded")));
+                apply("SoundGroupManager.CleanUpFileGroup", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "CleanUpFileGroup"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundsCleaned")));
+                apply("UIDungeonMapPath.OnDestroy", () => harmony.Patch(AccessTools.Method(typeof(UIDungeonMapPath), "OnDestroy"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_PathDestroyed")));
                 apply("GemHelper.IsGemLegalInFormat", () => harmony.Patch(AccessTools.Method(typeof(GemHelper), "IsGemLegalInFormat"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Legal")));
                 apply("UISocketCardViewModel.UpdateAvailableGems", () => harmony.Patch(AccessTools.Method(typeof(UISocketCardViewModel), "UpdateAvailableGems"), prefix: new HarmonyMethod(typeof(Hooks), "Gems_Available"), postfix: new HarmonyMethod(typeof(Hooks), "Gems_AvailableAfter")));
                 apply("Localization.Get", () => harmony.Patch(AccessTools.Method(typeof(Localization), "Get", new[] { typeof(string) }), postfix: new HarmonyMethod(typeof(Hooks), "Localization_Get")));
@@ -613,6 +617,9 @@ namespace HexRevival
         public static bool Arena_Battle() { Arena.Battle(); return false; }
         public static void Gems_Available(UISocketCardViewModel __instance) { Gems.BeforeAvailableGems(__instance); }
         public static void Gems_AvailableAfter(UISocketCardViewModel __instance) { Gems.AfterAvailableGems(__instance); }
+        public static void Memory_SoundLoaded(AssetRequestItem __0) { HexRevival.MemoryFixes.SoundLoaded(__0); }
+        public static void Memory_SoundsCleaned() { HexRevival.MemoryFixes.ReleaseSounds(); }
+        public static void Memory_PathDestroyed(UIDungeonMapPath __instance) { HexRevival.MemoryFixes.PathDestroyed(__instance); }
         public static bool Gems_Legal(EGemTypesNew __0, ESetFormat __1, ref bool __result) { return Gems.LegalInChapters(__0, __1, ref __result); }
         public static void AIHints_MyCard(Game.Shared.AI.AIHints __instance, ref bool __result) { if (!__result) __result = Server.AiOwns(__instance); }
         public static void Player_StartingHandSize(Game.Shared.Player __instance, ref int __result) { __result = Dungeons.StartingHand(__instance, __result); }

@@ -88,6 +88,8 @@ namespace HexRevival
                 File.WriteAllText(f, (n + 1).ToString());
             }
             catch { }
+            // Memory audit: a restart would reset what we measure; the stuck game is conceded instead.
+            if (File.Exists(Path.Combine(LocalServer.Root, "HexRevival.memaudit"))) { m_StallSince = now; Execute(gc, "losebattle"); return; }
             Execute(gc, "restart");
         }
 
@@ -170,6 +172,7 @@ namespace HexRevival
                 go.AddComponent<StoreVariants>();
                 go.AddComponent<BattlegroundsScore>();
                 go.AddComponent<BattlegroundsSets>();
+                go.AddComponent<MemoryAudit>();
                 Debug.Log("[HexRevival][Dbg] behaviour created");
             }
             catch (Exception e)
@@ -547,7 +550,12 @@ namespace HexRevival
                 return;
             if (m_MenuOnly) { m_AutoStartDone = true; WriteState("autostart: logged in, staying on the main menu (menu)"); return; }
             if (m_LandingSince < 0f)
+            {
                 m_LandingSince = now;
+                // Soak test: a census after each game, to see what accumulates from one game to the next.
+                if (m_AutoAI && File.Exists(Path.Combine(LocalServer.Root, "HexRevival.memaudit")))
+                    WriteState(MemoryAudit.Census("game " + m_GamesPlayed).Split('\n')[0]);
+            }
             if (now - m_LandingSince < (Instance.Headless ? 1f : 4f))
                 return;
             m_AutoStartDone = true;
@@ -998,6 +1006,9 @@ namespace HexRevival
                 case "cheat": return Cheats.Execute(gc, parts);
                 case "menu": return OfflineMenu.Command(parts);
                 case "camp": return Campaign.Command(parts);
+                case "mem":   // dev: "mem" = memory line; "mem census [label]" = loaded objects by type, compared with the previous census
+                    if (parts.Length > 1 && parts[1] == "bundles") return MemoryAudit.Bundles();   // "mem bundles" = bundles kept and their assets' reference counts
+                    return parts.Length > 1 && parts[1] == "census" ? MemoryAudit.Census(parts.Length > 2 ? parts[2] : "dev") : MemoryAudit.Line();
                 case "dun": return Dungeons.Command(parts);
                 case "packs": return Packs.Command(parts);   // dev: chests, "packs give <pack_name> [n]"
                 case "home": return Hometown.Command(parts, GameClient.Instance.PlayerProfile.GetCurrentChampion().Id);   // dev: hometown flags
