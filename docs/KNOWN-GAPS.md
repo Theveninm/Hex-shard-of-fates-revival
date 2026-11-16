@@ -55,3 +55,4 @@ Here is the list of the elements that are already known to be missing or placeho
 • **Siege**: which defenses you face, and how often AI players attack yours
 • **Dueling Pit**: which deck the AI picks
 • **Account XP**: Siege and Battlegrounds games give none (not known)
+• **Low memory warning**: after a level load, if the game is close to running out of memory, it asks you to restart. The threshold (128 MB in one block) is a guess

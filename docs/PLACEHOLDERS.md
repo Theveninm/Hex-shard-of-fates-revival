@@ -227,6 +227,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Loot.cs:105 | Legendary 1; Vandersveldt, Water Elemental, MyHotStream). A small sample: PLACEHOLDER precision. |
 | Loot.cs:118 | Alachian Sea Pack's. Weights by rarity: see Zymmer.CardWeight (PLACEHOLDER by analogy with the AZ1 pack). |
 | Loot.cs:120 | Clatterclank) come as a 1-in-100 extra, like the AZ1 table's unique equipment: PLACEHOLDER odds. |
+| MemoryAudit.cs:58 | Below this largest free block of address space, a restart is advised. PLACEHOLDER: the crashes reported |
 | Mercenaries.cs:270 | Where the challenges are: see Dungeons.PickMercNode (PLACEHOLDER). Not reproduced before 1.2.19. |
 | Mercenaries.cs:272 | Gold per upgrade (the 2016 Steam thread; the same for every level and mercenary: PLACEHOLDER).</summary> |
 | NodeScripts.cs:126 | Sapphire Gate: open once The Blood Beneath is accepted (PLACEHOLDER, inferred: user's choice 2026-11-05). The gate |
