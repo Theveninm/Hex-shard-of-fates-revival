@@ -43,6 +43,11 @@ namespace HexRevival
             /// </summary>
             public int GoldPerPlatinum = Store.DefaultGoldPerPlatinum;
             /// <summary>
+            /// What a Siege Sack and a Cosmic Coin are worth in gold (user 2026-11-17, after Talekith: Cosmic Coins cannot
+            /// be earned offline): with GoldPrices, the Prize Exchange sells for gold at these rates, as platinum does.
+            /// </summary>
+            public int GoldPerSiegeSack = Store.DefaultGoldPerPrize, GoldPerCosmicCoin = Store.DefaultGoldPerPrize;
+            /// <summary>
             /// Every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it
             /// (Criesener, 2026-11-01: chosen per account; 1 = the original prices).
             /// </summary>
@@ -136,7 +141,7 @@ namespace HexRevival
         /// the gold prices (0: the defaults).
         /// </summary>
         public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false, bool crafting = false,
-            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false, bool cheapPacks = false)
+            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false, bool cheapPacks = false, int goldPerSack = 0, int goldPerCosmic = 0)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
             Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
@@ -144,6 +149,8 @@ namespace HexRevival
             i.Platinum = unlockAll ? 0 : Math.Max(0, platinum);
             i.GoldPrices = unlockAll || goldPrices;
             if (!unlockAll && goldPerPlatinum > 0) i.GoldPerPlatinum = goldPerPlatinum;
+            if (!unlockAll && goldPerSack > 0) i.GoldPerSiegeSack = goldPerSack;
+            if (!unlockAll && goldPerCosmic > 0) i.GoldPerCosmicCoin = goldPerCosmic;
             if (!unlockAll && goldDivisor > 0) i.GoldDivisor = goldDivisor;
             i.AllGems = allGems;
             i.Crafting = !unlockAll && crafting;
@@ -236,6 +243,8 @@ namespace HexRevival
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "goldprices") i.GoldPrices = v != "0";
                     else if (k == "goldperplat") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerPlatinum = n; }
+                    else if (k == "goldpersack") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerSiegeSack = n; }
+                    else if (k == "goldpercosmic") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerCosmicCoin = n; }
                     else if (k == "golddivisor") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldDivisor = n; }
                     else if (k == "allgems") i.AllGems = v == "1";
                     else if (k == "crafting") i.Crafting = v == "1";
@@ -268,6 +277,8 @@ namespace HexRevival
                     "cosmic=" + i.CosmicCoins,
                     "goldprices=" + (i.GoldPrices ? "1" : "0"),
                     "goldperplat=" + i.GoldPerPlatinum,
+                    "goldpersack=" + i.GoldPerSiegeSack,
+                    "goldpercosmic=" + i.GoldPerCosmicCoin,
                     "golddivisor=" + i.GoldDivisor,
                     "allgems=" + (i.AllGems ? "1" : "0"),
                     "crafting=" + (i.Crafting ? "1" : "0"),

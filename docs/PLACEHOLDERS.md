@@ -290,6 +290,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Store.cs:23 | for gold: the gold price is a PLACEHOLDER. Bought packs had about a 2% chance of a bonus |
 | Store.cs:28 | Gold price of a booster. PLACEHOLDER (no source: gold only bought packs from players, ~22,000 on the auction house in 2016).</summary> |
 | Store.cs:117 | Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary> |
+| Store.cs:122 | Gold per Siege Sack and per Cosmic Coin by default (Talekith, 2026-11-17: a 100-coin pack for 1,000 gold). PLACEHOLDER ratio: nothing ever sold both for gold and for these currencies. |
 | Store.cs:172 | PLACEHOLDER gold prices of products without a known price.</summary> |
 | Store.cs:175 | Gold prices of stardust (Common, Uncommon, Rare, Legendary, Promo; PLACEHOLDER: a player's memory of the original store (Criesener), which |
 | Store.cs:187 | ones' proportions to the Howling Plains pack (PLACEHOLDER). |

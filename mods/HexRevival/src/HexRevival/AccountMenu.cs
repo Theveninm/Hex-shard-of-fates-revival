@@ -28,6 +28,7 @@ namespace HexRevival
         private bool m_CheapPacks;
         private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(), m_GoldDivisor = "1";
+        private string m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(), m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
         private Vector2 m_CreateScroll;
         private float m_CreateHeight = 1000;
         private string m_Error;
@@ -188,6 +189,7 @@ namespace HexRevival
                 m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
                 m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false; m_ExtraStore = false; m_CheapPacks = false;
                 m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
+                m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(); m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
             }
             y += newH + gap;
 
@@ -271,10 +273,16 @@ namespace HexRevival
                 m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
                 m_GoldDivisor = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
                 y += 72 * S;
+                // The Prize Exchange's currencies in gold (user 2026-11-17).
+                m_GoldPerSack = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldpersack"), m_GoldPerSack, "hexrevival_gold_per_sack");
+                m_GoldPerCosmic = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_goldpercosmic"), m_GoldPerCosmic, "hexrevival_gold_per_cosmic");
+                y += 72 * S;
                 // What these settings mean, live: a booster and a Common chest spin.
                 GUI.Label(new Rect(0, y, w, 24 * S), Store.PriceExample(m_GoldPrices, Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor)), GameSkin.Style("body", 14, GameSkin.Gold));
                 y += 26 * S;
                 GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperplat_desc") + " " + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                y += 52 * S;
+                GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperprize_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
                 y += 52 * S;
             }
             m_CreateHeight = y;
@@ -287,7 +295,7 @@ namespace HexRevival
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
                 if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems, m_Crafting,
-                    Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor), m_ExtraStore, m_CheapPacks));
+                    Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor), m_ExtraStore, m_CheapPacks, Factor(m_GoldPerSack), Factor(m_GoldPerCosmic)));
             }
         }
 

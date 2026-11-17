@@ -20,6 +20,9 @@ namespace HexRevival
     ///   colorless card gives Magical Ore. Never broken down: Spectral Oak, Spectral Acorn and Mystic Squirrel, which
     ///   are meant to pile up, and basic shards.
     /// - An equipment's copies above 1 break down into one part each, of its slot and rarity (a rare weapon: a Rare Grip).
+    /// - "Break down all" takes only those surplus copies. One card or equipment at a time, once its surplus is gone, the
+    ///   rest can go too, down to none (Talekith, 2026-11-17: to get rid of cards never used), but never the copies a deck
+    ///   or a mercenary's deck uses.
     /// - A card is crafted from GemsPerCard gems of its rarity and colors (Magical Ore for artifacts and colorless
     ///   cards) and stardust of its rarity (the stardust of its extended art, see ExtendedArt.StardustFor), DustCost
     ///   by rarity. An equipment from PartsPerEquipment parts of its slot and rarity, one gem of its card (that card's
@@ -308,12 +311,37 @@ namespace HexRevival
             return Math.Max(0, Collection.Count(card) - Math.Max(Collection.CopiesPerCard, Decks.MostInOneDeck(card)));
         }
 
-        /// <summary>Copies of the equipment that can be broken down (0 if none).</summary>
-        public static int EquipmentSurplus(ResourceId item)
+        /// <summary>
+        /// Copies of the card that can be broken down one card at a time, down to none (Talekith, 2026-11-17: to get rid
+        /// of cards never used): all but the most copies one of the account's decks or mercenary decks holds.
+        /// </summary>
+        public static int Breakable(ResourceId card)
         {
             if (!Active) return 0;
+            CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(card);
+            if (!IsCraftable(t) || NeverBroken.Contains(card)) return 0;
+            return Math.Max(0, Collection.Count(card) - Decks.MostInOneDeck(card));
+        }
+
+        /// <summary>Copies of the equipment above 1, broken down by "Break down all" (0 if none).</summary>
+        public static int EquipmentSurplus(ResourceId item)
+        {
+            if (!IsBreakableEquipment(item)) return 0;
+            return Math.Max(0, Inventory.Count(item) - 1);
+        }
+
+        /// <summary>Copies of the equipment that can be broken down one at a time: all, but the last one when a deck or a mercenary uses it.</summary>
+        public static int EquipmentBreakable(ResourceId item)
+        {
+            if (!IsBreakableEquipment(item)) return 0;
+            return Math.Max(0, Inventory.Count(item) - (Decks.UsesEquipment(item) ? 1 : 0));
+        }
+
+        private static bool IsBreakableEquipment(ResourceId item)
+        {
+            if (!Active) return false;
             InventoryEquipmentData e = Singleton<TemplateManager>.Instance.GetInventoryItem(item) as InventoryEquipmentData;
-            return e != null && Tier(e.m_Rarity) >= 0 && SlotIndex(e) >= 0 ? Math.Max(0, Inventory.Count(item) - 1) : 0;
+            return e != null && Tier(e.m_Rarity) >= 0 && SlotIndex(e) >= 0;
         }
 
         private static int SlotIndex(InventoryEquipmentData e) { return Array.IndexOf(Slots, e.m_EquipmentType); }
@@ -332,7 +360,7 @@ namespace HexRevival
             return string.Join(" / ", l.ToArray());
         }
 
-        /// <summary>Breaks down up to n surplus copies of a card; returns the materials gained (empty if none).</summary>
+        /// <summary>Breaks down up to n copies of a card (at most Breakable); returns the materials gained (empty if none).</summary>
         public static Dictionary<ResourceId, int> BreakCard(ResourceId card, int n)
         {
             Dictionary<ResourceId, int> got = new Dictionary<ResourceId, int>();
@@ -340,10 +368,10 @@ namespace HexRevival
             return got;
         }
 
-        /// <summary>Takes up to n surplus copies away and adds their gems to got (given later); returns how many.</summary>
+        /// <summary>Takes up to n copies away (at most Breakable) and adds their gems to got (given later); returns how many.</summary>
         private static int BreakCardInto(ResourceId card, int n, Dictionary<ResourceId, int> got, bool save)
         {
-            n = Math.Min(n, Surplus(card));
+            n = Math.Min(n, Breakable(card));
             if (n <= 0) return 0;
             CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(card);
             int tier = Tier(t.m_CardRarity);
@@ -380,14 +408,14 @@ namespace HexRevival
             }
         }
 
-        /// <summary>Breaks down the surplus copies of an equipment; returns the parts gained (empty if none).</summary>
+        /// <summary>Breaks down up to n copies of an equipment (at most EquipmentBreakable); returns the parts gained (empty if none).</summary>
         public static Dictionary<ResourceId, int> BreakEquipment(ResourceId item, int n) { return BreakEquipment(item, n, true); }
 
-        /// <summary>Breaks n surplus copies of an equipment down; give false: the parts are only returned (given later).</summary>
+        /// <summary>Breaks n copies of an equipment down (at most EquipmentBreakable); give false: the parts are only returned (given later).</summary>
         private static Dictionary<ResourceId, int> BreakEquipment(ResourceId item, int n, bool give)
         {
             Dictionary<ResourceId, int> got = new Dictionary<ResourceId, int>();
-            n = Math.Min(n, EquipmentSurplus(item));
+            n = Math.Min(n, EquipmentBreakable(item));
             if (n <= 0) return got;
             InventoryEquipmentData e = (InventoryEquipmentData)Singleton<TemplateManager>.Instance.GetInventoryItem(item);
             n = ExtendedArt.Spend(item, n, false, out _);
@@ -745,7 +773,8 @@ namespace HexRevival
                 {
                     CardTemplate t = FindCard(arg);
                     if (t == null) return "no card " + arg;
-                    return t.m_Name + ": " + Describe(BreakCard(t.m_Id, Surplus(t.m_Id)));
+                    int n = Surplus(t.m_Id) > 0 ? Surplus(t.m_Id) : Breakable(t.m_Id);   // as the card's button
+                    return t.m_Name + " x" + n + ": " + Describe(BreakCard(t.m_Id, n)) + " (left " + Collection.Count(t.m_Id) + ")";
                 }
                 case "breakall":
                 {
@@ -766,7 +795,9 @@ namespace HexRevival
                 case "ebreak":
                 {
                     InventoryEquipmentData e = FindEquipment(arg);
-                    return e == null ? "no equipment " + arg : e.m_Name + ": " + Describe(BreakEquipment(e.m_Id, EquipmentSurplus(e.m_Id)));
+                    if (e == null) return "no equipment " + arg;
+                    int n = EquipmentSurplus(e.m_Id) > 0 ? EquipmentSurplus(e.m_Id) : EquipmentBreakable(e.m_Id);   // as the button
+                    return e.m_Name + " x" + n + ": " + Describe(BreakEquipment(e.m_Id, n)) + " (left " + Inventory.Count(e.m_Id) + ")";
                 }
                 case "ecost":
                 case "emake":

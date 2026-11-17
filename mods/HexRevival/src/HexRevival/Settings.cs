@@ -51,6 +51,10 @@ namespace HexRevival
             // The prices (Criesener, 2026-11-01): copies of the Language row with their own list of values.
             EnsureChoiceRow(grid, "HexRevival_GoldPerPlatinum", "opt_goldperplat", offline && !Saves.Current.UnlockAll, Factors,
                 () => Saves.Current != null ? Saves.Current.GoldPerPlatinum : Store.DefaultGoldPerPlatinum, v => { if (Saves.Current != null) { Saves.Current.GoldPerPlatinum = v; Saves.SaveCurrent(); } });
+            EnsureChoiceRow(grid, "HexRevival_GoldPerSack", "opt_goldpersack", offline && !Saves.Current.UnlockAll, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerSiegeSack : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerSiegeSack = v; Saves.SaveCurrent(); } });
+            EnsureChoiceRow(grid, "HexRevival_GoldPerCosmic", "opt_goldpercosmic", offline && !Saves.Current.UnlockAll, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerCosmicCoin : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerCosmicCoin = v; Saves.SaveCurrent(); } });
             EnsureChoiceRow(grid, "HexRevival_GoldDivisor", "opt_golddivisor", offline && !Saves.Current.UnlockAll, Factors,
                 () => Saves.Current != null ? Saves.Current.GoldDivisor : 1, v => { if (Saves.Current != null) { Saves.Current.GoldDivisor = v; Saves.SaveCurrent(); } });
             EnsureTextRow(grid, "HexRevival_PriceExample", offline && !Saves.Current.UnlockAll,

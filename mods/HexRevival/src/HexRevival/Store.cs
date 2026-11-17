@@ -117,6 +117,16 @@ namespace HexRevival
         /// <summary>Gold per platinum: the boosters' 200 platinum (Src.Forum2017, also their base price in the game data) sell for 2000 gold. PLACEHOLDER ratio.</summary>
         public const int DefaultGoldPerPlatinum = 10;
 
+        /// <summary>
+        /// Gold per Siege Sack and per Cosmic Coin by default (Talekith, 2026-11-17: a 100-coin pack for 1,000 gold).
+        /// PLACEHOLDER ratio: nothing ever sold both for gold and for these currencies.
+        /// </summary>
+        public const int DefaultGoldPerPrize = 10;
+
+        /// <summary>Gold per Siege Sack / Cosmic Coin of the current account (the default without one).</summary>
+        public static int GoldPerSiegeSack { get { return Saves.Current != null && Saves.Current.GoldPerSiegeSack > 0 ? Saves.Current.GoldPerSiegeSack : DefaultGoldPerPrize; } }
+        public static int GoldPerCosmicCoin { get { return Saves.Current != null && Saves.Current.GoldPerCosmicCoin > 0 ? Saves.Current.GoldPerCosmicCoin : DefaultGoldPerPrize; } }
+
         /// <summary>Gold per platinum of the current account (Saves.Info.GoldPerPlatinum; the default without one).</summary>
         public static int GoldPerPlatinum { get { return Saves.Current != null && Saves.Current.GoldPerPlatinum > 0 ? Saves.Current.GoldPerPlatinum : DefaultGoldPerPlatinum; } }
 
@@ -253,7 +263,7 @@ namespace HexRevival
         {
             bool goldPrices = Saves.Current == null || Saves.Current.GoldPrices;
             bool pve = PveFullSets.Enabled;
-            string key = goldPrices + "/" + GoldPerPlatinum + "/" + GoldDivisor + "/" + pve + "/" + (Saves.Current != null && Saves.Current.CheapPacks);
+            string key = goldPrices + "/" + GoldPerPlatinum + "/" + GoldPerSiegeSack + "/" + GoldPerCosmicCoin + "/" + GoldDivisor + "/" + pve + "/" + (Saves.Current != null && Saves.Current.CheapPacks);
             if (s_Items != null && s_ItemsKey == key) return s_Items;
             s_ItemsKey = key;
             s_Items = new List<StoreItem>();
@@ -268,7 +278,14 @@ namespace HexRevival
                 // Every gold price here but stardust's was a platinum price (written at the default ratio): accounts
                 // without "platinum prices in gold" pay that platinum, the others its gold at the account's gold per
                 // platinum. Stardust always sold for gold (Criesener, 2026-10-31): the account's divisor.
-                if (p.Currency == "Gold" && item is InventoryStardust) p.Price = Gold(p.Price);
+                // The Prize Exchange, on accounts with gold prices: its Siege Sack and Cosmic Coin prices in gold, at the
+                // account's rates (user 2026-11-17: as platinum, a rate for each currency). The others keep the sacks and coins.
+                if (goldPrices && (p.Currency == "SiegeSack" || p.Currency == "CosmicCoin"))
+                {
+                    p.Price *= p.Currency == "SiegeSack" ? GoldPerSiegeSack : GoldPerCosmicCoin;
+                    p.Currency = "Gold";
+                }
+                else if (p.Currency == "Gold" && item is InventoryStardust) p.Price = Gold(p.Price);
                 else if (p.Currency == "Gold" && !goldPrices) { p.Currency = "Platinum"; p.Price = PlatinumOf(p.Price); }
                 else if (p.Currency == "Gold") p.Price = GoldOfPlatinum(PlatinumOf(p.Price));
                 if (p.Pve != null)
