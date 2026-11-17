@@ -228,11 +228,20 @@ namespace HexRevival
                 string detail = Loc.Get("last_played", s.LastPlayed.ToString("g", System.Globalization.CultureInfo.CurrentCulture));
                 // Delete, at the row's right end (user 2026-11-17). Drawn over the row, whose button takes the click (it
                 // comes first): a click there is the Delete button's.
-                float dw = 120 * S, dh = 40 * S;
-                Rect dr = new Rect(r.xMax - dw - 12 * S, r.y + (r.height - dh) / 2f, dw, dh);
+                // The game's bin icon (the deck editor's Delete Deck, user 2026-11-17: smaller than a labelled button); the
+                // labelled red button if the atlas is not loaded.
+                float dw = 38 * S, dh = 38 * S;
+                Rect dr = new Rect(r.xMax - dw - 14 * S, r.y + (r.height - dh) / 2f, dw, dh);
                 bool onDelete = dr.Contains(Event.current.mousePosition);
-                bool clicked = GameSkin.Row(r, s.Name, detail, false, null, dw + 20 * S);
-                GameSkin.RedButton(dr, Loc.Get("delete_account"), 16);
+                bool clicked = GameSkin.Row(r, s.Name, detail, false, null, dw + 24 * S);
+                bool down = onDelete && Input.GetMouseButton(0);
+                if (!GameSkin.Sprite(dr, "A_Icons", down ? "Icon_DeleteDeck_Click" : onDelete ? "Icon_DeleteDeck_Hover" : "Icon_DeleteDeck", 1f, false))
+                {
+                    dw = 120 * S;
+                    dr = new Rect(r.xMax - dw - 12 * S, dr.y, dw, dh);
+                    onDelete = dr.Contains(Event.current.mousePosition);
+                    GameSkin.RedButton(dr, Loc.Get("delete_account"), 16);
+                }
                 if (clicked && onDelete) { m_ToDelete = s; m_Screen = Screen.Delete; }
                 else if (clicked) Play(s);
             }
