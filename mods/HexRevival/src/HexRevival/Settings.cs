@@ -18,7 +18,7 @@ namespace HexRevival
         /// <summary>
         /// Adds "Show the cheat menu" to the game's display options, as a copy of the "Enable hints" row, and the offline
         /// account's settings to its Account tab (user, 2026-10-30: changed there without making a new account):
-        /// "Platinum prices in gold" and "Crafting" (progression accounts) and "Every gem in the campaign" (Saves.Info.AllGems), in place
+        /// "Pay everything in gold" and "Crafting" (progression accounts) and "Every gem in the campaign" (Saves.Info.AllGems), in place
         /// of "Change Password" and "Enable Authenticator", which do nothing offline. Applied immediately (they do not wait
         /// for the options' Apply button; neither needs a new session: the store and the gem list read them when shown).
         /// Called every frame; does nothing when the options are closed.
@@ -49,12 +49,12 @@ namespace HexRevival
             EnsureRow(row, grid, "HexRevival_GoldPrices", "opt_goldprices", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.GoldPrices, v => { if (Saves.Current != null) { Saves.Current.GoldPrices = v; Saves.SaveCurrent(); } });
             // The prices (Criesener, 2026-11-01): copies of the Language row with their own list of values.
-            EnsureChoiceRow(grid, "HexRevival_GoldPerPlatinum", "opt_goldperplat", offline && !Saves.Current.UnlockAll, Factors,
-                () => Saves.Current != null ? Saves.Current.GoldPerPlatinum : Store.DefaultGoldPerPlatinum, v => { if (Saves.Current != null) { Saves.Current.GoldPerPlatinum = v; Saves.SaveCurrent(); } });
-            EnsureChoiceRow(grid, "HexRevival_GoldPerSack", "opt_goldpersack", offline && !Saves.Current.UnlockAll, Factors,
-                () => Saves.Current != null ? Saves.Current.GoldPerSiegeSack : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerSiegeSack = v; Saves.SaveCurrent(); } });
-            EnsureChoiceRow(grid, "HexRevival_GoldPerCosmic", "opt_goldpercosmic", offline && !Saves.Current.UnlockAll, Factors,
-                () => Saves.Current != null ? Saves.Current.GoldPerCosmicCoin : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerCosmicCoin = v; Saves.SaveCurrent(); } });
+            EnsureChoiceRow(grid, "HexRevival_GoldPerPlatinum", "opt_goldperplat", offline && !Saves.Current.UnlockAll && Saves.Current.GoldPrices, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerPlatinum : Store.DefaultGoldPerPlatinum, v => { if (Saves.Current != null) { Saves.Current.GoldPerPlatinum = v; Saves.SaveCurrent(); } }, offline && !Saves.Current.UnlockAll);
+            EnsureChoiceRow(grid, "HexRevival_GoldPerSack", "opt_goldpersack", offline && !Saves.Current.UnlockAll && Saves.Current.GoldPrices, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerSiegeSack : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerSiegeSack = v; Saves.SaveCurrent(); } }, offline && !Saves.Current.UnlockAll);
+            EnsureChoiceRow(grid, "HexRevival_GoldPerCosmic", "opt_goldpercosmic", offline && !Saves.Current.UnlockAll && Saves.Current.GoldPrices, Factors,
+                () => Saves.Current != null ? Saves.Current.GoldPerCosmicCoin : Store.DefaultGoldPerPrize, v => { if (Saves.Current != null) { Saves.Current.GoldPerCosmicCoin = v; Saves.SaveCurrent(); } }, offline && !Saves.Current.UnlockAll);
             EnsureChoiceRow(grid, "HexRevival_GoldDivisor", "opt_golddivisor", offline && !Saves.Current.UnlockAll, Factors,
                 () => Saves.Current != null ? Saves.Current.GoldDivisor : 1, v => { if (Saves.Current != null) { Saves.Current.GoldDivisor = v; Saves.SaveCurrent(); } });
             EnsureTextRow(grid, "HexRevival_PriceExample", offline && !Saves.Current.UnlockAll,
@@ -461,8 +461,10 @@ namespace HexRevival
         /// <summary>
         /// A copy of the Account tab's "Language" row (a title and a drop-down list) under parent, with its own title and
         /// values (made once, shown when show is true, its list kept on the setting's value: the account may have changed since).
+        /// make: made even while hidden, so that it keeps its place among the rows when it shows later (a row made late
+        /// goes last).
         /// </summary>
-        private static void EnsureChoiceRow(Transform parent, string name, string labelKey, bool show, int[] choices, System.Func<int> get, System.Action<int> set)
+        private static void EnsureChoiceRow(Transform parent, string name, string labelKey, bool show, int[] choices, System.Func<int> get, System.Action<int> set, bool make = false)
         {
             Transform existing = parent.Find(name);
             if (existing != null)
@@ -477,7 +479,7 @@ namespace HexRevival
                 }
                 return;
             }
-            if (!show) return;
+            if (!show && !make) return;
             Transform language = parent.Find("Language");
             if (language == null) return;
             try
@@ -514,6 +516,7 @@ namespace HexRevival
                     int v;
                     if (int.TryParse(chosen.value, out v) && v > 0) { set(v); shown.text = v.ToString(); }
                 }));
+                copy.SetActive(show);
                 UiClone.Reposition(parent);
             }
             catch (System.Exception e) { Debug.LogError("[HexRevival] [Settings] choice row " + name + ": " + e); }

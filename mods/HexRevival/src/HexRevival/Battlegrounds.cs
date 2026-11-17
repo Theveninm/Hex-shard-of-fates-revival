@@ -510,7 +510,7 @@ namespace HexRevival
             LocalServer.Answer(typeof(TournamentsService.EnterTournament), res, handler);
         }
 
-        /// <summary>Accounts without "platinum prices in gold" pay the entries in platinum (the gold fees are platinum x 10); the others that platinum at the account's gold per platinum.</summary>
+        /// <summary>Accounts without "Pay everything in gold" pay the entries in platinum (the gold fees are platinum x 10); the others that platinum at the account's gold per platinum.</summary>
         private static bool FeeInPlatinum { get { return Saves.Current != null && !Saves.Current.GoldPrices; } }
 
         private static void ShowBalance()

@@ -276,7 +276,7 @@ namespace HexRevival
                 Product p = Price(item, tm);
                 if (p == null) continue;
                 // Every gold price here but stardust's was a platinum price (written at the default ratio): accounts
-                // without "platinum prices in gold" pay that platinum, the others its gold at the account's gold per
+                // without "Pay everything in gold" pay that platinum, the others its gold at the account's gold per
                 // platinum. Stardust always sold for gold (Criesener, 2026-10-31): the account's divisor.
                 // The Prize Exchange, on accounts with gold prices: its Siege Sack and Cosmic Coin prices in gold, at the
                 // account's rates (user 2026-11-17: as platinum, a rate for each currency). The others keep the sacks and coins.

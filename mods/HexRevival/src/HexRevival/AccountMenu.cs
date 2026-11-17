@@ -57,10 +57,28 @@ namespace HexRevival
                 return "logging in new account " + name;
             }
             else if (sub == "logout") { Singleton<Main>.Instance.RequestLogOut(); return "logging out"; }
+            else if (sub == "create")
+            {
+                // Dev: "profile create [nogold] [down]" = the new account screen, with "Pay everything in gold" off and
+                // scrolled down if asked (on the login screen, for screenshots of the form).
+                s_Instance.ResetCreate();
+                s_Instance.m_GoldPrices = System.Array.IndexOf(parts, "nogold") < 0;
+                if (System.Array.IndexOf(parts, "down") >= 0) s_Instance.m_CreateScroll = new Vector2(0, 10000);
+            }
             else s_Instance.m_Screen = Screen.List;
             OnlineProfile op = OnlineProfile.Current;
             return s_Instance.m_Screen + " - " + op.Name + " " + op.PlayerId;
         }
+        /// <summary>The new account screen, with its default choices.</summary>
+        private void ResetCreate()
+        {
+            m_Screen = Screen.Create;
+            m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
+            m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false; m_ExtraStore = false; m_CheapPacks = false;
+            m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
+            m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(); m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
+        }
+
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
         private readonly List<Behaviour> m_DisabledUi = new List<Behaviour>();
@@ -185,11 +203,7 @@ namespace HexRevival
             GameSkin.Label(new Rect(nr.x + 62 * S, nr.y, nr.width - 70 * S, newH), Loc.Get("new_account"), GameSkin.Style("title", 18, over ? Color.white : GameSkin.Gold));
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none))
             {
-                m_Screen = Screen.Create;
-                m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
-                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false; m_ExtraStore = false; m_CheapPacks = false;
-                m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
-                m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(); m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
+                ResetCreate();
             }
             y += newH + gap;
 
@@ -257,8 +271,9 @@ namespace HexRevival
             // Progression accounts only (an "unlock everything" account has its gold and gold prices, and no crafting).
             if (!m_Unlock)
             {
-                m_GoldPrices = Checkbox(new Rect(0, y, w, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
-                y += 78 * S;
+                // A longer text than the other options' (it names the three currencies): more room.
+                m_GoldPrices = Checkbox(new Rect(0, y, w, 90 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
+                y += 102 * S;
                 m_Crafting = Checkbox(new Rect(0, y, w, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));
                 y += 78 * S;
                 m_ExtraStore = Checkbox(new Rect(0, y, w, 66 * S), m_ExtraStore, Loc.Get("opt_extrastore"), Loc.Get("opt_extrastore_desc"));
@@ -269,21 +284,27 @@ namespace HexRevival
                 m_StartGold = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
                 m_StartPlatinum = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
                 y += 76 * S;
-                // The prices (Criesener, 2026-11-01): what a platinum is worth in gold, and the divisor of every gold price.
-                m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
-                m_GoldDivisor = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
-                y += 72 * S;
-                // The Prize Exchange's currencies in gold (user 2026-11-17).
-                m_GoldPerSack = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldpersack"), m_GoldPerSack, "hexrevival_gold_per_sack");
-                m_GoldPerCosmic = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_goldpercosmic"), m_GoldPerCosmic, "hexrevival_gold_per_cosmic");
+                // The prices (Criesener, 2026-11-01): what a platinum, a Siege Sack and a Cosmic Coin are worth in gold (only
+                // with prices in gold, user 2026-11-17), and the divisor of every gold price.
+                if (m_GoldPrices)
+                {
+                    m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
+                    m_GoldPerSack = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_goldpersack"), m_GoldPerSack, "hexrevival_gold_per_sack");
+                    y += 72 * S;
+                    m_GoldPerCosmic = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldpercosmic"), m_GoldPerCosmic, "hexrevival_gold_per_cosmic");
+                }
+                m_GoldDivisor = NumberField(new Rect(m_GoldPrices ? half + 20 * S : 0, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
                 y += 72 * S;
                 // What these settings mean, live: a booster and a Common chest spin.
                 GUI.Label(new Rect(0, y, w, 24 * S), Store.PriceExample(m_GoldPrices, Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor)), GameSkin.Style("body", 14, GameSkin.Gold));
                 y += 26 * S;
-                GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperplat_desc") + " " + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                GUI.Label(new Rect(0, y, w, 48 * S), (m_GoldPrices ? Loc.Get("opt_goldperplat_desc") + " " : "") + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
                 y += 52 * S;
-                GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperprize_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
-                y += 52 * S;
+                if (m_GoldPrices)
+                {
+                    GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperprize_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                    y += 52 * S;
+                }
             }
             m_CreateHeight = y;
             GUI.EndScrollView();
