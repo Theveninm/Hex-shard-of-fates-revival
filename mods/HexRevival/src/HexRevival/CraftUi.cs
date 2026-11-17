@@ -196,15 +196,15 @@ namespace HexRevival
             if (s_Info != null) SetButton(s_Info, Loc.Get("craft_btn_info"), true);
             if (s_Equip != null)
             {
-                int spare = Crafting.EquipmentSurplus(s_Equip.m_Id), owned = Inventory.Count(s_Equip.m_Id);
+                int spare = EquipmentToBreak(s_Equip.m_Id), owned = Inventory.Count(s_Equip.m_Id);
                 SetButton(s_Break, Loc.Get("craft_btn_break", spare), spare > 0);
                 SetButton(s_Make, Loc.Get("craft_btn_make", owned, 1), owned == 0);
                 return;
             }
             if (s_Card == null) return;
             ResourceId t = s_Card.Template.m_Id;
-            int surplus = Crafting.Surplus(t), all = Crafting.TotalSurplus(), missing = Crafting.Missing(t);
-            SetButton(s_Break, surplus > 0 || all == 0 ? Loc.Get("craft_btn_break", surplus) : Loc.Get("craft_btn_break_all", all), all > 0);
+            int n = CardToBreak(t), all = Crafting.TotalSurplus(), missing = Crafting.Missing(t);
+            SetButton(s_Break, n > 0 || all == 0 ? Loc.Get("craft_btn_break", n) : Loc.Get("craft_btn_break_all", all), n > 0 || all > 0);
             SetButton(s_Make, Loc.Get("craft_btn_make", Collection.Count(t), Collection.CopiesPerCard), missing > 0);
         }
 
@@ -213,16 +213,44 @@ namespace HexRevival
             UISystem.DisplayAlert(Crafting.InfoText(), Loc.Get("craft_info_title"), null);
         }
 
-        /// <summary>This card's surplus, every surplus of the account, or both to choose from.</summary>
+        /// <summary>
+        /// What the card's button breaks down: its surplus (above 4, or above the most one deck uses) first; once there is
+        /// none, the rest the decks do not use, down to none.
+        /// </summary>
+        private static int CardToBreak(ResourceId card)
+        {
+            int surplus = Crafting.Surplus(card);
+            return surplus > 0 ? surplus : Crafting.Breakable(card);
+        }
+
+        /// <summary>As CardToBreak, for an equipment: the copies above 1 first, then the last one if nothing uses it.</summary>
+        private static int EquipmentToBreak(ResourceId item)
+        {
+            int surplus = Crafting.EquipmentSurplus(item);
+            return surplus > 0 ? surplus : Crafting.EquipmentBreakable(item);
+        }
+
+        /// <summary>This card's surplus (or its last copies), every surplus of the account, or both to choose from.</summary>
         private static void OnBreak()
         {
             if (s_Equip != null) { EquipmentBreak(s_Equip); return; }
             if (s_Card == null) return;
             CardTemplate t = s_Card.Template;
-            int n = Crafting.Surplus(t.m_Id), all = Crafting.TotalSurplus();
+            int all = Crafting.TotalSurplus();
+            string title = Loc.Get("craft_title_break");
+            if (Crafting.Surplus(t.m_Id) <= 0)
+            {
+                // No surplus: the copies no deck uses, which leave the collection (the last ones, possibly all).
+                int rest = Crafting.Breakable(t.m_Id), left = Collection.Count(t.m_Id) - rest;
+                if (rest > 0)
+                {
+                    UISystem.DisplayConfirm(Loc.Get(left > 0 ? "craft_confirm_break_last" : "craft_confirm_break_none", rest, t.m_Name.Trim(), Crafting.Yield(t), left), title, null, () => BreakOne(t, rest));
+                    return;
+                }
+            }
+            int n = Crafting.Surplus(t.m_Id);
             if (all <= 0) return;
             UIModalPopupViewModel.ClickHandler one = () => BreakOne(t, n), every = BreakEvery;
-            string title = Loc.Get("craft_title_break");
             if (n <= 0) UISystem.DisplayConfirm(Loc.Get("craft_confirm_break_all", all), title, null, every);
             else if (all == n) UISystem.DisplayConfirm(Loc.Get("craft_confirm_break", n, t.m_Name.Trim(), Crafting.Yield(t)), title, null, one);
             else UISystem.Display3ButtonPopup(Loc.Get("craft_confirm_break", n, t.m_Name.Trim(), Crafting.Yield(t)) + "\n\n" + Loc.Get("craft_confirm_break_or_all", all), title,
@@ -365,9 +393,11 @@ namespace HexRevival
         private static void EquipmentBreak(InventoryEquipmentData e)
         {
             string name = e.m_Name.Trim();
-            int surplus = Crafting.EquipmentSurplus(e.m_Id);
+            int surplus = EquipmentToBreak(e.m_Id);
             if (surplus <= 0) return;
-            UISystem.DisplayConfirm(Loc.Get("craft_confirm_ebreak", surplus, name), Loc.Get("craft_title_break"), null, () =>
+            // The last copy (no deck or mercenary uses it): said so.
+            string ask = Crafting.EquipmentSurplus(e.m_Id) > 0 ? Loc.Get("craft_confirm_ebreak", surplus, name) : Loc.Get("craft_confirm_ebreak_last", name);
+            UISystem.DisplayConfirm(ask, Loc.Get("craft_title_break"), null, () =>
             {
                 Dictionary<ResourceId, int> got = Crafting.BreakEquipment(e.m_Id, surplus);
                 if (got.Count == 0) return;

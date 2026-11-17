@@ -48,6 +48,28 @@ namespace HexRevival
             }
         }
 
+        /// <summary>The most copies of a card one saved template (a mercenary's or the boat's deck) holds.</summary>
+        public static int MostInOneTemplate(ResourceId card)
+        {
+            int most = 0;
+            foreach (ProfileDeckTemplate t in All.Values)
+            {
+                if (t.CardDesc == null) continue;
+                int n = 0;
+                foreach (ProfileDeckTemplate.CardDescriptor c in t.CardDesc) if (c.Temp == card) n += c.Count;
+                if (n > most) most = n;
+            }
+            return most;
+        }
+
+        /// <summary>Whether a saved template (a mercenary's deck) has the equipment equipped.</summary>
+        public static bool UsesEquipment(ResourceId item)
+        {
+            foreach (ProfileDeckTemplate t in All.Values)
+                if (t.Equip != null && t.Equip.ContainsValue(item)) return true;
+            return false;
+        }
+
         public static ProfileDeckTemplate Get(ulong id)
         {
             ProfileDeckTemplate t;

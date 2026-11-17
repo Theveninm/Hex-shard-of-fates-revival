@@ -43,6 +43,11 @@ namespace HexRevival
             /// </summary>
             public int GoldPerPlatinum = Store.DefaultGoldPerPlatinum;
             /// <summary>
+            /// What a Siege Sack and a Cosmic Coin are worth in gold (user 2026-11-17, after Talekith: Cosmic Coins cannot
+            /// be earned offline): with GoldPrices, the Prize Exchange sells for gold at these rates, as platinum does.
+            /// </summary>
+            public int GoldPerSiegeSack = Store.DefaultGoldPerPrize, GoldPerCosmicCoin = Store.DefaultGoldPerPrize;
+            /// <summary>
             /// Every price that was gold in the original (stardust, Wheel of Fate spins) is divided by it
             /// (Criesener, 2026-11-01: chosen per account; 1 = the original prices).
             /// </summary>
@@ -121,12 +126,33 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>The folder (in HexRevivalSaves) deleted accounts are moved to.</summary>
+        public const string DeletedDir = "_deleted";
+
+        /// <summary>
+        /// Deletes an offline account (user 2026-11-17): its folder leaves the list, moved to HexRevivalSaves\_deleted
+        /// under its name and the date, from where it can still be brought back by hand. Returns where it went (null: not done).
+        /// </summary>
+        public static string Delete(Info i)
+        {
+            if (i == null || i.Folder != null || string.IsNullOrEmpty(i.Name) || i.Name == DeletedDir) return null;   // not the online account
+            string from = Path.Combine(RootDir, i.Name);
+            if (!Directory.Exists(from)) return null;
+            string bin = Path.Combine(RootDir, DeletedDir);
+            Directory.CreateDirectory(bin);
+            string to = Path.Combine(bin, i.Name + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
+            Directory.Move(from, to);
+            if (s_Current != null && s_Current.Folder == null && s_Current.Name == i.Name) s_Current = null;
+            UnityEngine.Debug.Log("[HexRevival] [Saves] account " + i.Name + " deleted (moved to " + to + ")");
+            return to;
+        }
+
         /// <summary>Why a name cannot be used (null if it can).</summary>
         public static string CheckName(string name)
         {
             if (string.IsNullOrEmpty(name) || name.Trim().Length == 0) return "account_name_empty";
             if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Trim() != name || name.Length > 32) return "account_name_invalid";
-            if (Directory.Exists(Path.Combine(RootDir, name))) return "account_name_taken";
+            if (Directory.Exists(Path.Combine(RootDir, name)) || name == DeletedDir) return "account_name_taken";
             return null;
         }
 
@@ -136,7 +162,7 @@ namespace HexRevival
         /// the gold prices (0: the defaults).
         /// </summary>
         public static Info Create(string name, bool unlockAll, bool tutorial = false, bool goldPrices = true, long gold = 0, long platinum = 0, bool allGems = false, bool crafting = false,
-            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false, bool cheapPacks = false)
+            int goldPerPlatinum = 0, int goldDivisor = 0, bool extraStore = false, bool cheapPacks = false, int goldPerSack = 0, int goldPerCosmic = 0)
         {
             Directory.CreateDirectory(Path.Combine(RootDir, name));
             Info i = new Info { Name = name, UnlockAll = unlockAll, LastPlayed = DateTime.Now, TutorialPending = tutorial };
@@ -144,6 +170,8 @@ namespace HexRevival
             i.Platinum = unlockAll ? 0 : Math.Max(0, platinum);
             i.GoldPrices = unlockAll || goldPrices;
             if (!unlockAll && goldPerPlatinum > 0) i.GoldPerPlatinum = goldPerPlatinum;
+            if (!unlockAll && goldPerSack > 0) i.GoldPerSiegeSack = goldPerSack;
+            if (!unlockAll && goldPerCosmic > 0) i.GoldPerCosmicCoin = goldPerCosmic;
             if (!unlockAll && goldDivisor > 0) i.GoldDivisor = goldDivisor;
             i.AllGems = allGems;
             i.Crafting = !unlockAll && crafting;
@@ -236,6 +264,8 @@ namespace HexRevival
                     else if (k == "cosmic") int.TryParse(v, out i.CosmicCoins);
                     else if (k == "goldprices") i.GoldPrices = v != "0";
                     else if (k == "goldperplat") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerPlatinum = n; }
+                    else if (k == "goldpersack") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerSiegeSack = n; }
+                    else if (k == "goldpercosmic") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldPerCosmicCoin = n; }
                     else if (k == "golddivisor") { int n; if (int.TryParse(v, out n) && n > 0) i.GoldDivisor = n; }
                     else if (k == "allgems") i.AllGems = v == "1";
                     else if (k == "crafting") i.Crafting = v == "1";
@@ -268,6 +298,8 @@ namespace HexRevival
                     "cosmic=" + i.CosmicCoins,
                     "goldprices=" + (i.GoldPrices ? "1" : "0"),
                     "goldperplat=" + i.GoldPerPlatinum,
+                    "goldpersack=" + i.GoldPerSiegeSack,
+                    "goldpercosmic=" + i.GoldPerCosmicCoin,
                     "golddivisor=" + i.GoldDivisor,
                     "allgems=" + (i.AllGems ? "1" : "0"),
                     "crafting=" + (i.Crafting ? "1" : "0"),

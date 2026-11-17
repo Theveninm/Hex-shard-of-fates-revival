@@ -13,7 +13,9 @@ namespace HexRevival
     /// </summary>
     public class AccountMenu : MonoBehaviour
     {
-        private enum Screen { List, Create, Online }
+        private enum Screen { List, Create, Online, Delete }
+        /// <summary>The account the Delete screen asks about.</summary>
+        private Saves.Info m_ToDelete;
 
         private Screen m_Screen = Screen.List;
         private List<Saves.Info> m_Saves;
@@ -28,6 +30,7 @@ namespace HexRevival
         private bool m_CheapPacks;
         private string m_StartGold = "0", m_StartPlatinum = "0";
         private string m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(), m_GoldDivisor = "1";
+        private string m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(), m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
         private Vector2 m_CreateScroll;
         private float m_CreateHeight = 1000;
         private string m_Error;
@@ -56,10 +59,39 @@ namespace HexRevival
                 return "logging in new account " + name;
             }
             else if (sub == "logout") { Singleton<Main>.Instance.RequestLogOut(); return "logging out"; }
+            else if (sub == "delete" && parts.Length > 2)
+            {
+                // Dev: "profile delete <account> [confirm]" = the Delete screen for that account; "confirm" deletes it as its button does.
+                bool confirm = parts[parts.Length - 1] == "confirm";
+                string name = string.Join(" ", parts, 2, parts.Length - (confirm ? 3 : 2));
+                Saves.Info target = Saves.List().Find(x => x.Name == name);
+                if (target == null) return "no account " + name;
+                if (confirm) { string to = Saves.Delete(target); s_Instance.m_Saves = Saves.List(); s_Instance.m_Screen = Screen.List; return to != null ? "deleted, moved to " + to : "not deleted"; }
+                s_Instance.m_ToDelete = target;
+                s_Instance.m_Screen = Screen.Delete;
+            }
+            else if (sub == "create")
+            {
+                // Dev: "profile create [nogold] [down]" = the new account screen, with "Pay everything in gold" off and
+                // scrolled down if asked (on the login screen, for screenshots of the form).
+                s_Instance.ResetCreate();
+                s_Instance.m_GoldPrices = System.Array.IndexOf(parts, "nogold") < 0;
+                if (System.Array.IndexOf(parts, "down") >= 0) s_Instance.m_CreateScroll = new Vector2(0, 10000);
+            }
             else s_Instance.m_Screen = Screen.List;
             OnlineProfile op = OnlineProfile.Current;
             return s_Instance.m_Screen + " - " + op.Name + " " + op.PlayerId;
         }
+        /// <summary>The new account screen, with its default choices.</summary>
+        private void ResetCreate()
+        {
+            m_Screen = Screen.Create;
+            m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
+            m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false; m_ExtraStore = false; m_CheapPacks = false;
+            m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
+            m_GoldPerSack = Store.DefaultGoldPerPrize.ToString(); m_GoldPerCosmic = Store.DefaultGoldPerPrize.ToString();
+        }
+
         private bool m_LoggingIn;
         private float m_LoginRequestedAt;
         private readonly List<Behaviour> m_DisabledUi = new List<Behaviour>();
@@ -135,7 +167,7 @@ namespace HexRevival
                 GUI.DrawTexture(win, GameSkin.Solid(new Color(0.06f, 0.07f, 0.1f, 0.97f)));
             Rect title = new Rect(win.center.x - 240 * S, win.y - 22 * S, 480 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
-            string key = m_Screen == Screen.List ? "play_title" : m_Screen == Screen.Create ? "new_account_title" : "online_mode";
+            string key = m_Screen == Screen.List ? "play_title" : m_Screen == Screen.Create ? "new_account_title" : m_Screen == Screen.Delete ? "delete_account_title" : "online_mode";
             GameSkin.Label(title, Loc.Get(key), GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter));
 
             Rect inner = new Rect(win.x + 40 * S, win.y + 64 * S, win.width - 80 * S, win.height - 100 * S);
@@ -150,6 +182,7 @@ namespace HexRevival
                     break;
                 }
                 case Screen.Create: DrawCreate(inner); break;
+                case Screen.Delete: DrawDelete(inner); break;
                 default: DrawOnline(inner); break;
             }
         }
@@ -184,10 +217,7 @@ namespace HexRevival
             GameSkin.Label(new Rect(nr.x + 62 * S, nr.y, nr.width - 70 * S, newH), Loc.Get("new_account"), GameSkin.Style("title", 18, over ? Color.white : GameSkin.Gold));
             if (GUI.Button(nr, GUIContent.none, GUIStyle.none))
             {
-                m_Screen = Screen.Create;
-                m_Name = ""; m_Unlock = false; m_Tutorial = true; m_Error = null;
-                m_GoldPrices = true; m_StartGold = "0"; m_StartPlatinum = "0"; m_AllGems = false; m_Crafting = false; m_ExtraStore = false; m_CheapPacks = false;
-                m_GoldPerPlatinum = Store.DefaultGoldPerPlatinum.ToString(); m_GoldDivisor = "1"; m_CreateScroll = Vector2.zero;
+                ResetCreate();
             }
             y += newH + gap;
 
@@ -196,7 +226,24 @@ namespace HexRevival
                 Saves.Info s = m_Saves[i];
                 Rect r = new Rect(0, y + i * (rowH + gap), view.width, rowH);
                 string detail = Loc.Get("last_played", s.LastPlayed.ToString("g", System.Globalization.CultureInfo.CurrentCulture));
-                if (GameSkin.Row(r, s.Name, detail, false)) Play(s);
+                // Delete, at the row's right end (user 2026-11-17). Drawn over the row, whose button takes the click (it
+                // comes first): a click there is the Delete button's.
+                // The game's bin icon (the deck editor's Delete Deck, user 2026-11-17: smaller than a labelled button); the
+                // labelled red button if the atlas is not loaded.
+                float dw = 38 * S, dh = 38 * S;
+                Rect dr = new Rect(r.xMax - dw - 14 * S, r.y + (r.height - dh) / 2f, dw, dh);
+                bool onDelete = dr.Contains(Event.current.mousePosition);
+                bool clicked = GameSkin.Row(r, s.Name, detail, false, null, dw + 24 * S);
+                bool down = onDelete && Input.GetMouseButton(0);
+                if (!GameSkin.Sprite(dr, "A_Icons", down ? "Icon_DeleteDeck_Click" : onDelete ? "Icon_DeleteDeck_Hover" : "Icon_DeleteDeck", 1f, false))
+                {
+                    dw = 120 * S;
+                    dr = new Rect(r.xMax - dw - 12 * S, dr.y, dw, dh);
+                    onDelete = dr.Contains(Event.current.mousePosition);
+                    GameSkin.RedButton(dr, Loc.Get("delete_account"), 16);
+                }
+                if (clicked && onDelete) { m_ToDelete = s; m_Screen = Screen.Delete; }
+                else if (clicked) Play(s);
             }
             GUI.EndScrollView();
             if (m_Saves.Count == 0)
@@ -214,6 +261,27 @@ namespace HexRevival
             {
                 m_Screen = Screen.List;
                 Play(Saves.Online);
+            }
+        }
+
+        /// <summary>Asks before deleting an account: Cancel, or Delete (the folder goes to HexRevivalSaves\_deleted).</summary>
+        private void DrawDelete(Rect area)
+        {
+            float S = GameSkin.Scale;
+            if (m_ToDelete == null) { m_Screen = Screen.List; return; }
+            GameSkin.Label(new Rect(area.x, area.y + 40 * S, area.width, 160 * S), Loc.Get("delete_account_confirm", m_ToDelete.Name),
+                GameSkin.Style("body", 18, GameSkin.Text, TextAnchor.UpperCenter, true));
+            GameSkin.Label(new Rect(area.x, area.y + 210 * S, area.width, 120 * S), Loc.Get("delete_account_where"),
+                GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperCenter, true));
+            float by = area.yMax - 56 * S;
+            if (GameSkin.GoldButton(new Rect(area.x, by, 200 * S, 52 * S), Loc.Get("cancel"))) { m_ToDelete = null; m_Screen = Screen.List; return; }
+            if (GameSkin.RedButton(new Rect(area.xMax - 240 * S, by, 240 * S, 52 * S), Loc.Get("delete_account_do")))
+            {
+                try { Saves.Delete(m_ToDelete); }
+                catch (System.Exception e) { Debug.LogError("[HexRevival] [Saves] delete " + m_ToDelete.Name + ": " + e); }
+                m_ToDelete = null;
+                m_Saves = Saves.List();
+                m_Screen = Screen.List;
             }
         }
 
@@ -255,8 +323,9 @@ namespace HexRevival
             // Progression accounts only (an "unlock everything" account has its gold and gold prices, and no crafting).
             if (!m_Unlock)
             {
-                m_GoldPrices = Checkbox(new Rect(0, y, w, 66 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
-                y += 78 * S;
+                // A longer text than the other options' (it names the three currencies): more room.
+                m_GoldPrices = Checkbox(new Rect(0, y, w, 90 * S), m_GoldPrices, Loc.Get("opt_goldprices"), Loc.Get("opt_goldprices_desc", Factor(m_GoldPerPlatinum) > 0 ? Factor(m_GoldPerPlatinum) : Store.DefaultGoldPerPlatinum));
+                y += 102 * S;
                 m_Crafting = Checkbox(new Rect(0, y, w, 66 * S), m_Crafting, Loc.Get("opt_crafting"), Loc.Get("opt_crafting_desc"));
                 y += 78 * S;
                 m_ExtraStore = Checkbox(new Rect(0, y, w, 66 * S), m_ExtraStore, Loc.Get("opt_extrastore"), Loc.Get("opt_extrastore_desc"));
@@ -267,15 +336,27 @@ namespace HexRevival
                 m_StartGold = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("start_gold"), m_StartGold, "hexrevival_start_gold");
                 m_StartPlatinum = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("start_platinum"), m_StartPlatinum, "hexrevival_start_platinum");
                 y += 76 * S;
-                // The prices (Criesener, 2026-11-01): what a platinum is worth in gold, and the divisor of every gold price.
-                m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
-                m_GoldDivisor = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
+                // The prices (Criesener, 2026-11-01): what a platinum, a Siege Sack and a Cosmic Coin are worth in gold (only
+                // with prices in gold, user 2026-11-17), and the divisor of every gold price.
+                if (m_GoldPrices)
+                {
+                    m_GoldPerPlatinum = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldperplat"), m_GoldPerPlatinum, "hexrevival_gold_per_plat");
+                    m_GoldPerSack = NumberField(new Rect(half + 20 * S, y, half, 70 * S), Loc.Get("opt_goldpersack"), m_GoldPerSack, "hexrevival_gold_per_sack");
+                    y += 72 * S;
+                    m_GoldPerCosmic = NumberField(new Rect(0, y, half, 70 * S), Loc.Get("opt_goldpercosmic"), m_GoldPerCosmic, "hexrevival_gold_per_cosmic");
+                }
+                m_GoldDivisor = NumberField(new Rect(m_GoldPrices ? half + 20 * S : 0, y, half, 70 * S), Loc.Get("opt_golddivisor"), m_GoldDivisor, "hexrevival_gold_divisor");
                 y += 72 * S;
                 // What these settings mean, live: a booster and a Common chest spin.
                 GUI.Label(new Rect(0, y, w, 24 * S), Store.PriceExample(m_GoldPrices, Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor)), GameSkin.Style("body", 14, GameSkin.Gold));
                 y += 26 * S;
-                GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperplat_desc") + " " + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                GUI.Label(new Rect(0, y, w, 48 * S), (m_GoldPrices ? Loc.Get("opt_goldperplat_desc") + " " : "") + Loc.Get("opt_golddivisor_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
                 y += 52 * S;
+                if (m_GoldPrices)
+                {
+                    GUI.Label(new Rect(0, y, w, 48 * S), Loc.Get("opt_goldperprize_desc"), GameSkin.Style("body", 13, GameSkin.Muted, TextAnchor.UpperLeft, true));
+                    y += 52 * S;
+                }
             }
             m_CreateHeight = y;
             GUI.EndScrollView();
@@ -287,7 +368,7 @@ namespace HexRevival
                 string name = (m_Name ?? "").Trim();
                 m_Error = Saves.CheckName(name);
                 if (m_Error == null) Play(Saves.Create(name, m_Unlock, m_Tutorial, m_GoldPrices, Amount(m_StartGold), Amount(m_StartPlatinum), m_AllGems, m_Crafting,
-                    Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor), m_ExtraStore, m_CheapPacks));
+                    Factor(m_GoldPerPlatinum), Factor(m_GoldDivisor), m_ExtraStore, m_CheapPacks, Factor(m_GoldPerSack), Factor(m_GoldPerCosmic)));
             }
         }
 

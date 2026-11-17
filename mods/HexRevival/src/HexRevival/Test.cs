@@ -1912,6 +1912,17 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "atlasfind":   // dev: "atlasfind <text>" = the sprites of the loaded NGUI atlases whose name holds the text (atlas: sprite WxH)
+                    {
+                        string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
+                        List<string> found = new List<string>();
+                        foreach (UIAtlas a in Resources.FindObjectsOfTypeAll<UIAtlas>())
+                            if (a != null && a.spriteList != null)
+                                foreach (UISpriteData d in a.spriteList)
+                                    if (d.name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) found.Add(a.name + ": " + d.name + " " + d.width + "x" + d.height);
+                        found.Sort();
+                        return found.Count + " sprite(s)\n" + string.Join("\n", System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(found)));
+                    }
                 case "sprites":   // dev: "sprites <MonoBehaviour type>" = the NGUI sprites and labels under every object of that type (inactive too)
                     {
                         Type t = parts.Length > 1 ? typeof(UIBattle).Assembly.GetType(parts[1]) : null;

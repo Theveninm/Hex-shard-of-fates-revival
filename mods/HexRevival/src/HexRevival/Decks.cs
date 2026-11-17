@@ -199,7 +199,7 @@ namespace HexRevival
         /// </summary>
         public static int MostInOneDeck(ResourceId template)
         {
-            int most = 0;
+            int most = DeckTemplates.MostInOneTemplate(template);   // mercenary and boat decks too
             foreach (StoredDeck d in s_Decks.Values)
             {
                 if (d.Common || d.Foreign || IsForAI(d)) continue;
@@ -209,6 +209,20 @@ namespace HexRevival
                 if (n > most) most = n;
             }
             return most;
+        }
+
+        /// <summary>
+        /// Whether one of the account's own decks or a mercenary's deck uses the equipment: breaking equipment down never
+        /// takes its last copy then.
+        /// </summary>
+        public static bool UsesEquipment(ResourceId item)
+        {
+            foreach (StoredDeck d in s_Decks.Values)
+            {
+                if (d.Common || d.Foreign || IsForAI(d)) continue;
+                if (d.Equipment.Contains(item)) return true;
+            }
+            return DeckTemplates.UsesEquipment(item);
         }
 
         /// <summary>Deck of a new campaign champion, filled with a starter deck (or empty).</summary>

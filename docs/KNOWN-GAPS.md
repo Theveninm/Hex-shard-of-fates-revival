@@ -43,7 +43,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • Chest rarity from boosters: uncommon 27%, rare 10%, legendary 4%, from about 150 packs opened on video (small sample)
 • How many items legendary / primal chests hold
 • PvE packs' exact contents; special packs' contents (race packs, Kismet's Draft, GenCon 2016)
-• Store gold prices (boosters, special packs, stardust, Kismet packs, full sets)
+• Store gold prices (boosters, special packs, stardust, Kismet packs, full sets, and the Prize Exchange in gold: 10 gold per Siege Sack or Cosmic Coin by default)
 • Account level rewards: the "fixed commons", which stardust and how much, which alternate art and at which level, which sleeve
 • Holiday and sleeve season dates are guessed
 
