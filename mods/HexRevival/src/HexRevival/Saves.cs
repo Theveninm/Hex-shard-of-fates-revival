@@ -126,12 +126,33 @@ namespace HexRevival
             return res;
         }
 
+        /// <summary>The folder (in HexRevivalSaves) deleted accounts are moved to.</summary>
+        public const string DeletedDir = "_deleted";
+
+        /// <summary>
+        /// Deletes an offline account (user 2026-11-17): its folder leaves the list, moved to HexRevivalSaves\_deleted
+        /// under its name and the date, from where it can still be brought back by hand. Returns where it went (null: not done).
+        /// </summary>
+        public static string Delete(Info i)
+        {
+            if (i == null || i.Folder != null || string.IsNullOrEmpty(i.Name) || i.Name == DeletedDir) return null;   // not the online account
+            string from = Path.Combine(RootDir, i.Name);
+            if (!Directory.Exists(from)) return null;
+            string bin = Path.Combine(RootDir, DeletedDir);
+            Directory.CreateDirectory(bin);
+            string to = Path.Combine(bin, i.Name + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss"));
+            Directory.Move(from, to);
+            if (s_Current != null && s_Current.Folder == null && s_Current.Name == i.Name) s_Current = null;
+            UnityEngine.Debug.Log("[HexRevival] [Saves] account " + i.Name + " deleted (moved to " + to + ")");
+            return to;
+        }
+
         /// <summary>Why a name cannot be used (null if it can).</summary>
         public static string CheckName(string name)
         {
             if (string.IsNullOrEmpty(name) || name.Trim().Length == 0) return "account_name_empty";
             if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Trim() != name || name.Length > 32) return "account_name_invalid";
-            if (Directory.Exists(Path.Combine(RootDir, name))) return "account_name_taken";
+            if (Directory.Exists(Path.Combine(RootDir, name)) || name == DeletedDir) return "account_name_taken";
             return null;
         }
 

@@ -13,7 +13,9 @@ namespace HexRevival
     /// </summary>
     public class AccountMenu : MonoBehaviour
     {
-        private enum Screen { List, Create, Online }
+        private enum Screen { List, Create, Online, Delete }
+        /// <summary>The account the Delete screen asks about.</summary>
+        private Saves.Info m_ToDelete;
 
         private Screen m_Screen = Screen.List;
         private List<Saves.Info> m_Saves;
@@ -57,6 +59,17 @@ namespace HexRevival
                 return "logging in new account " + name;
             }
             else if (sub == "logout") { Singleton<Main>.Instance.RequestLogOut(); return "logging out"; }
+            else if (sub == "delete" && parts.Length > 2)
+            {
+                // Dev: "profile delete <account> [confirm]" = the Delete screen for that account; "confirm" deletes it as its button does.
+                bool confirm = parts[parts.Length - 1] == "confirm";
+                string name = string.Join(" ", parts, 2, parts.Length - (confirm ? 3 : 2));
+                Saves.Info target = Saves.List().Find(x => x.Name == name);
+                if (target == null) return "no account " + name;
+                if (confirm) { string to = Saves.Delete(target); s_Instance.m_Saves = Saves.List(); s_Instance.m_Screen = Screen.List; return to != null ? "deleted, moved to " + to : "not deleted"; }
+                s_Instance.m_ToDelete = target;
+                s_Instance.m_Screen = Screen.Delete;
+            }
             else if (sub == "create")
             {
                 // Dev: "profile create [nogold] [down]" = the new account screen, with "Pay everything in gold" off and
@@ -154,7 +167,7 @@ namespace HexRevival
                 GUI.DrawTexture(win, GameSkin.Solid(new Color(0.06f, 0.07f, 0.1f, 0.97f)));
             Rect title = new Rect(win.center.x - 240 * S, win.y - 22 * S, 480 * S, 64 * S);
             GameSkin.Sprite(title, "A_Frames", "Frame_Title_Bar");
-            string key = m_Screen == Screen.List ? "play_title" : m_Screen == Screen.Create ? "new_account_title" : "online_mode";
+            string key = m_Screen == Screen.List ? "play_title" : m_Screen == Screen.Create ? "new_account_title" : m_Screen == Screen.Delete ? "delete_account_title" : "online_mode";
             GameSkin.Label(title, Loc.Get(key), GameSkin.Style("title", 28, GameSkin.Gold, TextAnchor.MiddleCenter));
 
             Rect inner = new Rect(win.x + 40 * S, win.y + 64 * S, win.width - 80 * S, win.height - 100 * S);
@@ -169,6 +182,7 @@ namespace HexRevival
                     break;
                 }
                 case Screen.Create: DrawCreate(inner); break;
+                case Screen.Delete: DrawDelete(inner); break;
                 default: DrawOnline(inner); break;
             }
         }
@@ -212,7 +226,15 @@ namespace HexRevival
                 Saves.Info s = m_Saves[i];
                 Rect r = new Rect(0, y + i * (rowH + gap), view.width, rowH);
                 string detail = Loc.Get("last_played", s.LastPlayed.ToString("g", System.Globalization.CultureInfo.CurrentCulture));
-                if (GameSkin.Row(r, s.Name, detail, false)) Play(s);
+                // Delete, at the row's right end (user 2026-11-17). Drawn over the row, whose button takes the click (it
+                // comes first): a click there is the Delete button's.
+                float dw = 120 * S, dh = 40 * S;
+                Rect dr = new Rect(r.xMax - dw - 12 * S, r.y + (r.height - dh) / 2f, dw, dh);
+                bool onDelete = dr.Contains(Event.current.mousePosition);
+                bool clicked = GameSkin.Row(r, s.Name, detail, false, null, dw + 20 * S);
+                GameSkin.RedButton(dr, Loc.Get("delete_account"), 16);
+                if (clicked && onDelete) { m_ToDelete = s; m_Screen = Screen.Delete; }
+                else if (clicked) Play(s);
             }
             GUI.EndScrollView();
             if (m_Saves.Count == 0)
@@ -230,6 +252,27 @@ namespace HexRevival
             {
                 m_Screen = Screen.List;
                 Play(Saves.Online);
+            }
+        }
+
+        /// <summary>Asks before deleting an account: Cancel, or Delete (the folder goes to HexRevivalSaves\_deleted).</summary>
+        private void DrawDelete(Rect area)
+        {
+            float S = GameSkin.Scale;
+            if (m_ToDelete == null) { m_Screen = Screen.List; return; }
+            GameSkin.Label(new Rect(area.x, area.y + 40 * S, area.width, 160 * S), Loc.Get("delete_account_confirm", m_ToDelete.Name),
+                GameSkin.Style("body", 18, GameSkin.Text, TextAnchor.UpperCenter, true));
+            GameSkin.Label(new Rect(area.x, area.y + 210 * S, area.width, 120 * S), Loc.Get("delete_account_where"),
+                GameSkin.Style("body", 14, GameSkin.Muted, TextAnchor.UpperCenter, true));
+            float by = area.yMax - 56 * S;
+            if (GameSkin.GoldButton(new Rect(area.x, by, 200 * S, 52 * S), Loc.Get("cancel"))) { m_ToDelete = null; m_Screen = Screen.List; return; }
+            if (GameSkin.RedButton(new Rect(area.xMax - 240 * S, by, 240 * S, 52 * S), Loc.Get("delete_account_do")))
+            {
+                try { Saves.Delete(m_ToDelete); }
+                catch (System.Exception e) { Debug.LogError("[HexRevival] [Saves] delete " + m_ToDelete.Name + ": " + e); }
+                m_ToDelete = null;
+                m_Saves = Saves.List();
+                m_Screen = Screen.List;
             }
         }
 
