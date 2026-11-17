@@ -244,7 +244,7 @@ namespace HexRevival
                 int rest = Crafting.Breakable(t.m_Id), left = Collection.Count(t.m_Id) - rest;
                 if (rest > 0)
                 {
-                    UISystem.DisplayConfirm(Loc.Get("craft_confirm_break_last", rest, t.m_Name.Trim(), Crafting.Yield(t), left), title, null, () => BreakOne(t, rest));
+                    UISystem.DisplayConfirm(Loc.Get(left > 0 ? "craft_confirm_break_last" : "craft_confirm_break_none", rest, t.m_Name.Trim(), Crafting.Yield(t), left), title, null, () => BreakOne(t, rest));
                     return;
                 }
             }
