@@ -20,6 +20,8 @@ namespace HexRevival
     {
         /// <summary>Last card signature sent, per (card, recipient).</summary>
         private static readonly Dictionary<string, string> s_CardSig = new Dictionary<string, string>();
+        /// <summary>The template each viewer was last told a transformed card has (see TellTransform).</summary>
+        private static readonly Dictionary<string, ResourceId> s_TransformSent = new Dictionary<string, ResourceId>();
         /// <summary>Cards revealed to a player (SendRevealedCards): key (card|player) -> zone at reveal time.</summary>
         private static readonly Dictionary<string, ECardCollections> s_Revealed = new Dictionary<string, ECardCollections>();
         /// <summary>Phase count at a deck reveal (key card|player): the AI, which has no window to close, forgets it at the next phase.</summary>
@@ -30,6 +32,7 @@ namespace HexRevival
         public static void ResetCache()
         {
             s_CardSig.Clear();
+            s_TransformSent.Clear();
             s_Revealed.Clear();
             s_RevealPhase.Clear();
             s_PlayerSig.Clear();
@@ -1231,10 +1234,33 @@ namespace HexRevival
                     if (!visible)
                         e.Nulling = true;
                     Dispatch(self, viewer, e);
+                    if (visible) TellTransform(self, card, viewer, key);
                     sent = true;
                 }
             }
             return sent;
+        }
+
+        /// <summary>
+        /// The client changes a card's name and picture only on a CardTransformed event (UIBattle.OnCardTransformed;
+        /// CardUpdated changes its type, text and numbers). A card that transforms while the viewer cannot see it (an
+        /// Incantation of Savagery in the opponent's deck or hand becoming a Feral Beast) kept its old name and picture
+        /// once played: a Feral Beast drawn as an Incantation (Talekith, 2026-11-18). So when a transformed card is
+        /// visible, its viewer is told its template once (the client does nothing if its view already has it).
+        /// </summary>
+        private static void TellTransform(StandaloneSession self, Card card, Player viewer, string key)
+        {
+            if (card.m_CardTemplate == null) return;
+            ResourceId now = card.m_CardTemplate.m_Id, told;
+            bool known = s_TransformSent.TryGetValue(key, out told);
+            if (known ? told == now : now == card.m_OriginalCardTemplateId) return;   // never transformed, or already told
+            s_TransformSent[key] = now;
+            CardTransformedSessionEventArgs t = new CardTransformedSessionEventArgs();
+            t.SessionId = self.m_SessionId;
+            t.SessionCardId = card.m_SessionCardId;
+            t.CardTemplateId = now;
+            t.Gems = card.ActiveGem;
+            Dispatch(self, viewer, t);
         }
 
         private static PlayerUpdatedSessionEventArgs BuildPlayerUpdate(StandaloneSession self, Player player)
