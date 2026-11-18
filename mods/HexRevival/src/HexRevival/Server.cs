@@ -417,6 +417,24 @@ namespace HexRevival
                     finally { s_InSyncTurnPhase = false; }
                 }
 
+                // A choice asked of the AI about a card it was never sent: see SendSourceToAI. The request may go to
+                // everyone (player null): the AI is the player it names.
+                AbilityActivationDataRequiredSessionEventArgs req = args as AbilityActivationDataRequiredSessionEventArgs;
+                TriggeredAbilityActivationDataRequiredSessionEventArgs reqs = args as TriggeredAbilityActivationDataRequiredSessionEventArgs;
+                if (req != null || reqs != null)
+                {
+                    UID asked = req != null ? req.PlayerId : reqs.PlayerId;
+                    Player ai = player;
+                    if (ai == null) foreach (Player p in self.GetAllPlayers()) if (p != null && p.m_PlayerId == asked) { ai = p; break; }
+                    if (ai != null && IsAIId(ai.m_PlayerId))
+                    {
+                        if (req != null) SendSourceToAI(self, ai, req.SourceCardId, req.AbilityInstanceId);
+                        else if (reqs.SourceCardIds != null)
+                            for (int i = 0; i < reqs.SourceCardIds.Count; i++)
+                                SendSourceToAI(self, ai, reqs.SourceCardIds[i], reqs.AbilityInstanceIds != null && i < reqs.AbilityInstanceIds.Count ? reqs.AbilityInstanceIds[i] : -1);
+                    }
+                }
+
                 if (args is GreenLightSessionEventArgs)
                 {
                     GreenLightSessionEventArgs gl = (GreenLightSessionEventArgs)args;
@@ -1239,6 +1257,29 @@ namespace HexRevival
                 }
             }
             return sent;
+        }
+
+        /// <summary>
+        /// The AI answers a choice by looking up the card whose ability asks it (AITactical.TriggeredAbilityDataRequested,
+        /// AIFunctions.GetCard). Some sources are not among the session's cards (GetAllCards), so they were never sent: a
+        /// mercenary's party passive, Boingo's "At the start of the game, each opposing champion discards an artifact".
+        /// The lookup threw (KeyNotFoundException), the AI never answered, and the game stayed at the first Ready step
+        /// (Stigro and Tanaka, 2026-11-18, Great Machine Graveyard and Dusty Robots). The source is sent to the AI first.
+        /// </summary>
+        private static void SendSourceToAI(StandaloneSession self, Player ai, SessionCardId source, long instanceId)
+        {
+            if (!source.IsValid() || s_CardSig.ContainsKey(source + "|" + ai.m_PlayerId)) return;
+            Card card = null;
+            foreach (Card c in self.GetAllCards()) if (c != null && c.m_SessionCardId == source) { card = c; break; }
+            if (card == null && instanceId >= 0)
+            {
+                Game.Shared.Mechanics.Abilities.AbilityInstance instance = self.AbilityManager.GetAbilityInstance(instanceId);
+                if (instance != null) card = instance.SourceCard;
+            }
+            if (card == null || card.m_SessionCardId != source) { Debug.LogWarning("[HexRevival] [AI] choice source " + source + " not found"); return; }
+            s_CardSig[source + "|" + ai.m_PlayerId] = "S|";   // sent once; not a state of the board, BroadcastState never sees it
+            Debug.Log("[HexRevival] [AI] choice source sent to the AI: " + (card.m_CardTemplate != null ? card.m_CardTemplate.m_Name : "?") + " " + source);
+            Dispatch(self, ai, BuildCardUpdate(self, card, ai));
         }
 
         /// <summary>
