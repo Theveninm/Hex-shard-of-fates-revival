@@ -73,6 +73,16 @@ namespace HexRevival
                     Server.MarkDirty();
                     return "put " + t.m_Name + " in play for " + p.m_PlayerId;
                 }
+                case "top":
+                {
+                    // dev: "cheat top <j|ai> <card>" = a new copy of that card on top of the player's deck (drawn next)
+                    CardTemplate t = FindCard(string.Join(" ", parts, 3, parts.Length - 3));
+                    if (t == null)
+                        return "card not found";
+                    ss.CreateEncounterCardsInZone(p, t.m_Id, 1, ECardCollections.Deck, ECardLocations.Top);
+                    Server.MarkDirty();
+                    return "put " + t.m_Name + " on top of " + p.m_PlayerId + "'s deck";
+                }
                 case "cast":
                 {
                     // dev: "cheat cast <j|ai> <card>" = that card played for free (EncounterModAddCard, CastSpells), as the Arena challenges do

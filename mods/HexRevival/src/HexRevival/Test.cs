@@ -1912,6 +1912,28 @@ namespace HexRevival
                         }
                         return sb.ToString();
                     }
+                case "examine":   // dev: "examine <card name> [n]" = the battle's card examiner (right-click zoom) on the n-th card view of that name (current template)
+                    {
+                        int nth = 0;
+                        int last = parts.Length - 1;
+                        if (last > 1 && int.TryParse(parts[last], out nth)) last--; else nth = 0;
+                        string q = string.Join(" ", parts, 1, last);
+                        List<string> seen = new List<string>();
+                        int k = 0;
+                        foreach (GoCardView v in UnityEngine.Object.FindObjectsOfType<GoCardView>())
+                        {
+                            if (v == null || v.Card == null) continue;
+                            CardTemplate t = Singleton<TemplateManager>.Instance.GetCardTemplate(v.Card.TemplateId);
+                            string name = t != null ? t.m_Name : "?";
+                            seen.Add(name + " [" + v.name + " " + (v.gameObject.activeInHierarchy ? "on" : "off") + " " + v.transform.position + " " + v.Card.Attack + "/" + v.Card.Defense + " " + v.Card.State + "] orig=" + v.Card.OrigTemplate);
+                            if (name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            if (k++ != nth) continue;
+                            GoCardExaminer ex = UnityEngine.Object.FindObjectOfType<GoCardExaminer>();
+                            if (ex == null) return "no examiner";
+                            return "examine " + name + " " + v.Card.CardId + ": " + ex.ExamineCard(v, false);
+                        }
+                        return "no view " + q + " among: " + string.Join("; ", seen.ToArray());
+                    }
                 case "atlasfind":   // dev: "atlasfind <text>" = the sprites of the loaded NGUI atlases whose name holds the text (atlas: sprite WxH)
                     {
                         string q = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : "";
