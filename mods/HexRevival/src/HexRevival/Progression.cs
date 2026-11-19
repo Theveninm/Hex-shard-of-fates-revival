@@ -903,8 +903,20 @@ namespace HexRevival
         public const int PveWinXp = 50;
         /// <summary>The first 1200 XP of each daily period count double. Src.Wiki2019.</summary>
         private const int BonusXp = 1200;
-        /// <summary>Daily XP cap: 4000, 8000 from level 20. Src.Wiki2019.</summary>
-        private static int DailyCap { get { return Saves.Current.AccountLevel >= 20 ? 8000 : 4000; } }
+        /// <summary>
+        /// Daily XP cap: 4000, 8000 from level 20. Src.Wiki2019. Only with the account's "daily account XP limit" option
+        /// (Saves.Info.DailyXpLimit, off by default since 1.2.35): otherwise none.
+        /// </summary>
+        private static int DailyCap
+        {
+            get
+            {
+                if (!Saves.Current.DailyXpLimit) return NoCap;
+                return Saves.Current.AccountLevel >= 20 ? 8000 : 4000;
+            }
+        }
+        /// <summary>The "cap" without the limit: more than any period can give.</summary>
+        private const int NoCap = int.MaxValue / 2;
         /// <summary>The daily period resets 20 hours after its first win. Src.Wiki2019.</summary>
         private const int PeriodHours = 20;
         internal const int MaxAccountLevel = 100;
@@ -1090,6 +1102,21 @@ namespace HexRevival
                 SetProperty(profile, "XPGainedInPeriod", s.XpInPeriod);
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Progression] account bar: " + e.Message); }
+        }
+
+        /// <summary>
+        /// After the account panel's Awake: without the daily limit its "Available XP before Cap" would read NoCap (about a
+        /// billion), so that line is hidden.
+        /// </summary>
+        public static void AccountPanelOpened(MonoBehaviour panel)
+        {
+            try
+            {
+                if (panel == null || Saves.Current == null || Saves.Current.DailyXpLimit) return;
+                foreach (Transform t in panel.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "XP_Cap" && t.parent != null && t.parent.name == "Frame_Stats") { t.gameObject.SetActive(false); return; }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Progression] account panel: " + e.Message); }
         }
 
         private static void SetProperty(object target, string name, object value)

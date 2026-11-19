@@ -67,6 +67,8 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.CheapPacks, v => { if (Saves.Current != null) { Saves.Current.CheapPacks = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_PrimalBonus", "opt_primalbonus", offline && !Saves.Current.UnlockAll,
                 () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
+            EnsureRow(row, grid, "HexRevival_DailyXpLimit", "opt_xplimit", offline,
+                () => Saves.Current != null && Saves.Current.DailyXpLimit, v => { if (Saves.Current != null) { Saves.Current.DailyXpLimit = v; Saves.SaveCurrent(); Progression.RefreshAccountUi(); } });
             // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do
             // nothing there and are not shown; its profile information says so, under the user name (user 2026-11-03:
             // the tab looked incomplete). "Every gem in the campaign" stays: it is about which gems the campaign's deck
@@ -155,6 +157,7 @@ namespace HexRevival
             private float m_Y, m_Overflow, m_Top, m_Bottom, m_Left, m_Right;   // the tab's area (tab buttons to button bar), panel-parent units
             private Vector3 m_LaidFor;
             private int m_LaidRows = -1;
+            private float m_LaidLowest = float.NaN;
             private bool m_Warned;
             private const float Step = 60f;      // per wheel notch (a row is about 50)
             private const float BarWidth = 18f;  // the scroll bar, at the area's right edge
@@ -174,8 +177,12 @@ namespace HexRevival
                 {
                     if (Grid == null || Panel == null) return;
                     int rows = 0;
-                    foreach (Transform t in Grid) if (t.gameObject.activeSelf) rows++;
-                    if (rows != m_LaidRows || transform.parent.position != m_LaidFor) Layout(rows);
+                    float lowest = 0f;
+                    foreach (Transform t in Grid) if (t.gameObject.activeSelf) { rows++; lowest = Mathf.Min(lowest, t.localPosition.y); }
+                    // Laid out again when the rows move too: the grid places them after they are shown, and the area
+                    // measured before stopped at the Crafting row (1.2.34, tested 2026-11-19), so the rows under it
+                    // (Additional items in the store, Cheaper campaign packs...) could not be scrolled to.
+                    if (rows != m_LaidRows || lowest != m_LaidLowest || transform.parent.position != m_LaidFor) { m_LaidLowest = lowest; Layout(rows); }
                     if (m_Overflow > 0f && Hovered())
                     {
                         // Input.mouseScrollDelta: the game's input settings may have no "Mouse ScrollWheel" axis.
