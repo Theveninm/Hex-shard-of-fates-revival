@@ -685,7 +685,8 @@ rewarded with some new cards!", Game) with 3 cards: these cards are given, once 
 
 - Account XP per win: 50 for PvE (campaign, Quick Match and practice against the AI).
 - The first 1,200 XP of each period count double; cap 4,000 XP per period (8,000 from level 20);
-  the period resets 20 hours after its first win.
+  the period resets 20 hours after its first win. Since 1.2.35 the cap applies only with the account's
+  "Daily account XP limit" option (Settings, Account tab), off by default (ZymmerOP: no reason for it offline).
 - XP per level: 1,000 (level 2) rising to 7,000 (level 41 and up); maximum level 100.
 - Rewards by level: levels 2-40 as listed by the wiki, then the 10-level cycle the game used.
   The XP bar at the bottom left of the main menu shows level and daily XP. As in the game, a level's
