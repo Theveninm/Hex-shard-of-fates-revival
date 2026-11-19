@@ -81,6 +81,12 @@ namespace HexRevival
             /// Packs.Spin). On by default, also for the accounts made before it existed; changed in Settings, Account tab.
             /// </summary>
             public bool PrimalBonus = true;
+            /// <summary>
+            /// The original's daily account XP limit (Progression.DailyCap: 4,000, 8,000 from level 20). Off by default, also
+            /// for the accounts made before it was an option (ZymmerOP 2026-11-19: no reason to keep it offline); changed in
+            /// Settings, Account tab. The doubled first 1,200 XP of each period stay either way.
+            /// </summary>
+            public bool DailyXpLimit;
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -272,6 +278,7 @@ namespace HexRevival
                     else if (k == "extrastore") i.ExtraStore = v == "1";
                     else if (k == "cheappacks") i.CheapPacks = v == "1";
                     else if (k == "primalbonus") i.PrimalBonus = v != "0";
+                    else if (k == "xplimit") i.DailyXpLimit = v == "1";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -306,6 +313,7 @@ namespace HexRevival
                     "extrastore=" + (i.ExtraStore ? "1" : "0"),
                     "cheappacks=" + (i.CheapPacks ? "1" : "0"),
                     "primalbonus=" + (i.PrimalBonus ? "1" : "0"),
+                    "xplimit=" + (i.DailyXpLimit ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }
