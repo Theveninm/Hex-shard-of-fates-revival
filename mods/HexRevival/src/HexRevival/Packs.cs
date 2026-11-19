@@ -162,6 +162,9 @@ namespace HexRevival
         /// The one made from our chest_bits has neither, so the Pack Opening screen's Open Multiple found no chest like the
         /// one chosen and opened nothing (UIPackListViewModel.OnOpenMultiplePromoChests, InventoryTreasureChest.
         /// IsSameTemplate; Zymmer 2026-11-02 for the gift boxes, user 2026-11-03 for the Howling Plains packs).
+        /// The spin status stays ours (none): IsSameTemplate also compares it with the chest the screen lists, made from
+        /// our chest_bits, and CreateChest takes the item's, a paid spin for some packs (the Kraken's Cove Pack): Open
+        /// Multiple then found none of them and the rewards window came up empty (Zymmer 2026-11-19).
         /// </summary>
         private static void AsPromoChest(PlayerProfile profile, Chest c)
         {
@@ -169,7 +172,9 @@ namespace HexRevival
             {
                 InventoryTreasureChest box = Singleton<TemplateManager>.Instance.GetInventoryItem(c.Template) as InventoryTreasureChest;
                 if (box == null || profile == null) return;
-                profile.InventoryChests[c.Id] = Game.Shared.Chests.ChestUtils.CreateChest(box, new inventory_bits { Id = c.Id, TemplateID = c.Template });
+                InventoryTreasureChest made = Game.Shared.Chests.ChestUtils.CreateChest(box, new inventory_bits { Id = c.Id, TemplateID = c.Template });
+                made.TreasureSpinType = c.Spin;
+                profile.InventoryChests[c.Id] = made;
             }
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Packs] gift box " + c.Id + ": " + e.Message); }
         }
@@ -675,7 +680,7 @@ namespace HexRevival
             if (s_Chests.Count > 0) Debug.Log("[HexRevival] [Packs] " + s_Chests.Count + " chest(s) waiting");
         }
 
-        /// <summary>Dev: "packs [state] | give &lt;pack_name&gt; [n] | open | flip | gather".</summary>
+        /// <summary>Dev: "packs [state] | give &lt;pack_name&gt; [n] | camp &lt;loot_pack&gt; [n] | open | flip | gather | spin | sim".</summary>
         public static string Command(string[] parts)
         {
             Load();
@@ -720,26 +725,60 @@ namespace HexRevival
             }
             if (sub == "sim" && parts.Length > 2)
             {
-                // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare, chest rarities
+                // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare
+                // (as the game shows them: an epic has its base card's rarity), fused cards, alternate arts, chest rarities
                 CardSetTemplate set = Progression.FindSet(parts[2].Replace('_', ' '));
                 if (set == null) return "no set " + parts[2];
-                int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0;
+                int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0, fused = 0, badMix = 0;
+                Dictionary<string, int> alts = new Dictionary<string, int>();
                 Dictionary<ERarity, int> count = new Dictionary<ERarity, int>();
                 for (int k = 0; k < n; k++)
                 {
                     List<CardTemplate> cards = Progression.OpenPack(set);
                     total += cards.Count;
-                    if (!cards.Exists(t => t.m_CardRarity >= ERarity.Rare)) noRare++;
+                    if (!cards.Exists(t => t.CardRarity >= ERarity.Rare)) noRare++;
+                    fused += cards.FindAll(Progression.IsFused).Count;
+                    // a pack's cards as the game shows them: 12 commons, 4 uncommons, 1 rare or legendary (campaign sets aside)
+                    if (cards.FindAll(t => t.CardRarity == ERarity.Common).Count != 12 || cards.FindAll(t => t.CardRarity == ERarity.Uncommon).Count != 4) badMix++;
+                    foreach (CardTemplate t in cards) if (t.m_CardRarity == ERarity.Epic) { string rk = t.CardRarity.ToString(); int v; alts.TryGetValue(rk, out v); alts[rk] = v + 1; }
                     foreach (CardTemplate t in cards) { int v; count.TryGetValue(t.m_CardRarity, out v); count[t.m_CardRarity] = v + 1; }
                 }
                 List<string> outl = new List<string>();
                 foreach (KeyValuePair<ERarity, int> kv in count) outl.Add(kv.Key + "=" + kv.Value);
                 foreach (ERarity r in new[] { ERarity.Common, ERarity.Uncommon, ERarity.Rare, ERarity.Epic, ERarity.Legendary })
                     outl.Add("pool " + r + "=" + Progression.Pool(set, r).Count);
+                List<string> al = new List<string>();
+                foreach (KeyValuePair<string, int> kv in alts) al.Add(kv.Key + " " + kv.Value);
+                outl.Add("fused drawn=" + fused + ", packs not 12/4/1 as shown=" + badMix + ", alternate arts by shown rarity: " + string.Join(" ", al.ToArray()));
                 Dictionary<ETreasureChestType, int> chests = new Dictionary<ETreasureChestType, int>();
                 for (int k = 0; k < n; k++) { ETreasureChestType c = RollRarity(); int v; chests.TryGetValue(c, out v); chests[c] = v + 1; }
                 foreach (KeyValuePair<ETreasureChestType, int> kv in chests) outl.Add("chest " + kv.Key + "=" + kv.Value);
                 return set.m_Name + ": " + n + " packs, " + total + " cards, " + noRare + " without a rare; " + string.Join(", ", outl.ToArray());
+            }
+            if (sub == "client")
+            {
+                // dev: "packs client" = the client's chests (as Open Multiple compares them) and the Pack Opening screen's selected one
+                List<string> o = new List<string>();
+                UIPackListViewModel vm = UnityEngine.Object.FindObjectOfType<UIPackListViewModel>();
+                InventoryTreasureChest sel = vm != null ? typeof(UIPackListViewModel).GetField("m_Curr_SelectedChest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(vm) as InventoryTreasureChest : null;
+                Func<InventoryTreasureChest, string> d = x => x == null ? "null" : x.m_Name + " inst=" + x.TreasureChestInstance + " set=" + x.SetId + " type=" + x.TreasureChestType + " promo=" + x.PromotionalID + " spin=" + x.TreasureSpinType;
+                o.Add("selected: " + d(sel));
+                foreach (KeyValuePair<ulong, InventoryTreasureChest> kv in GameClient.Instance.PlayerProfile.InventoryChests)
+                    o.Add(kv.Key + ": " + d(kv.Value) + (sel != null && sel.IsSameTemplate(kv.Value) ? " SAME" : ""));
+                return string.Join("\n", o.ToArray());
+            }
+            if (sub == "camp" && parts.Length > 2)
+            {
+                // dev: "packs camp <loot_pack> [n]" = n campaign packs of that loot table (e.g. Kraken's_Cove), as bought in the store
+                string lp = parts[2].Replace('_', ' ');
+                int n = parts.Length > 3 ? int.Parse(parts[3]) : 1;
+                for (int k = 0; k < n; k++)
+                {
+                    inventory_bits b = GiveCampaignPack(lp);
+                    if (b == null) return "no campaign pack " + lp;
+                    ShowChest(b.Id);
+                }
+                return n + " x " + Loot.PackItemName(lp);
             }
             if (sub == "give" && parts.Length > 2)
             {
