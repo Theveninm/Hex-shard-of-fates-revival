@@ -169,6 +169,8 @@ namespace HexRevival
             catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] starter decks: " + e); }
             try { PushLevels(profile); }
             catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] levels: " + e); }
+            try { TrimParties(profile); }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] party sizes: " + e); }
             foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
             {
                 try
@@ -199,11 +201,55 @@ namespace HexRevival
             if (Saves.Current == null || profile == null) return;
             int n = 0;
             foreach (string c in Saves.Current.Claims) if (c.StartsWith("merc:")) n++;
-            // One slot per mercenary earned, 4 at most (the flag's maximum). The client adds a free slot for every point of
-            // CAMP_PARTYCAP without capping it (UIPartyMercenarySelector.LoadPartyMembers): an account with 50 mercenaries
-            // showed 50 slots on the battle panel.
-            if (Saves.Current.UnlockAll || n > 4) n = 4;
-            if (n > 0) profile.UpdateSingleUserFlag(new Reckoning.Profile.Messages.FlagData { Name = "CAMP_PARTYCAP", Progress = n, Maximum = 4 });
+            // One slot per mercenary earned, 3 at most (BuiltInResources.Campaign.CampaignBasePartyMax). The client adds
+            // a free slot for every point of CAMP_PARTYCAP without capping it (UIPartyMercenarySelector.LoadPartyMembers):
+            // an account with 50 mercenaries showed 50 slots on the battle panel. Its race limit (GetMaxPartyForRace: 4
+            // for humans, 3 for the others) only shows the slots still locked; a human's fourth slot comes from a talent
+            // (PlayerProfile.GetUnlockedPartySlots adds BuiltInResources.Campaign.PartySizeBonusTalents). Until 1.2.35
+            // the cap was 4, and every race had 4 slots (Talekith 2026-11-19: a coyotle with 4).
+            if (Saves.Current.UnlockAll || n > BasePartyMax) n = BasePartyMax;
+            if (n > 0) profile.UpdateSingleUserFlag(new Reckoning.Profile.Messages.FlagData { Name = "CAMP_PARTYCAP", Progress = n, Maximum = BasePartyMax });
+        }
+
+        private static int BasePartyMax { get { return Game.Shared.Resources.BuiltInResources.Campaign.CampaignBasePartyMax; } }
+
+        /// <summary>
+        /// The mercenaries a champion's party can hold, as the client counts its slots: the slots earned (3 at most), plus
+        /// the champion's party size talents.
+        /// </summary>
+        private static int PartySize(PlayerProfile profile, ulong champ)
+        {
+            int n = 0;
+            if (Saves.Current != null) foreach (string c in Saves.Current.Claims) if (c.StartsWith("merc:")) n++;
+            if (Saves.Current != null && Saves.Current.UnlockAll) n = BasePartyMax;
+            n = Math.Min(n, BasePartyMax);
+            PlayerChampion pc = profile.GetPvEChampionById(champ);
+            if (pc != null && pc.SourceBits != null && pc.SourceBits.ChampionTalents != null)
+                foreach (ResourceId t in pc.SourceBits.ChampionTalents)
+                {
+                    int bonus;
+                    if (Game.Shared.Resources.BuiltInResources.Campaign.PartySizeBonusTalents.TryGetValue(t, out bonus)) n += bonus;
+                }
+            return n;
+        }
+
+        /// <summary>
+        /// A party saved with more mercenaries than its champion has slots (parties made when every race had 4) loses
+        /// the last ones: the client would show them in slots the champion does not have, and their passives would count.
+        /// </summary>
+        private static void TrimParties(PlayerProfile profile)
+        {
+            bool changed = false;
+            foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
+            {
+                if (profile.GetPvEChampionById(kv.Key) == null) continue;
+                int max = PartySize(profile, kv.Key);
+                if (kv.Value.Members.Count <= max) continue;
+                Debug.Log("[HexRevival] [Mercenaries] party of " + kv.Key + ": " + kv.Value.Members.Count + " members for " + max + " slot(s), the last ones leave it");
+                kv.Value.Members.RemoveRange(max, kv.Value.Members.Count - max);
+                changed = true;
+            }
+            if (changed) Save();
         }
 
         /// <summary>ClientCampaignManager.SaveChampionParty (Harmony prefix): saves the party and answers with it.</summary>
