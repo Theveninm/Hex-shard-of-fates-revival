@@ -9,6 +9,12 @@ Rule (from 1.2.6): no guess without the tag. A guess that the existing videos co
 placeholder, it is unfinished work: check the videos first (they are in campaign order, see
 claude/campaign-chronology-and-dungeons.md), and use a placeholder only for what no video shows.
 
+## Booster top card (2026-11-19)
+The top card's guess stays (legendary 1 in 8, otherwise an epic 1 in 5 when the set has one, else a rare), but an epic
+is an alternate art version that the game shows with its base card's rarity: only the epics of rares and legendaries
+take the slot now (before, an alternate art common or uncommon could, and the pack had no rare: Talekith, Zymmer).
+Fused cards (Doombringer's Ender and Terminus pairs) no longer come at random: the original made them only by fusion.
+
 ## Review of what is missing (2026-11-05, 1.2.19)
 The user asked for everything still missing to be done, "even if we're not 100% sure": each guess below is tagged
 PLACEHOLDER in the code, with the reasoning next to it.

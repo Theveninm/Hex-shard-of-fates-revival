@@ -604,7 +604,7 @@ namespace HexRevival
                 if (t == null || t.m_IsPvE || t.m_EquipmentModifiedCard) continue;
                 if (t.m_CardRarity != ERarity.Common && t.m_CardRarity != ERarity.Uncommon && t.m_CardRarity != ERarity.Rare && t.m_CardRarity != ERarity.Legendary) continue;
                 bool ownable;
-                try { ownable = t.IsOwnable() && !t.IsBasicResource(); } catch { ownable = false; }
+                try { ownable = t.IsOwnable() && !t.IsBasicResource() && !Progression.IsFused(t); } catch { ownable = false; }
                 if (ownable) s_PvPCards.Add(t);
             }
             return s_PvPCards;

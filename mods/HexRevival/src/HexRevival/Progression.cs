@@ -807,17 +807,22 @@ namespace HexRevival
         /// <summary>
         /// Booster content. 17 cards per pack: 12 commons, 4 uncommons, 1 rare or legendary (Src.Game: the store's
         /// "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is
-        /// legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have epics (from Frostheart), else rare;
-        /// basic shards are not included. The campaign sets (AZ1, AZ2) have no commons (Src.Game):
-        /// their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown).
+        /// legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have epics, else rare; basic shards are
+        /// not included. The campaign sets (AZ1, AZ2) have no commons (Src.Game): their common slots take uncommons
+        /// (PLACEHOLDER, the real PvE pack content is unknown).
+        /// An epic card is an alternate art version: the game shows it with its base card's rarity (CardTemplate.
+        /// CardRarity), so only the epics of rares and legendaries take the top slot (TopEpics). Until 1.2.34 any epic
+        /// could, and about one booster in six had an alternate art common or uncommon in place of its rare
+        /// (Talekith and Zymmer, 2026-11-19).
         /// </summary>
         public static List<CardTemplate> OpenPack(CardSetTemplate set)
         {
             List<CardTemplate> res = new List<CardTemplate>();
             if (set == null) return res;
             float v = UnityEngine.Random.value;
+            List<CardTemplate> epics = TopEpics(set);
             CardTemplate top = v < 0.125f ? RandomCard(set, ERarity.Legendary, null)
-                : v < 0.125f + 0.875f * 0.2f ? RandomCard(set, ERarity.Epic, null) : null;
+                : v < 0.125f + 0.875f * 0.2f && epics.Count > 0 ? epics[UnityEngine.Random.Range(0, epics.Count)] : null;
             res.Add(top ?? RandomCard(set, ERarity.Rare, null));
             for (int i = 0; i < 4; i++) res.Add(RandomCard(set, ERarity.Uncommon, null));
             for (int i = 0; i < 12; i++) res.Add(RandomCard(set, ERarity.Common, null) ?? RandomCard(set, ERarity.Uncommon, null));
@@ -827,13 +832,42 @@ namespace HexRevival
 
         private static readonly Dictionary<string, List<CardTemplate>> s_Pools = new Dictionary<string, List<CardTemplate>>();
 
+        /// <summary>A set's epic cards whose base card is rare or legendary (the booster's top slot). Shared: do not modify.</summary>
+        internal static List<CardTemplate> TopEpics(CardSetTemplate set)
+        {
+            string key = set.m_Id + "|top";
+            List<CardTemplate> pool;
+            if (!s_Pools.TryGetValue(key, out pool))
+            {
+                pool = new List<CardTemplate>();
+                foreach (CardTemplate t in Pool(set, ERarity.Epic))
+                {
+                    ERarity shown;
+                    try { shown = t.CardRarity; } catch { continue; }
+                    if (shown == ERarity.Rare || shown == ERarity.Legendary) pool.Add(t);
+                }
+                s_Pools[key] = pool;
+            }
+            return pool;
+        }
+
+        /// <summary>
+        /// A card made by fusing two others (Doombringer's "Ender" and "Terminus" cards: Src.Game, TemplateManager.
+        /// PopulateFusionList). The original game made them only in the deck editor's fusion (or the auction house), so
+        /// nothing gives them at random (Zymmer 2026-11-19: until 1.2.34 every pair was a common of Doombringer boosters).
+        /// </summary>
+        internal static bool IsFused(CardTemplate t)
+        {
+            try { return t.tac != null && t.tac.Get(ListAttrs.FusedComponents) != null; } catch { return false; }
+        }
+
         public static CardTemplate RandomCard(CardSetTemplate set, ERarity rarity, ECardTypes? type)
         {
             List<CardTemplate> pool = Pool(set, rarity, type);
             return pool.Count > 0 ? pool[UnityEngine.Random.Range(0, pool.Count)] : null;
         }
 
-        /// <summary>The ownable cards of a set and rarity (of a type), basic resources excepted. Shared: do not modify.</summary>
+        /// <summary>The ownable cards of a set and rarity (of a type), basic resources and fused cards excepted. Shared: do not modify.</summary>
         public static List<CardTemplate> Pool(CardSetTemplate set, ERarity rarity, ECardTypes? type = null)
         {
             if (set == null) return new List<CardTemplate>();
@@ -847,7 +881,7 @@ namespace HexRevival
                     if (t == null || t.m_SetId != set.m_Id || t.m_CardRarity != rarity) continue;
                     if (type.HasValue && (t.m_CardType & type.Value) == 0) continue;
                     bool ownable;
-                    try { ownable = t.IsOwnable() && !t.IsBasicResource(); } catch { ownable = false; }
+                    try { ownable = t.IsOwnable() && !t.IsBasicResource() && !IsFused(t); } catch { ownable = false; }
                     if (ownable) pool.Add(t);
                 }
                 s_Pools[key] = pool;
