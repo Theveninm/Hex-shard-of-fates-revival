@@ -39,7 +39,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • Guessed: one challenge per tier; which bosses in which tier; how often Uruunaz and Zakiir show up; the top tiers' decks; opponents' equipment; how gold is split between fights; what chests hold; who plays the new Runic / Banners challenges
 
 **💰 Loot & economy** (most important first)
-• Odds inside campaign packs, chests, the Wheel of Fate (reel colors) and boosters (sleeves, gift boxes, an alternate art rare or legendary as the top card)
+• Odds inside campaign packs, chests, the Wheel of Fate (reel colors) and boosters (sleeves, gift boxes, alternate art cards)
 • Chest rarity from boosters: uncommon 27%, rare 10%, legendary 4%, from about 150 packs opened on video (small sample)
 • How many items legendary / primal chests hold
 • PvE packs' exact contents; special packs' contents (race packs, Kismet's Draft, GenCon 2016)

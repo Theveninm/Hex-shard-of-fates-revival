@@ -807,49 +807,49 @@ namespace HexRevival
         /// <summary>
         /// Booster content. 17 cards per pack: 12 commons, 4 uncommons, 1 rare or legendary (Src.Game: the store's
         /// "BoosterPack_Content_Combined" text; before 1.2.10 13 commons and 3 uncommons). PLACEHOLDER: the top card is
-        /// legendary 1 time in 8, otherwise epic 1 time in 5 in the sets that have epics, else rare; basic shards are
-        /// not included. The campaign sets (AZ1, AZ2) have no commons (Src.Game): their common slots take uncommons
-        /// (PLACEHOLDER, the real PvE pack content is unknown).
-        /// An epic card is an alternate art version: the game shows it with its base card's rarity (CardTemplate.
-        /// CardRarity), so only the epics of rares and legendaries take the top slot (TopEpics). Until 1.2.34 any epic
-        /// could, and about one booster in six had an alternate art common or uncommon in place of its rare
-        /// (Talekith and Zymmer, 2026-11-19).
+        /// legendary 1 time in 8, else rare; basic shards are not included. The campaign sets (AZ1, AZ2) have no commons
+        /// (Src.Game): their common slots take uncommons (PLACEHOLDER, the real PvE pack content is unknown).
+        /// Alternate arts: an epic card is an alternate art version, which the game shows with its base card's rarity
+        /// (CardTemplate.CardRarity). PLACEHOLDER: when the top card is not legendary, 1 booster in 5 holds one alternate
+        /// art, any of the set's (the same yield as before 1.2.35); it takes the place of a card of its base card's rarity
+        /// (AlternateArt). Until 1.2.34 it always took the top slot, so about one booster in six had an alternate art
+        /// common or uncommon in place of its rare (Talekith and Zymmer, 2026-11-19; user 2026-11-19: an alternate art
+        /// never takes the rare's slot or a card of another rarity).
         /// </summary>
         public static List<CardTemplate> OpenPack(CardSetTemplate set)
         {
             List<CardTemplate> res = new List<CardTemplate>();
             if (set == null) return res;
             float v = UnityEngine.Random.value;
-            List<CardTemplate> epics = TopEpics(set);
-            CardTemplate top = v < 0.125f ? RandomCard(set, ERarity.Legendary, null)
-                : v < 0.125f + 0.875f * 0.2f && epics.Count > 0 ? epics[UnityEngine.Random.Range(0, epics.Count)] : null;
-            res.Add(top ?? RandomCard(set, ERarity.Rare, null));
+            res.Add((v < 0.125f ? RandomCard(set, ERarity.Legendary, null) : null) ?? RandomCard(set, ERarity.Rare, null));
             for (int i = 0; i < 4; i++) res.Add(RandomCard(set, ERarity.Uncommon, null));
             for (int i = 0; i < 12; i++) res.Add(RandomCard(set, ERarity.Common, null) ?? RandomCard(set, ERarity.Uncommon, null));
             res.RemoveAll(c => c == null);
+            if (v >= 0.125f && v < 0.125f + 0.875f * 0.2f) AlternateArt(set, res);
             return res;
         }
 
-        private static readonly Dictionary<string, List<CardTemplate>> s_Pools = new Dictionary<string, List<CardTemplate>>();
-
-        /// <summary>A set's epic cards whose base card is rare or legendary (the booster's top slot). Shared: do not modify.</summary>
-        internal static List<CardTemplate> TopEpics(CardSetTemplate set)
+        /// <summary>
+        /// One alternate art (epic) card of the set in place of a card the game shows with the same rarity: a random slot
+        /// of that rarity (PLACEHOLDER: which slot). Nothing when the set has none, or the pack no card of its rarity.
+        /// </summary>
+        private static void AlternateArt(CardSetTemplate set, List<CardTemplate> pack)
         {
-            string key = set.m_Id + "|top";
-            List<CardTemplate> pool;
-            if (!s_Pools.TryGetValue(key, out pool))
+            CardTemplate alt = RandomCard(set, ERarity.Epic, null);
+            if (alt == null) return;
+            ERarity shown;
+            try { shown = alt.CardRarity; } catch { return; }
+            if (shown == ERarity.Legendary) shown = ERarity.Rare;   // the top slot holds rares and legendaries alike
+            List<int> slots = new List<int>();
+            for (int i = 0; i < pack.Count; i++)
             {
-                pool = new List<CardTemplate>();
-                foreach (CardTemplate t in Pool(set, ERarity.Epic))
-                {
-                    ERarity shown;
-                    try { shown = t.CardRarity; } catch { continue; }
-                    if (shown == ERarity.Rare || shown == ERarity.Legendary) pool.Add(t);
-                }
-                s_Pools[key] = pool;
+                ERarity r = pack[i].m_CardRarity == ERarity.Legendary ? ERarity.Rare : pack[i].m_CardRarity;
+                if (r == shown) slots.Add(i);
             }
-            return pool;
+            if (slots.Count > 0) pack[slots[UnityEngine.Random.Range(0, slots.Count)]] = alt;
         }
+
+        private static readonly Dictionary<string, List<CardTemplate>> s_Pools = new Dictionary<string, List<CardTemplate>>();
 
         /// <summary>
         /// A card made by fusing two others (Doombringer's "Ender" and "Terminus" cards: Src.Game, TemplateManager.

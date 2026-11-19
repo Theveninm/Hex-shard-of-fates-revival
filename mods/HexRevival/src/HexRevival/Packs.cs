@@ -726,10 +726,11 @@ namespace HexRevival
             if (sub == "sim" && parts.Length > 2)
             {
                 // dev: "packs sim <set_name> [n]" = n boosters of that set drawn (nothing given): cards per rarity, packs without a rare
-                // (as the game shows them: an epic has its base card's rarity), fused cards, chest rarities
+                // (as the game shows them: an epic has its base card's rarity), fused cards, alternate arts, chest rarities
                 CardSetTemplate set = Progression.FindSet(parts[2].Replace('_', ' '));
                 if (set == null) return "no set " + parts[2];
-                int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0, fused = 0;
+                int n = parts.Length > 3 ? int.Parse(parts[3]) : 100, noRare = 0, total = 0, fused = 0, badMix = 0;
+                Dictionary<string, int> alts = new Dictionary<string, int>();
                 Dictionary<ERarity, int> count = new Dictionary<ERarity, int>();
                 for (int k = 0; k < n; k++)
                 {
@@ -737,13 +738,18 @@ namespace HexRevival
                     total += cards.Count;
                     if (!cards.Exists(t => t.CardRarity >= ERarity.Rare)) noRare++;
                     fused += cards.FindAll(Progression.IsFused).Count;
+                    // a pack's cards as the game shows them: 12 commons, 4 uncommons, 1 rare or legendary (campaign sets aside)
+                    if (cards.FindAll(t => t.CardRarity == ERarity.Common).Count != 12 || cards.FindAll(t => t.CardRarity == ERarity.Uncommon).Count != 4) badMix++;
+                    foreach (CardTemplate t in cards) if (t.m_CardRarity == ERarity.Epic) { string rk = t.CardRarity.ToString(); int v; alts.TryGetValue(rk, out v); alts[rk] = v + 1; }
                     foreach (CardTemplate t in cards) { int v; count.TryGetValue(t.m_CardRarity, out v); count[t.m_CardRarity] = v + 1; }
                 }
                 List<string> outl = new List<string>();
                 foreach (KeyValuePair<ERarity, int> kv in count) outl.Add(kv.Key + "=" + kv.Value);
                 foreach (ERarity r in new[] { ERarity.Common, ERarity.Uncommon, ERarity.Rare, ERarity.Epic, ERarity.Legendary })
                     outl.Add("pool " + r + "=" + Progression.Pool(set, r).Count);
-                outl.Add("top epics=" + Progression.TopEpics(set).Count + ", fused drawn=" + fused);
+                List<string> al = new List<string>();
+                foreach (KeyValuePair<string, int> kv in alts) al.Add(kv.Key + " " + kv.Value);
+                outl.Add("fused drawn=" + fused + ", packs not 12/4/1 as shown=" + badMix + ", alternate arts by shown rarity: " + string.Join(" ", al.ToArray()));
                 Dictionary<ETreasureChestType, int> chests = new Dictionary<ETreasureChestType, int>();
                 for (int k = 0; k < n; k++) { ETreasureChestType c = RollRarity(); int v; chests.TryGetValue(c, out v); chests[c] = v + 1; }
                 foreach (KeyValuePair<ETreasureChestType, int> kv in chests) outl.Add("chest " + kv.Key + "=" + kv.Value);
