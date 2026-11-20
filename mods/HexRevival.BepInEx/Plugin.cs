@@ -209,6 +209,14 @@ namespace HexRevival
                 // The game's own memory leaks (see MemoryFixes).
                 apply("SoundGroupManager.OnSoundEffectLoaded", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "OnSoundEffectLoaded"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundLoaded")));
                 apply("SoundGroupManager.CleanUpFileGroup", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "CleanUpFileGroup"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundsCleaned")));
+                // The game data decompressed into one array of the right size (MemoryFixes.Decompress).
+                apply("Compressor.Decompress", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Utils.Compressor), "Decompress", new[] { typeof(byte[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Compressor_Decompress")));
+                // The game data kept as bytes, then handed over in pieces at start-up (MemoryFixes.DecompressBall, ClientBall, LoadBall).
+                apply("TemplateManager.Decompress", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "Decompress", new[] { typeof(byte[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Template_Decompress")));
+                apply("TemplateManager.LoadClientBall", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "LoadClientBall"), prefix: new HarmonyMethod(typeof(Hooks), "Template_ClientBall")));
+                apply("TemplateManager.LoadAbilitiesFromBall", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "LoadAbilitiesFromBall"), prefix: new HarmonyMethod(typeof(Hooks), "Template_LoadBall")));
+                // The game's logger used after it is disposed, at quit (Hooks.Log_Exception).
+                apply("LogBase.Exception", () => harmony.Patch(AccessTools.Method(typeof(LogBase), "Exception", new[] { typeof(string), typeof(ELogLevel), typeof(Exception), typeof(string), typeof(object[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Log_Exception")));
                 // The account panel's "Available XP before Cap" without the daily limit (Progression.AccountPanelOpened).
                 apply("UIAccountLevelRewards.Awake", () => harmony.Patch(AccessTools.Method(typeof(UIAccountLevelRewards), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "AccountPanel_Awake")));
                 apply("UIDungeonMapPath.OnDestroy", () => harmony.Patch(AccessTools.Method(typeof(UIDungeonMapPath), "OnDestroy"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_PathDestroyed")));
@@ -621,6 +629,23 @@ namespace HexRevival
         public static void Gems_AvailableAfter(UISocketCardViewModel __instance) { Gems.AfterAvailableGems(__instance); }
         public static void Memory_SoundLoaded(AssetRequestItem __0) { HexRevival.MemoryFixes.SoundLoaded(__0); }
         public static void Memory_SoundsCleaned() { HexRevival.MemoryFixes.ReleaseSounds(); }
+        /// <summary>
+        /// Before LogBase.Exception. When the game quits, its logger's wait handle is disposed; a line logged after that
+        /// makes LogBase.Write throw an ObjectDisposedException, which it logs with LogBase.Exception, which writes
+        /// again: an endless recursion (each round also reported to the server as a "BILog" EXCEPTION) until the stack
+        /// overflows and mono crashes. ZymmerOP's log (2026-11-19): 1,245 rounds after quitting, then "Crash!!!". The
+        /// logger's own failure is dropped instead.
+        /// </summary>
+        public static bool Log_Exception(string loggerName, Exception ex)
+        {
+            return !(ex is ObjectDisposedException && loggerName == "LightweightLoggerWrite");
+        }
+
+        public static bool Compressor_Decompress(byte[] b, ref byte[] __result) { return MemoryFixes.Decompress(b, ref __result); }
+        public static bool Template_LoadBall(Reckoning.Game.TemplateManager __instance, ref string Data, ref bool __result) { return MemoryFixes.LoadBall(__instance, ref Data, ref __result); }
+        public static bool Template_Decompress(byte[] raw_data, ref string __result) { return MemoryFixes.DecompressBall(raw_data, ref __result); }
+        public static void Template_ClientBall(ref string data) { MemoryFixes.ClientBall(ref data); }
+
         public static void AccountPanel_Awake(UIAccountLevelRewards __instance) { Progression.AccountPanelOpened(__instance); }
         public static void Memory_PathDestroyed(UIDungeonMapPath __instance) { HexRevival.MemoryFixes.PathDestroyed(__instance); }
         public static bool Gems_Legal(EGemTypesNew __0, ESetFormat __1, ref bool __result) { return Gems.LegalInChapters(__0, __1, ref __result); }

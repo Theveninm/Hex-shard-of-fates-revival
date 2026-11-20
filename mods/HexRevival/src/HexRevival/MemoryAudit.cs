@@ -13,7 +13,7 @@ namespace HexRevival
     /// while Windows still had free memory, because the address space was full or too fragmented to hold one
     /// more large block. This writes one line to the log after each level load (the game frees unused assets
     /// then), so a player's log shows the trend: memory used, Unity objects, and the largest free block of
-    /// address space (what a large allocation needs). The dev command "mem census" counts the loaded objects
+    /// address space (what a large allocation needs, asked from Windows: LargestAllocatable). The dev command "mem census" counts the loaded objects
     /// by type and compares with the previous count, to find what accumulates.
     /// </summary>
     public class MemoryAudit : MonoBehaviour
@@ -34,6 +34,36 @@ namespace HexRevival
             m_LogAt = Time.realtimeSinceStartup + 3f;   // after the game's own clean-up of the previous level
         }
 
+        // Dev "mem rate <seconds>": managed memory allocated per second, measured frame by frame (a drop is a collection).
+        private static float s_RateUntil = -1f, s_RateStart;
+        private static long s_RateLast, s_RateAllocated;
+        private static int s_RateFrames, s_RateCollections;
+        private static string s_RateResult = "no measure yet";
+
+        public static string Rate(string[] parts)
+        {
+            if (parts.Length < 3) return s_RateUntil > 0 ? "measuring" : s_RateResult;
+            s_RateStart = Time.realtimeSinceStartup;
+            s_RateUntil = s_RateStart + float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+            s_RateLast = GC.GetTotalMemory(false); s_RateAllocated = 0; s_RateFrames = 0; s_RateCollections = GC.CollectionCount(0);
+            return "measuring for " + parts[2] + " s";
+        }
+
+        private void LateUpdate()
+        {
+            if (s_RateUntil < 0) return;
+            long now = GC.GetTotalMemory(false);
+            if (now > s_RateLast) s_RateAllocated += now - s_RateLast;
+            s_RateLast = now;
+            s_RateFrames++;
+            if (Time.realtimeSinceStartup < s_RateUntil) return;
+            float secs = Time.realtimeSinceStartup - s_RateStart;
+            s_RateResult = (s_RateAllocated / 1024 / secs).ToString("0") + " KB/s allocated over " + secs.ToString("0.0") + " s (" + s_RateFrames + " frames, "
+                + (s_RateAllocated / 1024 / Math.Max(1, s_RateFrames)) + " KB per frame, " + (GC.CollectionCount(0) - s_RateCollections) + " collections) in " + m_Scene;
+            Debug.Log("[HexRevival] [Memory] rate: " + s_RateResult);
+            s_RateUntil = -1f;
+        }
+
         private void Update()
         {
             if (m_LogAt < 0f || Time.realtimeSinceStartup < m_LogAt) return;
@@ -43,11 +73,11 @@ namespace HexRevival
                 Debug.Log("[HexRevival] [Memory] " + m_Scene + ": " + Line());
                 // The crashes reported came when a large block was asked for and none was left: the player is told
                 // to restart before that happens (once per session).
-                Space sp;
-                if (!s_Warned && AddressSpace(out sp) && sp.Largest < LowBlock)
+                long largest = LargestAllocatable();
+                if (!s_Warned && largest > 0 && largest < LowBlock)
                 {
                     s_Warned = true;
-                    Debug.Log("[HexRevival] [Memory] largest free block " + Mb(sp.Largest) + ": the player is told to restart");
+                    Debug.Log("[HexRevival] [Memory] largest allocatable block " + Mb(largest) + ": the player is told to restart");
                     Notices.Show(Loc.Get("memory_low"));
                 }
             }
@@ -76,6 +106,8 @@ namespace HexRevival
             sb.Append(", unity ").Append(Mb(UnityEngine.Profiling.Profiler.GetTotalAllocatedMemory()))
               .Append(" of ").Append(Mb(UnityEngine.Profiling.Profiler.GetTotalReservedMemory()));
             sb.Append(", objects ").Append(Resources.FindObjectsOfTypeAll(typeof(UnityEngine.Object)).Length);
+            long largest = LargestAllocatable();
+            if (largest > 0) sb.Append(", largest allocatable block ").Append(Mb(largest));
             Space sp;
             if (AddressSpace(out sp))
                 sb.Append(", address space free ").Append(Mb(sp.Free)).Append(" (largest block ").Append(Mb(sp.Largest))
@@ -107,6 +139,41 @@ namespace HexRevival
             public uint State;
             public uint Protect;
             public uint Type;
+        }
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr VirtualAlloc(IntPtr address, UIntPtr size, uint type, uint protect);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool VirtualFree(IntPtr address, UIntPtr size, uint type);
+
+        private const uint MemRelease = 0x8000, PageNoAccess = 0x01;
+
+        /// <summary>
+        /// The largest block of address space the game could still get in one piece, found by asking Windows for it:
+        /// reserving (never committing) blocks by halving, each released at once. Reading the address space
+        /// (AddressSpace) gives the same on Windows, but not under Wine/Proton: there, the space Wine keeps for later
+        /// allocations reads as reserved, so a Linux player's game showed 35 MB free (largest block 15 MB) at the main
+        /// menu and was told to restart at once (ZymmerOP's log, 2026-11-19), while its crash report said 1.7 GB were
+        /// free. 0 when unknown (not Windows).
+        /// </summary>
+        public static long LargestAllocatable()
+        {
+            if (Application.platform != RuntimePlatform.WindowsPlayer) return 0;
+            try
+            {
+                const long step = 1L << 20;   // 1 MB precision
+                long low = 0, high = IntPtr.Size == 4 ? 0xFFF00000L : 1L << 40;
+                while (high - low > step)
+                {
+                    long mid = (low + high) / 2 / step * step;
+                    IntPtr p = VirtualAlloc(IntPtr.Zero, new UIntPtr((ulong)mid), MemReserve, PageNoAccess);
+                    if (p != IntPtr.Zero) { VirtualFree(p, UIntPtr.Zero, MemRelease); low = mid; }
+                    else high = mid;
+                }
+                return low;
+            }
+            catch { return 0; }
         }
 
         [DllImport("kernel32.dll")]
