@@ -13,7 +13,7 @@ namespace HexRevival
     /// while Windows still had free memory, because the address space was full or too fragmented to hold one
     /// more large block. This writes one line to the log after each level load (the game frees unused assets
     /// then), so a player's log shows the trend: memory used, Unity objects, and the largest free block of
-    /// address space (what a large allocation needs). The dev command "mem census" counts the loaded objects
+    /// address space (what a large allocation needs, asked from Windows: LargestAllocatable). The dev command "mem census" counts the loaded objects
     /// by type and compares with the previous count, to find what accumulates.
     /// </summary>
     public class MemoryAudit : MonoBehaviour
@@ -43,11 +43,11 @@ namespace HexRevival
                 Debug.Log("[HexRevival] [Memory] " + m_Scene + ": " + Line());
                 // The crashes reported came when a large block was asked for and none was left: the player is told
                 // to restart before that happens (once per session).
-                Space sp;
-                if (!s_Warned && AddressSpace(out sp) && sp.Largest < LowBlock)
+                long largest = LargestAllocatable();
+                if (!s_Warned && largest > 0 && largest < LowBlock)
                 {
                     s_Warned = true;
-                    Debug.Log("[HexRevival] [Memory] largest free block " + Mb(sp.Largest) + ": the player is told to restart");
+                    Debug.Log("[HexRevival] [Memory] largest allocatable block " + Mb(largest) + ": the player is told to restart");
                     Notices.Show(Loc.Get("memory_low"));
                 }
             }
@@ -76,6 +76,8 @@ namespace HexRevival
             sb.Append(", unity ").Append(Mb(UnityEngine.Profiling.Profiler.GetTotalAllocatedMemory()))
               .Append(" of ").Append(Mb(UnityEngine.Profiling.Profiler.GetTotalReservedMemory()));
             sb.Append(", objects ").Append(Resources.FindObjectsOfTypeAll(typeof(UnityEngine.Object)).Length);
+            long largest = LargestAllocatable();
+            if (largest > 0) sb.Append(", largest allocatable block ").Append(Mb(largest));
             Space sp;
             if (AddressSpace(out sp))
                 sb.Append(", address space free ").Append(Mb(sp.Free)).Append(" (largest block ").Append(Mb(sp.Largest))
@@ -107,6 +109,41 @@ namespace HexRevival
             public uint State;
             public uint Protect;
             public uint Type;
+        }
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr VirtualAlloc(IntPtr address, UIntPtr size, uint type, uint protect);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool VirtualFree(IntPtr address, UIntPtr size, uint type);
+
+        private const uint MemRelease = 0x8000, PageNoAccess = 0x01;
+
+        /// <summary>
+        /// The largest block of address space the game could still get in one piece, found by asking Windows for it:
+        /// reserving (never committing) blocks by halving, each released at once. Reading the address space
+        /// (AddressSpace) gives the same on Windows, but not under Wine/Proton: there, the space Wine keeps for later
+        /// allocations reads as reserved, so a Linux player's game showed 35 MB free (largest block 15 MB) at the main
+        /// menu and was told to restart at once (ZymmerOP's log, 2026-11-19), while its crash report said 1.7 GB were
+        /// free. 0 when unknown (not Windows).
+        /// </summary>
+        public static long LargestAllocatable()
+        {
+            if (Application.platform != RuntimePlatform.WindowsPlayer) return 0;
+            try
+            {
+                const long step = 1L << 20;   // 1 MB precision
+                long low = 0, high = IntPtr.Size == 4 ? 0xFFF00000L : 1L << 40;
+                while (high - low > step)
+                {
+                    long mid = (low + high) / 2 / step * step;
+                    IntPtr p = VirtualAlloc(IntPtr.Zero, new UIntPtr((ulong)mid), MemReserve, PageNoAccess);
+                    if (p != IntPtr.Zero) { VirtualFree(p, UIntPtr.Zero, MemRelease); low = mid; }
+                    else high = mid;
+                }
+                return low;
+            }
+            catch { return 0; }
         }
 
         [DllImport("kernel32.dll")]
