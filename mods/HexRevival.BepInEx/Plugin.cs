@@ -209,6 +209,12 @@ namespace HexRevival
                 // The game's own memory leaks (see MemoryFixes).
                 apply("SoundGroupManager.OnSoundEffectLoaded", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "OnSoundEffectLoaded"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundLoaded")));
                 apply("SoundGroupManager.CleanUpFileGroup", () => harmony.Patch(AccessTools.Method(AccessTools.TypeByName("SoundGroupManager"), "CleanUpFileGroup"), postfix: new HarmonyMethod(typeof(Hooks), "Memory_SoundsCleaned")));
+                // The game data decompressed into one array of the right size (MemoryFixes.Decompress).
+                apply("Compressor.Decompress", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.Utils.Compressor), "Decompress", new[] { typeof(byte[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Compressor_Decompress")));
+                // The game data kept as bytes, then handed over in pieces at start-up (MemoryFixes.DecompressBall, ClientBall, LoadBall).
+                apply("TemplateManager.Decompress", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "Decompress", new[] { typeof(byte[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Template_Decompress")));
+                apply("TemplateManager.LoadClientBall", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "LoadClientBall"), prefix: new HarmonyMethod(typeof(Hooks), "Template_ClientBall")));
+                apply("TemplateManager.LoadAbilitiesFromBall", () => harmony.Patch(AccessTools.Method(typeof(Reckoning.Game.TemplateManager), "LoadAbilitiesFromBall"), prefix: new HarmonyMethod(typeof(Hooks), "Template_LoadBall")));
                 // The game's logger used after it is disposed, at quit (Hooks.Log_Exception).
                 apply("LogBase.Exception", () => harmony.Patch(AccessTools.Method(typeof(LogBase), "Exception", new[] { typeof(string), typeof(ELogLevel), typeof(Exception), typeof(string), typeof(object[]) }), prefix: new HarmonyMethod(typeof(Hooks), "Log_Exception")));
                 // The account panel's "Available XP before Cap" without the daily limit (Progression.AccountPanelOpened).
@@ -634,6 +640,11 @@ namespace HexRevival
         {
             return !(ex is ObjectDisposedException && loggerName == "LightweightLoggerWrite");
         }
+
+        public static bool Compressor_Decompress(byte[] b, ref byte[] __result) { return MemoryFixes.Decompress(b, ref __result); }
+        public static bool Template_LoadBall(Reckoning.Game.TemplateManager __instance, ref string Data, ref bool __result) { return MemoryFixes.LoadBall(__instance, ref Data, ref __result); }
+        public static bool Template_Decompress(byte[] raw_data, ref string __result) { return MemoryFixes.DecompressBall(raw_data, ref __result); }
+        public static void Template_ClientBall(ref string data) { MemoryFixes.ClientBall(ref data); }
 
         public static void AccountPanel_Awake(UIAccountLevelRewards __instance) { Progression.AccountPanelOpened(__instance); }
         public static void Memory_PathDestroyed(UIDungeonMapPath __instance) { HexRevival.MemoryFixes.PathDestroyed(__instance); }

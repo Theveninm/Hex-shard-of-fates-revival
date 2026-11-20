@@ -34,6 +34,36 @@ namespace HexRevival
             m_LogAt = Time.realtimeSinceStartup + 3f;   // after the game's own clean-up of the previous level
         }
 
+        // Dev "mem rate <seconds>": managed memory allocated per second, measured frame by frame (a drop is a collection).
+        private static float s_RateUntil = -1f, s_RateStart;
+        private static long s_RateLast, s_RateAllocated;
+        private static int s_RateFrames, s_RateCollections;
+        private static string s_RateResult = "no measure yet";
+
+        public static string Rate(string[] parts)
+        {
+            if (parts.Length < 3) return s_RateUntil > 0 ? "measuring" : s_RateResult;
+            s_RateStart = Time.realtimeSinceStartup;
+            s_RateUntil = s_RateStart + float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+            s_RateLast = GC.GetTotalMemory(false); s_RateAllocated = 0; s_RateFrames = 0; s_RateCollections = GC.CollectionCount(0);
+            return "measuring for " + parts[2] + " s";
+        }
+
+        private void LateUpdate()
+        {
+            if (s_RateUntil < 0) return;
+            long now = GC.GetTotalMemory(false);
+            if (now > s_RateLast) s_RateAllocated += now - s_RateLast;
+            s_RateLast = now;
+            s_RateFrames++;
+            if (Time.realtimeSinceStartup < s_RateUntil) return;
+            float secs = Time.realtimeSinceStartup - s_RateStart;
+            s_RateResult = (s_RateAllocated / 1024 / secs).ToString("0") + " KB/s allocated over " + secs.ToString("0.0") + " s (" + s_RateFrames + " frames, "
+                + (s_RateAllocated / 1024 / Math.Max(1, s_RateFrames)) + " KB per frame, " + (GC.CollectionCount(0) - s_RateCollections) + " collections) in " + m_Scene;
+            Debug.Log("[HexRevival] [Memory] rate: " + s_RateResult);
+            s_RateUntil = -1f;
+        }
+
         private void Update()
         {
             if (m_LogAt < 0f || Time.realtimeSinceStartup < m_LogAt) return;

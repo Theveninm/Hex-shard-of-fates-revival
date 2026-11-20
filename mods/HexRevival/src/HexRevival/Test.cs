@@ -1008,6 +1008,55 @@ namespace HexRevival
                 case "camp": return Campaign.Command(parts);
                 case "mem":   // dev: "mem" = memory line; "mem census [label]" = loaded objects by type, compared with the previous census
                     if (parts.Length > 1 && parts[1] == "bundles") return MemoryAudit.Bundles();   // "mem bundles" = bundles kept and their assets' reference counts
+                    if (parts.Length > 2 && (parts[1] == "off" || parts[1] == "on"))
+                    {
+                        // dev: "mem off|on <type name>" = disables / enables the behaviours of that type (to find what allocates)
+                        int n = 0;
+                        foreach (Behaviour b in Resources.FindObjectsOfTypeAll(typeof(Behaviour)))
+                            if (b != null && b.GetType().Name == parts[2]) { b.enabled = parts[1] == "on"; n++; }
+                        return parts[1] + " " + n + " " + parts[2];
+                    }
+                    if (parts.Length > 1 && parts[1] == "types")
+                    {
+                        // dev: "mem types" = the enabled behaviours with an Update, by type, active in the scene
+                        Dictionary<string, int> c = new Dictionary<string, int>();
+                        foreach (Behaviour b in UnityEngine.Object.FindObjectsOfType<Behaviour>())
+                        {
+                            if (b == null || !b.isActiveAndEnabled) continue;
+                            System.Reflection.BindingFlags bf = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+                            Type t = b.GetType();
+                            if (t.GetMethod("Update", bf) == null && t.GetMethod("LateUpdate", bf) == null && t.GetMethod("OnGUI", bf) == null) continue;
+                            int k; c.TryGetValue(t.FullName, out k); c[t.FullName] = k + 1;
+                        }
+                        List<string> o = new List<string>();
+                        foreach (KeyValuePair<string, int> kv in c) o.Add(kv.Value + " " + kv.Key);
+                        o.Sort();
+                        return string.Join("\n", o.ToArray());
+                    }
+                    if (parts.Length > 1 && parts[1] == "templates")
+                    {
+                        // dev: "mem templates" = the size of every collection the TemplateManager holds (to compare two ways of loading)
+                        List<string> o = new List<string>();
+                        object tm = Singleton<TemplateManager>.Instance;
+                        foreach (System.Reflection.FieldInfo f in typeof(TemplateManager).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+                        {
+                            System.Collections.ICollection c = f.GetValue(f.IsStatic ? null : tm) as System.Collections.ICollection;
+                            if (c != null) o.Add(f.Name + " " + c.Count);
+                        }
+                        o.Sort(StringComparer.Ordinal);
+                        return string.Join("\n", o.ToArray());
+                    }
+                    if (parts.Length > 1 && parts[1] == "gc")
+                    {
+                        // dev: "mem gc" = how long a full collection takes, and the managed memory before and after
+                        long before = GC.GetTotalMemory(false);
+                        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+                        GC.Collect();
+                        sw.Stop();
+                        return "collection " + sw.ElapsedMilliseconds + " ms: " + (before >> 20) + " -> " + (GC.GetTotalMemory(false) >> 20) + " MB";
+                    }
+                    if (parts.Length > 1 && parts[1] == "rate") return MemoryAudit.Rate(parts);   // "mem rate <seconds>" starts a measure, "mem rate" reads it
+                    if (parts.Length > 1 && (parts[1] == "live" || parts[1] == "liveall")) return ManagedCensus.Run(parts.Length > 2 ? parts[2] : "dev", parts.Length > 3 ? int.Parse(parts[3]) : 30, parts[1] == "liveall");   // "mem live|liveall [label] [top]" = managed objects by class (liveall: also from Unity objects)
                     return parts.Length > 1 && parts[1] == "census" ? MemoryAudit.Census(parts.Length > 2 ? parts[2] : "dev") : MemoryAudit.Line();
                 case "dun": return Dungeons.Command(parts);
                 case "packs": return Packs.Command(parts);   // dev: chests, "packs give <pack_name> [n]"

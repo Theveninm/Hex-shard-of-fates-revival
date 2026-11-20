@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 using UnityEngine;
 
 namespace HexRevival
@@ -72,6 +75,164 @@ namespace HexRevival
             }
             catch { }
             return 0;
+        }
+
+        // --- Game data at start-up --------------------------------------------------------------------------------------
+        // The game data (HexData, gzip, about 100 MB of JSON once decompressed) was loaded in a way that peaked at several
+        // copies of it at once: a MemoryStream doubling its buffer while decompressing, then one 200 MB string, then that
+        // string split into its sections (a second copy of all of it) and each section into its templates (a third copy).
+        // Mono's collector never gives its heap back: that peak is why the game's managed heap was about 1 GB from the
+        // start, in a 32-bit game (2026-11-20, user's PC: 1008-1175 MB at the main menu, 417-449 MB with these fixes; the
+        // largest free block of address space went from about 1.5 GB to 2 GB).
+        // Now: the bytes are decompressed into one array of the right size (Decompress), kept as bytes (DecompressBall),
+        // and handed to TemplateManager.LoadAbilitiesFromBall in small pieces of the same form
+        // ("Type$$--$$template$$--$$template...", LoadBall), which it parses the same way: every case of its switch only
+        // adds the templates it parses (FastParseTemplates), so one section in several pieces gives the same result
+        // (compared with "mem templates": the same counts in every collection). A HexRevival.wholeball file next to Hex.exe
+        // turns the last two steps off (to compare).
+
+        [DllImport("mono.dll")]
+        private static extern long mono_gc_get_heap_size();
+
+        [ThreadStatic] private static bool t_InBall;
+        private static Type s_GZip;
+        private static MethodInfo s_LoadBall;
+        private const string SectionMark = "$$$---$$$", TemplateMark = "$$--$$";
+        private const int PieceChars = 1 << 20;   // about 2 MB per piece
+
+        private static string Heap()
+        {
+            long h = 0;
+            try { h = mono_gc_get_heap_size(); } catch { }
+            return "managed " + (GC.GetTotalMemory(false) >> 20) + " MB in a heap of " + (h >> 20) + " MB";
+        }
+
+        /// <summary>
+        /// Before Compressor.Decompress (the game data, gzip): the game copies the decompressed bytes into a MemoryStream,
+        /// which doubles its buffer as it grows (4 KB ... 128 MB for the 100 MB of data), then copies it all once more
+        /// (ToArray): about 450 MB allocated for 100 MB of result, so Mono's heap grew for good. The data is now read
+        /// straight into one array of the size the gzip trailer gives. False when done here.
+        /// </summary>
+        public static bool Decompress(byte[] b, ref byte[] result)
+        {
+            try
+            {
+                if (b == null || b.Length < 1 << 20 || !Game.Shared.Utils.Compressor.IsCompressed(b)) return true;
+                // ISIZE: the uncompressed size modulo 2^32, in the last 4 bytes (RFC 1952).
+                long size = (uint)(b[b.Length - 4] | b[b.Length - 3] << 8 | b[b.Length - 2] << 16 | b[b.Length - 1] << 24);
+                if (size < b.Length || size > 768L << 20) return true;
+                GC.Collect();   // what was allocated before is freed before the large block is asked for
+                byte[] outBytes = new byte[size];
+                int got = 0;
+                // The game's own gzip reader (SharpZipLib, a game assembly the mod is not built against).
+                if (s_GZip == null) s_GZip = Type.GetType("ICSharpCode.SharpZipLib.GZip.GZipInputStream, ICSharpCode.SharpZipLib");
+                if (s_GZip == null) return true;
+                using (MemoryStream ms = new MemoryStream(b))
+                using (Stream gz = (Stream)Activator.CreateInstance(s_GZip, ms))
+                {
+                    int n;
+                    while (got < outBytes.Length && (n = gz.Read(outBytes, got, outBytes.Length - got)) > 0) got += n;
+                    if (got != outBytes.Length || gz.ReadByte() != -1) return true;   // not a single gzip member of that size: the game's way
+                }
+                result = outBytes;
+                Debug.Log("[HexRevival] [Memory] game data decompressed in place (" + (size >> 20) + " MB), " + Heap());
+                return false;
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Memory] decompress: " + e.Message); return true; }
+        }
+
+        // TemplateManager.Decompress (gzip bytes → one string) is only used for the two data files, whose strings go to
+        // LoadClientBall or LoadAbilitiesFromBall. For a large one, it now returns a marker and keeps the bytes: the
+        // ability ball is parsed from the bytes in pieces (never one 200 MB string), the client ball gets its string.
+        private static readonly string BallMarker = new string(new[] { '\u0001', 'H', 'R', 'b', 'a', 'l', 'l' });
+        [ThreadStatic] private static byte[] t_BallBytes;
+        private const int LargeBall = 8 << 20;
+
+        /// <summary>Before TemplateManager.Decompress(byte[]): false with the marker (large data) or the string.</summary>
+        public static bool DecompressBall(byte[] raw, ref string result)
+        {
+            if (File.Exists(Path.Combine(LocalServer.Root, "HexRevival.wholeball"))) return true;
+            byte[] bytes = Game.Shared.Utils.Compressor.Decompress(raw);
+            if (bytes != null && bytes.Length >= LargeBall) { t_BallBytes = bytes; result = BallMarker; }
+            else result = bytes != null ? Encoding.UTF8.GetString(bytes) : null;
+            return false;
+        }
+
+        /// <summary>Before TemplateManager.LoadClientBall: the marker becomes the string.</summary>
+        public static void ClientBall(ref string data)
+        {
+            if (!ReferenceEquals(data, BallMarker)) return;
+            data = Encoding.UTF8.GetString(t_BallBytes);
+            t_BallBytes = null;
+        }
+
+        private static readonly byte[] SectionBytes = Encoding.ASCII.GetBytes(SectionMark), TemplateBytes = Encoding.ASCII.GetBytes(TemplateMark);
+
+        private static int IndexOf(byte[] d, byte[] mark, int from, int to)
+        {
+            for (int i = from; i <= to - mark.Length; i++)
+            {
+                if (d[i] != mark[0]) continue;
+                int k = 1;
+                while (k < mark.Length && d[i + k] == mark[k]) k++;
+                if (k == mark.Length) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>Before TemplateManager.LoadAbilitiesFromBall: false when the data was handed over in pieces.</summary>
+        public static bool LoadBall(object manager, ref string data, ref bool result)
+        {
+            if (t_InBall || !ReferenceEquals(data, BallMarker)) return true;
+            byte[] d = t_BallBytes;
+            t_BallBytes = null;
+            if (s_LoadBall == null) s_LoadBall = manager.GetType().GetMethod("LoadAbilitiesFromBall", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();   // maybe not the main thread: no Time
+            Debug.Log("[HexRevival] [Memory] game data (" + (d.Length >> 20) + " MB) handed over in pieces, before: " + Heap());
+            int pieces = 0;
+            t_InBall = true;
+            try
+            {
+                // The markers are ASCII: a piece's bytes always end between two whole UTF-8 characters.
+                StringBuilder piece = new StringBuilder(PieceChars + 4096);
+                int pos = 0;
+                while (pos < d.Length)
+                {
+                    int end = IndexOf(d, SectionBytes, pos, d.Length);
+                    if (end < 0) end = d.Length;
+                    int head = IndexOf(d, TemplateBytes, pos, end);
+                    if (head < 0)
+                    {
+                        // A section without templates: as it is (the game logs an unknown type or skips it).
+                        if (end > pos) { s_LoadBall.Invoke(manager, new object[] { Encoding.UTF8.GetString(d, pos, end - pos) }); pieces++; }
+                    }
+                    else
+                    {
+                        string header = Encoding.UTF8.GetString(d, pos, head - pos);
+                        int t = head + TemplateBytes.Length;
+                        piece.Length = 0;
+                        while (t <= end)
+                        {
+                            int next = IndexOf(d, TemplateBytes, t, end);
+                            int stop = next < 0 ? end : next;
+                            if (stop > t)   // empty templates are dropped, as by the game's Split (RemoveEmptyEntries)
+                            {
+                                if (piece.Length == 0) piece.Append(header);
+                                piece.Append(TemplateMark).Append(Encoding.UTF8.GetString(d, t, stop - t));
+                                if (piece.Length >= PieceChars) { s_LoadBall.Invoke(manager, new object[] { piece.ToString() }); pieces++; piece.Length = 0; }
+                            }
+                            if (next < 0) break;
+                            t = next + TemplateBytes.Length;
+                        }
+                        if (piece.Length > 0) { s_LoadBall.Invoke(manager, new object[] { piece.ToString() }); pieces++; piece.Length = 0; }
+                    }
+                    pos = end + SectionBytes.Length;
+                }
+                result = true;
+            }
+            finally { t_InBall = false; }
+            Debug.Log("[HexRevival] [Memory] game data parsed in " + pieces + " pieces (" + (sw.ElapsedMilliseconds / 1000f).ToString("0.0") + " s), after: " + Heap());
+            return false;
         }
 
         // --- Map paths -----------------------------------------------------------------------------------------------
