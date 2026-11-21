@@ -1297,11 +1297,14 @@ namespace HexRevival
             string enc = b.Enc;
             if (won)
             {
-                // The mercenary challenge room won by a party mercenary: one challenge for it (see PickMercNode).
+                // The mercenary challenge room won by a party mercenary: one challenge for it (see PickMercNode), and the
+                // reward's "Challenge Completed" line with its bonus gold (Progression.OnCampaignBattleWon).
+                string challengeMerc = null;
                 if (room == MercNode(r) && !string.IsNullOrEmpty(b.Merc))
                 {
                     r.Vars["mercnode"] = "-";
                     Mercenaries.AddChallenge(b.Merc);
+                    challengeMerc = b.Merc;
                 }
                 if (enc != null) Quests.SetFlag(r.Champ, "won:" + enc, "1");
                 if (enc != null) Quests.OnEncounterWon(r.Champ, enc, Progression.AnyTamed());
@@ -1312,7 +1315,7 @@ namespace HexRevival
                 // hint): Src.Video (KVC) shows it from the run's second win on, until the run's first defeat.
                 string w; int wins; r.Vars.TryGetValue("wins", out w); int.TryParse(w, out wins);
                 r.Vars["wins"] = (wins + 1).ToString();
-                if (b.Reward != null) Progression.OnCampaignBattleWon(r.Champ, b.Reward, wins > 0 && Losses(r) == 0);
+                if (b.Reward != null) Progression.OnCampaignBattleWon(r.Champ, b.Reward, wins > 0 && Losses(r) == 0, challengeMerc);
             }
             else
             {

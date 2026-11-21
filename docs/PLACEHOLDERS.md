@@ -9,6 +9,13 @@ Rule (from 1.2.6): no guess without the tag. A guess that the existing videos co
 placeholder, it is unfinished work: check the videos first (they are in campaign order, see
 claude/campaign-chronology-and-dungeons.md), and use a placeholder only for what no video shows.
 
+## Mercenary challenge gold and Battlegrounds account XP (2026-11-21, 1.2.39)
+
+| What | Was | Now | Source / why |
+|---|---|---|---|
+| Dungeon "Challenge Completed" line | missing, its condition unknown | the mercenary challenge room won by a party mercenary: the line with the mercenary's portrait and a second gold line of 100% of the battle's gold | settled: Game (Loc MERC_NODE_COMPLETED is "Challenge Completed"; hint Hint_Mercenary_ChallengeNode: bonus gold for a mercenary's win), Video (+100%); Talekith |
+| Account XP for a Battlegrounds win (gauntlets, ladder) | none | 50, as a PvE win | PLACEHOLDER: ZymmerOP remembered Battlegrounds giving account XP; the amount is his suggestion |
+
 ## Booster alternate arts (2026-11-19)
 Epic cards are alternate art versions, which the game shows with their base card's rarity. Until 1.2.34 the top card
 was an epic 1 time in 5 (when not legendary), so an alternate art common or uncommon could take the rare's place
@@ -33,8 +40,7 @@ PLACEHOLDER in the code, with the reasoning next to it.
 | Account level alternate arts | nothing | an alternate art card of the current set at level 22 | Src.Wiki2019 ("common alternate arts" in levels 22-26); which card and level: PLACEHOLDER |
 
 Still not done, and why: Swarm! Swarm!, Rage and Charge! (arena: they change every card's values, no card of the game
-data does it); the dungeons' "Challenge Completed" gold line (condition never shown: see PROGRESSION.md); Pappy
-Jasper's Whip; Mayor Galway's death; the Kraken's sea hag curses and tentacles (in-battle scenes); the Crayburn
+data does it); Pappy Jasper's Whip; Mayor Galway's death; the Kraken's sea hag curses and tentacles (in-battle scenes); the Crayburn
 watchtower's training battle (no encounter in the game data); Hogarth's challenge window (console only); Swiss and
 single elimination tournaments; the Wheel of Fate items, event and Kickstarter items with no source of how they were
 won; Horwich Sea's "Princess Revert" (no run shows it); the never-released content listed below.

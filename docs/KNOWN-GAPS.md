@@ -20,7 +20,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • **The Usurper**: Shepherd's Rest (Finanif) reward is a guess (nobody on video fought it)
 • **Sapphire Gate**: opens once you accept The Blood Beneath. Inferred, no video shows where the key comes from
 • **Quests**: rewards never seen on video are guessed gold
-• **All dungeons**: the "Challenge Completed" bonus gold (+100%) is missing (its condition was never found); Pappy Jasper's Whip (Dec 2016 drop) is missing
+• **All dungeons**: Pappy Jasper's Whip (Dec 2016 drop) is missing
 
 **🌊 Campaign: Alachian Sea (AZ2), in story order**
 • **Lurking Crocodile**: the race card for Coyotle, Orc, Dwarf, Shin'hare and Vennen champions is inferred (seen for Necrotic, Elf and Human only)
@@ -54,5 +54,5 @@ Here is the list of the elements that are already known to be missing or placeho
 • **Battlegrounds**: prizes, draft timer, ladder stars, gauntlet format are guesses; Swiss and single-elimination tournaments are missing
 • **Siege**: which defenses you face, and how often AI players attack yours
 • **Dueling Pit**: which deck the AI picks
-• **Account XP**: Siege and Battlegrounds games give none (not known)
+• **Account XP**: Siege games give none, Battlegrounds wins give 50 like PvE wins (the real values aren't known)
 • **Low memory warning**: after a level load, if the game is close to running out of memory, it asks you to restart. The threshold (128 MB in one block) is a guess

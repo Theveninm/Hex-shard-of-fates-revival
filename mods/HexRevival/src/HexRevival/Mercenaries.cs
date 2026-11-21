@@ -426,6 +426,15 @@ namespace HexRevival
             return n;
         }
 
+        /// <summary>A mercenary's leveling (inventory id), null if unknown: the reward window's "Challenge Completed" line needs it.</summary>
+        public static MercLeveling InfoOf(string mercItem)
+        {
+            ResourceId id;
+            if (string.IsNullOrEmpty(mercItem) || !ResourceId.TryParse(mercItem, out id) || !id.IsValid) return null;
+            InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(id) as InventoryMercenaryData;
+            return data != null ? Info(data) : null;
+        }
+
         private static MercLeveling Info(InventoryMercenaryData data)
         {
             Lvl l = LvlOf(data.m_Id);
