@@ -464,7 +464,6 @@ namespace HexRevival
 
         /// <summary>End-of-battle events published by the game's rules (Src.Game: HandleGameplayChallenges), e.g. "savedprincess", "tamed".</summary>
         public static readonly HashSet<string> BattleEvents = new HashSet<string>();
-        private static bool s_FortuneApplied;
 
         /// <summary>StandaloneSession.PublishEvent (Harmony prefix): records the event of the battle in progress.</summary>
         public static void OnPublishEvent(string key, object value)
@@ -482,7 +481,6 @@ namespace HexRevival
         public static void OnSessionTick(StandaloneSession ss)
         {
             if (ss == null || (int)ss.CurrentTurnPhase <= (int)Game.Shared.Mechanics.ETurnPhases.Mulligan) return;
-            if (s_BattleChamp != 0 && !s_FortuneApplied) { s_FortuneApplied = true; Fortunes.Apply(ss, s_BattleChamp); }
             if (s_BattleChamp != 0) TickShip(ss);
             if (s_Difficulty <= 0) return;
             Player ai = Cheats.FindPlayer(ss, "ai");
@@ -1119,6 +1117,8 @@ namespace HexRevival
         // GameplayState sent to the client
         // ------------------------------------------------------------------
 
+        private static string s_LastQuestNodes;
+
         private static GameplayState BuildState(CampState st)
         {
             BuildMap(st.Z);
@@ -1139,6 +1139,8 @@ namespace HexRevival
             gs.VisLocs = new List<Location>();
             gs.LocNodes = new List<Node>();
             gs.Encounters = new List<Game.Shared.Eval.Data.Encounter>();
+            HashSet<string> questTargets = Quests.OpenTargets(st.ChampId);
+            List<object> questNodes = new List<object>();
             foreach (MapNode n in st.Z.Nodes)
             {
                 bool visible = Shown(st, n);
@@ -1251,6 +1253,13 @@ namespace HexRevival
                     d["count_var"] = "/GnomesCount";
                 }
                 ShipLocation(st, n, d);
+                // A battle or dungeon a quest now asks for: the map's animated quest glyph on its node (mornox
+                // 2026-11-21; the client's UIDungeonMapNode.QuestObjective, read from "/quest_nodes").
+                object enc;
+                string dungeonId = n.Dungeon != null ? Dungeons.IdOf(n.Dungeon) : null;
+                if (visible && !(d["completed"] is bool && (bool)d["completed"])
+                    && ((d.TryGetValue("encounter", out enc) && enc is string && questTargets.Contains((string)enc)) || (dungeonId != null && questTargets.Contains(dungeonId))))
+                    questNodes.Add(n.Id);
                 gs.VisLocs.Add(new Location(d));
                 Dictionary<string, object> nd = new Dictionary<string, object>();
                 nd["id"] = n.Id;
@@ -1287,7 +1296,9 @@ namespace HexRevival
             pub["CampaignGroup"] = st.Z.Key;
             pub["visited_nodes"] = new List<object>(st.VisitedNodes.ToArray());
             pub["visited_paths"] = new List<object>(st.VisitedPaths.ToArray());
-            pub["quest_nodes"] = new List<object>();
+            pub["quest_nodes"] = questNodes;
+            string qn = st.ChampId + ":" + string.Join(",", questNodes.ConvertAll(x => (string)x).ToArray());
+            if (qn != s_LastQuestNodes) { s_LastQuestNodes = qn; Debug.Log("[HexRevival] [Campaign] quest nodes of " + qn); }
             if (st.Z == AZ1)
             {
                 pub["GnomesMin"] = 0L;
@@ -2067,6 +2078,8 @@ namespace HexRevival
                     else Debug.LogWarning("[HexRevival] [Campaign] no effect card " + name);
                     QuestSim.Note("  effect: " + name + (t == null ? " (not found)" : ""));
                 }
+            ResourceId fortune = Fortunes.Take(champId);
+            if (fortune.IsValid) s_BattleEffects.Add(fortune);
             UID deck = UID.Invalid;
             try
             {
@@ -2090,7 +2103,6 @@ namespace HexRevival
             // The battle HUD reads the level from the profile's current champion.
             SetCurrentChampion(champId);
             BattleEvents.Clear();
-            s_FortuneApplied = false;
             Enqueue(() => Patches.StartMatch(deck, new ResourceId(encounter), null, "campaign " + label));
         }
 
@@ -2323,6 +2335,12 @@ namespace HexRevival
                 }
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalConvs.txt"), sb.ToString());
                 return count + " conversations written to HexRevivalConvs.txt";
+            }
+            if (sub == "shipreward")
+            {
+                // dev: "camp shipreward" = the reward window of a ship talent point (adds one to the current champion's ship)
+                Progression.DevShipReward(GameClient.Instance.PlayerProfile.GetCurrentChampion().Id);
+                return "ship talent point given";
             }
             if (sub == "fight" && parts.Length > 2)
             {

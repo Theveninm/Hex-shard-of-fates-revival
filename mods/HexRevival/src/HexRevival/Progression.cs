@@ -560,6 +560,9 @@ namespace HexRevival
         /// <summary>Gold of a quest whose reward is unknown. PLACEHOLDER.</summary>
         private const int QuestGold = 300;
 
+        /// <summary>Dev: a reward of 1 ship talent point with 100 XP (the loot window's two talent lines when the champion levels up).</summary>
+        internal static void DevShipReward(ulong champId) { Grant(champId, new Reward { Xp = 100, ShipTalentPoints = 1, Source = Src.Game }, null, "dev ship reward"); }
+
         /// <summary>The ship named at Portsmeare Harbor (Src.Video: a reward window with 3 ship talent points).</summary>
         public static void OnShipNamed(ulong champId)
         {
@@ -630,6 +633,21 @@ namespace HexRevival
         }
 
         /// <summary>
+        /// The labels of the talent point lines of the reward being shown, in order (null: the game's own "Talent Point").
+        /// The client's loot window shows every "LEVEL" line with the same text (UIGenericLootWindow.AddTalentPointReward,
+        /// no text given by UICampaignZoneVMBase.HandlePendingReward).
+        /// </summary>
+        private static readonly Queue<string> LootTalentLabels = new Queue<string>();
+
+        /// <summary>UIGenericLootWindow.AddTalentPointReward (Harmony prefix): the ship's line gets its own label.</summary>
+        public static void OnLootTalentLine(ref string textOverride)
+        {
+            if (!string.IsNullOrEmpty(textOverride) || LootTalentLabels.Count == 0) return;
+            string label = LootTalentLabels.Dequeue();
+            if (label != null) textOverride = label;
+        }
+
+        /// <summary>
         /// Applies a reward and hands it to the client like the campaign server did
         /// (ClientCampaignManager.CacheRewards): the map then shows the game's loot window.
         /// </summary>
@@ -676,12 +694,15 @@ namespace HexRevival
             champion_bits champ = Champions.AddXp(champId, r.Xp + bonusXp, out levels);
             if (r.Xp > 0) shown.Add(Action("XP", r.Xp, null));
             if (bonusXp > 0) shown.Add(Action("XP", bonusXp, null));
-            if (levels > 0) shown.Add(Action("LEVEL", levels * TalentPointsPerLevel, null));
+            LootTalentLabels.Clear();
+            if (levels > 0) { shown.Add(Action("LEVEL", levels * TalentPointsPerLevel, null)); LootTalentLabels.Enqueue(null); }
             if (r.ShipTalentPoints > 0)
             {
-                // Shown as the game's talent point line (the original said "Ship Talent Point").
+                // The game's talent point line, labelled "Ship Talent Point" as the original showed it (Src.Video), so that
+                // it is not taken for the champion's own level-up points (mornox 2026-11-21).
                 Campaign.AddShipTalentPoints(champId, r.ShipTalentPoints);
                 shown.Add(Action("LEVEL", r.ShipTalentPoints, null));
+                LootTalentLabels.Enqueue(Loc.Get("ship_talent_point"));
             }
             Saves.SaveCurrent();
 

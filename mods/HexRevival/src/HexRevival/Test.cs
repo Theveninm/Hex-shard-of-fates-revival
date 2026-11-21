@@ -1297,6 +1297,15 @@ namespace HexRevival
                     {
                         PlayerProfile pp = GameClient.Instance.PlayerProfile;
                         ulong champ;
+                        if (parts.Length > 2 && parts[1] == "won")
+                        {
+                            // dev: "party won <merc item id>" = what the client does with a mercenary won in the campaign
+                            // (ClientCampaignManager.checkNewbiePartyMunging, see Mercenaries.OnNewbieMunging), for the current champion
+                            System.Reflection.MethodInfo mm = typeof(Game.Client.Campaign.ClientCampaignManager).GetMethod("checkNewbiePartyMunging", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                            if (mm == null) return "no checkNewbiePartyMunging";
+                            if (!mm.IsStatic) return "not static"; mm.Invoke(null, new object[] { pp.GetCurrentChampion().Id, parts[2] });
+                            return "called (static=" + mm.IsStatic + ")";
+                        }
                         if (parts.Length < 2 || !ulong.TryParse(parts[1], out champ)) champ = pp.GetCurrentChampion() != null ? pp.GetCurrentChampion().Id : 0;
                         List<string> o = new List<string>();
                         foreach (PlayerProfile.PartyMember m in pp.GetPartyForChampion(champ))

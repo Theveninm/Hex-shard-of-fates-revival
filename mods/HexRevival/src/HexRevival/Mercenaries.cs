@@ -236,6 +236,7 @@ namespace HexRevival
         /// <summary>
         /// A party saved with more mercenaries than its champion has slots (parties made when every race had 4) loses
         /// the last ones: the client would show them in slots the champion does not have, and their passives would count.
+        /// A mercenary in it twice keeps one place.
         /// </summary>
         private static void TrimParties(PlayerProfile profile)
         {
@@ -243,6 +244,13 @@ namespace HexRevival
             foreach (KeyValuePair<ulong, CampSysGeneral.Party.ChampionParty> kv in All)
             {
                 if (profile.GetPvEChampionById(kv.Key) == null) continue;
+                // A mercenary twice in a party (OnNewbieMunging): its second copy leaves it.
+                HashSet<ResourceId> seen = new HashSet<ResourceId>();
+                if (kv.Value.Members.RemoveAll(m => !seen.Add(m.Mercenary)) > 0)
+                {
+                    Debug.Log("[HexRevival] [Mercenaries] party of " + kv.Key + ": a mercenary was in it twice");
+                    changed = true;
+                }
                 int max = PartySize(profile, kv.Key);
                 if (kv.Value.Members.Count <= max) continue;
                 Debug.Log("[HexRevival] [Mercenaries] party of " + kv.Key + ": " + kv.Value.Members.Count + " members for " + max + " slot(s), the last ones leave it");
@@ -250,6 +258,32 @@ namespace HexRevival
                 changed = true;
             }
             if (changed) Save();
+        }
+
+        /// <summary>
+        /// ClientCampaignManager.checkNewbiePartyMunging (Harmony prefix; false skips it): a mercenary won in the campaign
+        /// (Katsuhiro, Augustine...) gets its starter deck as a deck template and joins the champion's party. The client
+        /// adds it without looking at the party's slots or members: a full party got a fifth member in a slot the champion
+        /// does not have (mornox, Talekith 2026-11-21: it vanished once taken out), and a mercenary already in it a second
+        /// copy. Then only the deck template is made, and the party is left as it is.
+        /// </summary>
+        public static bool OnNewbieMunging(ulong champ, string mercItem)
+        {
+            try
+            {
+                PlayerProfile profile = GameClient.Instance.PlayerProfile;
+                ResourceId item;
+                InventoryMercenaryData data = ResourceId.TryParse(mercItem, out item) ? Singleton<TemplateManager>.Instance.GetInventoryItem(item) as InventoryMercenaryData : null;
+                if (profile == null || data == null || data.MercenaryTemplate == null) return true;
+                List<PlayerProfile.PartyMember> members = profile.GetPartyForChampion(champ);
+                int count = members != null ? members.Count : 0;
+                bool inParty = members != null && members.Exists(m => m.MercTemplate != null && m.MercTemplate.Id == data.MercenaryTemplate.Id);
+                if (!inParty && count < PartySize(profile, champ)) return true;
+                Debug.Log("[HexRevival] [Mercenaries] " + data.m_Name + " won by " + champ + ": " + (inParty ? "already in the party" : "the party is full (" + count + ")") + ", not added");
+                EnsureStarterDecks(profile);
+                return false;
+            }
+            catch (Exception e) { Debug.LogError("[HexRevival] [Mercenaries] new mercenary: " + e); return true; }
         }
 
         /// <summary>ClientCampaignManager.SaveChampionParty (Harmony prefix): saves the party and answers with it.</summary>
