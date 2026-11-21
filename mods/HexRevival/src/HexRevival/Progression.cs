@@ -80,6 +80,8 @@ namespace HexRevival
             public string NeedsEvent;                   // the items need this end-of-battle event (Src.Game: HandleGameplayChallenges)
             public int ShipTalentPoints;                // AZ2 ship talent points (first win only, Src.Video "N Ship Talent Point")
             public int BonusGold;                       // second gold line (dungeons, see OnCampaignBattleWon)
+            public string ChallengeMerc;                // the dungeon's mercenary challenge won by this mercenary (inventory id): "Challenge Completed"
+            public int ChallengeGold;                   // its bonus gold line
             public Src Source;
             public string Note;
 
@@ -449,7 +451,12 @@ namespace HexRevival
         /// A campaign battle won (map node, sea or dungeon room). bonusGold: dungeon battles' second gold line, 25% of
         /// the gold (Src.Video, KVC: never on a run's first battle, then on every win until the first defeat of the run).
         /// </summary>
-        public static void OnCampaignBattleWon(ulong champId, string node, bool bonusGold = false)
+        /// <param name="challengeMerc">The party mercenary (inventory id) that won the dungeon's mercenary challenge room,
+        /// null otherwise: the reward window's "Challenge Completed" line (the client's MERCXP action, UIGenericLootWindow.AddMercPointReward, Loc
+        /// MERC_NODE_COMPLETED) and a bonus gold line ("MERCGOLD") of 100% of the battle's gold. Src.Game: the hint
+        /// Hint_Mercenary_ChallengeNode ("Defeating that encounter with a Mercenary will award bonus gold"); Src.Video: the
+        /// dungeon reward windows with a "Challenge Completed" line had a second gold line equal to the battle's gold.</param>
+        public static void OnCampaignBattleWon(ulong champId, string node, bool bonusGold = false, string challengeMerc = null)
         {
             Reward r;
             Reward special = AZ1.TryGetValue(node, out r) ? r : null;
@@ -502,6 +509,7 @@ namespace HexRevival
                 give = withTamed;
             }
             if (bonusGold && give.Gold >= 4) { give = give.Copy(); give.BonusGold = give.Gold / 4; }
+            if (challengeMerc != null) { give = give.Copy(); give.ChallengeMerc = challengeMerc; give.ChallengeGold = give.Gold; }
             Grant(champId, give, node, "campaign " + node);
         }
 
@@ -561,6 +569,9 @@ namespace HexRevival
         private const int QuestGold = 300;
 
         /// <summary>Dev: a reward of 1 ship talent point with 100 XP (the loot window's two talent lines when the champion levels up).</summary>
+        /// <summary>Dev: a dungeon battle reward of 200 gold won by a mercenary in the mercenary challenge room.</summary>
+        internal static void DevChallengeReward(ulong champId, string mercItem) { Grant(champId, new Reward { Gold = 200, Xp = 100, ChallengeMerc = mercItem, ChallengeGold = 200, Source = Src.Game }, null, "dev challenge reward"); }
+
         internal static void DevShipReward(ulong champId) { Grant(champId, new Reward { Xp = 100, ShipTalentPoints = 1, Source = Src.Game }, null, "dev ship reward"); }
 
         /// <summary>The ship named at Portsmeare Harbor (Src.Video: a reward window with 3 ship talent points).</summary>
@@ -662,7 +673,7 @@ namespace HexRevival
             if (QuestSim.Active)
             {
                 // Simulation: the reward is only described (nothing is given to the account in use).
-                QuestSim.Note("  REWARD " + what + ": " + r.Gold + " gold" + (r.BonusGold > 0 ? " + " + r.BonusGold + " bonus" : "") + ", " + r.Xp + " XP, " + r.Packs + " pack(s)" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : ""));
+                QuestSim.Note("  REWARD " + what + ": " + r.Gold + " gold" + (r.BonusGold > 0 ? " + " + r.BonusGold + " bonus" : "") + (r.ChallengeMerc != null ? " + " + r.ChallengeGold + " challenge" : "") + ", " + r.Xp + " XP, " + r.Packs + " pack(s)" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : ""));
                 return;
             }
             foreach (string name in names) AddDrop(Loot.Resolve(name, true), cards, items, shown);
@@ -690,6 +701,18 @@ namespace HexRevival
                 Saves.Current.Gold += r.BonusGold;
                 shown.Add(Action("GOLD", r.BonusGold, null));
             }
+            Reckoning.Profile.Messages.MercLeveling challenge = r.ChallengeMerc != null ? Mercenaries.InfoOf(r.ChallengeMerc) : null;
+            if (challenge != null)
+            {
+                // The client keeps a "MERCXP" line only with the mercenary's leveling in the update (MercInfos), and shows
+                // a "MERCGOLD" line as its own gold line (ClientCampaignManager.MergeRewards; other gold lines are added up).
+                shown.Add(Action("MERCXP", 1, r.ChallengeMerc));
+                if (r.ChallengeGold > 0)
+                {
+                    Saves.Current.Gold += r.ChallengeGold;
+                    shown.Add(Action("MERCGOLD", r.ChallengeGold, null));
+                }
+            }
             int levels;
             champion_bits champ = Champions.AddXp(champId, r.Xp + bonusXp, out levels);
             if (r.Xp > 0) shown.Add(Action("XP", r.Xp, null));
@@ -713,6 +736,7 @@ namespace HexRevival
             up.Items = new List<EscrowResultItem>();
             foreach (inventory_bits it in items) up.Items.Add(new EscrowResultItem(it));
             up.Accounts = new List<EscrowResultAccount> { new EscrowResultAccount(AccountBits()) };
+            if (challenge != null) up.MercInfos = new List<EscrowResultMercInfo> { new EscrowResultMercInfo(challenge) };
             if (champ != null) up.Champions = new List<EscrowResultChampion> { new EscrowResultChampion(champ) };
             try
             {
@@ -956,6 +980,8 @@ namespace HexRevival
 
         /// <summary>Account XP for a PvE win (campaign, Quick Match against the AI). Src.Wiki2019: PvE 50, AI Dueling Pit 50.</summary>
         public const int PveWinXp = 50;
+        /// <summary>Account XP for a Battlegrounds win: PLACEHOLDER, the PvE value (see OnMatchEnded).</summary>
+        public const int PvpWinXp = 50;
         /// <summary>The first 1200 XP of each daily period count double. Src.Wiki2019.</summary>
         private const int BonusXp = 1200;
         /// <summary>
@@ -1229,7 +1255,14 @@ namespace HexRevival
             Campaign.OpponentDefeated = won && ss != null && AiChampionsDead(ss);
             if (Arena.OnGameEnded(won)) return;   // the arena's own rewards (see Arena)
             if (Siege.OnGameEnded(won)) return;   // no account XP for Siege battles: PLACEHOLDER, not known
-            if (Battlegrounds.OnGameEnded(won) || Battlegrounds.OnLadderGameEnded(won)) return;   // same for the Battlegrounds: PLACEHOLDER
+            if (Battlegrounds.OnGameEnded(won) || Battlegrounds.OnLadderGameEnded(won))
+            {
+                // A Battlegrounds win (gauntlet or ladder) gives the PvE win's account XP. PLACEHOLDER: the amount the
+                // original gave for PvP wins is not known (ZymmerOP 2026-11-21 remembered Battlegrounds giving account XP
+                // and suggested the PvE value).
+                if (won) AddAccountXp(PvpWinXp);
+                return;
+            }
             if (!Campaign.OnGameEnded(won) && won) OnOtherBattleWon();
         }
     }

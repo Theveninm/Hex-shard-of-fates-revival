@@ -2336,6 +2336,12 @@ namespace HexRevival
                 File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalConvs.txt"), sb.ToString());
                 return count + " conversations written to HexRevivalConvs.txt";
             }
+            if (sub == "challengereward" && parts.Length > 2)
+            {
+                // dev: "camp challengereward <merc item id>" = the reward window of a mercenary challenge won (adds 400 gold)
+                Progression.DevChallengeReward(GameClient.Instance.PlayerProfile.GetCurrentChampion().Id, parts[2]);
+                return "challenge reward given";
+            }
             if (sub == "shipreward")
             {
                 // dev: "camp shipreward" = the reward window of a ship talent point (adds one to the current champion's ship)

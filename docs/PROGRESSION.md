@@ -411,12 +411,15 @@ of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ard
 battles with one reward (Video: one window for Echo Ridge).
 Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your
 first attempt"; Video, KVC 5 runs): a second gold line of 25% on every dungeon win from the run's second
-on, until the run's first defeat. Not done, information not found:
-- the "Challenge Completed" line (+100% of the battle's gold, AZ1 and AZ2 dungeons, Video): its
-  condition is never shown (not on the map, the room dialog, the battle panel nor in battle; the client
-  has an objective widget the videos never show). 17 won battles compared, YES and NO, in vain: end
-  health, length, first try and dialog choice ruled out; a shard or card type in play fits them all but
-  stays a guess.
+on, until the run's first defeat.
+The "Challenge Completed" line (Video: +100% of the battle's gold, AZ1 and AZ2 dungeons) is the mercenary challenge's:
+the client shows it for a "MERCXP" reward with the mercenary's portrait, its text is the localization key
+MERC_NODE_COMPLETED, and the game's hint Hint_Mercenary_ChallengeNode says "Defeating that encounter with a Mercenary
+will award bonus gold and grant progress towards upgrading that Mercenary" (Game). Since 1.2.39, a win by a party
+mercenary in the mercenary challenge room shows it with a second gold line ("MERCGOLD") of 100% of the battle's gold
+(Video). Until then the line was listed as missing, its condition unknown (17 won battles compared on video without
+finding it; whether a mercenary fought them was not checked) (Talekith 2026-11-21).
+Not done, information not found:
 - Pappy Jasper's Whip: a second reward window "You received a piece of equipment" after the closing
   dialog of a dungeon's last node, twice (KVC, 25 and 27 Dec 2016), absent from 6 other runs: no text
   explains it (a random drop or a Christmas event).
@@ -567,7 +570,7 @@ holds the "On Demand" gauntlets and the opponents are AIs.
 | Draft | 60 s per pick; packs passed left, right, left; the 7 other drafters are bots (see AI opponents) | PLACEHOLDER (timer); the passing order is the usual one |
 | Opponents | constructed: the opponent pack (see AI opponents); draft: another drafter's picks; sealed: a pool of 6 boosters | PLACEHOLDER |
 | Ladder (ranked) | a star lost per loss; a star per win, one more from the second win in a row; never below 0; unranked and Immortal matches change nothing; no tier rewards | Steam2016 (a player, Sep 2016: "lose 1 star per loss", "1 extra for a win streak of 2 or more"; matches were best of 3 then); floor at 0 PLACEHOLDER; the tiers are the client's own (Game LadderTiers) |
-| Account XP | none for Battlegrounds games | PLACEHOLDER |
+| Account XP | 50 per won Battlegrounds game (gauntlets and ladder), as a PvE win; none for a loss | PLACEHOLDER (ZymmerOP 2026-11-21 remembered Battlegrounds giving account XP, amount unknown; before 1.2.39: none) |
 | Game format | the gauntlets' games are Immortal PvP games, the ladder's Standard (Immortal for the Immortal ladder), the Dueling Pit's Standard as the client's own: random cards (Portal...) come from the PvP sets; until 1.2.24 every game was a PvE one and Portal made PvE cards in a sealed gauntlet (Ghulzen 2026-11-08) | Game (Session.GetSetsValidInFormat); the gauntlets' format PLACEHOLDER |
 
 A best-of-3 match is played one game at a time: after each game the player is back in the deck builder
