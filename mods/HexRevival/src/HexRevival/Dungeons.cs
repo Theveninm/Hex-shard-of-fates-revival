@@ -439,6 +439,9 @@ namespace HexRevival
         /// <summary>Dungeon entered from an AZ1 map node (null if none).</summary>
         public static string AtNode(string zone, string node) { Def d = Defs().Find(x => x.Zone == zone && x.AZ1Node == node); return d != null ? d.Key : null; }
 
+        /// <summary>The dungeon template id of a dungeon key (what quest objectives name).</summary>
+        public static string IdOf(string key) { Def d = Defs().Find(x => x.Key == key); return d != null ? d.Id : null; }
+
         /// <summary>Paths of the dungeon's map, read from the client's prefab ("Path_A_B").</summary>
         private static Dictionary<string, HashSet<string>> Edges(Def d)
         {

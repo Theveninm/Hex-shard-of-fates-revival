@@ -11,8 +11,8 @@ namespace HexRevival
     /// Gaal fortunes (Milosh, Simza, Gyorgy): for 100 gold the gaal draws a card from the Deck of
     /// Fates that "helps in travels" (Src.Game dialogues). The fortunes are the game's "Fortune of ..."
     /// effect cards (set PvE_AZ1_Created_Effects, Src.Game). The champion holds one fortune at a time
-    /// (the gaals have an "already has fortune" dialogue); its abilities are activated for the
-    /// champion at the start of the next campaign battle, which uses it up.
+    /// (the gaals have an "already has fortune" dialogue); it is one of the next campaign battle's effects, which uses
+    /// it up (Take).
     /// Duration, Src.Video: the window reads "Gaal Camp - Your fortune for the next battle" (MHS UW 2017-01-25
     /// [W__kpqC147U] 0:51, Fortune of Diamond). PLACEHOLDER: how the fortune is drawn (random here; the runs show
     /// different fortunes at different visits, no pattern known: the same gaal, Gyorgy, before the same Pale Moon battle
@@ -27,6 +27,38 @@ namespace HexRevival
         public static bool Has(ulong champ) { return Quests.Flag(champ, "fortune") != null; }
 
         private static List<CardTemplate> s_Deck;
+
+        /// <summary>The fortune of the battle launched last (shown in its Terrain Effects panel), null if none.</summary>
+        private static CardTemplate s_InBattle;
+
+        /// <summary>
+        /// UIBattle.OnGameStarted (Harmony postfix): the fortune is listed in the battle's Terrain Effects panel (the
+        /// game's UIChallengeAlert, which lists the battle scene's mods), with its text; the fortune's effect card was not
+        /// shown anywhere (mornox 2026-11-21). Once per battle.
+        /// </summary>
+        public static void ShowInBattle(UIBattle battle)
+        {
+            CardTemplate card = s_InBattle;
+            s_InBattle = null;
+            if (card == null || battle == null) return;
+            try
+            {
+                const System.Reflection.BindingFlags f = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+                object scene = typeof(UIBattle).GetField("m_SceneObjects", f).GetValue(battle);
+                UIChallengeAlert alert = scene != null ? scene.GetType().GetField("ChallengeAlert", f).GetValue(scene) as UIChallengeAlert : null;
+                if (alert == null || alert.Context == null) return;
+                if (string.IsNullOrEmpty(alert.Context.LabelText)) alert.Context.LabelText = Localization.Get("Terrain_Effects");
+                ChallengeItemContext item = new ChallengeItemContext();
+                item.TitleText = card.m_Name;
+                // The card's text without its markup ("<b>", "#IGNORE_CHAIN#"), read from the player's side: the fortune is
+                // played by the encounter, so its "opposing champion" is the player.
+                string text = System.Text.RegularExpressions.Regex.Replace(card.m_GameText ?? "", "<[^>]*>|#[A-Z_]+#", "");
+                item.LabelText = text.Replace("Each opposing champion", "Your champion");
+                alert.Context.Challenges.Add(item);
+                Debug.Log("[HexRevival] [Fortunes] " + card.m_Name + " listed in the battle's terrain effects");
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Fortunes] terrain effects: " + e.Message); }
+        }
 
         private static List<CardTemplate> Deck()
         {
@@ -58,18 +90,25 @@ namespace HexRevival
             if (!QuestSim.Active) Notices.Show(card.m_Name);
         }
 
-        /// <summary>Start of a campaign battle (after the mulligan): the fortune's abilities for the champion, then it is used up.</summary>
-        public static void Apply(StandaloneSession ss, ulong champ)
+        /// <summary>
+        /// A campaign battle launched: the champion's fortune card, used up, for the battle's effects (null if none).
+        /// The fortunes are written from the encounter's side ("Each opposing champion gains 6 health", Fortune of
+        /// Diamond), like the dungeon boons: the AI side runs them at the start (Patches: encounter AbilitiesToRun), and
+        /// the player gets the boon. Until 1.2.37 their abilities were activated for the player, so the boon went to the
+        /// AI's champion (mornox 2026-11-21: "you don't get the boon").
+        /// </summary>
+        public static ResourceId Take(ulong champ)
         {
             string id = Quests.Flag(champ, "fortune");
-            if (id == null) return;
+            s_InBattle = null;
+            if (id == null) return ResourceId.Invalid;
             Quests.SetFlag(champ, "fortune", null);
             CardTemplate card = Singleton<TemplateManager>.Instance.GetCardTemplate(new ResourceId(id));
-            Player human = Cheats.FindPlayer(ss, "j");
-            if (card == null || human == null) return;
-            foreach (CardAbilityContainer a in card.m_CardAbilities) ss.ActivateAbilityForPlayer(human, a.m_CardAbilityId);
-            Server.MarkDirty();
-            Debug.Log("[HexRevival] [Fortunes] " + card.m_Name + " applied");
+            if (card == null) return ResourceId.Invalid;
+            Debug.Log("[HexRevival] [Fortunes] " + card.m_Name + " for this battle");
+            s_InBattle = card;
+            QuestSim.Note("  effect: " + card.m_Name + " (fortune)");
+            return card.m_Id;
         }
     }
 }

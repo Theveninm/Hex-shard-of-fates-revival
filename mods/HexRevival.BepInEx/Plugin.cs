@@ -101,6 +101,7 @@ namespace HexRevival
             }
             // Campaign mercenary parties (see Mercenaries.cs).
             apply("ClientCampaignManager.SaveChampionParty", () => Prefix(harmony, typeof(ClientCampaignManager), "SaveChampionParty", null, "Campaign_SaveChampionParty"));
+            apply("UIGenericLootWindow.AddTalentPointReward", () => Prefix(harmony, typeof(UIGenericLootWindow), "AddTalentPointReward", null, "Loot_TalentPoints"));
             apply("ClientCampaignManager.checkNewbiePartyMunging", () => Prefix(harmony, typeof(ClientCampaignManager), "checkNewbiePartyMunging", null, "Campaign_NewbieMunging"));
             // Profile deck templates (the AZ2 boat's deck, see DeckTemplates.cs).
             // Account level rewards claimed on the account panel (see AccountRewards).
@@ -699,6 +700,7 @@ namespace HexRevival
         public static void Session_PublishEvent(string __0, object __1) { Campaign.OnPublishEvent(__0, __1); }
         public static bool Campaign_SaveChampionParty(Game.Shared.Campaign.Messages.CampSysGeneral.Party.ChampionParty __0, ClientCampaignManager.PartyMembersCallback __1)
         { Mercenaries.OnSaveParty(__0, __1); return false; }
+        public static void Loot_TalentPoints(ref string __1) { Progression.OnLootTalentLine(ref __1); }
         public static bool Campaign_NewbieMunging(ulong __0, string __1) { return Mercenaries.OnNewbieMunging(__0, __1); }
         public static bool Profile_DeckTemplateSave(Game.Shared.Profile.ProfileDeckTemplate __2, ulong? __3,
             Action<Game.Shared.Network.CustomNetworkResponse<Game.Shared.Profile.Network.Response>> __4, ref IAsyncResult __result)
@@ -864,6 +866,7 @@ namespace HexRevival
         }
         public static void UIBattle_OnGameStarted(UIBattle __instance)
         {
+            HexRevival.Fortunes.ShowInBattle(__instance);
             try
             {
                 UnityEngine.Debug.Log("[HexRevival] equipment tray: game started, " + (__instance.Players != null ? __instance.Players.Length : 0) + " player(s)");

@@ -363,6 +363,32 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Quests] refresh " + script + ": " + e.Message); }
         }
 
+        /// <summary>
+        /// The battles (scene ids) and dungeons (template ids) the champion's quests now ask for: of each active quest,
+        /// its first open objective and the open optional ones before the next. The map marks their nodes with the quest
+        /// glyph (Campaign.BuildState, "/quest_nodes").
+        /// </summary>
+        public static HashSet<string> OpenTargets(ulong champ)
+        {
+            HashSet<string> res = new HashSet<string>();
+            foreach (KeyValuePair<string, Progress> q in Of(champ))
+            {
+                if (q.Value.Finished) continue;
+                Def d = GetDef(q.Key);
+                if (d == null) continue;
+                int first = FirstOpen(d, q.Value);
+                for (int i = 0; i <= first && i < d.Objectives.Count; i++)
+                {
+                    Objective o = d.Objectives[i];
+                    if (q.Value.Done.Contains(i)) continue;
+                    if (o.Encounter != null) res.Add(o.Encounter);
+                    foreach (string a in o.AltEncounters) res.Add(a);
+                    if (o.Dungeon != null) res.Add(o.Dungeon);
+                }
+            }
+            return res;
+        }
+
         /// <summary>Index of the first objective not done, optional ones left aside (Objectives.Count when all are done).</summary>
         public static int FirstOpen(Def d, Progress p)
         {
