@@ -22,7 +22,7 @@ namespace HexRevival
         public const string Version = "1.2.39";
 
         public const string RepoUrl = "https://github.com/Theveninm/Hex-shard-of-fates-revival";
-        public const string DiscordUrl = "https://discord.gg/4TWeErkhe";
+        public const string DiscordUrl = "https://discord.gg/bJaG9NFGAZ";
         private const string LatestReleaseApi = "https://api.github.com/repos/Theveninm/Hex-shard-of-fates-revival/releases/latest";
 
         /// <summary>The newest release when it is newer than this one (null otherwise, or while checking).</summary>

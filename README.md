@@ -1,7 +1,7 @@
 # HEX Revival
 
 Play **HEX: Shards of Fate** again, solo against the AI or online against other players, now that the official servers
-are gone (December 2020). **[Download the latest release](https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/latest)** · **[Discord server](https://discord.gg/4TWeErkhe)**
+are gone (December 2020). **[Download the latest release](https://github.com/Theveninm/Hex-shard-of-fates-revival/releases/latest)** · **[Discord server](https://discord.gg/bJaG9NFGAZ)**
 
 HEX Revival is a mod: it does not include or modify any game file. It adds a small loader
 ([BepInEx](https://github.com/BepInEx/BepInEx)) and the HexRevival plugin next to `Hex.exe`,
@@ -45,7 +45,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
   **Host a game**: against another player in a format (Immortal, Standard, PvE, free), or against the AI. The online
   account plays the decks of every offline account (see [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md)).
 - **Featured Content** (main menu): tells you when a new version is out, with the link to download it. The Discord
-  button of the top bar opens the [Discord server](https://discord.gg/4TWeErkhe), where players meet to talk about
+  button of the top bar opens the [Discord server](https://discord.gg/bJaG9NFGAZ), where players meet to talk about
   the game and find opponents.
 - **Store**: boosters, the game's preconstructed decks, the Prize Exchange (Siege Sacks, Cosmic Coins),
   primal packs and battleboards, sold for gold. Boosters are opened on the game's Pack Opening screen, each with a
@@ -75,7 +75,7 @@ and rebuilds locally what the server used to do: game rules, AI opponent, your c
 
 Not available (yet): Swiss and single-elimination tournaments.
 
-Come and talk about the game, report bugs and find opponents on the **[Discord server](https://discord.gg/4TWeErkhe)**.
+Come and talk about the game, report bugs and find opponents on the **[Discord server](https://discord.gg/bJaG9NFGAZ)**.
 
 ## Install and play
 
