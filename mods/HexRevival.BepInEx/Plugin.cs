@@ -143,6 +143,12 @@ namespace HexRevival
                 new[] { typeof(Reckoning.Game.ChampionTalentGroupData), typeof(Reckoning.Game.ChampionTalentData), typeof(bool), typeof(bool), typeof(Game.Shared.Domain.champion_bits) }),
                 postfix: new HarmonyMethod(typeof(Hooks), "Talent_Tooltip")));
             apply("UIChampionTalentViewModel.OnTalentPressed", () => harmony.Patch(AccessTools.Method(typeof(UIChampionTalentViewModel), "OnTalentPressed"), prefix: new HarmonyMethod(typeof(Hooks), "Talent_Pressed")));
+            // The AI casts the cards it can afford instead of tunneling them, and tunnels the ones it cannot (AiTunneling).
+            apply("AITactical.PlayCard", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "PlayCard",
+                new[] { typeof(Game.Shared.CardRepresentation), typeof(int), typeof(Game.Shared.Mechanics.Abilities.AbilityActivationData) }),
+                prefix: new HarmonyMethod(typeof(Hooks), "AITactical_PlayCardPre"), finalizer: new HarmonyMethod(typeof(Hooks), "AITactical_PlayCardExit")));
+            apply("AIFunctions.HasAbilityEffectTemplate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AIFunctions), "HasAbilityEffectTemplate"), prefix: new HarmonyMethod(typeof(Hooks), "AIFunctions_HasEffect")));
+            apply("AITactical.BuildBoard", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "BuildBoard"), postfix: new HarmonyMethod(typeof(Hooks), "AITactical_BuildBoard")));
             apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
             apply("LocalPlayer.PassPriority", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "PassPriority"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_LocalPass")));
             apply("LocalPlayer.SendAutoPass", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "SendAutoPass"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_AutoPass")));
@@ -730,6 +736,10 @@ namespace HexRevival
         public static bool Talent_Pressed(UIChampionTalentViewModel __instance, UITalentContext talentContext) { try { return HexRevival.LevelCap.ConfirmPick(__instance, talentContext); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent pick: " + e.Message); return true; } }
         public static void Equipment_Tooltip(Reckoning.Game.InventoryItemData item, ref string __result) { try { __result = (__result ?? "") + HexRevival.EquipmentSources.TooltipLines(item); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment tooltip: " + e.Message); } }
         public static void Equipment_Icon(NguiGoInventoryIconBinding __instance, EZData.Property<Reckoning.Game.InventoryItemData> ___m_Property) { try { HexRevival.EquipmentSources.MarkIcon(__instance, ___m_Property != null ? ___m_Property.GetValue() : null); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment icon: " + e.Message); } }
+        public static void AITactical_PlayCardPre() { HexRevival.AiTunneling.PlayCardEnter(); }
+        public static Exception AITactical_PlayCardExit(Exception __exception) { HexRevival.AiTunneling.PlayCardExit(); return __exception; }
+        public static bool AIFunctions_HasEffect(Type __1, ref bool __result) { if (!HexRevival.AiTunneling.HideTunnel(__1)) return true; __result = false; return false; }
+        public static void AITactical_BuildBoard(Game.Shared.AI.AITactical __instance, bool __1, ref bool __result) { if (!__result && HexRevival.AiTunneling.TunnelLeftover(__instance, __1)) __result = true; }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { if (Tutorial.DevStallAI) { Tutorial.DevStallAI = false; UnityEngine.Debug.Log("[HexRevival] [Tutorial] dev: AI update swallowed"); __result = true; return false; } Tutorial.SkipImpossiblePlays(__instance); return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }
         public static void TutorialRewards_Launch(System.Collections.Generic.IEnumerable<Game.Shared.ResourceId> __0) { Tutorial.OnRewards(__0); }
         public static void TutorialManager_CtorPre(Game.Shared.ClientSessionBase __0) { Tutorial.BeforeScriptCopy(__0); }

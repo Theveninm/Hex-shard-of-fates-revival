@@ -249,12 +249,16 @@ namespace HexRevival
         /// Map nodes whose battle depends on the faction (Src.Game): the template has "Node023A/B" and
         /// "Node026A/B", the map prefab one "Node023" / "Node026"; their conversations ("Node 23 -
         /// Zombies - ARDENT", "Node 26 - Bog - Underworld player"...) are per faction. Node 23: the
-        /// soldiers of the other faction surrounded by zombies, helped or not (choice_Help / choice_NoHelp).
+        /// soldiers of the other faction surrounded by zombies, helped or not (choice_Help / choice_NoHelp). The scene
+        /// names say whose soldiers they are not: "23B - NECROTIC CHOICE HELP" has the mod "Human Aid" (a Ruby Pyromancer),
+        /// for an Underworld champion who helped the humans; "23A - HUMANS CHOICE HELP" has "Necrotic Aid" (a Gemsoul
+        /// Feeder), for an Ardent one. Until 1.2.41 they were swapped (GooseChase, Talekith 2026-11-24: the wrong aid in
+        /// the Terrain Effects). The aid itself: see SceneAid.
         /// </summary>
         private static readonly Dictionary<string, string[]> FactionNodes = new Dictionary<string, string[]>
         {
-            { "Node023", new[] { "Node023A", "UW:help", "AZ 1 - NODE 23A - HUMANS CHOICE HELP", "UW:nohelp", "AZ 1 - NODE 23A_2 - HUMANS NO HELP",
-                "AR:help", "AZ 1 - NODE 23B - NECROTIC CHOICE HELP", "AR:nohelp", "AZ 1 - NODE 23B_2 - NECROTIC NO HELP" } },
+            { "Node023", new[] { "Node023A", "UW:help", "AZ 1 - NODE 23B - NECROTIC CHOICE HELP", "UW:nohelp", "AZ 1 - NODE 23B_2 - NECROTIC NO HELP",
+                "AR:help", "AZ 1 - NODE 23A - HUMANS CHOICE HELP", "AR:nohelp", "AZ 1 - NODE 23A_2 - HUMANS NO HELP" } },
             { "Node026", new[] { "Node026A", "UW", "AZ 1 - NODE 26 - WAYWARD ORCS", "AR", "AZ 1 - NODE 26B - WAYWARD VENNEN" } },
         };
 
@@ -2067,8 +2071,25 @@ namespace HexRevival
             foreach (string a in EventStrings(args)) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);
         }
 
+        /// <summary>
+        /// Encounter scenes whose aid mod has no card (Src.Game: Node 23's "Human Aid" / "Necrotic Aid", m_Mods empty;
+        /// the campaign server added it): the effect card that gives it, run by the encounter like the other effects
+        /// ("Each opposing champion summons a Ruby Pyromancer", PvE_AZ1_Created_Effects). Src.Game: the cards' names
+        /// "Humans Aid Underworld" / "Necrotic Aid Ardent" and the scene mods' texts.
+        /// </summary>
+        private static readonly Dictionary<string, string> SceneAid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "AZ 1 - NODE 23B - NECROTIC CHOICE HELP", "Humans Aid Underworld" },
+            { "AZ 1 - NODE 23A - HUMANS CHOICE HELP", "Necrotic Aid Ardent" },
+        };
+
         internal static void LaunchBattle(ulong champId, string encounter, string label, IEnumerable<string> effects = null)
         {
+            SceneData aidScene;
+            string aid;
+            if (encounter != null && Singleton<TemplateManager>.Instance.CampaignScenes.TryGetValue(new ResourceId(encounter), out aidScene)
+                && aidScene != null && aidScene.m_Name != null && SceneAid.TryGetValue(aidScene.m_Name.Trim(), out aid))
+                effects = effects != null ? new List<string>(effects) { aid } : new List<string> { aid };
             s_BattleEffects.Clear();
             if (effects != null)
                 foreach (string name in effects)
@@ -2362,6 +2383,15 @@ namespace HexRevival
                 foreach (string a in parts) if (a.StartsWith("merc=")) s_MercChoice = a.Substring(5);   // "merc=<mercenary item id>": played by that party member
                 int diff;
                 if (LastEvent.StartsWith("Diff_") && int.TryParse(LastEvent.Substring(5), out diff)) s_Difficulty = diff;
+                if (n.Variants != null)
+                {
+                    // the faction's battle for that event ("camp fight Node023 choice_NoHelp"), as the map gives it; "UW" / "AR"
+                    // anywhere: that faction's battle whatever the champion's
+                    champion_bits cb = Champions.Get(champ);
+                    string f = Array.IndexOf(parts, "UW") >= 0 ? "UW" : Array.IndexOf(parts, "AR") >= 0 ? "AR"
+                        : cb != null && cb.Race.GetFaction() == Game.Shared.Mechanics.EFactions.Underworld ? "UW" : "AR";
+                    enc = EncFor(n, f, LastEvent) ?? enc;
+                }
                 StartBattle(st, n, enc);
                 return "fight " + n.Id + " (" + LastEvent + ") for champion " + champ;
             }
