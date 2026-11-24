@@ -684,18 +684,23 @@ namespace HexRevival
                         // block (read by BattleStateDeclareBlockers / BattleStateAssignBlocker).
                         if (card.IsInPlay() && card.IsTroop() && card.CanBlock() == ECombatantStatus.Ok)
                         {
-                            List<SessionCardId> blockable = new List<SessionCardId>();
+                            List<SessionCardId> blockable = new List<SessionCardId>(), mustBeBlocked = new List<SessionCardId>();
                             foreach (Combat combat in self.CombatManager.Combats)
                             {
                                 if (combat.Attacker == null || combat.Defender == null || combat.Defender.m_ControllingPlayer != player)
                                     continue;
-                                if (card.CanBlock(combat.Attacker) == ECombatantStatus.Ok)
-                                    blockable.Add(combat.Attacker.m_SessionCardId);
+                                if (card.CanBlock(combat.Attacker) != ECombatantStatus.Ok) continue;
+                                blockable.Add(combat.Attacker.m_SessionCardId);
+                                if (combat.Attacker.MustBeBlocked()) mustBeBlocked.Add(combat.Attacker.m_SessionCardId);
                             }
+                            // An attacker that "must be blocked if able" (Pheromones): a troop able to block it must block it (or one
+                            // of them, Session.AreBlocksLegal). Only those are offered, with a minimum of 1: the client then shows
+                            // its own ILLEGAL BLOCK button until the player assigns that block (BattleStateDeclareBlockers.BlockingIsLegal).
+                            if (mustBeBlocked.Count > 0) blockable = mustBeBlocked;
                             if (blockable.Count > 0)
                             {
                                 usage |= ECardUsage.Defend;
-                                int min = card.GetCardContext().GetBool(IntAttrs.MustBlock) ? 1 : 0;
+                                int min = mustBeBlocked.Count > 0 || card.GetCardContext().GetBool(IntAttrs.MustBlock) ? 1 : 0;
                                 instances.Add(new OptionInstanceSessionEventArgs
                                 {
                                     SessionId = self.m_SessionId,

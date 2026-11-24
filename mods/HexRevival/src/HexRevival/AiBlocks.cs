@@ -21,9 +21,10 @@ namespace HexRevival
     /// one with the fewest blockers so far), a troop that must block blocks the first attacker it can, a lone
     /// blocker on a Feral attacker is freed. The AI's other choices are kept.
     ///
-    /// The player's declaration is repaired the same way: the client does not check these rules either, and a
-    /// rejected declaration never passes priority, so the battle stopped before combat damage (ZymmerOP,
-    /// 2026-11-24, Pheromones in the Crocodile encounter: passing without blockers soft-locked the game).
+    /// The player's declaration is repaired the same way, as a safety net: the client only enforces the minimum
+    /// blocks the server's options give it (Server: a troop able to block an attacker that must be blocked gets
+    /// a minimum of 1, so the client shows ILLEGAL BLOCK), and a rejected declaration never passes priority, so
+    /// the battle stopped before combat damage (ZymmerOP, 2026-11-24, Pheromones in the Crocodile encounter).
     /// </summary>
     public static class AiBlocks
     {
