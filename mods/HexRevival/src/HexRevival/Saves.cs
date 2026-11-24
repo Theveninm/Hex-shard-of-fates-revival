@@ -87,6 +87,10 @@ namespace HexRevival
             /// Settings, Account tab. The doubled first 1,200 XP of each period stay either way.
             /// </summary>
             public bool DailyXpLimit;
+            /// <summary>Champion levels up to 20 (LevelCap). Off by default: beyond the original game.</summary>
+            public bool Level20;
+            /// <summary>With Level20: each class's level 30 talent can be taken at level 20 (LevelCap). Off by default.</summary>
+            public bool Level30Talent;
             /// <summary>One-time rewards already received ("champion:reward" keys).</summary>
             public HashSet<string> Claims = new HashSet<string>();
         }
@@ -279,6 +283,8 @@ namespace HexRevival
                     else if (k == "cheappacks") i.CheapPacks = v == "1";
                     else if (k == "primalbonus") i.PrimalBonus = v != "0";
                     else if (k == "xplimit") i.DailyXpLimit = v == "1";
+                    else if (k == "level20") i.Level20 = v == "1";
+                    else if (k == "level30talent") i.Level30Talent = v == "1";
                     else if (k == "claims") i.Claims.UnionWith(v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
                 }
             }
@@ -314,6 +320,8 @@ namespace HexRevival
                     "cheappacks=" + (i.CheapPacks ? "1" : "0"),
                     "primalbonus=" + (i.PrimalBonus ? "1" : "0"),
                     "xplimit=" + (i.DailyXpLimit ? "1" : "0"),
+                    "level20=" + (i.Level20 ? "1" : "0"),
+                    "level30talent=" + (i.Level30Talent ? "1" : "0"),
                     "claims=" + string.Join(",", new List<string>(i.Claims).ToArray()) });
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Saves] write " + i.Name + ": " + e.Message); }

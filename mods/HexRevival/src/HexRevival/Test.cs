@@ -1075,6 +1075,55 @@ namespace HexRevival
                 case "aidecks": return AiDecksWindow.Command(parts);
                 case "craft": return Crafting.Command(parts);   // dev: breaking down and crafting (see Crafting)
                 case "tdecks": return TournamentDecks.Command(parts);
+                case "bindpath":   // dev: "bindpath <object path text>" = the NGUI bindings of the matching objects: their Path, Expression, CheckType, Invert
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        StringBuilder bp = new StringBuilder();
+                        foreach (NguiBinding b in Resources.FindObjectsOfTypeAll<NguiBinding>())
+                        {
+                            if (b == null) continue;
+                            string path = b.name; for (Transform t = b.transform.parent; t != null; t = t.parent) path = t.name + "/" + path;
+                            if (path.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            bp.Append(path).Append(" ").Append(b.GetType().Name).Append(" path=").Append(b.Path);
+                            NguiBooleanBinding bb = b as NguiBooleanBinding;
+                            if (bb != null) bp.Append(" check=").Append(bb.CheckType).Append(" ref=").Append(bb.Reference).Append(" invert=").Append(bb.Invert);
+                            bp.Append('\n');
+                            if (bp.Length > 6000) break;
+                        }
+                        return bp.Length > 0 ? bp.ToString() : "no binding under " + q;
+                    }
+                case "talents":   // dev: "talents open" (the current champion's talent window), "talents list", "talents press <name>" (as a click)
+                    {
+                        UIChampionTalentViewModel tv = null;
+                        foreach (UIChampionTalentViewModel v in Resources.FindObjectsOfTypeAll<UIChampionTalentViewModel>())
+                            if (v != null && v.GetType() == typeof(UIChampionTalentViewModel) && v.gameObject.scene.IsValid()) { tv = v; break; }
+                        if (tv == null) return "no talent window";
+                        string sub = parts.Length > 1 ? parts[1] : "list";
+                        if (sub == "open")
+                        {
+                            ulong cid = Main.Instance.m_GameClient.PlayerProfile.GetCurrentChampion().Id;
+                            tv.SetChampion(cid, false);
+                            tv.SetVisible(true);
+                            return "talents of champion " + cid;
+                        }
+                        Dictionary<ResourceId, UITalentContext> tl = HarmonyLib.Traverse.Create(tv).Field("m_TalentList").GetValue<Dictionary<ResourceId, UITalentContext>>();
+                        if (tl == null) return "no talents";
+                        string q = string.Join(" ", parts, Math.Min(2, parts.Length), Math.Max(0, parts.Length - 2));
+                        List<string> tn = new List<string>();
+                        foreach (UITalentContext c in tl.Values)
+                        {
+                            if (c == null || c.Talent == null) continue;
+                            if (sub == "press" && c.Talent.m_Name.Equals(q, StringComparison.OrdinalIgnoreCase))
+                            {
+                                HarmonyLib.AccessTools.Method(typeof(UIChampionTalentViewModel), "OnTalentPressed").Invoke(tv, new object[] { c });
+                                return "pressed " + c.Name + " selected=" + c.Selected;
+                            }
+                            if (c.Talent.m_MinLevel >= 15) tn.Add(c.Name + " min=" + c.Talent.m_MinLevel + " unlocked=" + c.Unlocked + " selected=" + c.Selected);
+                        }
+                        return sub == "press" ? "no talent " + q : string.Join("\n", tn.ToArray());
+                    }
+                case "eqsrc":   // dev: "eqsrc <equipment name>" = owned count and where the piece drops (EquipmentSources)
+                    return EquipmentSources.Command(string.Join(" ", parts, 1, parts.Length - 1));
                 case "talentcheck":   // dev: "talentcheck <race> <class> <level>" = the talents that level makes mandatory, and those then unlocked
                     {
                         if (parts.Length < 4) return "usage: talentcheck <race> <class> <level>";
@@ -1095,7 +1144,9 @@ namespace HexRevival
                                     ChampionTalentData t = tm.GetChampionTalentTemplate(id);
                                     if (t != null) o.Add(t.m_Name + " min " + t.m_MinLevel + " cost " + t.m_Cost + " sel " + t.m_SelectionType
                                         + " unlocked(empty)=" + Game.Shared.Talents.TalentManager.IsTalentUnlocked(c, t, new List<ResourceId>())
-                                        + " unlocked(mandatory)=" + Game.Shared.Talents.TalentManager.IsTalentUnlocked(c, t, c.ChampionTalents));
+                                        + " unlocked(mandatory)=" + Game.Shared.Talents.TalentManager.IsTalentUnlocked(c, t, c.ChampionTalents)
+                                        + (t.m_MinLevel >= 15 ? " impl=" + t.m_ImplStage + " abilities=" + (t.m_Abilities is System.Collections.ICollection ? ((System.Collections.ICollection)t.m_Abilities).Count : -1)
+                                            + " text=" + t.m_GameText + " desc=" + t.m_Description + " notes=" + t.m_DesignNotes : ""));
                                 }
                         return string.Join("\n", o.ToArray());
                     }

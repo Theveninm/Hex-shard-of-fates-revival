@@ -43,6 +43,7 @@ Here is the list of the elements that are already known to be missing or placeho
 • Chest rarity from boosters: uncommon 27%, rare 10%, legendary 4%, from about 150 packs opened on video (small sample)
 • How many items legendary / primal chests hold
 • PvE packs' exact contents; special packs' contents (race packs, Kismet's Draft, GenCon 2016)
+• Alachian Sea packs' 2 commons come from sets 5–9 (Herofall to Doombringer), a choice so later commons can be found; which sets the real packs used is unknown
 • Store gold prices (boosters, special packs, stardust, Kismet packs, full sets, and the Prize Exchange in gold: 10 gold per Siege Sack or Cosmic Coin by default)
 • Account level rewards: the "fixed commons", which stardust and how much, which alternate art and at which level, which sleeve
 • Holiday and sleeve season dates are guessed
@@ -55,4 +56,5 @@ Here is the list of the elements that are already known to be missing or placeho
 • **Siege**: which defenses you face, and how often AI players attack yours
 • **Dueling Pit**: which deck the AI picks
 • **Account XP**: Siege games give none, Battlegrounds wins give 50 like PvE wins (the real values aren't known)
+• **Champion levels 16–20** (account option, off by default, not in the original): 20,000 XP per level is a guess; only 4 of the 24 level 30 talents were finished by the original team; the others are marked "Unfinished" and do nothing
 • **Low memory warning**: after a level load, if the game is close to running out of memory, it asks you to restart. The threshold (128 MB in one block) is a guess

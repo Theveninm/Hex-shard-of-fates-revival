@@ -9,6 +9,13 @@ Rule (from 1.2.6): no guess without the tag. A guess that the existing videos co
 placeholder, it is unfinished work: check the videos first (they are in campaign order, see
 claude/campaign-chronology-and-dungeons.md), and use a placeholder only for what no video shows.
 
+## Alachian Sea pack commons, champion levels 16–20 (2026-11-24)
+
+| What | Was | Now | Source / why |
+|---|---|---|---|
+| Champion levels 16–20 (account option "Champion levels up to 20", off by default) | none (cap 15) | 20,000 XP per level after 15 | PLACEHOLDER: TalekithOP's suggestion; the original never went past 15 |
+| Sets of the 2 commons of an AZ2 pack (Alachian Sea Pack and its dungeons' packs) | sets 1–3, as the AZ1 packs | sets 5–9 (Herofall, Scars of War, Frostheart, Dead of Winter, Doombringer) | PLACEHOLDER: TalekithOP's suggestion, so that the later sets' commons can be found; no source for the real packs |
+
 ## Mercenary challenge gold and Battlegrounds account XP (2026-11-21, 1.2.39)
 
 | What | Was | Now | Source / why |

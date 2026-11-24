@@ -1077,7 +1077,7 @@ namespace HexRevival
                 if (p == null) continue;
                 switch (s.Kind)
                 {
-                    case "commons": p.Title = RarityName(ERarity.Common); p.Counted = true; G(c, Loc.Get("g_per_pack", RarityName(ERarity.Common), 2), Loc.Get("n_first_sets")).Pools.Add(p); break;
+                    case "commons": p.Title = RarityName(ERarity.Common); p.Counted = true; G(c, Loc.Get("g_per_pack", RarityName(ERarity.Common), 2), Loc.Get(Loot.IsAZ2(pack) ? "n_later_sets" : "n_first_sets")).Pools.Add(p); break;
                     case "card": p.Title = Loc.Get("pc_cards_title"); p.Counted = true; G(c, Loc.Get("g_camp_card")).Pools.Add(p); break;
                     case "equipment": p.Title = Loc.Get("pc_equipment"); G(c, Loc.Get("g_camp_equipment"), Loc.Get("n_dust_instead")).Pools.Add(p); break;
                     default:

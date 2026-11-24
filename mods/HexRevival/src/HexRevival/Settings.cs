@@ -69,6 +69,12 @@ namespace HexRevival
                 () => Saves.Current != null && Saves.Current.PrimalBonus, v => { if (Saves.Current != null) { Saves.Current.PrimalBonus = v; Saves.SaveCurrent(); } });
             EnsureRow(row, grid, "HexRevival_DailyXpLimit", "opt_xplimit", offline,
                 () => Saves.Current != null && Saves.Current.DailyXpLimit, v => { if (Saves.Current != null) { Saves.Current.DailyXpLimit = v; Saves.SaveCurrent(); Progression.RefreshAccountUi(); } });
+            // Beyond the original game, off by default (TalekithOP / the user, 2026-11-24): levels 16-20, then the level 30
+            // talent at 20 (LevelCap; applied at once, the champions' levels with the next login).
+            EnsureRow(row, grid, "HexRevival_Level20", "opt_level20", offline,
+                () => Saves.Current != null && Saves.Current.Level20, v => { if (Saves.Current != null) { Saves.Current.Level20 = v; Saves.SaveCurrent(); LevelCap.Apply(); } });
+            EnsureRow(row, grid, "HexRevival_Level30Talent", "opt_level30talent", offline && Saves.Current.Level20,
+                () => Saves.Current != null && Saves.Current.Level30Talent, v => { if (Saves.Current != null) { Saves.Current.Level30Talent = v; Saves.SaveCurrent(); LevelCap.Apply(); } });
             // An "unlock everything" account owns every card and item: the prices, crafting, store and chest options do
             // nothing there and are not shown; its profile information says so, under the user name (user 2026-11-03:
             // the tab looked incomplete). "Every gem in the campaign" stays: it is about which gems the campaign's deck
