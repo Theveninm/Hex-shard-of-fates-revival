@@ -2058,7 +2058,7 @@ namespace HexRevival
         private static string s_MercChoice;
 
         /// <summary>The mercenary item id of the party member playing the last battle launched (null: the champion).</summary>
-        internal static string LastBattleMerc;
+        public static string LastBattleMerc;
 
         /// <summary>Reads the mercenary choice of a "start" event (campaign map or dungeon).</summary>
         internal static void NoteStartArgs(object[] args)

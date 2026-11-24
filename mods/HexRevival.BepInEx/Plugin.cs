@@ -760,7 +760,7 @@ namespace HexRevival
             {
                 if (partyMembers != null || championBits == null || player == null || player.IsAI()) return;
                 if (HexRevival.Campaign.BattleChampion == 0 || HexRevival.Campaign.BattleChampion != championBits.Id) return;
-                partyMembers = HexRevival.Mercenaries.PartyTemplateIds(championBits.Id);
+                partyMembers = HexRevival.Mercenaries.PartyTemplateIds(championBits.Id, HexRevival.Campaign.LastBattleMerc);
                 if (partyMembers != null) UnityEngine.Debug.Log("[HexRevival] [Mercenaries] party passives of " + partyMembers.Count + " member(s)");
             }
             catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] party passives: " + e.Message); }

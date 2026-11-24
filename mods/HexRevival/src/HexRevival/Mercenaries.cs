@@ -321,15 +321,21 @@ namespace HexRevival
         /// every party member's "Party:" abilities to the fighter's simulacrum card (AuthoritativeSessionBase.
         /// InstantiateChampionCard / InstantiateMercenaryCard, partyMembers), a list the campaign server sent with the
         /// battle; the local session loads the deck without it (StandaloneSession.HasDeckAndChampInfo returns false),
-        /// so no party passive was ever applied. Null if the champion has no party.
+        /// so no party passive was ever applied. The mercenary playing the battle (fighter, its item id) is left out: its
+        /// passive is for the others (GooseChase 2026-11-21: Corinth the Iconoclast's dungeon Sanctum of Suffering only
+        /// came when another party member fought; the Dingler King and the Scion of Uruunaz got their own until 1.2.40).
+        /// Null if no other member is left.
         /// </summary>
-        public static List<ResourceId> PartyTemplateIds(ulong champ)
+        public static List<ResourceId> PartyTemplateIds(ulong champ, string fighter)
         {
             CampSysGeneral.Party.ChampionParty party;
             if (!All.TryGetValue(champ, out party) || party.Members.Count == 0) return null;
             List<ResourceId> res = new List<ResourceId>();
+            ResourceId playing;
+            if (string.IsNullOrEmpty(fighter) || !ResourceId.TryParse(fighter, out playing)) playing = ResourceId.Invalid;
             foreach (CampSysGeneral.Party.ChampionParty.ChampionPartyMember m in party.Members)
             {
+                if (playing.IsValid && m.Mercenary == playing) continue;
                 InventoryMercenaryData data = Singleton<TemplateManager>.Instance.GetInventoryItem(m.Mercenary) as InventoryMercenaryData;
                 MercenaryTemplate t = AtLevel(data, Math.Max(m.Upgrade + 1, Level(m.Mercenary)));
                 if (t != null) res.Add(t.Id);
