@@ -56,5 +56,5 @@ Here is the list of the elements that are already known to be missing or placeho
 • **Siege**: which defenses you face, and how often AI players attack yours
 • **Dueling Pit**: which deck the AI picks
 • **Account XP**: Siege games give none, Battlegrounds wins give 50 like PvE wins (the real values aren't known)
-• **Champion levels 16–20** (account option, off by default, not in the original): 20,000 XP per level is a guess; only 4 of the 24 level 30 talents were finished in the game files, the others can't be taken
+• **Champion levels 16–20** (account option, off by default, not in the original): 20,000 XP per level is a guess; only 4 of the 24 level 30 talents were finished by the original team; the others are marked "Unfinished" and do nothing
 • **Low memory warning**: after a level load, if the game is close to running out of memory, it asks you to restart. The threshold (128 MB in one block) is a guess

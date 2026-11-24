@@ -137,6 +137,12 @@ namespace HexRevival
             // Equipment: owned count and where it drops in its tooltip, owned or not in a card's equipment list (EquipmentSources).
             apply("UIEquipmentItemContext.BuildInfoTooltip", () => harmony.Patch(AccessTools.Method(typeof(UIEquipmentItemContext), "BuildInfoTooltip"), postfix: new HarmonyMethod(typeof(Hooks), "Equipment_Tooltip")));
             apply("NguiGoInventoryIconBinding.UpdateBinding", () => harmony.Patch(AccessTools.Method(typeof(NguiGoInventoryIconBinding), "UpdateBinding"), postfix: new HarmonyMethod(typeof(Hooks), "Equipment_Icon")));
+            // Level 30 talents left unfinished by the original team: marked, and a confirmation before picking one (LevelCap).
+            apply("UITalentContext.SetTalent", () => harmony.Patch(AccessTools.Method(typeof(UITalentContext), "SetTalent"), postfix: new HarmonyMethod(typeof(Hooks), "Talent_Set")));
+            apply("UITalentContext.BuildTalentTooltip", () => harmony.Patch(AccessTools.Method(typeof(UITalentContext), "BuildTalentTooltip",
+                new[] { typeof(Reckoning.Game.ChampionTalentGroupData), typeof(Reckoning.Game.ChampionTalentData), typeof(bool), typeof(bool), typeof(Game.Shared.Domain.champion_bits) }),
+                postfix: new HarmonyMethod(typeof(Hooks), "Talent_Tooltip")));
+            apply("UIChampionTalentViewModel.OnTalentPressed", () => harmony.Patch(AccessTools.Method(typeof(UIChampionTalentViewModel), "OnTalentPressed"), prefix: new HarmonyMethod(typeof(Hooks), "Talent_Pressed")));
             apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
             apply("LocalPlayer.PassPriority", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "PassPriority"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_LocalPass")));
             apply("LocalPlayer.SendAutoPass", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "SendAutoPass"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_AutoPass")));
@@ -719,6 +725,9 @@ namespace HexRevival
         { __result = null; Siege.OnRequest(__3, __5); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
+        public static void Talent_Set(UITalentContext __instance) { try { HexRevival.LevelCap.MarkTalent(__instance); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent mark: " + e.Message); } }
+        public static void Talent_Tooltip(Reckoning.Game.ChampionTalentData talent, ref string __result) { try { __result = HexRevival.LevelCap.TalentTooltip(talent, __result); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent tooltip: " + e.Message); } }
+        public static bool Talent_Pressed(UIChampionTalentViewModel __instance, UITalentContext talentContext) { try { return HexRevival.LevelCap.ConfirmPick(__instance, talentContext); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent pick: " + e.Message); return true; } }
         public static void Equipment_Tooltip(Reckoning.Game.InventoryItemData item, ref string __result) { try { __result = (__result ?? "") + HexRevival.EquipmentSources.TooltipLines(item); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment tooltip: " + e.Message); } }
         public static void Equipment_Icon(NguiGoInventoryIconBinding __instance, EZData.Property<Reckoning.Game.InventoryItemData> ___m_Property) { try { HexRevival.EquipmentSources.MarkIcon(__instance, ___m_Property != null ? ___m_Property.GetValue() : null); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment icon: " + e.Message); } }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { if (Tutorial.DevStallAI) { Tutorial.DevStallAI = false; UnityEngine.Debug.Log("[HexRevival] [Tutorial] dev: AI update swallowed"); __result = true; return false; } Tutorial.SkipImpossiblePlays(__instance); return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }

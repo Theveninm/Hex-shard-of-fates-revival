@@ -1092,6 +1092,36 @@ namespace HexRevival
                         }
                         return bp.Length > 0 ? bp.ToString() : "no binding under " + q;
                     }
+                case "talents":   // dev: "talents open" (the current champion's talent window), "talents list", "talents press <name>" (as a click)
+                    {
+                        UIChampionTalentViewModel tv = null;
+                        foreach (UIChampionTalentViewModel v in Resources.FindObjectsOfTypeAll<UIChampionTalentViewModel>())
+                            if (v != null && v.GetType() == typeof(UIChampionTalentViewModel) && v.gameObject.scene.IsValid()) { tv = v; break; }
+                        if (tv == null) return "no talent window";
+                        string sub = parts.Length > 1 ? parts[1] : "list";
+                        if (sub == "open")
+                        {
+                            ulong cid = Main.Instance.m_GameClient.PlayerProfile.GetCurrentChampion().Id;
+                            tv.SetChampion(cid, false);
+                            tv.SetVisible(true);
+                            return "talents of champion " + cid;
+                        }
+                        Dictionary<ResourceId, UITalentContext> tl = HarmonyLib.Traverse.Create(tv).Field("m_TalentList").GetValue<Dictionary<ResourceId, UITalentContext>>();
+                        if (tl == null) return "no talents";
+                        string q = string.Join(" ", parts, Math.Min(2, parts.Length), Math.Max(0, parts.Length - 2));
+                        List<string> tn = new List<string>();
+                        foreach (UITalentContext c in tl.Values)
+                        {
+                            if (c == null || c.Talent == null) continue;
+                            if (sub == "press" && c.Talent.m_Name.Equals(q, StringComparison.OrdinalIgnoreCase))
+                            {
+                                HarmonyLib.AccessTools.Method(typeof(UIChampionTalentViewModel), "OnTalentPressed").Invoke(tv, new object[] { c });
+                                return "pressed " + c.Name + " selected=" + c.Selected;
+                            }
+                            if (c.Talent.m_MinLevel >= 15) tn.Add(c.Name + " min=" + c.Talent.m_MinLevel + " unlocked=" + c.Unlocked + " selected=" + c.Selected);
+                        }
+                        return sub == "press" ? "no talent " + q : string.Join("\n", tn.ToArray());
+                    }
                 case "eqsrc":   // dev: "eqsrc <equipment name>" = owned count and where the piece drops (EquipmentSources)
                     return EquipmentSources.Command(string.Join(" ", parts, 1, parts.Length - 1));
                 case "talentcheck":   // dev: "talentcheck <race> <class> <level>" = the talents that level makes mandatory, and those then unlocked

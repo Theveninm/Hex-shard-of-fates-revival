@@ -300,9 +300,10 @@ Talent points per level: 1 (PLACEHOLDER).
 - "Champion levels up to 20": levels 16 to 20 at 20,000 XP each (130,000 … 210,000; PLACEHOLDER, his suggestion).
   The game counts talent points up to level 25 (Game: TalentManager.GetTotalTalentPoints, min(25, level) − 1).
   Turned off, champions above 15 go back to 15 with their talents reset to the mandatory ones (their XP is kept).
-- "Level 30 talent at level 20": the level 30 talents the game data marks finished can be taken at 20 (Game:
-  4 of the 24 warrior / mage / cleric ones, Siege, Alwyn's Loyalty, Power Harvest, Viciousness; the 20 others are
-  "NeedsFinalDesign" descriptions without an ability and stay out of reach).
+- "Level 30 talents at level 20": each class's level 30 talent can be taken at 20. Most were left unfinished by the
+  original team (Game: of the 24 warrior / mage / cleric ones, only Siege, Alwyn's Loyalty, Power Harvest and
+  Viciousness are finished; the 20 others are "NeedsFinalDesign" descriptions without an ability, so they do
+  nothing): those are marked "(Unfinished)" in the talent window, their tooltip says why, and picking one asks first.
 
 ## Campaign (AZ2, the Alachian Sea)
 
