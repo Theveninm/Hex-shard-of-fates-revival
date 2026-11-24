@@ -88,8 +88,21 @@ namespace HexRevival
         /// <summary>Share of a dungeon pack's equipment draws that are its own pieces (Src.LootTables2016: 0.30 in Tranquil Dream and Smoldering Dead).</summary>
         private const float OwnEquipmentShare = 0.30f;
 
-        /// <summary>PvP sets of the 2 commons of a campaign pack (Src.Video).</summary>
+        /// <summary>PvP sets of the 2 commons of an AZ1 campaign pack (Src.Video).</summary>
         private static readonly string[] CommonSets = { "Shards of Fate", "Shattered Destiny", "Armies of Myth" };
+
+        /// <summary>
+        /// PvP sets of the 2 commons of an AZ2 pack (the Alachian Sea Pack and its dungeons' packs): sets 5 to 9, so that the
+        /// later sets' commons can be found too (TalekithOP, 2026-11-24). No source says which sets these packs used:
+        /// PLACEHOLDER.
+        /// </summary>
+        private static readonly string[] CommonSetsAZ2 = { "Herofall", "Scars of War", "Frostheart", "Dead of Winter", "Doombringer" };
+
+        /// <summary>Whether a pack table name (Open's key) is an AZ2 pack.</summary>
+        public static bool IsAZ2(string pack) { return pack != null && AZ2Packs.ContainsKey(pack); }
+
+        /// <summary>The common sets of a pack: the AZ2 ones for an AZ2 pack (az2 not null).</summary>
+        private static string[] CommonSetsOf(string az2) { return az2 != null ? CommonSetsAZ2 : CommonSets; }
 
         /// <summary>
         /// Chance that each of the 2 non-card slots is a stardust instead of an equipment. The store's own text for the
@@ -147,7 +160,8 @@ namespace HexRevival
             string az2;
             if (!Packs().TryGetValue(pack, out t) && !AZ2Packs.TryGetValue(pack, out az2)) return res;
             AZ2Packs.TryGetValue(pack, out az2);
-            foreach (string setName in new[] { RandomOf(CommonSets), RandomOf(CommonSets) })
+            string[] sets = CommonSetsOf(az2);
+            foreach (string setName in new[] { RandomOf(sets), RandomOf(sets) })
             {
                 CardTemplate c = Progression.RandomCard(SetByName(setName), Game.Shared.Mechanics.ERarity.Common, null);
                 if (c != null) res.Add(new Drop { Card = c });
@@ -201,15 +215,16 @@ namespace HexRevival
             Packs().TryGetValue(pack, out t);
             AZ2Packs.TryGetValue(pack, out az2);
             if (t == null && az2 == null) return res;
-            // Two commons, each of one of the first three sets (picked first, then a common of it).
+            // Two commons, each of one of the pack's common sets (picked first, then a common of it).
             Slot commons = new Slot { Kind = "commons", Tries = new[] { 1f, 1f } };
             Dictionary<ResourceId, KeyValuePair<Drop, float>> com = new Dictionary<ResourceId, KeyValuePair<Drop, float>>();
-            foreach (string setName in CommonSets)
+            string[] commonSets = CommonSetsOf(az2);
+            foreach (string setName in commonSets)
             {
                 List<CardTemplate> pool = Progression.Pool(SetByName(setName), Game.Shared.Mechanics.ERarity.Common);
                 foreach (CardTemplate c in pool)
                 {
-                    float pr = 1f / CommonSets.Length / pool.Count;
+                    float pr = 1f / commonSets.Length / pool.Count;
                     KeyValuePair<Drop, float> had;
                     com[c.m_Id] = com.TryGetValue(c.m_Id, out had) ? new KeyValuePair<Drop, float>(had.Key, had.Value + pr) : new KeyValuePair<Drop, float>(new Drop { Card = c }, pr);
                 }

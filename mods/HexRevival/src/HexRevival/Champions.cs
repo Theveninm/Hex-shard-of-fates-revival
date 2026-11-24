@@ -50,6 +50,7 @@ namespace HexRevival
                     }
             }
             catch (Exception e) { Debug.LogError("[HexRevival] [Champions] decks: " + e); }
+            LevelCap.Apply();   // the account's level cap option: the XP table, then each champion's level
             Debug.Log("[HexRevival] [Champions] " + s_Champions.Count + " champion(s)");
             return new List<champion_bits>(s_Champions);
         }
@@ -307,6 +308,15 @@ namespace HexRevival
             if (c.ChampionTalents.Count == had) return false;
             Save();
             return true;
+        }
+
+        /// <summary>Each champion's level brought to what its XP gives under the account's level cap (LevelCap).</summary>
+        public static void FitLevels()
+        {
+            if (s_Champions == null) return;
+            bool changed = false;
+            foreach (champion_bits c in s_Champions) if (LevelCap.Fit(c)) { changed = true; Debug.Log("[HexRevival] [Champions] " + c.Name + " level " + c.Level); }
+            if (changed) Save();
         }
 
         /// <summary>A champion's sub-champion of that class (the AZ2 boat), null if not created yet.</summary>

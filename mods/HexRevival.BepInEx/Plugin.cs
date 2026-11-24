@@ -134,6 +134,9 @@ namespace HexRevival
                 prefix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPre"), postfix: new HarmonyMethod(typeof(Hooks), "TutorialManager_CtorPost")));
             apply("UITutorialRewards.Launch", () => harmony.Patch(AccessTools.Method(typeof(UITutorialRewards), "Launch"), prefix: new HarmonyMethod(typeof(Hooks), "TutorialRewards_Launch")));
             apply("AITactical.AIUpdate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "AIUpdate", new[] { typeof(Game.Shared.Mechanics.ETurnPhases) }), prefix: new HarmonyMethod(typeof(Hooks), "AITactical_AIUpdate")));
+            // Equipment: owned count and where it drops in its tooltip, owned or not in a card's equipment list (EquipmentSources).
+            apply("UIEquipmentItemContext.BuildInfoTooltip", () => harmony.Patch(AccessTools.Method(typeof(UIEquipmentItemContext), "BuildInfoTooltip"), postfix: new HarmonyMethod(typeof(Hooks), "Equipment_Tooltip")));
+            apply("NguiGoInventoryIconBinding.UpdateBinding", () => harmony.Patch(AccessTools.Method(typeof(NguiGoInventoryIconBinding), "UpdateBinding"), postfix: new HarmonyMethod(typeof(Hooks), "Equipment_Icon")));
             apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
             apply("LocalPlayer.PassPriority", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "PassPriority"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_LocalPass")));
             apply("LocalPlayer.SendAutoPass", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "SendAutoPass"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_AutoPass")));
@@ -716,6 +719,8 @@ namespace HexRevival
         { __result = null; Siege.OnRequest(__3, __5); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
+        public static void Equipment_Tooltip(Reckoning.Game.InventoryItemData item, ref string __result) { try { __result = (__result ?? "") + HexRevival.EquipmentSources.TooltipLines(item); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment tooltip: " + e.Message); } }
+        public static void Equipment_Icon(NguiGoInventoryIconBinding __instance, EZData.Property<Reckoning.Game.InventoryItemData> ___m_Property) { try { HexRevival.EquipmentSources.MarkIcon(__instance, ___m_Property != null ? ___m_Property.GetValue() : null); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] equipment icon: " + e.Message); } }
         public static bool AITactical_AIUpdate(Game.Shared.AI.AITactical __instance, Game.Shared.Mechanics.ETurnPhases __0, ref bool __result) { if (Tutorial.DevStallAI) { Tutorial.DevStallAI = false; UnityEngine.Debug.Log("[HexRevival] [Tutorial] dev: AI update swallowed"); __result = true; return false; } Tutorial.SkipImpossiblePlays(__instance); return !Tutorial.AIDamageOrder(__instance, __0, ref __result); }
         public static void TutorialRewards_Launch(System.Collections.Generic.IEnumerable<Game.Shared.ResourceId> __0) { Tutorial.OnRewards(__0); }
         public static void TutorialManager_CtorPre(Game.Shared.ClientSessionBase __0) { Tutorial.BeforeScriptCopy(__0); }

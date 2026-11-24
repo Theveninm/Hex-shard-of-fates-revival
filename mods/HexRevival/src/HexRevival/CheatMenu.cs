@@ -50,6 +50,7 @@ namespace HexRevival
         private void Update()
         {
             Settings.EnsureOptionRow();
+            LevelCap.Tick();
             Vector2 mouse = new Vector2(Input.mousePosition.x, UnityEngine.Screen.height - Input.mousePosition.y);
             bool over = LoggedIn() && (m_ToggleRect.Contains(mouse) || (m_Open && m_PanelRect.Contains(mouse)));
             if (over && m_DisabledUi.Count == 0)

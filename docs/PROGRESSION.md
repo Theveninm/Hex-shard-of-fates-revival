@@ -296,6 +296,14 @@ game names. The dev command `loot check` lists the reward names that match nothi
 Champion levels follow the game's XP table (Game): level 2 at 1,000 XP … 15 at 110,000.
 Talent points per level: 1 (PLACEHOLDER).
 
+**Beyond the original, account options off by default** (Settings, Account tab; TalekithOP 2026-11-24):
+- "Champion levels up to 20": levels 16 to 20 at 20,000 XP each (130,000 … 210,000; PLACEHOLDER, his suggestion).
+  The game counts talent points up to level 25 (Game: TalentManager.GetTotalTalentPoints, min(25, level) − 1).
+  Turned off, champions above 15 go back to 15 with their talents reset to the mandatory ones (their XP is kept).
+- "Level 30 talent at level 20": the level 30 talents the game data marks finished can be taken at 20 (Game:
+  4 of the 24 warrior / mage / cleric ones, Siege, Alwyn's Loyalty, Power Harvest, Viciousness; the 20 others are
+  "NeedsFinalDesign" descriptions without an ability and stay out of reach).
+
 ## Campaign (AZ2, the Alachian Sea)
 
 The AZ2 map (Game: its own DungeonTemplate and map prefab, shared background) is reached from AZ1 by the
@@ -847,7 +855,8 @@ others (PLACEHOLDER). A kind the set has nothing left of is left out and the oth
 are the account level rewards' "chests" (common) and "rarechest" (rare).
 
 **Alachian Sea packs** (AZ2 campaign and dungeon packs): no drop table found. The campaign pack layout
-above; which card and equipment: Zymmer. The Alachian Sea Pack: one of its 37 cards and 156 equipment pieces;
+above, but their 2 commons come from sets 5 to 9 (Herofall, Scars of War, Frostheart, Dead of Winter, Doombringer;
+TalekithOP 2026-11-24: so that the later sets' commons can be found; PLACEHOLDER); which card and equipment: Zymmer. The Alachian Sea Pack: one of its 37 cards and 156 equipment pieces;
 a dungeon pack (Brutecrown Bluff, Great Machine Graveyard, Kraken's Cove, Ruins of Kukatan): one of its own 6-7
 cards, and its own 9 equipment pieces 30% of the time, otherwise the Alachian Sea Pack's (as the AZ1 dungeon
 packs). Weights by rarity, per item: the mean % of one item of that rarity in the AZ1 pack (LootTables2016:
