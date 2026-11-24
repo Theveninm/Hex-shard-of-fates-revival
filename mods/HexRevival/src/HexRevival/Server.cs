@@ -225,11 +225,12 @@ namespace HexRevival
                 || transaction is PlayResourceTransaction || transaction is ActivateAbilityTransaction || transaction is ChoosePlayTransaction)
                 s_OptionsSigByPlayer.Remove(transaction.m_PlayerId);
             if (NetCodec.Loopback && !IsAIId(transaction.m_PlayerId)) transaction = NetCodec.LoopTransaction(transaction);
-            // The AI's blocks, made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks).
-            if (transaction is CommitTroopsToDefenseTransaction && IsAIId(transaction.m_PlayerId))
+            // Blocks made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks). The AI then
+            // passes; the player's client, which does not check these rules, waits forever (Pheromones, ZymmerOP).
+            if (transaction is CommitTroopsToDefenseTransaction)
             {
                 try { AiBlocks.Repair(self, (CommitTroopsToDefenseTransaction)transaction); }
-                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] AI blocks: " + e); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] blocks: " + e); }
             }
             // A choice the AI must make while an ability resolves, left empty by the game's AI (AiTargets).
             if (transaction is SetAbilityActivationDataTransaction && IsAIId(transaction.m_PlayerId))
@@ -683,18 +684,23 @@ namespace HexRevival
                         // block (read by BattleStateDeclareBlockers / BattleStateAssignBlocker).
                         if (card.IsInPlay() && card.IsTroop() && card.CanBlock() == ECombatantStatus.Ok)
                         {
-                            List<SessionCardId> blockable = new List<SessionCardId>();
+                            List<SessionCardId> blockable = new List<SessionCardId>(), mustBeBlocked = new List<SessionCardId>();
                             foreach (Combat combat in self.CombatManager.Combats)
                             {
                                 if (combat.Attacker == null || combat.Defender == null || combat.Defender.m_ControllingPlayer != player)
                                     continue;
-                                if (card.CanBlock(combat.Attacker) == ECombatantStatus.Ok)
-                                    blockable.Add(combat.Attacker.m_SessionCardId);
+                                if (card.CanBlock(combat.Attacker) != ECombatantStatus.Ok) continue;
+                                blockable.Add(combat.Attacker.m_SessionCardId);
+                                if (combat.Attacker.MustBeBlocked()) mustBeBlocked.Add(combat.Attacker.m_SessionCardId);
                             }
+                            // An attacker that "must be blocked if able" (Pheromones): a troop able to block it must block it (or one
+                            // of them, Session.AreBlocksLegal). Only those are offered, with a minimum of 1: the client then shows
+                            // its own ILLEGAL BLOCK button until the player assigns that block (BattleStateDeclareBlockers.BlockingIsLegal).
+                            if (mustBeBlocked.Count > 0) blockable = mustBeBlocked;
                             if (blockable.Count > 0)
                             {
                                 usage |= ECardUsage.Defend;
-                                int min = card.GetCardContext().GetBool(IntAttrs.MustBlock) ? 1 : 0;
+                                int min = mustBeBlocked.Count > 0 || card.GetCardContext().GetBool(IntAttrs.MustBlock) ? 1 : 0;
                                 instances.Add(new OptionInstanceSessionEventArgs
                                 {
                                     SessionId = self.m_SessionId,
