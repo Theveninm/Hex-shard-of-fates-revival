@@ -92,7 +92,7 @@ gives **100 gold + 100 champion XP** (HexServer). Battle rewards (Video unless n
 | Node019 Brink Ridge | Barricade Zombie, once, after the Smoldering Dead (Video: MHS Ardent 2017-05-16; scene 19B1, the castle battlefield seen on the video, not 19B's forest) | 250 | 250 | — |
 | Node021 Clark Foothills | Bloated Zombie | 300 | 200 | 1 random equipment (Conflagration Staff, Brutal Scimitar, Commander's Brooch seen in three runs) |
 | Node022 Lake Wyalusing | Guru of the Wounded Petal | 400 | 250 | AZ1 pack, deck sleeve Uzume, Grand Concubunny |
-| Node023 Saramago Crater | Zombie Mob (soldiers of the other faction helped or not: 4 scenes 23A/23B, Game) | 250 | 250 | AZ1 pack |
+| Node023 Saramago Crater | Zombie Mob (soldiers of the other faction helped or not: 4 scenes 23A/23B, Game; helped, one of them fights for the champion: Ruby Pyromancer for Underworld, Gemsoul Feeder for Ardent, Game: "Humans Aid Underworld" / "Necrotic Aid Ardent") | 250 | 250 | AZ1 pack |
 | Node026 Johannes Bog | Furious Taskmaster (Underworld) / Brood Creeper (Ardent) | 450 | 250 | — |
 | Node028 Garden of Ophelia | Overgrown Garden | 500 | 500 | AZ1 pack |
 | Node031, Node033 | Water Elemental | 400 | 200 | — (Bubblebee if tamed) |

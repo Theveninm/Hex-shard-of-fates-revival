@@ -225,11 +225,12 @@ namespace HexRevival
                 || transaction is PlayResourceTransaction || transaction is ActivateAbilityTransaction || transaction is ChoosePlayTransaction)
                 s_OptionsSigByPlayer.Remove(transaction.m_PlayerId);
             if (NetCodec.Loopback && !IsAIId(transaction.m_PlayerId)) transaction = NetCodec.LoopTransaction(transaction);
-            // The AI's blocks, made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks).
-            if (transaction is CommitTroopsToDefenseTransaction && IsAIId(transaction.m_PlayerId))
+            // Blocks made legal (must be blocked, must block, Feral): the engine would drop them all (AiBlocks). The AI then
+            // passes; the player's client, which does not check these rules, waits forever (Pheromones, ZymmerOP).
+            if (transaction is CommitTroopsToDefenseTransaction)
             {
                 try { AiBlocks.Repair(self, (CommitTroopsToDefenseTransaction)transaction); }
-                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] AI blocks: " + e); }
+                catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] blocks: " + e); }
             }
             // A choice the AI must make while an ability resolves, left empty by the game's AI (AiTargets).
             if (transaction is SetAbilityActivationDataTransaction && IsAIId(transaction.m_PlayerId))

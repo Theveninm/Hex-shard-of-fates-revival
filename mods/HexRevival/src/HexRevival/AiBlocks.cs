@@ -20,6 +20,10 @@ namespace HexRevival
     /// AreNonBlocksLegal): a troop that can block an attacker that must be blocked blocks one of them (the
     /// one with the fewest blockers so far), a troop that must block blocks the first attacker it can, a lone
     /// blocker on a Feral attacker is freed. The AI's other choices are kept.
+    ///
+    /// The player's declaration is repaired the same way: the client does not check these rules either, and a
+    /// rejected declaration never passes priority, so the battle stopped before combat damage (ZymmerOP,
+    /// 2026-11-24, Pheromones in the Crocodile encounter: passing without blockers soft-locked the game).
     /// </summary>
     public static class AiBlocks
     {
@@ -38,7 +42,7 @@ namespace HexRevival
             if (attackers == null || attackers.Count == 0) return;
 
             List<string> changes = new List<string>();
-            if (DevBlockAll)
+            if (DevBlockAll && Server.IsAIId(tx.m_PlayerId))
             {
                 // dev ("aiblockall on"): every troop of the AI able to block the first attacker blocks it (several blockers).
                 tx.m_DefenseDeclarations.Clear();
@@ -91,7 +95,7 @@ namespace HexRevival
                 d.DefendingCardIds.Clear();
             }
             tx.m_DefenseDeclarations.RemoveAll(d => d.DefendingCardIds == null || d.DefendingCardIds.Count == 0);
-            if (changes.Count > 0) Debug.Log("[HexRevival] [Server] AI blocks repaired: " + string.Join("; ", changes.ToArray()));
+            if (changes.Count > 0) Debug.Log("[HexRevival] [Server] " + (Server.IsAIId(tx.m_PlayerId) ? "AI" : "player") + " blocks repaired: " + string.Join("; ", changes.ToArray()));
         }
 
         private static CommitTroopsToDefenseTransaction.DefenseDeclaration DeclarationOf(CommitTroopsToDefenseTransaction tx, SessionCardId blocker)
