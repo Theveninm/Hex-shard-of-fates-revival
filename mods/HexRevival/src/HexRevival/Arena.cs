@@ -530,7 +530,14 @@ namespace HexRevival
             res.ErrorMessage = "";
             res.AllLoot = new List<ArenaReward>();
             if (r == null) res.Error = EDoArenaCashOutError.InternalServerError;
-            else if (r.Info.Wins == 0) res.Error = EDoArenaCashOutError.FailedNoWins;
+            else if (r.Info.Wins == 0)
+            {
+                // The client shows "Better luck next time" and leaves the arena: it only removes a run (DestroyArenaData)
+                // from the loot window, which a run without wins never reaches. A finished run is removed here, or Join
+                // gives it back forever and no new run can start (TanakaOP, 2026-11-25: 3 games conceded).
+                res.Error = EDoArenaCashOutError.FailedNoWins;
+                if (r.Info.Loses >= MaxLosses) { Data.Run = null; Save(); }
+            }
             else
             {
                 if (!r.CashedOut)
