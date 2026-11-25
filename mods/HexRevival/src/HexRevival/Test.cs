@@ -1126,8 +1126,19 @@ namespace HexRevival
                     }
                 case "convtext":   // dev: "convtext <conversation name>" = its first line and objective (Arena.ConversationTexts)
                     {
-                        string[] ct = Arena.ConversationTexts(string.Join(" ", parts, 1, parts.Length - 1));
-                        return ct == null ? "no conversation" : string.Join("\n", ct);
+                        string cname = string.Join(" ", parts, 1, parts.Length - 1);
+                        string[] ct = Arena.ConversationTexts(cname);
+                        StringBuilder cb = new StringBuilder(ct == null ? "no conversation\n" : string.Join("\n", ct) + "\n");
+                        // the whole template, every field (events of the answers included)
+                        foreach (Reckoning.Game.Conversations.ConversationTemplate ctt in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)
+                            if (ctt != null && ctt.m_Name != null && ctt.m_Name.Trim() == cname)
+                            {
+                                cb.Append(AbilityDump.Describe(ctt, 0)).Append('\n');
+                                foreach (object q in ctt.m_Questions.Values) cb.Append("Q ").Append(AbilityDump.Describe(q, 0)).Append('\n');
+                                foreach (object a in ctt.m_Answers.Values) cb.Append("A ").Append(AbilityDump.Describe(a, 0)).Append('\n');
+                            }
+                        System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "HexRevivalConversation.txt"), cb.ToString());
+                        return cb.Length > 3000 ? cb.ToString(0, 3000) + "... (HexRevivalConversation.txt)" : cb.ToString();
                     }
                 case "itemid":   // dev: "itemid <name>" = the inventory items (mercenaries, equipment...) of that name: id and type
                     {
@@ -1138,6 +1149,23 @@ namespace HexRevival
                         return found.Count > 0 ? string.Join("\n", found.ToArray()) : "no item " + q;
                     }
                 case "topdebug": Server.s_TopDebug = !Server.s_TopDebug; Server.MarkDirty(); return "top-of-deck option log " + Server.s_TopDebug;
+                case "tunnelers":   // dev: every card template with Tunneling: name, set, tunneling, ownable
+                    {
+                        StringBuilder tb = new StringBuilder();
+                        TemplateManager ttm = Singleton<TemplateManager>.Instance;
+                        foreach (CardTemplate t in ttm.Cards.Values)
+                        {
+                            int tn = 0;
+                            try { tn = t != null && t.tac != null ? t.tac.Get(IntAttrs.Tunneling, 0) : 0; } catch { }
+                            if (tn == 0) continue;
+                            string set = "?";
+                            try { foreach (CardSetTemplate cs in ttm.CardSets.Values) if (cs != null && cs.m_Id == t.m_SetId) { set = cs.m_Name; break; } } catch { }
+                            bool own = false; try { own = t.IsOwnable(); } catch { }
+                            tb.Append(t.m_Name.Trim()).Append(" | ").Append(set).Append(" | T").Append(tn).Append(own ? " | ownable" : "").Append('\n');
+                        }
+                        System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "HexRevivalTunnelers.txt"), tb.ToString());
+                        return "written HexRevivalTunnelers.txt";
+                    }
                 case "eqsrc":   // dev: "eqsrc <equipment name>" = owned count and where the piece drops (EquipmentSources)
                     return EquipmentSources.Command(string.Join(" ", parts, 1, parts.Length - 1));
                 case "talentcheck":   // dev: "talentcheck <race> <class> <level>" = the talents that level makes mandatory, and those then unlocked

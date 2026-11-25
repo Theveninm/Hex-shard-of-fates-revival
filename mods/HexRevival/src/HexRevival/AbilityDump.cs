@@ -125,7 +125,7 @@ namespace HexRevival
         }
 
         /// <summary>The object's fields that differ from their default, recursively (rule data has no other text form).</summary>
-        private static string Describe(object o, int depth)
+        internal static string Describe(object o, int depth)
         {
             if (o == null) return "-";
             Type t = o.GetType();
