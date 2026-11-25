@@ -136,9 +136,9 @@ namespace HexRevival
 
         /// <summary>
         /// The champion select's "location" line (UIPvEChampionSelectContext.GetSummary_Callback, postfixed): the champion's
-        /// adventure zone (Howling Plains / Alachian Sea, Game: AdventureZone.ZoneName) when its last campaign is the map or
-        /// a map panorama. The client takes it from the summary's CampaignTemplateId, which for a panorama is a fixed id that
-        /// reads Howling Plains (ZymmerOP, 2026-11-25: AZ2 champions showed Howling Plains). Dungeons keep their own name.
+        /// map's name (Howling Plains / Alachian Sea, from its template, as the client reads it) when its last campaign is the
+        /// map or a map panorama. The client takes it from the last campaign's summary; a champion's last campaign id stays
+        /// its first map's (ZymmerOP, 2026-11-25: AZ2 champions showed Howling Plains). Dungeons keep their own name.
         /// </summary>
         public static void FixChampionLocations(System.Collections.IEnumerable items)
         {
@@ -151,10 +151,20 @@ namespace HexRevival
                 ulong last = it.PlayerChampion.LastCampaignID;
                 if (last == 0 || Dungeons.IsDunCamp(last) || Quests.IsQuestCamp(last)) continue;
                 Zone z = CurrentZone(it.PlayerChampion.Id);
-                Reckoning.Game.Campaign.AdventureZone az;
-                if (tm != null && tm.CampaignZones.TryGetValue(z.TemplateId, out az) && az != null && !string.IsNullOrEmpty(az.ZoneName))
-                    it.Location = az.ZoneName;
+                string name = ZoneDisplayName(tm, z.TemplateId);
+                if (!string.IsNullOrEmpty(name)) it.Location = name.Trim();   // the AZ2 map's name starts with a space (" The Alachian Sea")
             }
+        }
+
+        /// <summary>A map template's name as the client finds it (UIPvEChampionSelectContext: scene, location, then zone).</summary>
+        private static string ZoneDisplayName(TemplateManager tm, ResourceId id)
+        {
+            if (tm == null) return null;
+            SceneData sc; LocationData lo; Reckoning.Game.Campaign.AdventureZone az;
+            if (tm.CampaignScenes.TryGetValue(id, out sc) && sc != null) return sc.Name;
+            if (tm.CampaignLocations.TryGetValue(id, out lo) && lo != null) return lo.Name;
+            if (tm.CampaignZones.TryGetValue(id, out az) && az != null) return az.ZoneName;
+            return null;
         }
 
         /// <summary>AZ1 map template id (other code refers to it).</summary>
