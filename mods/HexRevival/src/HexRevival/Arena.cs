@@ -860,19 +860,61 @@ namespace HexRevival
             Debug.Log("[HexRevival] [Arena] challenge: " + amount + " " + name + " to " + zone + " for " + p.m_PlayerId);
         }
 
-        /// <summary>Tunneling challenge: a card of the player's deck goes underground (the session's TunnelCard).</summary>
+        /// <summary>
+        /// Tunneling challenge ("Your opponent starts this game with a secret tunneled card in play", Hogarth: "a tunneled
+        /// troop ready to pop up and eat you"): a troop with Tunneling goes underground for the opponent (the session's
+        /// TunnelCard). A troop without Tunneling surfaced at once, its 0 counters reaching its Tunneling of 0 (ZymmerOP,
+        /// 2026-11-25: it went straight into play), and the engine rebuilds a card's attributes from its template, so
+        /// none can be given. Which troop: PLACEHOLDER, one of the opponent's deck with Tunneling if there is one, else a
+        /// random Tunneling troop of the game's sets added to that deck first.
+        /// </summary>
         private static void TunnelRandom(StandaloneSession ss, Player p)
         {
-            if (ss == null || p == null || p.m_Deck == null || p.m_Deck.m_Cards.Count == 0) return;
-            List<Card> troops = p.m_Deck.m_Cards.FindAll(x => x != null && x.IsTroop());
-            List<Card> from = troops.Count > 0 ? troops : p.m_Deck.m_Cards;
-            Card card = from[UnityEngine.Random.Range(0, from.Count)];
+            if (ss == null || p == null || p.m_Deck == null) return;
+            List<Card> tunnelers = p.m_Deck.m_Cards.FindAll(x => x != null && x.IsTroop() && TunnelingOf(x.m_CardTemplate) > 0);
+            if (tunnelers.Count == 0)
+            {
+                List<CardTemplate> pool = TunnelingTroops();
+                if (pool.Count == 0) { Debug.LogWarning("[HexRevival] [Arena] no Tunneling troop found"); return; }
+                CardTemplate t = pool[UnityEngine.Random.Range(0, pool.Count)];
+                AddCards(ss, p, t.m_Name.Trim(), 1, ECardCollections.Deck);
+                tunnelers = new List<Card>();
+                foreach (Card x in p.GetAllCards())
+                    if (x != null && x.m_CardTemplate != null && x.m_CardTemplate.m_Name != null && x.m_CardTemplate.m_Name.Trim() == t.m_Name.Trim() && (x.m_CurrentCardCollection & ECardCollections.Deck) != 0) tunnelers.Add(x);   // by name: AddCards takes the name's first version
+                if (tunnelers.Count == 0) Debug.LogWarning("[HexRevival] [Arena] " + t.m_Name + " not found in the deck");
+                if (tunnelers.Count == 0) return;
+            }
+            Card card = tunnelers[UnityEngine.Random.Range(0, tunnelers.Count)];
             ss.TunnelCard(card, new TAC());
-            Debug.Log("[HexRevival] [Arena] challenge: " + card.m_CardTemplate.m_Name + " tunneled for " + p.m_PlayerId);
+            Debug.Log("[HexRevival] [Arena] challenge: " + card.m_CardTemplate.m_Name + " (Tunneling " + TunnelingOf(card.m_CardTemplate) + ") tunneled for " + p.m_PlayerId
+                + ", now in " + card.m_CurrentCardCollection);
+        }
+
+        private static int TunnelingOf(CardTemplate t)
+        {
+            try { return t != null && t.tac != null ? t.tac.Get(IntAttrs.Tunneling, 0) : 0; } catch { return 0; }
+        }
+
+        private static List<CardTemplate> s_TunnelingTroops;
+
+        /// <summary>The game's ownable troops with Tunneling (Shattered Destiny and later sets).</summary>
+        private static List<CardTemplate> TunnelingTroops()
+        {
+            if (s_TunnelingTroops != null) return s_TunnelingTroops;
+            List<CardTemplate> res = new List<CardTemplate>();
+            HashSet<string> names = new HashSet<string>();
+            foreach (CardTemplate t in Singleton<TemplateManager>.Instance.Cards.Values)
+            {
+                if (t == null || t.m_Name == null || TunnelingOf(t) <= 0 || names.Contains(t.m_Name.Trim())) continue;
+                bool ok;
+                try { ok = t.IsOwnable() && (t.m_CardType & ECardTypes.Troop) != 0; } catch { ok = false; }
+                if (ok) { res.Add(t); names.Add(t.m_Name.Trim()); }
+            }
+            return s_TunnelingTroops = res;
         }
 
         /// <summary>A challenge conversation's line and objective (heading, text), from the game data; null if not found.</summary>
-        private static string[] ConversationTexts(string name)
+        internal static string[] ConversationTexts(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
             foreach (Reckoning.Game.Conversations.ConversationTemplate t in Singleton<TemplateManager>.Instance.ConversationTemplates.Values)

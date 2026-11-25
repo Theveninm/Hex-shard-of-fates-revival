@@ -134,6 +134,29 @@ namespace HexRevival
 
         internal static Zone ZoneByKey(string key) { return Array.Find(Zones, z => z.Key == key) ?? AZ1; }
 
+        /// <summary>
+        /// The champion select's "location" line (UIPvEChampionSelectContext.GetSummary_Callback, postfixed): the champion's
+        /// adventure zone (Howling Plains / Alachian Sea, Game: AdventureZone.ZoneName) when its last campaign is the map or
+        /// a map panorama. The client takes it from the summary's CampaignTemplateId, which for a panorama is a fixed id that
+        /// reads Howling Plains (ZymmerOP, 2026-11-25: AZ2 champions showed Howling Plains). Dungeons keep their own name.
+        /// </summary>
+        public static void FixChampionLocations(System.Collections.IEnumerable items)
+        {
+            if (items == null) return;
+            TemplateManager tm = Singleton<TemplateManager>.Instance;
+            foreach (object o in items)
+            {
+                ChampionItemContext it = o as ChampionItemContext;
+                if (it == null || it.PlayerChampion == null) continue;
+                ulong last = it.PlayerChampion.LastCampaignID;
+                if (last == 0 || Dungeons.IsDunCamp(last) || Quests.IsQuestCamp(last)) continue;
+                Zone z = CurrentZone(it.PlayerChampion.Id);
+                Reckoning.Game.Campaign.AdventureZone az;
+                if (tm != null && tm.CampaignZones.TryGetValue(z.TemplateId, out az) && az != null && !string.IsNullOrEmpty(az.ZoneName))
+                    it.Location = az.ZoneName;
+            }
+        }
+
         /// <summary>AZ1 map template id (other code refers to it).</summary>
         public static ResourceId AZ1TemplateId { get { return AZ1.TemplateId; } }
 

@@ -675,7 +675,7 @@ namespace HexRevival
             foreach (Collider c in UnityEngine.Object.FindObjectsOfType<Collider>())
             {
                 if (c == null || !c.enabled || !c.gameObject.activeInHierarchy) continue;
-                if (c.GetComponent<UIWidget>() == null && c.GetComponent<UIButton>() == null && c.GetComponent<UIEventListener>() == null) continue;
+                if (c.GetComponent<UIWidget>() == null && c.GetComponent<UIButton>() == null && c.GetComponent<UIEventListener>() == null && c.GetComponent<Collider>() == null) continue;
                 string path = c.name;
                 Transform t = c.transform.parent;
                 for (int i = 0; i < 4 && t != null; i++, t = t.parent) path = t.name + "/" + path;
@@ -985,7 +985,9 @@ namespace HexRevival
                     foreach (KeyValuePair<SessionCardId, CardRepresentation> kv in ordered)
                     {
                         CardTemplate t = tm.GetCardTemplate(kv.Value.TemplateId);
-                        if (t == null || !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase)) continue;
+                        // "tclick #124": the card of that session id (Card.124)
+                        bool byId = q.StartsWith("#") && kv.Key.ToString() == "SessionCardId(Card." + q.Substring(1) + ")";
+                        if (t == null || (!byId && !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase))) continue;
                         GoCardView view = UIBattle.Instance.GetCardView(kv.Key);
                         if (view == null) continue;
                         object stack = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UIBattle.Instance);
@@ -1122,6 +1124,20 @@ namespace HexRevival
                         }
                         return sub == "press" ? "no talent " + q : string.Join("\n", tn.ToArray());
                     }
+                case "convtext":   // dev: "convtext <conversation name>" = its first line and objective (Arena.ConversationTexts)
+                    {
+                        string[] ct = Arena.ConversationTexts(string.Join(" ", parts, 1, parts.Length - 1));
+                        return ct == null ? "no conversation" : string.Join("\n", ct);
+                    }
+                case "itemid":   // dev: "itemid <name>" = the inventory items (mercenaries, equipment...) of that name: id and type
+                    {
+                        string q = string.Join(" ", parts, 1, parts.Length - 1);
+                        List<string> found = new List<string>();
+                        foreach (InventoryItemData d in Singleton<TemplateManager>.Instance.InventoryItems.Values)
+                            if (d != null && d.m_Name != null && d.m_Name.Trim().Equals(q, StringComparison.OrdinalIgnoreCase)) found.Add(d.m_Id + " " + d.GetType().Name);
+                        return found.Count > 0 ? string.Join("\n", found.ToArray()) : "no item " + q;
+                    }
+                case "topdebug": Server.s_TopDebug = !Server.s_TopDebug; Server.MarkDirty(); return "top-of-deck option log " + Server.s_TopDebug;
                 case "eqsrc":   // dev: "eqsrc <equipment name>" = owned count and where the piece drops (EquipmentSources)
                     return EquipmentSources.Command(string.Join(" ", parts, 1, parts.Length - 1));
                 case "talentcheck":   // dev: "talentcheck <race> <class> <level>" = the talents that level makes mandatory, and those then unlocked
