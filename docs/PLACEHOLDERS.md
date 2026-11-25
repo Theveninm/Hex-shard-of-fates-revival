@@ -219,7 +219,7 @@ were server-side or came from other players; only new sources (forums, wiki, dat
 | Arena.cs:624 | other sets: half each, PLACEHOLDER), sometimes stardust (Src.Video: "Common Stardust x2", "Rare Stardust"; |
 | Arena.cs:625 | 20% PLACEHOLDER), rarely an arena equipment (Src.Zymmer list, see ArenaEquipment; not seen in 10 chests: 5% PLACEHOLDER). |
 | Arena.cs:652 | A card of the game's booster sets (common 10, uncommon 3, rare 1: PLACEHOLDER weights).</summary> |
-| Arena.cs:799 | soon as its tunneling count is reached (0 for a card without Tunneling). Which card: PLACEHOLDER (a random troop |
+| Arena.cs (TunnelRandom) | The Tunneling challenge's card: PLACEHOLDER, a troop with Tunneling of the opponent's deck, else a random Tunneling troop of the game's sets added to it (a troop without Tunneling surfaced at once; 2026-11-25, the user's choice). No source: the game text only says "a secret tunneled card", no game card or video shows it, a Steam report (2016-07-15, ledeir) says "No unit was tunneled for the challenge"; the game's own cards give a troop without Tunneling +3 / +4 when they tunnel it (Quicksand, a Robot ability). |
 | Arena.cs:819 | (Src.Game: ArenaPVE_Challenge_Body6 / 9). Played (cast) once the mulligan is over (PLACEHOLDER: when). |
 | Arena.cs:824 | ..."), never seen on video. PLACEHOLDER: played once for the opponent (Runic: it speaks of every action) and for |
 | Battlegrounds.cs:28 | draft timer are PLACEHOLDER (not known). The client's own screens are driven through its TournamentManager: |

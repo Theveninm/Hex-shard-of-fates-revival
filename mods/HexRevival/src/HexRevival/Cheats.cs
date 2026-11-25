@@ -135,6 +135,26 @@ namespace HexRevival
                     Server.MarkDirty();
                     return "health " + h + " for " + p.m_PlayerId;
                 }
+                case "charge":
+                {
+                    // dev: "cheat charge j 4" = adds champion charges
+                    int n;
+                    if (parts.Length < 4 || !int.TryParse(parts[3], out n)) return "invalid number";
+                    ss.AddChargePoints(p.m_ChampionCard, n, false);
+                    Server.MarkDirty();
+                    return "charges +" + n + " for " + p.m_PlayerId;
+                }
+                case "attr":
+                {
+                    // dev: "cheat attr j CanPlayOpposingTopOfDeck 1" = sets an attribute of the champion card (its base value)
+                    int v;
+                    if (parts.Length < 5 || !int.TryParse(parts[4], out v)) return "usage: cheat attr j|ai <IntAttrs name> <value>";
+                    System.Reflection.FieldInfo f = typeof(IntAttrs).GetField(parts[3], System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (f == null) return "no attribute " + parts[3];
+                    p.m_ChampionCard[(IntAttrs)f.GetValue(null)] = v;
+                    Server.MarkDirty();
+                    return parts[3] + " = " + v + " on " + p.m_PlayerId + " (now " + p.m_ChampionCard.GetCardContext().Get((IntAttrs)f.GetValue(null), 0) + ")";
+                }
                 case "res":
                 {
                     int n;

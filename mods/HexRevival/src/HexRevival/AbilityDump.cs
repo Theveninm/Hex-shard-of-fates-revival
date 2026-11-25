@@ -24,6 +24,13 @@ namespace HexRevival
             if (parts.Length < 2) return "abildump battle | card <name> | <name>";
             StringBuilder sb = new StringBuilder();
             TemplateManager tm = Singleton<TemplateManager>.Instance;
+            if (parts[1] == "id" && parts.Length > 2)
+            {
+                // "abildump id <ability guid>": one ability (a champion power, a party passive...)
+                Ability(sb, tm, new ResourceId(new Guid(parts[2])), "  ");
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "HexRevivalAbilities.txt"), sb.ToString());
+                return sb.ToString();
+            }
             if (parts[1] == "invoked")
             {
                 // "abildump invoked": cards whose effect makes another champion (or each champion) use an ability that asks
@@ -118,7 +125,7 @@ namespace HexRevival
         }
 
         /// <summary>The object's fields that differ from their default, recursively (rule data has no other text form).</summary>
-        private static string Describe(object o, int depth)
+        internal static string Describe(object o, int depth)
         {
             if (o == null) return "-";
             Type t = o.GetType();

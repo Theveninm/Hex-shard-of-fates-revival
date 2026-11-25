@@ -591,6 +591,32 @@ namespace HexRevival
 
         private static readonly Dictionary<UID, string> s_OptionsSigByPlayer = new Dictionary<UID, string>();
 
+        /// <summary>
+        /// The cards a player's options are computed for: their own, and the top card of each opponent's deck when the
+        /// engine lets the player play it (CanPlayCard: "You can play the top card of each opposing champion's deck this
+        /// turn", Vlastislav the Deathless's Enthrall the Mortals; ZymmerOP, 2026-11-25: the card was shown, not playable).
+        /// Which end of the deck list is its top is not assumed: both are asked, only the playable one is offered.
+        /// </summary>
+        internal static bool s_TopDebug;
+
+        private static IEnumerable<Card> OptionCandidates(StandaloneSession self, Player player)
+        {
+            foreach (Card c in player.GetAllCards()) yield return c;
+            foreach (Player other in self.GetAllPlayers())
+            {
+                if (other == null || other == player || other.m_Deck == null || other.m_Deck.m_Cards == null || other.m_Deck.m_Cards.Count == 0) continue;
+                List<Card> deck = other.m_Deck.m_Cards;
+                Card first = deck[0], last = deck[deck.Count - 1];
+                bool firstOk = false, lastOk = false;
+                try { firstOk = first != null && self.CanPlayCard(first, player); } catch { }
+                try { lastOk = last != null && last != first && self.CanPlayCard(last, player); } catch { }
+                if (s_TopDebug) Debug.Log("[HexRevival] [Server] top of " + other.m_PlayerId + "'s deck for " + player.m_PlayerId + ": first " + (first != null ? first.m_CardTemplate.m_Name : "-") + " " + firstOk
+                    + ", last " + (last != null ? last.m_CardTemplate.m_Name : "-") + " " + lastOk);
+                if (firstOk) yield return first;
+                if (lastOk) yield return last;
+            }
+        }
+
         public static bool Server_SendPlayerOptions(StandaloneSession self, Player player)
         {
             try
@@ -623,7 +649,7 @@ namespace HexRevival
                 s_AIIdleSince = -1f;
 
                 List<SessionEventArgs> options = new List<SessionEventArgs>();
-                foreach (Card card in player.GetAllCards())
+                foreach (Card card in OptionCandidates(self, player))
                 {
                     if (card == null || !card.m_SessionCardId.IsValid())
                         continue;

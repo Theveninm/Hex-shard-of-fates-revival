@@ -37,6 +37,7 @@ Here is the list of the elements that are already known to be missing or placeho
 **❄️ Frost Ring Arena**
 • Missing: the Swarm! Swarm!, Rage and Charge! challenges (they change every card, and no game card does that)
 • Guessed: one challenge per tier; which bosses in which tier; how often Uruunaz and Zakiir show up; the top tiers' decks; opponents' equipment; how gold is split between fights; what chests hold; who plays the new Runic / Banners challenges
+• **Tunneling challenge**: the secret tunneled card is a troop that has Tunneling (from the opponent's deck, or a random one). Whether the original gave Tunneling to a troop without it is unknown (a 2016 report says no troop was tunneled at all)
 
 **💰 Loot & economy** (most important first)
 • Odds inside campaign packs, chests, the Wheel of Fate (reel colors) and boosters (sleeves, gift boxes, alternate art cards)

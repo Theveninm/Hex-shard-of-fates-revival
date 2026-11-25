@@ -149,6 +149,8 @@ namespace HexRevival
                 prefix: new HarmonyMethod(typeof(Hooks), "AITactical_PlayCardPre"), finalizer: new HarmonyMethod(typeof(Hooks), "AITactical_PlayCardExit")));
             apply("AIFunctions.HasAbilityEffectTemplate", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AIFunctions), "HasAbilityEffectTemplate"), prefix: new HarmonyMethod(typeof(Hooks), "AIFunctions_HasEffect")));
             apply("AITactical.BuildBoard", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.AI.AITactical), "BuildBoard"), postfix: new HarmonyMethod(typeof(Hooks), "AITactical_BuildBoard")));
+            // Champion select: the champion's zone as its location (Campaign.FixChampionLocations).
+            apply("UIPvEChampionSelectContext.GetSummary_Callback", () => harmony.Patch(AccessTools.Method(typeof(UIPvEChampionSelectContext), "GetSummary_Callback"), postfix: new HarmonyMethod(typeof(Hooks), "ChampSelect_Summary")));
             apply("UISystemMenuViewModel.Awake", () => harmony.Patch(AccessTools.Method(typeof(UISystemMenuViewModel), "Awake"), postfix: new HarmonyMethod(typeof(Hooks), "SystemMenu_Awake")));
             apply("LocalPlayer.PassPriority", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "PassPriority"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_LocalPass")));
             apply("LocalPlayer.SendAutoPass", () => harmony.Patch(AccessTools.Method(typeof(Game.Shared.LocalPlayer), "SendAutoPass"), prefix: new HarmonyMethod(typeof(Hooks), "Trace_AutoPass")));
@@ -731,6 +733,7 @@ namespace HexRevival
         { __result = null; Siege.OnRequest(__3, __5); return false; }
         public static void CoinToss_TurnOff() { Tutorial.OnRoundStarted(); }
         public static void SystemMenu_Awake(UISystemMenuViewModel __instance) { Tutorial.OnSystemMenu(__instance); }
+        public static void ChampSelect_Summary(System.Collections.Generic.SortedList<string, ChampionItemContext> ___m_HeroList) { try { HexRevival.Campaign.FixChampionLocations(___m_HeroList != null ? ___m_HeroList.Values : null); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] champion locations: " + e.Message); } }
         public static void Talent_Set(UITalentContext __instance) { try { HexRevival.LevelCap.MarkTalent(__instance); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent mark: " + e.Message); } }
         public static void Talent_Tooltip(Reckoning.Game.ChampionTalentData talent, ref string __result) { try { __result = HexRevival.LevelCap.TalentTooltip(talent, __result); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent tooltip: " + e.Message); } }
         public static bool Talent_Pressed(UIChampionTalentViewModel __instance, UITalentContext talentContext) { try { return HexRevival.LevelCap.ConfirmPick(__instance, talentContext); } catch (Exception e) { UnityEngine.Debug.LogWarning("[HexRevival] talent pick: " + e.Message); return true; } }
