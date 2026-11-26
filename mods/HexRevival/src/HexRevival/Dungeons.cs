@@ -347,9 +347,12 @@ namespace HexRevival
                 .Add("NodeQ", Fight(rk, "Tomb of Omens", "Ruins of Kukatan Q - Tomb of Omens", "kukatan/NodeQ"))
                 .Add("NodeL", Fight(rk, "Black Hall", "Ruins of Kukatan L - Black Hall", "kukatan/NodeL"))
                 .Add("NodeM", Fight(rk, "Forgotten Crypt", "Ruins of Kukatan M - Rear Entrance", "kukatan/NodeM"))
-                // Lukaz riding high, then laid low ("You belligerently busted my behemoth!" in between).
-                .Add("NodeN", new Step { Conv = rk + "Echo Ridge", Enc = "Ruins of Kukatan N-2 - Echo Ridge (Lukaz)", Success = rk + "Echo Ridge - Transition from Lukaz Riding High to Laid Low", Fail = rk + "Echo Ridge Fail", Reward = "kukatan/NodeN/1" },
-                    new Step { Enc = "Ruins of Kukatan N-1 - Echo Ridge (Lukaz, Laid Low)", Success = rk + "Echo Ridge Success", Fail = rk + "Echo Ridge Fail", Reward = "kukatan/NodeN/2" })
+                // Lukaz riding high, then laid low, in one battle: Lukaz's power (Src.Game) plays the transition conversation
+                // ("You belligerently busted my behemoth!") and turns him into Lukaz, Laid Low when his Behemoth leaves play;
+                // beating him then ends the dungeon (StigroOP 2026-11-26: until 1.2.44, a second battle against Lukaz,
+                // Laid Low followed). The game's "Laid Low" encounter is used for a battle lost after the transformation
+                // (lukazlow, see OnGameEnded): PLACEHOLDER, not seen.
+                .Add("NodeN", new Step { Conv = rk + "Echo Ridge", Enc = "Ruins of Kukatan {?lukazlow:N-1 - Echo Ridge (Lukaz, Laid Low):N-2 - Echo Ridge (Lukaz)}", Success = rk + "Echo Ridge Success", Fail = rk + "Echo Ridge Fail", Reward = "kukatan/NodeN" })
                 .Final("NodeN"));
             return s_Defs;
         }
@@ -594,6 +597,14 @@ namespace HexRevival
                         r.Steps.Remove("NodeG");
                     }
                     if (!r.Vars.ContainsKey("mercnode")) PickMercNode(r);   // runs from before 1.2.19
+                    // Runs from before 1.2.45, between the two Lukaz battles: the battle left is against Lukaz, Laid Low.
+                    int lukaz;
+                    if (r.Key == "kukatan" && r.Steps.TryGetValue("NodeN", out lukaz) && lukaz == 1)
+                    {
+                        r.Steps.Remove("NodeN");
+                        r.Seen.Remove("NodeN:1");
+                        r.Vars["lukazlow"] = "1";
+                    }
                     s_Runs[r.Champ] = r;
                 }
             }
@@ -1319,6 +1330,7 @@ namespace HexRevival
             }
             else
             {
+                if (r.Key == "kukatan" && room == "NodeN" && LukazLaidLow()) r.Vars["lukazlow"] = "1";
                 r.Outcome = Conv(r, room, b.Step.Fail);
                 // A dungeon life is lost (none in Castle Crayburn); the last one ends the run.
                 r.Vars["losses"] = (Losses(r) + 1).ToString();
@@ -1331,6 +1343,32 @@ namespace HexRevival
             if (won && r.Outcome == null && AfterStep(r, room)) return true;
             Save();
             return true;
+        }
+
+        /// <summary>
+        /// The battle just over had Lukaz transformed: his Behemoth left play (Lukaz's power then turns him into Lukaz, Laid
+        /// Low), or his champion card already is Lukaz, Laid Low.
+        /// </summary>
+        private static bool LukazLaidLow()
+        {
+            StandaloneSession ss = Server.CurrentSession;
+            if (ss == null) return false;
+            try
+            {
+                bool behemoth = false, inPlay = false;
+                foreach (Card c in ss.GetAllCards())
+                {
+                    string name = c != null && c.m_CardTemplate != null && c.m_CardTemplate.m_Name != null ? c.m_CardTemplate.m_Name.Trim() : null;
+                    if (name == null) continue;
+                    if (name.Contains("Laid Low") && (c.m_CurrentCardCollection & ECardCollections.Champions) != 0) return true;
+                    if (name != "Lukaz's Behemoth") continue;
+                    behemoth = true;
+                    if ((c.m_CurrentCardCollection & ECardCollections.Warzone) != 0) inPlay = true;
+                }
+                return behemoth && !inPlay;
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Dungeons] Lukaz: " + e.Message); }
+            return false;
         }
 
         /// <summary>After a lost battle: the dungeon lives left (the client does not show them).</summary>

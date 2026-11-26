@@ -859,6 +859,35 @@ namespace HexRevival
         }
 
         /// <summary>The game's EncounterModAddCard for a player: cards into a zone (a deck is shuffled after), or played for free (CastSpells).</summary>
+        /// <summary>The challenge cards with no art (unused game cards): once resolved, out of the crypt.</summary>
+        private static readonly string[] ArtlessChallengeCards = { "Arena Challenge - Banners", "Arena Challenge - Runic" };
+
+        /// <summary>
+        /// Banners and Runic challenge cards, once resolved, are voided (Server.BroadcastState). Cast as spells, they went to
+        /// each player's crypt, where the client draws a card with no art as a black card (the user, 2026-11-26), and an
+        /// action the player never had counted for the crypt's actions. Other challenge cards are kept as they are.
+        /// </summary>
+        public static void VoidArtlessChallengeCards(StandaloneSession ss)
+        {
+            if (ss == null) return;
+            try
+            {
+                foreach (Player p in ss.GetAllPlayers())
+                {
+                    if (p == null) continue;
+                    CardCollection crypt = p.GetCardCollection(ECardCollections.Discard);
+                    if (crypt == null || crypt.m_Cards == null) continue;
+                    foreach (Card c in new List<Card>(crypt.m_Cards))
+                    {
+                        if (c == null || c.m_CardTemplate == null || Array.IndexOf(ArtlessChallengeCards, c.m_CardTemplate.m_Name.Trim()) < 0) continue;
+                        ss.MoveCardWithDispatch(c, p, ECardCollections.Void, ECardLocations.Unknown, -1, null);
+                        Debug.Log("[HexRevival] [Arena] " + c.m_CardTemplate.m_Name.Trim() + " voided from " + p.m_PlayerId + "'s crypt");
+                    }
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Arena] challenge card: " + e.Message); }
+        }
+
         private static void AddCards(StandaloneSession ss, Player p, string name, int amount, ECardCollections zone)
         {
             CardTemplate c = Opponents.CardByName(name);

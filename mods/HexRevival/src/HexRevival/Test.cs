@@ -979,6 +979,16 @@ namespace HexRevival
                     if (session == null || ReferenceEquals(UIBattle.Instance, null)) return "no battle";
                     string q = string.Join(" ", parts, 1, parts.Length - 1);
                     TemplateManager tm = Singleton<TemplateManager>.Instance;
+                    // "tclick choice <n>": the n-th card the UI state shows (a "Choose one" card's choices)
+                    if (q.StartsWith("choice "))
+                    {
+                        object st = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UIBattle.Instance);
+                        BattleStateBase top = st.GetType().GetMethod("Peek").Invoke(st, null) as BattleStateBase;
+                        int n; int.TryParse(q.Substring(7), out n);
+                        if (top == null || top.Cards == null || n < 0 || n >= top.Cards.Count) return "no choice " + n + " (" + (top != null && top.Cards != null ? top.Cards.Count : 0) + ")";
+                        top.OnClick(top.Cards[n]);
+                        return "clicked choice " + n + " in " + top.GetType().Name;
+                    }
                     // Cards in play first: a deck or discard card of the same name also has a view.
                     List<KeyValuePair<SessionCardId, CardRepresentation>> ordered = new List<KeyValuePair<SessionCardId, CardRepresentation>>(session.Cache.Cards);
                     ordered.Sort((a, b) => (a.Value.Collection == ECardCollections.Warzone ? 0 : 1).CompareTo(b.Value.Collection == ECardCollections.Warzone ? 0 : 1));
@@ -987,14 +997,21 @@ namespace HexRevival
                         CardTemplate t = tm.GetCardTemplate(kv.Value.TemplateId);
                         // "tclick #124": the card of that session id (Card.124)
                         bool byId = q.StartsWith("#") && kv.Key.ToString() == "SessionCardId(Card." + q.Substring(1) + ")";
-                        if (t == null || (!byId && !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase))) continue;
+                        if (!byId && (t == null || !string.Equals(t.m_Name, q, StringComparison.OrdinalIgnoreCase))) continue;
                         GoCardView view = UIBattle.Instance.GetCardView(kv.Key);
+                        // A champion has no card view of its own: its portrait's (GoChampionPortrait.GetChampionCardView).
+                        if (view == null && kv.Value.Collection == ECardCollections.Champions)
+                            foreach (GoChampionPortrait portrait in UnityEngine.Object.FindObjectsOfType<GoChampionPortrait>())
+                            {
+                                GoCardView cv = portrait.GetChampionCardView();
+                                if (cv != null && cv.Id == kv.Key) { view = cv; break; }
+                            }
                         if (view == null) continue;
                         object stack = typeof(UIBattle).GetField("m_StateStack", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(UIBattle.Instance);
                         BattleStateBase state = stack.GetType().GetMethod("Peek").Invoke(stack, null) as BattleStateBase;
                         if (state == null) return "no UI state";
                         state.OnClick(view);
-                        return "clicked " + t.m_Name + " (" + kv.Key + ") in " + state.GetType().Name;
+                        return "clicked " + (t != null ? t.m_Name : "champion") + " (" + kv.Key + ") in " + state.GetType().Name;
                     }
                     return "no card view named '" + q + "'";
                 }
