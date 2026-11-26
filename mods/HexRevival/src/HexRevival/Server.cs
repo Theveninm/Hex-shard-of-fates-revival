@@ -671,12 +671,15 @@ namespace HexRevival
                         //  - the generic "Play Card" ability: the card's additional costs
                         //    (X, sacrifice, discard... see GetPotentialCostsForAbility);
                         //  - EACH automatic/indexed ability of the card (CanUseAbility requires one
-                        //    option entry per ability), with its targets and costs.
+                        //    option entry per ability), with its targets and costs. The indexed ones are a
+                        //    "Choose one" card's choices: the choice window (BattleStateIndexedAbility) offers
+                        //    only those with an entry. GetAutomaticAbilities() leaves them out: until 1.2.44 no
+                        //    choice was valid and the card could not be cast (Wrath of Kha, Engulf; ZymmerOP,
+                        //    GooseChase, 2026-11-26).
                         SafeAddAbilityOptions(self, player, card, Game.Shared.Resources.BuiltInResources.PlayCardAbilityTemplateId, instances);
-                        List<AbilityTemplate> automatic = card.GetAutomaticAbilities();
-                        if (automatic != null)
-                            foreach (AbilityTemplate ability in automatic)
-                                SafeAddAbilityOptions(self, player, card, ability.AbilityTemplateId, instances);
+                        // A choice is offered only if it can be cast (the engine's own test, as for the card:
+                        // Session.HasEnoughTargetsToCast): Engulf's "Interrupt target troop" needs a troop being cast.
+                        AddCardAbilityOptions(self, player, card, instances);
                     }
 
                     List<AbilityTemplate> manual = card.GetManualAbilities();
@@ -1017,6 +1020,22 @@ namespace HexRevival
             }
         }
 
+        /// <summary>A card about to be played: an entry for each of its automatic and indexed ("Choose one") abilities.</summary>
+        private static void AddCardAbilityOptions(StandaloneSession self, Player player, Card card, List<SessionEventArgs> instances)
+        {
+            List<AbilityTemplate> automatic = card.GetAutomaticAndIndexedAbilities();
+            if (automatic == null) return;
+            foreach (AbilityTemplate ability in automatic)
+                if (ability.m_AbilityIndex <= 0 || ChoiceHasTargets(self, card, player, ability))
+                    SafeAddAbilityOptions(self, player, card, ability.AbilityTemplateId, instances);
+        }
+
+        private static bool ChoiceHasTargets(StandaloneSession self, Card card, Player player, AbilityTemplate ability)
+        {
+            try { return self.AbilityHasValidTargets(card, player, ability); }
+            catch (Exception e) { Debug.LogWarning("[HexRevival] [Server] choice targets: " + e.Message); return true; }
+        }
+
         private static void AddAbilityOptions(StandaloneSession self, Player player, Card card, ResourceId abilityId, List<SessionEventArgs> instances, Game.Shared.Mechanics.Abilities.AbilityInstance abilityInstance = null)
         {
             OptionInstanceSessionEventArgs instance = new OptionInstanceSessionEventArgs
@@ -1121,6 +1140,11 @@ namespace HexRevival
                     }
                     Game.Shared.Mechanics.Abilities.AbilityInstance instance = (instances != null && i < instances.Count) ? instances[i] : null;
                     AddAbilityOptions(self, player, card, template.AbilityTemplateId, option.Instances, instance);
+                    // A card played by an effect ("Choose a revealed card, and play it for free": Enthralling Gaze):
+                    // its own abilities too, as for a card played from the hand, or a "Choose one" card offers no
+                    // valid choice and its play never ends (Wrath of Kha, ZymmerOP 2026-11-26).
+                    if (template.AbilityTemplateId == Game.Shared.Resources.BuiltInResources.PlayCardAbilityTemplateId)
+                        AddCardAbilityOptions(self, player, card, option.Instances);
                 }
                 SendOptionList(self, player, options, true);
                 s_Dirty = true;
@@ -1240,6 +1264,7 @@ namespace HexRevival
         /// <summary>Sends the state deltas (players then cards). Returns true if anything went out.</summary>
         public static bool BroadcastState(StandaloneSession self)
         {
+            Arena.VoidArtlessChallengeCards(self);
             bool sent = false;
             foreach (Player player in self.GetAllPlayers())
             {

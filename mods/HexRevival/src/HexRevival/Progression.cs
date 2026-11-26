@@ -286,9 +286,8 @@ namespace HexRevival
             { "kukatan/NodeP", R(625, 550) },                                 // Nibblin Ceremony
             { "kukatan/NodeQ", new Reward { Gold = 600, Xp = 525, Source = Src.Placeholder, Note = "Tomb of Omens never fought on video" } },
             { "kukatan/NodeM", R(675, 600, "Rare Stardust", "Uncommon Stardust", "Common Stardust") },   // Exploding Zombies
-            // Lukaz: one reward window for Echo Ridge (Src.Video), given after the second battle.
-            { "kukatan/NodeN/1", new Reward { Source = Src.Video, Note = "one window for both Lukaz battles" } },
-            { "kukatan/NodeN/2", new Reward { Gold = 700, Xp = 650, Packs = 1, PackName = "Ruins of Kukatan", Source = Src.Video } },
+            // Lukaz: one reward window for Echo Ridge (Src.Video).
+            { "kukatan/NodeN", new Reward { Gold = 700, Xp = 650, Packs = 1, PackName = "Ruins of Kukatan", Source = Src.Video } },
         };
 
         /// <summary>

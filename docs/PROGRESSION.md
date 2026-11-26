@@ -416,8 +416,9 @@ and 2018-02-09: started by the robot head at the Entrance, "Repair" in the Assem
 objective, turned in to Reese or Tezozo; until 1.2.24 nothing counted the repair, and the turn-in never came, mornox
 2026-11-08); the Graveyard's NodeL, a prefab node with no room in the template, never shown (Video: MHS Ardent
 2018-02-09, the Assembly Yard leads to four rooms); the Tomb of Lingerers' explorers
-of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ardent); Lukaz in two
-battles with one reward (Video: one window for Echo Ridge).
+of the other faction (Video: F 01 Coyotle for Underworld, F 02 Shin'hare for Ardent); Lukaz in one
+battle with one reward (Video: one window for Echo Ridge; Game: Lukaz turns into Lukaz, Laid Low inside the battle
+when his Behemoth leaves play; until 1.2.44 a second battle against Lukaz, Laid Low followed, StigroOP 2026-11-26).
 Bonus gold (the game's hint: "a small amount of bonus gold if you manage to defeat an enemy on your
 first attempt"; Video, KVC 5 runs): a second gold line of 25% on every dungeon win from the run's second
 on, until the run's first defeat.
