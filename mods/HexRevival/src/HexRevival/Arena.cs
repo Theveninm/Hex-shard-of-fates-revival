@@ -888,10 +888,38 @@ namespace HexRevival
             catch (Exception e) { Debug.LogWarning("[HexRevival] [Arena] challenge card: " + e.Message); }
         }
 
+        /// <summary>
+        /// A picture for each challenge card the original team left without one (no image path: the client draws it as a
+        /// black card while it is cast; the user, 2026-11-26): another card's, on the same theme, with that card's set
+        /// (the client finds the picture through it). The mod's choice.
+        /// </summary>
+        private static readonly Dictionary<string, string> ChallengeArt = new Dictionary<string, string>
+        {
+            { "Arena Challenge - Banners", "Rallying Banner" },
+            { "Arena Challenge - Runic", "Runic Monolith" },
+        };
+
+        private static void GiveArt(CardTemplate c)
+        {
+            string donorName;
+            if (c == null || !string.IsNullOrEmpty(c.m_CardImagePath) || !ChallengeArt.TryGetValue(c.m_Name.Trim(), out donorName)) return;
+            CardTemplate d = Opponents.CardByName(donorName);
+            if (d == null || string.IsNullOrEmpty(d.m_CardImagePath)) return;
+            c.m_CardImagePath = d.m_CardImagePath;
+            c.m_ArtNumber = d.m_ArtNumber;
+            c.m_ArtistName = d.m_ArtistName;
+            c.m_ArtStatus = d.m_ArtStatus;
+            // The picture's bundle is looked for in the card's set folder (AssetBundles/cardsets/<set>/<art>.ab): the
+            // donor's set, or the client waits forever for cardsets/ai_cards/<art>.ab and the card stays black.
+            c.m_SetId = d.m_SetId;
+            Debug.Log("[HexRevival] [Arena] " + c.m_Name.Trim() + " drawn with the picture of " + donorName);
+        }
+
         private static void AddCards(StandaloneSession ss, Player p, string name, int amount, ECardCollections zone)
         {
             CardTemplate c = Opponents.CardByName(name);
             if (ss == null || p == null || c == null) { Debug.LogWarning("[HexRevival] [Arena] challenge card not found: " + name); return; }
+            GiveArt(c);
             new EncounterModAddCard { m_CardId = c.m_Id, m_Amount = amount, m_Collection = zone, m_Location = ECardLocations.Unknown, m_Shuffle = zone == ECardCollections.Deck }.Apply(ss, p);
             Debug.Log("[HexRevival] [Arena] challenge: " + amount + " " + name + " to " + zone + " for " + p.m_PlayerId);
         }
